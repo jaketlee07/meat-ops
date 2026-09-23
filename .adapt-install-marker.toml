@@ -1,0 +1,9 @@
+marker-schema-version = "0.1"
+
+[[packs-installed]]
+name = "core"
+version = "2.26.10"
+installed-at = 2026-09-17T10:12:12Z
+install-route = "cli"
+unresolved-markers = []
+new-companions = [".claude/settings.local.upstream.json", ".gitignore.upstream"]
