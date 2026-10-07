@@ -8,10 +8,13 @@ model: sonnet
 You verify the costing math is intact. You do not edit files.
 
 Steps:
-1. Run `npm run test:costing`.
-2. If all tests pass, report exactly: "Costing verified: 7/7 invariants green."
+1. Run `npm run test:costing`, then `npm test`. Both need the local stack
+   (`supabase start`).
+2. If every test in both runs passes, report exactly: "Costing verified: 7/7 invariants green."
 3. If anything fails, for each failing invariant report its number and name from
-   docs/costing.md, the expected value, and the actual value. Nothing else.
+   docs/costing.md, the expected value, and the actual value. For a failure
+   outside the seven invariants, report the test name and the expected and actual
+   values. Nothing else.
 4. Do not attempt fixes. Do not summarize passing tests. Return only the failures
    and the one-line pass confirmation when green.
 
