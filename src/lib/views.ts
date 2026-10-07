@@ -38,3 +38,12 @@ export async function getTrace(
   if (error) throw new Error(`getTrace failed: ${error.message}`);
   return data;
 }
+
+export async function getTraceByLot(
+  client: TypedClient,
+  lotNumber: string,
+): Promise<SaleTrace[]> {
+  const { data, error } = await client.from("v_sale_traceability").select("*").eq("raw_lot", lotNumber);
+  if (error) throw new Error(`getTraceByLot failed: ${error.message}`);
+  return data;
+}

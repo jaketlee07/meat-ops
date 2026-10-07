@@ -1,7 +1,7 @@
 import type { Database } from "./database.types.js";
 import type { TypedClient } from "./supabase.js";
 
-// Thin, typed wrappers over the three costing RPCs. These do no math: they map
+// Thin, typed wrappers over the six costing RPCs. These do no math: they map
 // friendly argument names to the SQL parameter names, call the function, and
 // return the typed row. All cost and inventory logic lives in Postgres.
 
@@ -80,4 +80,40 @@ export async function recordSale(client: TypedClient, input: RecordSaleInput): P
   });
   if (error) throw new Error(`recordSale failed: ${error.message}`);
   return data as Sale;
+}
+
+export type VoidedSale = Functions["void_sale"]["Returns"];
+
+export async function voidReceipt(client: TypedClient, lotId: string, reason: string): Promise<Lot> {
+  const { data, error } = await client.rpc("void_receipt", { p_lot_id: lotId, p_reason: reason });
+  if (error) throw new Error(`voidReceipt failed: ${error.message}`);
+  return data as Lot;
+}
+
+export async function voidSale(
+  client: TypedClient,
+  saleId: string,
+  reason: string,
+): Promise<VoidedSale> {
+  const { data, error } = await client.rpc("void_sale", { p_sale_id: saleId, p_reason: reason });
+  if (error) throw new Error(`voidSale failed: ${error.message}`);
+  return data as VoidedSale;
+}
+
+export interface AdjustLotInput {
+  lotId: string;
+  newRemainingLbs: number;
+  reason: "count" | "waste" | "spoilage" | "other";
+  note?: string;
+}
+
+export async function adjustLot(client: TypedClient, input: AdjustLotInput): Promise<Lot> {
+  const { data, error } = await client.rpc("adjust_lot", {
+    p_lot_id: input.lotId,
+    p_new_remaining_lbs: input.newRemainingLbs,
+    p_reason: input.reason,
+    p_note: input.note,
+  });
+  if (error) throw new Error(`adjustLot failed: ${error.message}`);
+  return data as Lot;
 }
