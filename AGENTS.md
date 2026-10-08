@@ -74,8 +74,9 @@ npm ci                            # install
 npx playwright install chromium   # once, the browser for the browser suite
 supabase start                    # local stack (Docker); tests run against it
 supabase migration up             # apply migrations to the local stack
-npm run dev                       # the app on http://127.0.0.1:3000
 npm run build                     # production build
+npm run start                     # the built app on http://127.0.0.1:3000; use this day to day
+npm run dev                       # development only; see below
 npm test                          # Vitest suites, then the Playwright browser suite
 npm run test:e2e                  # the browser suite only
 npm run test:costing              # the golden costing suite only
@@ -95,7 +96,10 @@ supabase status -o env --override-name api.url=SUPABASE_URL --override-name auth
 
 The app refuses to build, start, or run when a privileged variable is set: any
 name containing `SERVICE_ROLE`, `SECRET`, `JWT`, `DB_URL`, `DATABASE_URL`, or
-`POSTGRES`. Stop `npm run dev` before `npm test`, because both use `.next`. The
+`POSTGRES`. Stop `npm run dev` before `npm test`, because both use `.next`.
+`npm run dev` answers Next.js's own dev-tool addresses before the app's Host
+check runs, so a web page that points its name at this machine could reach them
+while it runs. The owner accepted that for development only. The
 tests refuse to run against any host except `127.0.0.1` or `localhost`.
 
 Use commands verified from repository guidance, manifests, task runners, or CI.

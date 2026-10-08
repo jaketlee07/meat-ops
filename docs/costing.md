@@ -187,7 +187,7 @@ the database returns:
 
 | Kind | Format | Examples |
 | --- | --- | --- |
-| Weight | thousands separators, 0 to 3 decimals, then " lbs" | 5000 → 5,000 lbs; 32.5 → 32.5 lbs; 1234.5678 → 1,234.568 lbs |
+| Weight | thousands separators, 0 to 3 decimals with trailing zeros dropped, then " lbs" | 5000 → 5,000 lbs; 32.5 → 32.5 lbs; 1234.5678 → 1,234.568 lbs |
 | Cost per lb (lot cost, average) | "$", 4 decimals, "/lb" | 1.725 → $1.7250/lb; 1.68 → $1.6800/lb |
 | Suggested price per lb | "$", 2 decimals, "/lb" | 2.6818 → $2.68/lb; 2.685 → $2.69/lb; 1.005 → $1.01/lb |
 | Date | month abbreviation, day, year, in any time zone | 2026-10-07 → Oct 7, 2026 |

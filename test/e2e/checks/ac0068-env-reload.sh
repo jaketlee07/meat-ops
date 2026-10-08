@@ -2,7 +2,9 @@
 # AC-0068: while `npm run dev` runs, once it logs that it reloaded .env.local after a
 # check-name variable (POSTGRES_URL) was written there, GET /sign-in, GET /receiving,
 # and POST /receiving each answer 500 with a body that does not contain the value.
-# Run from the repository root with no privileged variable in the shell.
+# Run from the repository root with no privileged variable in the shell. It exits
+# non-zero unless all three answers are 500 and the value appears in no body and
+# not in the dev log.
 set -u
 ROOT="$(pwd)"
 PORT=3101
@@ -59,14 +61,19 @@ done
 echo "log: $(grep -m1 'Reload env' "$LOG")"
 
 # 3. The next GET, GET, and POST each answer 500 without the value in the body.
+FAILED=0
 check() {
   label="$1"; shift
   code="$(curl -s -o "$WORK/body" -w '%{http_code}' "$@")"
-  if grep -q "$MARKER" "$WORK/body"; then leak="MARKER IN BODY"; else leak="no marker in body"; fi
+  if grep -q "$MARKER" "$WORK/body"; then leak="MARKER IN BODY"; FAILED=1; else leak="no marker in body"; fi
+  [ "$code" = 500 ] || FAILED=1
   echo "after:  $label -> $code ($leak), body: $(head -c 60 "$WORK/body")"
 }
 check "GET  /sign-in " "$BASE/sign-in"
 check "GET  /receiving" "$BASE/receiving"
 check "POST /receiving" -X POST -d 'x=1' "$BASE/receiving"
 
-if grep -q "$MARKER" "$LOG"; then echo "dev log: MARKER IN LOG"; else echo "dev log: no marker"; fi
+if grep -q "$MARKER" "$LOG"; then echo "dev log: MARKER IN LOG"; FAILED=1; else echo "dev log: no marker"; fi
+
+if [ "$FAILED" = 0 ]; then echo "PASS"; else echo "FAIL"; fi
+exit "$FAILED"
