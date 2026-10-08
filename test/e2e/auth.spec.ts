@@ -1,10 +1,24 @@
-import { expect, test, type Cookie, type Page } from "@playwright/test";
+import { expect, test, type Cookie, type Page, type Request } from "@playwright/test";
 import { resolveStackEnv } from "../env";
 import { createTypedClient } from "../../src/lib/supabase";
 import { NON_OPERATOR_EMAIL, OPERATOR_EMAIL, TEST_PASSWORD } from "../users";
 import { resetTestData } from "../db";
 import { checkPageState } from "./a11y";
-import { fillReceipt, lotCount, NOT_ALLOWED, openForm, RECEIVING_FORM, SIGNED_OUT } from "./receiving-page";
+import {
+  fillReceipt,
+  lotCount,
+  lotNumberOf,
+  NOT_ALLOWED,
+  openForm,
+  RAW_TOM_URL,
+  receiptItem,
+  RECEIVING_FORM,
+  seedReceipt,
+  SIGNED_OUT,
+  VOID_SIGNED_OUT,
+  voidMarks,
+  voidThrough,
+} from "./receiving-page";
 import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
 import { NON_OPERATOR_STATE, OPERATOR_STATE, signInThroughForm, submitSignIn } from "./states";
 
@@ -176,5 +190,83 @@ test.describe("a replayed save request", () => {
       }
       expect(await lotCount(), `lots after ${who}`).toBe(1);
     }
+  });
+});
+
+test.describe("a replayed void request", () => {
+  test.use({ storageState: OPERATOR_STATE });
+
+  test("AC-0044 and AC-0066: with no session or a non-operator's, it voids nothing and says why", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    await resetTestData();
+    const lotNumber = await lotNumberOf(await seedReceipt(1000, 1.68));
+    await openForm(page, RAW_TOM_URL);
+
+    // Capture the request a real void sends and stop it before the server sees
+    // it, so the lot is still untouched when the copies arrive.
+    let captured: Request | undefined;
+    await page.route("**/receiving**", async (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && "next-action" in request.headers()) {
+        captured = request;
+        await route.abort();
+      } else {
+        await route.continue();
+      }
+    });
+    await voidThrough(page, receiptItem(page, lotNumber), "keyed twice");
+    await expect.poll(() => captured).toBeDefined();
+    if (!captured) throw new Error("no void request was captured");
+    expect(await voidMarks(), "voids after the captured request was stopped").toBe(0);
+
+    // Send it again with no cookie of the operator's. Playwright sets the length
+    // and host itself.
+    const headers = captured.headers();
+    for (const name of ["cookie", "content-length", "host"]) delete headers[name];
+    const body = captured.postDataBuffer();
+
+    const replays = [
+      { who: "no session", storageState: undefined, message: VOID_SIGNED_OUT },
+      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: NOT_ALLOWED },
+    ];
+    for (const { who, storageState, message } of replays) {
+      const replay = await playwright.request.newContext({ baseURL, storageState });
+      try {
+        const response = await replay.post(captured.url(), { headers, data: body });
+        expect(await response.text(), `response for ${who}`).toContain(message);
+      } finally {
+        await replay.dispose();
+      }
+      expect(await voidMarks(), `voids after ${who}`).toBe(0);
+    }
+
+    const operator = await playwright.request.newContext({ baseURL, storageState: OPERATOR_STATE });
+    try {
+      // Every argument is caller input: the action runs the reason rule itself,
+      // and the engine refuses a lot id that is not a lot. The body is the
+      // bound lot id and the reason.
+      const [lotId, reason] = JSON.parse(captured.postData() ?? "[]") as [string, string];
+      expect([typeof lotId, reason]).toEqual(["string", "keyed twice"]);
+      const tampered = [
+        { what: "a blank reason", args: [lotId, "   "], message: "Enter a reason for the void." },
+        { what: "an unknown lot", args: ["00000000-0000-0000-0000-000000000000", reason], message: "not found" },
+      ];
+      for (const { what, args, message } of tampered) {
+        const response = await operator.post(captured.url(), { headers, data: JSON.stringify(args) });
+        expect(await response.text(), `response for ${what}`).toContain(message);
+        expect(await voidMarks(), `voids after ${what}`).toBe(0);
+      }
+
+      // Control: the request as captured, from the operator's session, does void
+      // the lot, so the refusals above came from who sent it and what it said,
+      // and not from a bad copy.
+      await operator.post(captured.url(), { headers, data: body });
+    } finally {
+      await operator.dispose();
+    }
+    expect(await voidMarks(), "voids after the operator's own copy").toBe(1);
   });
 });

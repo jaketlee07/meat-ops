@@ -1,11 +1,21 @@
-import type { FinishedPrice, ProductStock } from "../../lib/receiving";
+import type { FinishedPrice, ProductStock, RecentReceipts as Receipts } from "../../lib/receiving";
 import { Facts } from "./facts";
+import { RecentReceipts } from "./recent-receipts";
 import { NO_FINISHED, priceView, showAverage, showOnHand, showPrice, stockView } from "./stock-view";
 
-// The chosen product's stock and the current suggested price of each finished
-// product made from it, as the database holds them now. The page renders this
-// again after a save, so it is where a change in the ledger shows up.
-export function ProductRegion({ stock, prices }: { stock: ProductStock; prices: FinishedPrice[] }) {
+// The chosen product's stock, the current suggested price of each finished
+// product made from it, and its recent receipts, as the database holds them
+// now. The page renders this again after a save or a void, so it is where a
+// change in the ledger shows up.
+export function ProductRegion({
+  stock,
+  prices,
+  recent,
+}: {
+  stock: ProductStock;
+  prices: FinishedPrice[];
+  recent: Receipts;
+}) {
   const view = stockView(stock);
   return (
     <>
@@ -22,6 +32,7 @@ export function ProductRegion({ stock, prices }: { stock: ProductStock; prices: 
           ])}
         />
       )}
+      <RecentReceipts {...recent} />
     </>
   );
 }

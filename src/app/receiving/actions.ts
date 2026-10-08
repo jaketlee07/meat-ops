@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { parseReceiptForm, type ReceiptField } from "../../lib/receipt-input";
+import { parseReceiptForm, parseVoidReason, type ReceiptField } from "../../lib/receipt-input";
 import {
   getStock,
   listFinishedPrices,
@@ -9,7 +9,7 @@ import {
   type FinishedPrice,
   type ProductStock,
 } from "../../lib/receiving";
-import { isOperator, receiveLot, type Lot } from "../../lib/rpc";
+import { isOperator, receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
 import type { TypedClient } from "../../lib/supabase";
 import { createSessionClient } from "../_server/session";
 import { readFields } from "./form-fields";
@@ -48,8 +48,17 @@ export type SaveState =
   // Totals are null only when the lot is written but the second read failed.
   | { status: "saved"; lot: SavedLot; totals: Totals | null };
 
+export type VoidState =
+  // The reason rule refused the form (AC-0051); nothing reached the database.
+  | { status: "invalid"; error: string }
+  // The caller or the database refused the void; the message says why.
+  | { status: "refused"; message: string }
+  | { status: "voided" };
+
 const NOT_SAVED = "The receipt wasn't saved.";
 const SIGNED_OUT = "You're signed out. Sign in again to save this receipt.";
+const NOT_VOIDED = "The receipt wasn't voided.";
+const VOID_SIGNED_OUT = "You're signed out. Sign in again to void this receipt.";
 
 function refused(message: string): SaveState {
   return { status: "refused", message };
@@ -153,4 +162,30 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
     },
     totals,
   };
+}
+
+// Voids one untouched receipt. The lot id is bound to the action where the list
+// renders, and the reason comes from the dialog; a request can carry any value
+// for either, so both are caller input. The engine decides whether the lot is
+// still untouched, and its refusal is shown as is.
+export async function voidReceipt(lotId: string, reason: string): Promise<VoidState> {
+  const supabase = await createSessionClient({ readOnly: true });
+
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims) return { status: "refused", message: VOID_SIGNED_OUT };
+  if (!(await isOperator(supabase))) {
+    return { status: "refused", message: `${NOT_VOIDED} ${NOT_ALLOWED}` };
+  }
+
+  const parsed = parseVoidReason(typeof reason === "string" ? reason : "");
+  if (!parsed.ok) return { status: "invalid", error: parsed.error };
+
+  try {
+    await voidReceiptCall(supabase, typeof lotId === "string" ? lotId : "", parsed.value);
+  } catch (error) {
+    return { status: "refused", message: `${NOT_VOIDED} ${refusalReason(error)}` };
+  }
+
+  revalidatePath("/receiving");
+  return { status: "voided" };
 }

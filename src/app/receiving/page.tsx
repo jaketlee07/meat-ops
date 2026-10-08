@@ -1,5 +1,11 @@
 import { redirect } from "next/navigation";
-import { getStock, listActiveRawProducts, listFinishedPrices, listVendors } from "../../lib/receiving";
+import {
+  getStock,
+  listActiveRawProducts,
+  listFinishedPrices,
+  listRecentReceipts,
+  listVendors,
+} from "../../lib/receiving";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { signOut } from "../sign-in/actions";
@@ -9,7 +15,7 @@ import { ReceiptForm } from "./receipt-form";
 
 // Every page settles who is asking. The proxy only refreshes the session.
 // The chosen product lives in the URL (?product=<code>), so the server renders
-// that product's stock and the form keeps its typed values in the browser.
+// that product's stock and receipts and the form keeps its typed values in the browser.
 export default async function ReceivingPage({
   searchParams,
 }: {
@@ -33,11 +39,12 @@ export default async function ReceivingPage({
 
   let region = null;
   if (selected) {
-    const [stock, prices] = await Promise.all([
+    const [stock, prices, recent] = await Promise.all([
       getStock(supabase, selected.id),
       listFinishedPrices(supabase, selected.id),
+      listRecentReceipts(supabase, selected.id),
     ]);
-    region = <ProductRegion stock={stock} prices={prices} />;
+    region = <ProductRegion stock={stock} prices={prices} recent={recent} />;
   }
 
   return (

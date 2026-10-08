@@ -1,5 +1,14 @@
 import { expect, test, type Locator } from "@playwright/test";
-import { query, RAW_TOM_ID, resetTestData } from "../db";
+import {
+  adjustCall,
+  callAsOperator,
+  PROD_502_ID,
+  produceCall,
+  query,
+  RAW_TOM_ID,
+  resetTestData,
+  voidReceiptCall,
+} from "../db";
 import { resolveStackEnv } from "../env";
 import { OPERATOR_EMAIL } from "../users";
 import { checkPageState } from "./a11y";
@@ -12,12 +21,22 @@ import {
   FORM_CONTROLS,
   type Fields,
   lotCount,
+  lotNumberOf,
+  lotState,
   NOT_SAVED,
+  NOT_VOIDED,
   openForm,
+  RAW_TOM_URL,
   readValues,
+  receiptItem,
   seedReceipt,
   SIGNED_OUT,
   VENDOR,
+  VOID_SIGNED_OUT,
+  voidButton,
+  voidDialog,
+  voidMarks,
+  voidThrough,
 } from "./receiving-page";
 import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
 import { OPERATOR_STATE, signInThroughForm } from "./states";
@@ -268,7 +287,8 @@ test.describe("saving", () => {
     await expect(f.cost).toHaveValue("");
     await expect(f.notes).toHaveValue("");
 
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    // Both receipts are untouched, so the list adds a Void button for each.
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Void"]);
   });
 
   test("AC-0014 and AC-0067: a first receipt shows 0 lbs, None yet, and No price yet before", async ({ page }) => {
@@ -439,6 +459,320 @@ test.describe("refusals after the rules pass", () => {
       await expect(f.message).toBeFocused();
       expect(await readValues(f)).toEqual(typed);
       expect(await lotCount()).toBe(1);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+// Receipts of RAW-TOM entered out of date order, so entry order and date order disagree.
+const ENTRY_DAYS = [21, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+test.describe("recent receipts", () => {
+  test("AC-0020 and AC-0048: the 10 most recently entered receipts, newest entry first, and the count", async ({
+    page,
+  }) => {
+    const ids: string[] = [];
+    for (const day of ENTRY_DAYS) ids.push(await seedReceipt(100, 1.68, `2026-05-${day}`));
+    // The first receipt entered is void. It falls outside the 10, and it still counts.
+    const [first] = ids;
+    expect((await callAsOperator(voidReceiptCall(first ?? ""))).ok).toBe(true);
+
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(f.region.getByRole("listitem")).toHaveCount(10);
+    await expect(factValue(f.region, "Received")).toHaveText(
+      [20, 19, 18, 17, 16, 15, 14, 13, 12, 11].map((day) => `May ${day}, 2026`),
+    );
+    await expect(f.region.getByText("Showing the 10 most recent of 12 receipts.", { exact: true })).toBeVisible();
+  });
+
+  test("AC-0048: with 10 receipts or fewer there is no count line", async ({ page }) => {
+    for (const day of ENTRY_DAYS.slice(0, 10)) await seedReceipt(100, 1.68, `2026-05-${day}`);
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(f.region.getByRole("listitem")).toHaveCount(10);
+    await expect(f.region.getByText(/^Showing the/)).toHaveCount(0);
+
+    await seedReceipt(100, 1.68, "2026-05-22");
+    await page.reload();
+    await expect(f.region.getByText("Showing the 10 most recent of 11 receipts.", { exact: true })).toBeVisible();
+  });
+
+  test("AC-0047: each receipt shows its lot number, date, vendor, weight, cost, and remaining lbs", async ({
+    page,
+  }) => {
+    const id = await seedReceipt(2000, 1.725, "2026-04-03");
+    expect((await callAsOperator(produceCall(PROD_502_ID, 500))).ok).toBe(true);
+    const lotNumber = await lotNumberOf(id);
+
+    await openForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, lotNumber);
+    await expect(factValue(item, "Lot number")).toHaveText(lotNumber);
+    await expect(factValue(item, "Received")).toHaveText("Apr 3, 2026");
+    await expect(factValue(item, "Vendor")).toHaveText(VENDOR);
+    await expect(factValue(item, "Weight")).toHaveText("2,000 lbs");
+    await expect(factValue(item, "Cost per lb")).toHaveText("$1.7250/lb");
+    await expect(factValue(item, "Remaining")).toHaveText("1,500 lbs");
+  });
+
+  test("AC-0049: a product with no receipts says so", async ({ page }) => {
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(f.region.getByText("No receipts for this product yet.", { exact: true })).toBeVisible();
+    await expect(f.region.getByRole("listitem")).toHaveCount(0);
+  });
+
+  test("AC-0021: Void on untouched receipts, the reason on void ones, In use on the rest", async ({ page }) => {
+    // The T4 fixture: one production drew from, one adjusted down and back to
+    // its full weight, one void, and one untouched.
+    const consumed = await seedReceipt(1000, 1.68, "2026-05-01");
+    const adjusted = await seedReceipt(1000, 1.68, "2026-05-02");
+    const voided = await seedReceipt(1000, 1.68, "2026-05-03");
+    const untouched = await seedReceipt(1000, 1.68, "2026-05-04");
+    expect((await callAsOperator(produceCall(PROD_502_ID, 500))).ok).toBe(true);
+    expect((await callAsOperator(adjustCall(adjusted, 900))).ok).toBe(true);
+    expect((await callAsOperator(adjustCall(adjusted, 1000))).ok).toBe(true);
+    expect((await callAsOperator(voidReceiptCall(voided, "entered twice"))).ok).toBe(true);
+
+    await openForm(page, RAW_TOM_URL);
+    const item = async (id: string) => receiptItem(page, await lotNumberOf(id));
+
+    const untouchedItem = await item(untouched);
+    await expect(voidButton(untouchedItem)).toBeVisible();
+    await expect(untouchedItem.getByText("In use")).toHaveCount(0);
+    await expect(untouchedItem.getByText(/^Void: /)).toHaveCount(0);
+
+    for (const id of [consumed, adjusted]) {
+      const inUse = await item(id);
+      await expect(inUse.getByText("In use", { exact: true })).toBeVisible();
+      await expect(voidButton(inUse)).toHaveCount(0);
+      await expect(inUse.getByText(/^Void: /)).toHaveCount(0);
+    }
+
+    const voidItem = await item(voided);
+    await expect(voidItem.getByText("Void: entered twice", { exact: true })).toBeVisible();
+    await expect(voidButton(voidItem)).toHaveCount(0);
+    await expect(voidItem.getByText("In use")).toHaveCount(0);
+
+    // Four receipts at phone width: no sideways scroll, and one Void button to reach.
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void"]);
+  });
+});
+
+test.describe("the void confirmation", () => {
+  test("AC-0022: Void opens a confirmation that names the lot, weight, and vendor and asks for a reason", async ({
+    page,
+  }) => {
+    const lotNumber = await lotNumberOf(await seedReceipt(1000, 1.68));
+    await openForm(page, RAW_TOM_URL);
+    await voidButton(receiptItem(page, lotNumber)).click();
+
+    const dialog = voidDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(`Lot ${lotNumber}, 1,000 lbs, from ${VENDOR}.`);
+    const reason = dialog.getByLabel("Reason for the void");
+    await expect(reason).toBeVisible();
+
+    // Cancel is the first stop and holds focus on open, so Tab reaches the reason next.
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(reason).toBeFocused();
+
+    expect(await checkPageState(page)).toEqual(["button Cancel", "textarea reason", "button Void receipt"]);
+  });
+
+  test("AC-0050: Cancel and Escape close the confirmation and change nothing", async ({ page }) => {
+    const id = await seedReceipt(1000, 1.68);
+    const before = await lotState(id);
+    await openForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, await lotNumberOf(id));
+    const posts: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST") posts.push(request.url());
+    });
+
+    const dialog = voidDialog(page);
+    const reason = dialog.getByLabel("Reason for the void");
+    await voidButton(item).click();
+    await reason.fill("typed by mistake");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(voidButton(item)).toBeFocused();
+
+    // Reopening starts with an empty reason, and Escape closes it the same way.
+    await voidButton(item).click();
+    await expect(reason).toHaveValue("");
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(voidButton(item)).toBeFocused();
+
+    expect(posts).toEqual([]);
+    expect(await voidMarks()).toBe(0);
+    expect(await lotState(id)).toEqual(before);
+    await expect(item.getByText(/^Void: /)).toHaveCount(0);
+  });
+
+  test("AC-0051: a blank or spaces-only reason shows its message and changes nothing", async ({ page }) => {
+    const id = await seedReceipt(1000, 1.68);
+    const before = await lotState(id);
+    await openForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, await lotNumberOf(id));
+    const posts: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST") posts.push(request.url());
+    });
+
+    const dialog = voidDialog(page);
+    const reason = dialog.getByLabel("Reason for the void");
+    const confirm = dialog.getByRole("button", { name: "Void receipt" });
+    await voidButton(item).click();
+    for (const blank of ["", "   "]) {
+      await reason.fill(blank);
+      await confirm.click();
+      const message = dialog.getByText("Enter a reason for the void.", { exact: true });
+      await expect(message).toBeVisible();
+      // The confirmation stays open, the field holds focus and points to the message.
+      await expect(reason).toBeFocused();
+      await expect(reason).toHaveAttribute("aria-describedby", (await message.getAttribute("id")) ?? "missing");
+    }
+
+    expect(posts).toEqual([]);
+    expect(await voidMarks()).toBe(0);
+    expect(await lotState(id)).toEqual(before);
+  });
+});
+
+test.describe("voiding", () => {
+  test("AC-0023: voiding the second receipt shows it as void and the first receipt's stock and average", async ({
+    page,
+  }) => {
+    const first = await seedReceipt(1000, 1.68, "2026-05-12");
+    const second = await seedReceipt(500, 1.8, "2026-05-13");
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(factValue(f.region, "On hand")).toHaveText("1,500 lbs");
+
+    const item = receiptItem(page, await lotNumberOf(second));
+    await voidThrough(page, item, "keyed twice");
+
+    await expect(item.getByText("Void: keyed twice", { exact: true })).toBeVisible();
+    await expect(voidButton(item)).toHaveCount(0);
+    await expect(factValue(f.region, "On hand")).toHaveText("1,000 lbs");
+    await expect(factValue(f.region, "Average cost")).toHaveText("$1.6800/lb");
+    await expect(factValue(f.region, "502 Smoked Turkey Drums Tom")).toHaveText("$2.68/lb");
+
+    // The first receipt is untouched by the void, and focus moved to the list.
+    const firstItem = receiptItem(page, await lotNumberOf(first));
+    await expect(voidButton(firstItem)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Recent receipts" })).toBeFocused();
+    expect(await lotState(second)).toEqual({ remaining: 0, voided: true, reason: "keyed twice" });
+    expect(await lotState(first)).toEqual({ remaining: 1000, voided: false, reason: null });
+    expect(await voidMarks()).toBe(1);
+  });
+
+  test("AC-0053 and AC-0067: voiding the only receipt shows 0 lbs, None yet, and No price yet", async ({ page }) => {
+    const id = await seedReceipt(5000, 1.68);
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(factValue(f.region, "Average cost")).toHaveText("$1.6800/lb");
+
+    await voidThrough(page, receiptItem(page, await lotNumberOf(id)), "wrong product");
+
+    await expect(factValue(f.region, "On hand")).toHaveText("0 lbs");
+    await expect(factValue(f.region, "Average cost")).toHaveText("None yet");
+    await expect(factValue(f.region, "502 Smoked Turkey Drums Tom")).toHaveText("No price yet");
+    await expect(f.region.getByText("Void: wrong product", { exact: true })).toBeVisible();
+  });
+
+  test("AC-0052 and AC-0057: a lot production drew from after the list loaded is refused, and stays as it was", async ({
+    page,
+  }) => {
+    const id = await seedReceipt(1000, 1.68);
+    const f = await openForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, await lotNumberOf(id));
+    await expect(voidButton(item)).toBeVisible();
+
+    // Production draws from the lot after the list shows it as untouched.
+    expect((await callAsOperator(produceCall(PROD_502_ID, 500))).ok).toBe(true);
+    const before = await lotState(id);
+    expect(before).toEqual({ remaining: 500, voided: false, reason: null });
+
+    await voidThrough(page, item, "keyed twice");
+
+    const message = item.getByRole("alert");
+    await expect(message).toHaveText(new RegExp(`^${NOT_VOIDED} invalid, lot [0-9a-f-]{36} has been consumed$`));
+    await expect(message).toBeFocused();
+    await expect(voidDialog(page)).toBeHidden();
+    expect(await lotState(id)).toEqual(before);
+    expect(await voidMarks()).toBe(0);
+    await expect(item.getByText(/^Void: /)).toHaveCount(0);
+    await expect(factValue(f.region, "On hand")).toHaveText("1,000 lbs");
+
+    // The list after the refusal: the message is in the page, the dialog is closed.
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void"]);
+  });
+});
+
+test.describe("voiding after the session ended", () => {
+  test("AC-0043 and AC-0057: with no session cookie, the void is refused and the lot is unchanged", async ({
+    page,
+  }) => {
+    const id = await seedReceipt(1000, 1.68);
+    const before = await lotState(id);
+    await openForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, await lotNumberOf(id));
+    await expect(voidButton(item)).toBeVisible();
+
+    await page.context().clearCookies();
+    await voidThrough(page, item, "keyed twice");
+
+    const message = item.getByRole("alert");
+    await expect(message).toHaveText(VOID_SIGNED_OUT);
+    await expect(message).toBeFocused();
+    expect(await lotState(id)).toEqual(before);
+    expect(await voidMarks()).toBe(0);
+  });
+
+  test("AC-0043 and AC-0057: an expired access token refreshes and voids, and a revoked session is refused", async ({
+    browser,
+    baseURL,
+  }) => {
+    const first = await seedReceipt(1000, 1.68, "2026-05-12");
+    const second = await seedReceipt(500, 1.8, "2026-05-13");
+    const secondBefore = await lotState(second);
+
+    // A session of its own, so the saved operator session that later tests
+    // reuse is untouched. It is never saved under test/e2e/.auth/.
+    const context = await browser.newContext({ baseURL });
+    const sessionCookies = async () => (await context.cookies()).filter(isAuthCookie);
+    try {
+      const page = await context.newPage();
+      await signInThroughForm(page, OPERATOR_EMAIL);
+      await openForm(page, RAW_TOM_URL);
+      const firstItem = receiptItem(page, await lotNumberOf(first));
+      const secondItem = receiptItem(page, await lotNumberOf(second));
+
+      // The access token expired while the list was open. The proxy refreshes
+      // it ahead of the action, so the action sees the new session and voids.
+      await context.addCookies(withExpiredAccessToken(await sessionCookies()));
+      await voidThrough(page, firstItem, "keyed twice");
+      await expect(firstItem.getByText("Void: keyed twice", { exact: true })).toBeVisible();
+      expect(await voidMarks()).toBe(1);
+
+      // End the session at the auth server, then age the access token so the
+      // proxy has to refresh it, and the refresh is refused.
+      const cookies = await sessionCookies();
+      const stack = resolveStackEnv();
+      const revoked = await fetch(`${stack.apiUrl}/auth/v1/logout?scope=local`, {
+        method: "POST",
+        headers: { apikey: stack.anonKey, authorization: `Bearer ${readSession(cookies).access_token}` },
+      });
+      expect(revoked.status).toBe(204);
+      await context.addCookies(withExpiredAccessToken(cookies));
+
+      await voidThrough(page, secondItem, "wrong price");
+      const message = secondItem.getByRole("alert");
+      await expect(message).toHaveText(VOID_SIGNED_OUT);
+      await expect(message).toBeFocused();
+      expect(await lotState(second)).toEqual(secondBefore);
+      expect(await voidMarks()).toBe(1);
     } finally {
       await context.close();
     }

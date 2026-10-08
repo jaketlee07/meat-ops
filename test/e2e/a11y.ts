@@ -62,10 +62,12 @@ async function walkTabOrder(page: Page): Promise<FocusedControl[]> {
   await page.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
     window.scrollTo(0, 0);
-    // Put the focus starting point at the top of the document.
+    // Put the focus starting point at the top of the document. While a modal
+    // dialog is open the rest of the page is inert and cannot take focus, so
+    // the top of the page for Tab is the top of the dialog.
     const marker = document.createElement("span");
     marker.tabIndex = -1;
-    document.body.prepend(marker);
+    (document.querySelector("dialog:modal") ?? document.body).prepend(marker);
     marker.focus();
     marker.remove();
     (window as unknown as { __tabWalk: Element[] }).__tabWalk = [];

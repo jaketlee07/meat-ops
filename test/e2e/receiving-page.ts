@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { callAsOperator, query, RAW_TOM_ID, receiveCall, VENDOR_ID } from "../db";
+import { callAsOperator, idOf, query, RAW_TOM_ID, receiveCall, VENDOR_ID } from "../db";
 
 // What the receiving specs share: how to find the form's parts, fill it, and
 // read raw tables through pg. The pg pool stays open: every spec in this worker
@@ -10,6 +10,10 @@ export const VENDOR = "Reyes Meats";
 export const SIGNED_OUT = "You're signed out. Sign in again to save this receipt.";
 export const NOT_SAVED = "The receipt wasn't saved.";
 export const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
+export const VOID_SIGNED_OUT = "You're signed out. Sign in again to void this receipt.";
+export const NOT_VOIDED = "The receipt wasn't voided.";
+// The receiving page with RAW-TOM chosen, so its stock and receipts are shown.
+export const RAW_TOM_URL = `/receiving?product=${CODE}`;
 // The accessible name of the receiving form.
 export const RECEIVING_FORM = "New receipt";
 
@@ -79,10 +83,53 @@ export async function lotCount(): Promise<number> {
   return row?.n ?? -1;
 }
 
-// Receives a lot of RAW-TOM through the engine, as the operator.
-export async function seedReceipt(lbs: number, cost: number): Promise<void> {
-  const outcome = await callAsOperator(receiveCall(RAW_TOM_ID, VENDOR_ID, lbs, cost, "2026-05-12"));
+// Receives a lot of RAW-TOM through the engine, as the operator, and returns its id.
+export async function seedReceipt(lbs: number, cost: number, date = "2026-05-12"): Promise<string> {
+  const outcome = await callAsOperator(receiveCall(RAW_TOM_ID, VENDOR_ID, lbs, cost, date));
   expect(outcome.ok, outcome.error).toBe(true);
+  return idOf(outcome);
+}
+
+export async function lotNumberOf(id: string): Promise<string> {
+  const [row] = await query<{ lot_number: string }>("select lot_number from lots where id = $1", [id]);
+  return row?.lot_number ?? "missing";
+}
+
+// How many lots carry a void mark, for "no new void mark".
+export async function voidMarks(): Promise<number> {
+  const [row] = await query<{ n: number }>("select count(*)::int as n from lots where voided_at is not null");
+  return row?.n ?? -1;
+}
+
+// What a lot holds in the ledger, to show a refused void left it unchanged.
+export async function lotState(id: string) {
+  const [row] = await query<{ remaining: number; voided: boolean; reason: string | null }>(
+    "select remaining_lbs::float8 as remaining, voided_at is not null as voided, void_reason as reason from lots where id = $1",
+    [id],
+  );
+  return row;
+}
+
+// The list item of one receipt in the recent receipts list, found by lot number.
+export function receiptItem(page: Page, lotNumber: string): Locator {
+  return page.locator("#product-region li").filter({ hasText: lotNumber });
+}
+
+// The Void button of a receipt. Its name carries the lot number, so each is distinct.
+export function voidButton(item: Locator): Locator {
+  return item.getByRole("button", { name: /^Void lot / });
+}
+
+export function voidDialog(page: Page): Locator {
+  return page.getByRole("dialog", { name: "Void this receipt?" });
+}
+
+// Opens the confirmation, types a reason, and presses the confirm button.
+export async function voidThrough(page: Page, item: Locator, reason: string): Promise<void> {
+  await voidButton(item).click();
+  const dialog = voidDialog(page);
+  await dialog.getByLabel("Reason for the void").fill(reason);
+  await dialog.getByRole("button", { name: "Void receipt" }).click();
 }
 
 // The value cell that follows a label in a list of facts.
