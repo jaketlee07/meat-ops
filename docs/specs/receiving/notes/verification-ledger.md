@@ -83,3 +83,22 @@ Execution observations, newest last. Each entry names the task, the command, and
 - Durable outputs: `docs/architecture/overview.md` gains the `src/app/`, guard, and `test/e2e/` area rows, the session limits in the `supabase/config.toml` row, the write-path sentence, and an "App trust boundary" section (variables, cookies, sessions, network, the proxy authorizes nothing); the `check_operator` access-model rows landed in T2. `AGENTS.md` "Build and test commands" lists dev, build, test, test:e2e, audit, the one-time browser install, and the `.env` command (verified: it prints exactly `SUPABASE_URL` and `SUPABASE_ANON_KEY`). `docs/costing.md` states the AC-0024 formats and the AC-0067 texts in its Rounding note, and its opening names `test/format.test.ts` and `test/e2e/receiving.spec.ts`.
 - Closing goal-based checks, all on the T8 tree: AC-0033 advisor exit 0; AC-0034 regeneration byte-identical; AC-0035 build exit 0; AC-0037 typecheck exit 0; AC-0038, AC-0059, AC-0039 (three greps), AC-0040, AC-0064 print nothing; AC-0065 `npm run audit` "found 0 vulnerabilities"; AC-0062 `GOTRUE_SESSIONS_TIMEBOX=168h0m0s`, `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT=12h0m0s`; AC-0060 27 of 27 refused; AC-0063 start and dev each one listener on `127.0.0.1`; AC-0068 three 500s with no marker; AC-0036 `npm test` exit 0, Vitest 167 passed, Playwright 61 passed.
 - Foundation-hardening AC-0049 for `AGENTS.md`: every cited path exists except the exempt `CONTRIBUTING.md` and `AGENTS.local.md`. The doc edits add no em dashes.
+
+## Post-gates review, round 1 (2026-10-08)
+
+Reviewers on `git diff 7d81cf2..dc8294a`, each report adjudicated (artifacts under the ignored `.context/reviews/8bd1023d-4bec-4e12-a2b5-8d29179b0f2c/`):
+
+- adversarial-reviewer: 12 sustained (1 Concern: the device date is read once at mount, so a form open past midnight refuses the real date; 11 Nits).
+- quality-engineer: 17 sustained (Concerns: the midnight date; the AC-0068 script exits 0 whatever it observes; the AC-0009 test catches a UTC-based default only part of the day; 14 Nits), 1 refuted (rollback path).
+- frontend-reviewer: Major sustained (error page Try again calls `reset`, which does not re-fetch); 3 Minors sustained (a thrown save or void loses the form; the error page drops focus; result-panel numbers cannot wrap at 320 px); 2 refuted; 2 indeterminate pending owner decisions (sign-in copy for non-credential failures; announcing the void dialog's lot sentence).
+- security-reviewer: 1 Nit sustained (the AC-0068 script cannot fail); 1 indeterminate pending an owner decision (no Host-header check, so a DNS-rebinding page could drive sign-in and spend the shared sign-in limit).
+- experience-reviewer: named skip (not installed).
+
+Owner decisions, in chat on 2026-10-08:
+
+1. Fix the DNS-rebinding exposure now: refuse any request whose Host is not the loopback host the app serves (spec amendment, re-approval).
+2. Fix scope "nearly everything": the Concerns and the Major; the Host check; failure handling (a failed or unreachable save or void keeps the form and says honestly that the receipt may or may not be saved; a time limit on server database calls); sign-in failures that are not bad credentials; the stale result panel after voiding a just-saved receipt; the stale region after a refused void; the docs, ledger, and test-strength Nits. Two test-tool refinements go to the backlog: a test seam for the "saved, totals not loaded" branch, and opacity-aware ring scoring in `test/e2e/a11y.ts`.
+3. Sign-in failures other than bad credentials read "Couldn't sign in right now. Wait a few minutes and try again." and leave a server-side record; "Email or password is incorrect." stays for bad credentials.
+4. The void confirmation announces its lot sentence to screen readers (`aria-describedby`).
+
+Review state: `findings-remain` (seq 24) and `review record` round 1 with 29 fingerprints. The new criteria go through a controlled contract amendment.
