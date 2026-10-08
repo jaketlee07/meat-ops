@@ -2,6 +2,7 @@ import "server-only";
 import { createServerClient, type CookieOptionsWithName } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "../../lib/database.types";
+import { DB_CALL_TIMEOUT_MS, withTimeout } from "../../lib/failures";
 import type { TypedClient } from "../../lib/supabase";
 
 // The one cookie-options constant. Every createServerClient call passes it,
@@ -12,6 +13,14 @@ export const SESSION_COOKIE_OPTIONS: CookieOptionsWithName = {
   httpOnly: true,
   sameSite: "lax",
 };
+
+// Every server-side Supabase client, the proxy's included, passes this as its
+// `global.fetch` (AC-0082). supabase-js hands that fetch to its auth client
+// (sign-in, the user lookup, token refresh, and the signing-key fetch behind
+// getClaims), to PostgREST (every table read and function call), and to the
+// storage and functions clients. The global fetch is looked up on each call, as
+// supabase-js does.
+export const TIMED_FETCH = withTimeout((input, init) => fetch(input, init), DB_CALL_TIMEOUT_MS);
 
 // The app holds only these two variables: the project URL and the anon key, so
 // row-level security applies to every call. Neither has a NEXT_PUBLIC_ prefix,
@@ -40,6 +49,7 @@ export async function createSessionClient({
   const cookieStore = await cookies();
   return createServerClient<Database>(url, anonKey, {
     cookieOptions: SESSION_COOKIE_OPTIONS,
+    global: { fetch: TIMED_FETCH },
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll(cookiesToSet) {

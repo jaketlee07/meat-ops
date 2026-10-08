@@ -1,19 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { NOT_ALLOWED, saveFailureMessage, voidFailureMessage } from "../../lib/failures";
 import { parseReceiptForm, parseVoidReason, type ReceiptField } from "../../lib/receipt-input";
 import {
   getStock,
   listFinishedPrices,
+  listRawProducts,
   listVendors,
   type FinishedPrice,
   type ProductStock,
 } from "../../lib/receiving";
-import { isOperator, receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
+import { receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
 import type { TypedClient } from "../../lib/supabase";
-import { createSessionClient } from "../_server/session";
+import { checkCaller } from "../_server/caller";
 import { readFields } from "./form-fields";
-import { NOT_ALLOWED, refusalReason } from "./refusal";
 import { priceView, stockView, type StockView } from "./stock-view";
 
 export interface SavedLot {
@@ -64,15 +65,6 @@ function refused(message: string): SaveState {
   return { status: "refused", message };
 }
 
-// Every raw product, active or not. The save rules take every code, so a
-// product made inactive after the page loaded reaches receive_lot and is
-// refused there with its own reason.
-async function listRawProducts(client: TypedClient) {
-  const { data, error } = await client.from("products").select("id, code, description").eq("kind", "raw");
-  if (error) throw new Error(`listRawProducts failed: ${error.message}`);
-  return data;
-}
-
 function priceChanges(
   before: { stock: ProductStock; prices: FinishedPrice[] },
   after: { stock: ProductStock; prices: FinishedPrice[] },
@@ -88,22 +80,15 @@ function priceChanges(
   }));
 }
 
-// A server action is a public POST endpoint, so every argument is caller input.
-// It settles who is calling first, then the form rules, then calls the engine
-// with the signed-in session. The engine stays the authority on every refusal.
-export async function saveReceipt(formData: FormData): Promise<SaveState> {
-  const supabase = await createSessionClient({ readOnly: true });
-
-  // Who is calling comes before any rule that reads through row-level security,
-  // so a non-operator never sees a field error built from rows it cannot read.
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) return refused(SIGNED_OUT);
-  if (!(await isOperator(supabase))) return refused(`${NOT_SAVED} ${NOT_ALLOWED}`);
-
+// Everything a save reads before its write call, in one place so a single catch
+// maps a failure in any of those calls. The save rules take every raw code, so a
+// product made inactive after the page loaded reaches receive_lot and is refused
+// there with its own reason.
+async function readBeforeWrite(supabase: TypedClient, formData: FormData) {
   const rawProducts = await listRawProducts(supabase);
   const byCode = new Map(rawProducts.map((product) => [product.code, product]));
   const parsed = parseReceiptForm(readFields(formData), new Set(byCode.keys()));
-  if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
+  if (!parsed.ok) return { ok: false as const, errors: parsed.errors };
   const input = parsed.value;
   const product = byCode.get(input.productCode);
   if (!product) throw new Error(`parseReceiptForm accepted unknown code ${input.productCode}`);
@@ -114,6 +99,31 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
     listFinishedPrices(supabase, product.id),
     listVendors(supabase),
   ]);
+  return { ok: true as const, input, product, stockBefore, pricesBefore, vendors };
+}
+
+// A server action is a public POST endpoint, so every argument is caller input.
+// It settles who is calling first, then the form rules, then calls the engine
+// with the signed-in session. The engine stays the authority on every refusal.
+// A failure before the write call says the receipt wasn't saved; a write call
+// that got no answer says it may not have been (src/lib/failures.ts).
+export async function saveReceipt(formData: FormData): Promise<SaveState> {
+  // Who is calling comes before any rule that reads through row-level security,
+  // so a non-operator never sees a field error built from rows it cannot read.
+  const caller = await checkCaller();
+  if (caller.status === "ended") return refused(SIGNED_OUT);
+  if (caller.status === "not-operator") return refused(`${NOT_SAVED} ${NOT_ALLOWED}`);
+  if (caller.status === "failed") return refused(saveFailureMessage(caller.error, "before-write"));
+  const { supabase } = caller;
+
+  let prior;
+  try {
+    prior = await readBeforeWrite(supabase, formData);
+  } catch (error) {
+    return refused(saveFailureMessage(error, "before-write"));
+  }
+  if (!prior.ok) return { status: "invalid", fieldErrors: prior.errors };
+  const { input, product, stockBefore, pricesBefore, vendors } = prior;
 
   let lot: Lot;
   try {
@@ -126,7 +136,7 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
       notes: input.notes,
     });
   } catch (error) {
-    return refused(`${NOT_SAVED} ${refusalReason(error)}`);
+    return refused(saveFailureMessage(error, "write"));
   }
 
   // The lot is written. If this read fails, say so rather than throw: an error
@@ -144,7 +154,10 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
         { stock: stockAfter, prices: pricesAfter },
       ),
     };
-  } catch {
+  } catch (error) {
+    // The error's message only: the log must hold no row data.
+    const reason = error instanceof Error ? error.message : "unknown error";
+    console.error(`saveReceipt: reading the totals after the write failed: ${reason}`);
     totals = null;
   }
 
@@ -167,23 +180,26 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
 // Voids one untouched receipt. The lot id is bound to the action where the list
 // renders, and the reason comes from the dialog; a request can carry any value
 // for either, so both are caller input. The engine decides whether the lot is
-// still untouched, and its refusal is shown as is.
+// still untouched, and its refusal is shown as is. A void has one call before
+// the write call, the caller check; a write call that got no answer says the
+// receipt may not have been voided (src/lib/failures.ts).
 export async function voidReceipt(lotId: string, reason: string): Promise<VoidState> {
-  const supabase = await createSessionClient({ readOnly: true });
-
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) return { status: "refused", message: VOID_SIGNED_OUT };
-  if (!(await isOperator(supabase))) {
+  const caller = await checkCaller();
+  if (caller.status === "ended") return { status: "refused", message: VOID_SIGNED_OUT };
+  if (caller.status === "not-operator") {
     return { status: "refused", message: `${NOT_VOIDED} ${NOT_ALLOWED}` };
+  }
+  if (caller.status === "failed") {
+    return { status: "refused", message: voidFailureMessage(caller.error, "before-write") };
   }
 
   const parsed = parseVoidReason(typeof reason === "string" ? reason : "");
   if (!parsed.ok) return { status: "invalid", error: parsed.error };
 
   try {
-    await voidReceiptCall(supabase, typeof lotId === "string" ? lotId : "", parsed.value);
+    await voidReceiptCall(caller.supabase, typeof lotId === "string" ? lotId : "", parsed.value);
   } catch (error) {
-    return { status: "refused", message: `${NOT_VOIDED} ${refusalReason(error)}` };
+    return { status: "refused", message: voidFailureMessage(error, "write") };
   }
 
   revalidatePath("/receiving");

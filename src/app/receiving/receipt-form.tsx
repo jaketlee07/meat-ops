@@ -11,6 +11,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { SAVE_UNKNOWN } from "../../lib/failures";
 import { parseReceiptForm, type ReceiptField } from "../../lib/receipt-input";
 import type { Vendor } from "../../lib/receiving";
 import { saveReceipt, type SaveState } from "./actions";
@@ -85,7 +86,14 @@ export function ReceiptForm({ products, vendors, initialCode, regionCode, region
     async (_previous: SaveState, formData: FormData): Promise<SaveState> => {
       const parsed = parseReceiptForm(readFields(formData), new Set(loaded.keys()));
       if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
-      return saveReceipt(formData);
+      try {
+        return await saveReceipt(formData);
+      } catch {
+        // A dropped connection or a server error: the save may have happened
+        // (AC-0071). A rejected action reaches the error boundary, which would
+        // unmount this form and lose every value, so it is answered here.
+        return { status: "refused", message: SAVE_UNKNOWN };
+      }
     },
     IDLE,
   );

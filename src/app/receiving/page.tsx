@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { NOT_ALLOWED } from "../../lib/failures";
 import {
   getStock,
   listActiveRawProducts,
@@ -10,7 +11,6 @@ import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { signOut } from "../sign-in/actions";
 import { ProductRegion } from "./product-region";
-import { NOT_ALLOWED } from "./refusal";
 import { ReceiptForm } from "./receipt-form";
 
 // Every page settles who is asking. The proxy only refreshes the session.

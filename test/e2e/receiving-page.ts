@@ -12,6 +12,10 @@ export const NOT_SAVED = "The receipt wasn't saved.";
 export const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
 export const VOID_SIGNED_OUT = "You're signed out. Sign in again to void this receipt.";
 export const NOT_VOIDED = "The receipt wasn't voided.";
+// AC-0071 and AC-0073: the write call got no answer, so the save or void may have happened.
+export const SAVE_UNKNOWN =
+  "The receipt may not have been saved. Reload this page and check Recent receipts before saving again.";
+export const VOID_UNKNOWN = "The receipt may not have been voided. Reload this page to see whether it was.";
 // The receiving page with RAW-TOM chosen, so its stock and receipts are shown.
 export const RAW_TOM_URL = `/receiving?product=${CODE}`;
 // The accessible name of the receiving form.
@@ -76,6 +80,22 @@ export async function readValues(f: Fields): Promise<Record<string, string>> {
     date: await f.date.inputValue(),
     notes: await f.notes.inputValue(),
   };
+}
+
+// Aborts every server action request the page sends from now on, as a dropped
+// connection would, before the server sees it. Returns a count of the aborted requests.
+export async function dropActionRequests(page: Page): Promise<{ readonly count: number }> {
+  const dropped = { count: 0 };
+  await page.route("**/receiving**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) {
+      dropped.count += 1;
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  });
+  return dropped;
 }
 
 export async function lotCount(): Promise<number> {

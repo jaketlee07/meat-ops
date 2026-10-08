@@ -16,6 +16,7 @@ import {
   beforeAfter,
   CODE,
   deviceDate,
+  dropActionRequests,
   factValue,
   fillReceipt,
   FORM_CONTROLS,
@@ -29,10 +30,12 @@ import {
   RAW_TOM_URL,
   readValues,
   receiptItem,
+  SAVE_UNKNOWN,
   seedReceipt,
   SIGNED_OUT,
   VENDOR,
   VOID_SIGNED_OUT,
+  VOID_UNKNOWN,
   voidButton,
   voidDialog,
   voidMarks,
@@ -463,6 +466,24 @@ test.describe("refusals after the rules pass", () => {
       await context.close();
     }
   });
+
+  test("AC-0071, AC-0081, and AC-0057: a save whose connection drops keeps the form and says it may not have been saved", async ({
+    page,
+  }) => {
+    const f = await openForm(page, `/receiving?product=${CODE}`);
+    const typed = await fillAll(f);
+    const dropped = await dropActionRequests(page);
+    await f.save.click();
+
+    await expect(f.message).toHaveText(SAVE_UNKNOWN);
+    await expect(f.message).toBeFocused();
+    // The save request never reached the server, and every field keeps its value.
+    expect(dropped.count).toBe(1);
+    expect(await readValues(f)).toEqual(typed);
+    expect(await lotCount()).toBe(0);
+    await expect(f.save).toBeEnabled();
+    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+  });
 });
 
 // Receipts of RAW-TOM entered out of date order, so entry order and date order disagree.
@@ -681,11 +702,11 @@ test.describe("voiding", () => {
     await expect(f.region.getByText("Void: wrong product", { exact: true })).toBeVisible();
   });
 
-  test("AC-0052 and AC-0057: a lot production drew from after the list loaded is refused, and stays as it was", async ({
+  test("AC-0052, AC-0057, and AC-0077: a lot production drew from after the list loaded is refused, and stays as it was", async ({
     page,
   }) => {
     const id = await seedReceipt(1000, 1.68);
-    const f = await openForm(page, RAW_TOM_URL);
+    await openForm(page, RAW_TOM_URL);
     const item = receiptItem(page, await lotNumberOf(id));
     await expect(voidButton(item)).toBeVisible();
 
@@ -696,16 +717,44 @@ test.describe("voiding", () => {
 
     await voidThrough(page, item, "keyed twice");
 
+    // AC-0077: the engine's reason, then the hint to reload for the latest stock.
     const message = item.getByRole("alert");
-    await expect(message).toHaveText(new RegExp(`^${NOT_VOIDED} invalid, lot [0-9a-f-]{36} has been consumed$`));
+    await expect(message).toHaveText(
+      new RegExp(`^${NOT_VOIDED} invalid, lot [0-9a-f-]{36} has been consumed\\. Reload to see the latest stock\\.$`),
+    );
     await expect(message).toBeFocused();
     await expect(voidDialog(page)).toBeHidden();
     expect(await lotState(id)).toEqual(before);
     expect(await voidMarks()).toBe(0);
     await expect(item.getByText(/^Void: /)).toHaveCount(0);
-    await expect(factValue(f.region, "On hand")).toHaveText("1,000 lbs");
 
     // The list after the refusal: the message is in the page, the dialog is closed.
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void"]);
+  });
+});
+
+test.describe("voiding when the connection drops", () => {
+  test("AC-0073 and AC-0057: the list stays and says the receipt may not have been voided", async ({ page }) => {
+    const id = await seedReceipt(1000, 1.68);
+    const before = await lotState(id);
+    const f = await openForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, await lotNumberOf(id));
+    await expect(voidButton(item)).toBeVisible();
+    const dropped = await dropActionRequests(page);
+
+    await voidThrough(page, item, "keyed twice");
+
+    const message = item.getByRole("alert");
+    await expect(message).toHaveText(VOID_UNKNOWN);
+    await expect(message).toBeFocused();
+    // The void request never reached the server, the dialog is closed, and the
+    // list is still on screen with the receipt untouched.
+    expect(dropped.count).toBe(1);
+    await expect(voidDialog(page)).toBeHidden();
+    await expect(voidButton(item)).toBeVisible();
+    await expect(factValue(f.region, "On hand")).toHaveText("1,000 lbs");
+    expect(await lotState(id)).toEqual(before);
+    expect(await voidMarks()).toBe(0);
     expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void"]);
   });
 });

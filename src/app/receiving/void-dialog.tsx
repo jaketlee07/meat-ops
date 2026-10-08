@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition, type FormEvent } from "react";
+import { VOID_UNKNOWN } from "../../lib/failures";
 import { parseVoidReason } from "../../lib/receipt-input";
 import type { VoidState } from "./actions";
 
@@ -70,7 +71,15 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
     }
     setInvalid(null);
     startVoid(async () => {
-      const result = await voidAction(reason);
+      let result: VoidState;
+      try {
+        result = await voidAction(reason);
+      } catch {
+        // A dropped connection or a server error: the void may have happened
+        // (AC-0073). A rejected action reaches the error boundary, which would
+        // unmount the list, so it is answered here like a refusal.
+        result = { status: "refused", message: VOID_UNKNOWN };
+      }
       if (result.status === "invalid") {
         setInvalid({ text: result.error });
         return;

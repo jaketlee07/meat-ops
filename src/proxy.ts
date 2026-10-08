@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE_OPTIONS, supabaseEnv } from "./app/_server/session";
+import { SESSION_COOKIE_OPTIONS, supabaseEnv, TIMED_FETCH } from "./app/_server/session";
 import type { Database } from "./lib/database.types";
 import { privilegedVariableNames } from "./privileged-env";
 
@@ -46,6 +46,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { url, anonKey } = supabaseEnv();
   const supabase = createServerClient<Database>(url, anonKey, {
     cookieOptions: SESSION_COOKIE_OPTIONS,
+    global: { fetch: TIMED_FETCH },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet, headers) {

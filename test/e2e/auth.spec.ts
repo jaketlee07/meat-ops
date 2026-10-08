@@ -11,6 +11,8 @@ import {
   lotCount,
   lotNumberOf,
   NOT_ALLOWED,
+  NOT_SAVED,
+  NOT_VOIDED,
   openForm,
   RAW_TOM_URL,
   receiptItem,
@@ -149,6 +151,34 @@ test.describe("sign out", () => {
     expect(refused.status).toBe(400);
     expect(refused.body.error_code).toBe("refresh_token_not_found");
   });
+
+  test("AC-0005: Sign out on the operator's receiving page ends on /sign-in, and /receiving then ends there too", async ({
+    browser,
+    baseURL,
+  }) => {
+    // A session of its own in a new context, because signing out revokes it. The
+    // saved operator session that later tests reuse is untouched, and this one
+    // is never saved under test/e2e/.auth/.
+    const context = await browser.newContext({ baseURL });
+    try {
+      const page = await context.newPage();
+      await signInThroughForm(page, OPERATOR_EMAIL);
+      await expect(page.getByRole("form", { name: RECEIVING_FORM })).toBeVisible();
+      expect((await authCookies(page)).length, "the session cookie exists before sign-out").toBeGreaterThan(0);
+
+      await page.getByRole("button", { name: "Sign out" }).click();
+      await expect(page).toHaveURL(/\/sign-in$/);
+      await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
+      expect(await authCookies(page)).toEqual([]);
+
+      // The next request for /receiving ends on /sign-in.
+      await page.goto("/receiving");
+      await expect(page).toHaveURL(/\/sign-in$/);
+      await expect(page.getByLabel("Email")).toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
 });
 
 test.describe("a replayed save request", () => {
@@ -180,7 +210,8 @@ test.describe("a replayed save request", () => {
 
     const replays = [
       { who: "no session", storageState: undefined, message: SIGNED_OUT },
-      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: NOT_ALLOWED },
+      // The action's own text in full, not the bare sentence the not-allowed page also shows.
+      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: `${NOT_SAVED} ${NOT_ALLOWED}` },
     ];
     for (const { who, storageState, message } of replays) {
       const replay = await playwright.request.newContext({ baseURL, storageState });
@@ -232,7 +263,8 @@ test.describe("a replayed void request", () => {
 
     const replays = [
       { who: "no session", storageState: undefined, message: VOID_SIGNED_OUT },
-      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: NOT_ALLOWED },
+      // The action's own text in full, not the bare sentence the not-allowed page also shows.
+      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: `${NOT_VOIDED} ${NOT_ALLOWED}` },
     ];
     for (const { who, storageState, message } of replays) {
       const replay = await playwright.request.newContext({ baseURL, storageState });
