@@ -27,7 +27,15 @@ export function supabaseEnv(): { url: string; anonKey: string } {
 
 // A new client for each page render and each server action, never shared. Reads
 // the request's cookies and writes refreshed ones back where Next.js allows it.
-export async function createSessionClient(): Promise<TypedClient> {
+//
+// A server action that must keep its form passes `readOnly`. Any cookie write
+// inside an action makes Next.js render the page again in the action's response,
+// and a signed-out page redirects, which would throw away the form the action is
+// answering. The proxy has already refreshed or cleared the session for this
+// request, so such an action only reads it.
+export async function createSessionClient({
+  readOnly = false,
+}: { readOnly?: boolean } = {}): Promise<TypedClient> {
   const { url, anonKey } = supabaseEnv();
   const cookieStore = await cookies();
   return createServerClient<Database>(url, anonKey, {
@@ -35,6 +43,7 @@ export async function createSessionClient(): Promise<TypedClient> {
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll(cookiesToSet) {
+        if (readOnly) return;
         try {
           for (const { name, value, options } of cookiesToSet) {
             cookieStore.set(name, value, options);

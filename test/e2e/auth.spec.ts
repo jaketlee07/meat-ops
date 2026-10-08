@@ -2,11 +2,11 @@ import { expect, test, type Cookie, type Page } from "@playwright/test";
 import { resolveStackEnv } from "../env";
 import { createTypedClient } from "../../src/lib/supabase";
 import { NON_OPERATOR_EMAIL, OPERATOR_EMAIL, TEST_PASSWORD } from "../users";
+import { resetTestData } from "../db";
 import { checkPageState } from "./a11y";
+import { fillReceipt, lotCount, NOT_ALLOWED, openForm, RECEIVING_FORM, SIGNED_OUT } from "./receiving-page";
 import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
-import { NON_OPERATOR_STATE, signInThroughForm, submitSignIn } from "./states";
-
-const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
+import { NON_OPERATOR_STATE, OPERATOR_STATE, signInThroughForm, submitSignIn } from "./states";
 
 // What Tab reaches on the sign-in page, in order.
 const SIGN_IN_CONTROLS = ["input #email", "input #password", "button Sign in"];
@@ -62,8 +62,11 @@ test.describe("signed out", () => {
     expect(await authCookies(page)).toEqual([]);
   });
 
-  test("AC-0006: auth cookies are HttpOnly and SameSite=Lax at sign-in and after a refresh", async ({ page }) => {
+  test("AC-0002 and AC-0006: sign-in ends on the receiving form, with HttpOnly SameSite=Lax cookies", async ({ page }) => {
     await signInThroughForm(page, OPERATOR_EMAIL);
+    // AC-0002: signing in ends on /receiving with the receiving form shown.
+    await expect(page).toHaveURL(/\/receiving$/);
+    await expect(page.getByRole("form", { name: RECEIVING_FORM })).toBeVisible();
     const atSignIn = await authCookies(page);
     expect(atSignIn.length, "the session cookie exists after sign-in").toBeGreaterThan(0);
     for (const cookie of atSignIn) {
@@ -95,6 +98,8 @@ test.describe("signed in as a non-operator", () => {
     await page.goto("/receiving");
     await expect(page.getByText(NOT_ALLOWED, { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+    // AC-0004: and no receiving form.
+    await expect(page.getByRole("form", { name: RECEIVING_FORM })).toHaveCount(0);
     expect(await checkPageState(page)).toEqual(["button Sign out"]);
   });
 });
@@ -127,5 +132,49 @@ test.describe("sign out", () => {
     const refused = await refreshGrant(heldBefore);
     expect(refused.status).toBe(400);
     expect(refused.body.error_code).toBe("refresh_token_not_found");
+  });
+});
+
+test.describe("a replayed save request", () => {
+  test.use({ storageState: OPERATOR_STATE });
+
+  test("AC-0044 and AC-0066: with no session or a non-operator's, it writes no lot and says why", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    await resetTestData();
+
+    // Capture the request a real save sends. This save is the one lot expected.
+    const f = await openForm(page, "/receiving?product=RAW-TOM");
+    await fillReceipt(f, {});
+    const captured = page.waitForRequest(
+      (request) => request.method() === "POST" && "next-action" in request.headers(),
+    );
+    await f.save.click();
+    const saveRequest = await captured;
+    await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
+    expect(await lotCount()).toBe(1);
+
+    // Send it again with no cookie of the operator's. Playwright sets the length
+    // and host itself.
+    const headers = await saveRequest.allHeaders();
+    for (const name of ["cookie", "content-length", "host"]) delete headers[name];
+    const body = saveRequest.postDataBuffer();
+
+    const replays = [
+      { who: "no session", storageState: undefined, message: SIGNED_OUT },
+      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: NOT_ALLOWED },
+    ];
+    for (const { who, storageState, message } of replays) {
+      const replay = await playwright.request.newContext({ baseURL, storageState });
+      try {
+        const response = await replay.post(saveRequest.url(), { headers, data: body });
+        expect(await response.text(), `response for ${who}`).toContain(message);
+      } finally {
+        await replay.dispose();
+      }
+      expect(await lotCount(), `lots after ${who}`).toBe(1);
+    }
   });
 });

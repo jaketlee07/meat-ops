@@ -19,6 +19,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     });
   }
 
+  const isRead = request.method === "GET" || request.method === "HEAD";
+
   // The refreshed cookies go to the request, so this render's pages see them,
   // and to the response, so the browser keeps them.
   let response = NextResponse.next({ request });
@@ -29,6 +31,12 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet, headers) {
+        // Next.js renders the page again inside a server action's response when
+        // the proxy sets a cookie. A cleared session would then send that render
+        // to /sign-in and throw away the form the action is about to answer, so
+        // the action must see the stale session and answer "signed out" itself.
+        // A refresh still goes through, so the browser keeps the rotated tokens.
+        if (!isRead && cookiesToSet.every(({ value }) => value === "")) return;
         for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
         response = NextResponse.next({ request });
         for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options);
@@ -40,7 +48,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   const { data } = await supabase.auth.getClaims();
   const signedOut = !data?.claims;
-  const isRead = request.method === "GET" || request.method === "HEAD";
 
   if (signedOut && isRead && request.nextUrl.pathname !== "/sign-in") {
     const redirect = NextResponse.redirect(new URL("/sign-in", request.url));
