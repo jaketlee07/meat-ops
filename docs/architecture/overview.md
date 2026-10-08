@@ -46,7 +46,11 @@ fix catalog data. It never deletes, and it never writes to a ledger table.
 ## Write path
 
 The ledger changes only through six functions, `receive_lot`, `produce_batch`,
-`record_sale`, `void_receipt`, `void_sale`, and `adjust_lot`. Each one:
+`record_sale`, `void_receipt`, `void_sale`, and `adjust_lot`. They run as
+`SECURITY DEFINER`, so signed-in users need no write grant on any ledger table.
+Running them as the caller instead would require ledger write policies, and those
+would let the owner's session change ledger rows directly, outside the
+operations. Each one:
 
 1. Checks the caller first. A JWT must carry the `authenticated` role, and `private.is_operator()` must find its `sub` on `private.operators`. The table policies use the same function.
 2. Validates its arguments and raises an error instead of writing a wrong row. This comes before any lock, except that a void or adjustment first looks up the lot or sale it names, to learn which row to lock. Checks that depend on stock or lot state, such as a shortfall or the adjustment cap, come after the lock.

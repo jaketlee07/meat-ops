@@ -9,7 +9,7 @@ When voids leave a raw product with 0 lbs on hand, its average equals what it wo
 
 ## Boundary
 
-- Replace the AC-0053 rule in docs/specs/foundation-hardening/spec.md with a recompute from the non-void lots alone.
+- Replace the three zero-stock steps in the void_receipt section of docs/costing.md with a recompute from the non-void lots alone.
 - Keep every other costing rule and the seven golden invariants unchanged.
 - Land before real business data is loaded.
 
