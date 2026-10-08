@@ -2,7 +2,15 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTypedClient } from "../src/lib/supabase.js";
-import { adjustLot, produceBatch, receiveLot, recordSale, voidReceipt, voidSale } from "../src/lib/rpc.js";
+import {
+  adjustLot,
+  isOperator,
+  produceBatch,
+  receiveLot,
+  recordSale,
+  voidReceipt,
+  voidSale,
+} from "../src/lib/rpc.js";
 import { resolveStackEnv } from "./env.js";
 import { signInNonOperator, signInOperator, signInPasswordOperator } from "./users.js";
 import {
@@ -283,6 +291,8 @@ beforeAll(async () => {
   });
   await voidSale(operatorTyped, wrongSale.id, "access fixture");
   exercised.add("void_sale");
+  expect(await isOperator(operatorTyped), "operator passes check_operator").toBe(true);
+  exercised.add("check_operator");
 
   // Targets that stay valid: an untouched lot to void, a sale to void, a lot to adjust.
   const untouched = await receiveLot(operatorTyped, {
@@ -320,6 +330,7 @@ beforeAll(async () => {
     void_receipt: { p_lot_id: untouched.id, p_reason: "access test" },
     void_sale: { p_sale_id: spare.id, p_reason: "access test" },
     adjust_lot: { p_lot_id: adjusted.id, p_new_remaining_lbs: 600, p_reason: "count" },
+    check_operator: {},
   };
 });
 

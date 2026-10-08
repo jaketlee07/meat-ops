@@ -34,11 +34,18 @@ no client can read or change the list.
 
 | Role | Reads | Writes | Operations |
 | --- | --- | --- | --- |
-| `anon` (public key, no login) | Nothing. Tables and views are absent from the GraphQL schema and refused over REST. | Nothing. | Refused. |
-| Non-operator (signed in, not on the allowlist) | 0 rows from every table and view. | Nothing. | Each call fails with SQLSTATE `42501` and writes no rows. |
-| Operator (signed in, on the allowlist) | Every table and view. | Insert and update on master-data tables. No delete. No direct ledger write. | All six. |
-| `service_role` (admin key) | Every table and view. | Insert and update on master-data tables. No delete. No direct ledger write. | None. It holds no EXECUTE on any `public` function. |
+| `anon` (public key, no login) | Nothing. Tables and views are absent from the GraphQL schema and refused over REST. | Nothing. | Refused, `check_operator` included. |
+| Non-operator (signed in, not on the allowlist) | 0 rows from every table and view. | Nothing. | Each call fails with SQLSTATE `42501` and writes no rows. `check_operator` fails the same way. |
+| Operator (signed in, on the allowlist) | Every table and view. | Insert and update on master-data tables. No delete. No direct ledger write. | All six. `check_operator` succeeds. |
+| `service_role` (admin key) | Every table and view. | Insert and update on master-data tables. No delete. No direct ledger write. | None. It holds no EXECUTE on any `public` function, `check_operator` included. |
 | `postgres` (direct database session) | Everything. | Everything, including the seed script. | Allowed. A session with no JWT claims passes the caller check only for `postgres` and `supabase_admin`. |
+
+`public.check_operator()` is not an operation and writes nothing. It returns
+nothing for an operator and raises SQLSTATE `42501` for any other caller, so the
+app can tell a signed-in user who is not on the allowlist from an operator whose
+catalog is empty. It runs as the caller, asks `private.is_operator()` and nothing
+else, and only `authenticated` can execute it. A `postgres` session has no JWT
+user, so it gets the same `42501`.
 
 The `service_role` master-data exception exists so admin tooling can load and
 fix catalog data. It never deletes, and it never writes to a ledger table.

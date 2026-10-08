@@ -117,3 +117,12 @@ export async function adjustLot(client: TypedClient, input: AdjustLotInput): Pro
   if (error) throw new Error(`adjustLot failed: ${error.message}`);
   return data as Lot;
 }
+
+// True for an operator, false for a signed-in user who is not on the allowlist.
+// Any other failure (network, expired session) throws, so it is never read as "not allowed".
+export async function isOperator(client: TypedClient): Promise<boolean> {
+  const { error } = await client.rpc("check_operator");
+  if (!error) return true;
+  if (error.code === "42501") return false;
+  throw new Error(`isOperator failed: ${error.message}`);
+}
