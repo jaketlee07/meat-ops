@@ -30,7 +30,7 @@
 
 ## Approach
 
-The work lands as eight dependency-ordered layers, and each leaves `npm test` green.
+The work lands as twelve dependency-ordered layers, and each leaves `npm test` green. Layers 1 to 7 are T1 to T7. Layers 8 to 11 are the amendment's T9 to T12, and the docs layer, T8, runs last.
 
 1. Add the app toolchain and the privileged-variable guard. This includes the `@supabase/supabase-js` upgrade that `@supabase/ssr` requires, and the existing suites must stay green across it.
 2. Add `public.check_operator()` in a new migration, with an `isOperator` wrapper, so the app can tell a non-operator apart from an empty catalog.
@@ -39,7 +39,11 @@ The work lands as eight dependency-ordered layers, and each leaves `npm test` gr
 5. Add sign-in, sign-out, the session proxy, and the not-allowed page. Wire the Playwright suite into `npm test`.
 6. Add the receiving form, the save action, and the before-and-after result.
 7. Add the recent receipts list and the void flow.
-8. Bring the architecture overview, `AGENTS.md`, and the costing reference up to date, and run the goal-based checks.
+8. Refuse every request with a foreign or missing `Host` in the proxy (T9).
+9. Add failure classification, the sign-in mapping, the session outcome, and the request limit in `src/lib/`, test-first (T10).
+10. Make failed saves, voids, and sign-ins keep their screens and say what happened (T11).
+11. Keep the receiving screen current across midnight, new products, and voids (T12).
+12. Bring the architecture overview, `AGENTS.md`, and the costing reference up to date, and run the goal-based checks and the recorded run (T8).
 
 The riskiest part is the session path in layer 5. A cookie the proxy refreshes but a server action cannot see would sign the owner out mid-entry. A client built in the wrong place would make the engine run as `anon`. The browser suite catches both, because every receiving criterion signs in and saves through the real server.
 
@@ -73,14 +77,15 @@ It collects the focusable controls by pressing Tab per the spec's definition. Re
 **Stub validation:** each `ts` stub block below is copied byte-exact to scratch beside copies of `src/lib/` and `test/`.
 - **Compile:** it must type-check against placeholder declarations of the planned surface.
 - **Red, with the placeholders removed:** each must fail because the implementation is absent, and for no other reason.
-- **Results for the current blocks (2026-10-08):** compile exited 0. `format`, `receipt-input`, and `receiving-data` failed with "Failed to load url ../src/lib/<module>.js". `operator-check` signed in, then failed with "isOperator is not a function".
+- **T10 block (amendment, 2026-10-08, after the round-1 repairs):** compile exited 0 against placeholder declarations of `RpcError` and the `src/lib/failures.ts` surface, `sessionOutcome` and the staged `voidFailureMessage` included; with the placeholder removed it failed with "Failed to load url ../src/lib/failures.js".
+- **Results for the T2 to T4 blocks (2026-10-08):** compile exited 0. `format`, `receipt-input`, and `receiving-data` failed with "Failed to load url ../src/lib/<module>.js". `operator-check` signed in, then failed with "isOperator is not a function".
 - **Isolation downgrade:** the runs had no network deny and no timeout wrapper. They reached only the local stack, through the localhost guard, and their only write was global setup's idempotent upsert of the test users.
 
 ## Durable-output map
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| Current architecture / `docs/architecture/overview.md` | T2, T8 | T2: access-model row for `check_operator`. T8: areas rows for `src/app/` and `test/e2e/`, the write-path sentence, and the app trust-boundary section | Rows match `src/`, `test/e2e/`, `supabase/config.toml`, and the T2 migration |
+| Current architecture / `docs/architecture/overview.md` | T2, T8 | T2: access-model row for `check_operator`. T8: areas rows for `src/app/` and `test/e2e/`, the write-path sentence, and the app trust-boundary section, including the Host check (T9) and the database-call time limit (T10, T11) | Rows match `src/`, `test/e2e/`, `supabase/config.toml`, and the T2 migration |
 | Agent guidance / `AGENTS.md` | T1, T8 | Commands added in T1 run in the T1 gate; T8 writes them into "Build and test commands" | Each listed command ran in the closing gates |
 | Display rounding / `docs/costing.md` | T3, T6, T7, T8 | `test/format.test.ts` for the AC-0024 examples; `test/e2e/receiving.spec.ts` for the AC-0067 texts | Each AC-0024 example and AC-0067 text appears in the note and in its suite, and the file's opening names both suites |
 | Interface compatibility / `src/lib/database.types.ts` | T2 | AC-0034 | `npm run gen:types` leaves no diff |
@@ -131,13 +136,14 @@ The cookie rules, the privileged-variable guard, and the route list go to the ar
 - **Product choice lives in the URL.** An exact code match in the form calls `router.replace("/receiving?product=<code>")` inside a transition. The server renders that product's stock, the current suggested price of each finished product made from it, and its recent receipts, while the client form keeps its field values. After a save or a void, `revalidatePath` re-renders the region from the database, so it is where AC-0053 is observed. Traces to AC-0007, AC-0017, AC-0020, AC-0053.
 - **"Before" is read, never derived.** The save action reads the stock and finished prices, calls `receive_lot`, then reads them again. Traces to AC-0013, AC-0014, AC-0015.
 - **One rule module serves the client and the server.** `parseReceiptForm` runs in the browser for instant messages and again in the save action.
-  - The browser passes the active raw codes from page load. The server passes every raw code, so a product made inactive after page load reaches `receive_lot` and its refusal.
+  - The browser passes the page's product list, read from its latest `products` prop. A code missing from that list skips the browser's code rule and is sent marked for a current check.
+  - For a code the page knew, the server passes every raw code, so a product made inactive after page load reaches `receive_lot` and its refusal (AC-0019). For a marked code it passes the active raw codes read at save time, so an inactive code still gets the AC-0010 field message and a newly active one saves (AC-0078). The mark only picks which message a refused code gets; the engine refuses an inactive product either way.
   - The server copy takes the device date from a hidden `today` field. The future-date rule exists to catch typos, and the engine accepts any date.
 
-  Traces to AC-0010, AC-0011, AC-0019.
+  Traces to AC-0010, AC-0011, AC-0019, AC-0078.
 - **Every action argument is caller-controlled input.** That covers the form fields, the hidden `today`, and the lot id bound to the void action. Authorization and lot-state checks stay in the engine. Traces to AC-0044.
 - **Each action settles who is calling before any rule that reads through RLS.** The order is:
-  1. `getClaims()`. With no claims, the action returns the signed-out message.
+  1. `getClaims()`. With no claims and no error, or with an auth error whose status is 4xx other than 429, the session has ended and the action returns the signed-out message. Any other auth error is a failed lookup, which takes the AC-0072 or AC-0083 path.
   2. `isOperator`. If it is false, the action returns "This account isn't allowed to use Meat Ops."
   3. Only then does the save action read the raw codes and run `parseReceiptForm`.
 
@@ -156,10 +162,11 @@ The cookie rules, the privileged-variable guard, and the route list go to the ar
 ```
 src/privileged-env.ts                privileged-variable name rule (names only, never values)
 next.config.ts                       boot check (build, start, dev): print names, exit 1
-src/proxy.ts                         per-request privileged check, session refresh, signed-out GET redirect
+src/proxy.ts                         Host check, per-request privileged check, session refresh, signed-out GET redirect
 src/app/layout.tsx, globals.css      root layout, Tailwind import, design tokens
 src/app/page.tsx                     redirect("/receiving")
 src/app/_server/session.ts           cookie options, createSessionClient(); import "server-only"
+src/app/_server/caller.ts            shared caller check for saveReceipt and voidReceipt
 src/app/sign-in/page.tsx             server page
 src/app/sign-in/sign-in-form.tsx     client form (useActionState)
 src/app/sign-in/actions.ts           signIn, signOut
@@ -168,12 +175,13 @@ src/app/receiving/actions.ts         saveReceipt, voidReceipt
 src/app/receiving/receipt-form.tsx   client: code lookup, fields, Save, result panel, focus
 src/app/receiving/recent-receipts.tsx list, status cells
 src/app/receiving/void-dialog.tsx    client: native <dialog>, reason, Cancel, Void
-src/app/receiving/error.tsx          "Couldn't load this page." with Try again
+src/app/receiving/error.tsx          "Couldn't load this page." with Try again (retry), heading focused
 src/lib/format.ts                    AC-0024 formatters (pure)
 src/lib/receipt-input.ts             parseReceiptForm, parseVoidReason (pure)
-src/lib/receiving.ts                 listActiveRawProducts, listVendors, getStock,
+src/lib/receiving.ts                 listActiveRawProducts, listRawProducts, listVendors, getStock,
                                      listFinishedPrices, listRecentReceipts
-src/lib/rpc.ts                       + isOperator
+src/lib/rpc.ts                       + isOperator, RpcError
+src/lib/failures.ts                  failure messages, sign-in mapping, log line, session outcome, withTimeout (pure)
 test/e2e/*.spec.ts                   Playwright suite (Vitest includes only test/**/*.test.ts)
 ```
 
@@ -197,13 +205,13 @@ State matrix (the applicable subset of the 18 states):
 | empty | "No receipts for this product yet." | AC-0049 |
 | disabled | Save disabled while saving | AC-0018 |
 | success | "Receipt saved" panel, focus on its heading, `role="status"` region | AC-0012, AC-0055 |
-| error | Field messages, or a focused form banner for a refusal, with prior values kept | AC-0010, AC-0019, AC-0042, AC-0046, AC-0057 |
+| error | Field messages, or a focused form banner for a refusal or a failure, with prior values kept | AC-0010, AC-0019, AC-0042, AC-0046, AC-0057, AC-0071, AC-0072, AC-0073, AC-0081, AC-0083 |
 | partial / large-data-set | "Showing the 10 most recent of N receipts." | AC-0048 |
 | permission/denied | Not-allowed page with Sign out | AC-0004 |
 | destructive-confirmation | Void dialog; Cancel is first in tab order and takes initial focus | AC-0022, AC-0050 |
 | high-zoom | 320 px reflow | AC-0026 |
 | keyboard-only | Full keyboard path, visible focus | AC-0027, AC-0030 |
-| offline, blocked, long-content, reduced-motion | Not applicable: offline queueing is out of scope and a network failure shows the error state; nothing blocks; notes are capped at 500 characters and wrap; the UI has no animation | — |
+| offline, blocked, long-content, reduced-motion | Not applicable: offline queueing is out of scope; a dropped connection or an unreachable database shows the AC-0071, AC-0072, AC-0073, or AC-0083 message with the form or list kept, and a failed page load shows the error page; nothing blocks; notes are capped at 500 characters and wrap; the UI has no animation | — |
 
 ### Quality attributes (NFRs)
 
@@ -237,6 +245,20 @@ State matrix (the applicable subset of the 18 states):
   - Any other refusal adds the engine's text without its function-name prefix.
 - **Void refusal:** the same mapping, with "The receipt wasn't voided."
 - **Signed-out action:** an action that finds no claims calls nothing. It returns the AC-0042 or AC-0043 message, and the form keeps its values.
+- **Error identity (amendment, 2026-10-08).** The `src/lib/rpc.ts` wrappers throw an `RpcError` that keeps PostgREST's error code beside the existing message text. An engine refusal carries a SQLSTATE (`42501`, `P0001`, and so on). A transport failure carries none.
+  - `src/lib/failures.ts` holds the pure mapping from an error and its stage to the owner's message. The stage is the call that failed: any call before the write call, or the write call. A save failure before the write reads "The receipt wasn't saved.", and a write with no engine answer reads the AC-0071 message. A void maps the same way to "The receipt wasn't voided." and the AC-0073 message. An engine refusal keeps the AC-0019 and AC-0052 mapping, and a refused void adds "Reload to see the latest stock."
+  - A read after the engine returned the lot is not a failure. The panel shows the saved lot and says its totals could not be loaded, and the read's error is logged.
+  - `sessionOutcome` tells signed in, an ended session, and a failed auth lookup apart, for the caller check above.
+  - The same module holds the sign-in mapping (`invalid_credentials` alone reads as a wrong password) and the server log line, which carries only the auth error's code and status.
+  - `src/app/receiving/refusal.ts` gives way to this module.
+- **Time limit.** Every server-side Supabase client, the proxy's included, fetches through `withTimeout(fetch, DB_CALL_TIMEOUT_MS)`, with the limit set to 10,000 ms.
+  - `withTimeout` aborts through its own `AbortController`, so the fetch rejects with an `AbortError`. postgrest-js never retries an aborted request (`fetchWithRetry` in `node_modules/@supabase/postgrest-js/dist/index.mjs`), so each REST request gives up 10 seconds after it is sent (AC-0082).
+  - postgrest-js still retries a read that fails fast, such as a refused connection, up to three times after waits of 1, 2, and 4 seconds.
+  - auth-js retries a failed token refresh for up to 30 seconds, so the limit bounds each auth request but not a refresh as a whole.
+- **Thrown actions.** The receiving form and the void dialog catch a rejected action call, such as a dropped connection or a server error. They answer with the AC-0071 or AC-0073 message instead of letting the error boundary unmount them.
+- **Caller check.** One helper in `src/app/_server/caller.ts` runs the read-only client, `getClaims` with `sessionOutcome`, and `isOperator` for `saveReceipt` and `voidReceipt`, so a new receiving action cannot skip a step or the read-only flag. `signIn` and `signOut` keep their own cookie-writing client, and the page keeps its own read-write client.
+- **Host check.** `src/proxy.ts` matches every path. Before anything else it answers 421 "Misdirected request." when the `Host` header is missing or its hostname is not `127.0.0.1` or `localhost`. It then returns at once for `/_next/static/`, `/_next/image`, and `/favicon.ico`, with no session work. Under `npm run dev`, Next answers its dev-tool addresses before the proxy runs; the owner accepted that exposure (spec Assumptions).
+- **Error page.** `src/app/receiving/error.tsx` calls `retry`, which re-fetches, not `reset`, and focuses its heading on mount. `/sign-in` renders no server call that can fail, so it needs no error page of its own.
 
 ## Tasks
 
@@ -614,20 +636,247 @@ describe("AC-0021: receipt status", () => {
 
 **Done when:** `npm test` is green with every browser criterion covered.
 
-### T8: Durable docs match the code, and the goal-based checks pass
+### T9: A request with a foreign or missing Host is refused before anything runs
 
-**Depends on:** T7
-**Touches:** docs/architecture/overview.md, AGENTS.md, docs/costing.md, docs/specs/receiving/notes/verification-ledger.md
+**Depends on:** none
+**Touches:** src/proxy.ts, test/e2e/auth.spec.ts
 
-**Tests:** no stub (goal-based).
+**Tests:** no stub (manual QA exercised by E2E).
+- **AC-0069**, in `test/e2e/auth.spec.ts`, with raw requests from `node:http` to the `npm run start` test server:
+  - `Host: rebind.example:3100` gets 421 for `/`, `/sign-in`, `/_next/static/x.js`, `/_next/image`, and `/favicon.ico`.
+  - An HTTP/1.1 request with no `Host` header (`setHost: false`) gets Node's 400, and an HTTP/1.0 request with no `Host` header, written to a raw `net` socket, gets 421. Neither renders a page.
+  - A sign-in action POST with the operator's valid credentials and `Host: rebind.example:3100`, sent to `/sign-in` and to `/favicon.ico`, creates no new `auth.sessions` row for the operator, checked through `pg` before and after. The action id comes from a sign-in request captured the way the AC-0066 replay tests capture theirs.
+  - `/sign-in` with `Host: 127.0.0.1:3100` and with `Host: localhost:3100` is not refused.
+
+**Approach:**
+- The proxy's matcher covers every path.
+- The proxy checks `Host` first, then the privileged variables, then returns at once for `/_next/static/`, `/_next/image`, and `/favicon.ico`, with no session work.
+- The server's own options stay as Next sets them, so Node keeps refusing an HTTP/1.1 request with no `Host`.
+
+**Done when:** `npm test` is green with the new tests included.
+
+### T10: Failure messages, the sign-in mapping, the session outcome, and the request limit pass their examples
+
+**Depends on:** none
+**Touches:** src/lib/rpc.ts, src/lib/failures.ts, src/lib/receiving.ts, test/failures.test.ts, test/receiving-data-extra.test.ts
+
+**Tests:**
+- Failure classification, construction for AC-0070, AC-0080, AC-0072, AC-0082, AC-0083, and AC-0077, in `test/failures.test.ts`. stub: true
+
+```ts
+import { describe, expect, it } from "vitest";
+import {
+  DB_CALL_TIMEOUT_MS,
+  authFailureLogLine,
+  saveFailureMessage,
+  sessionOutcome,
+  signInFailureMessage,
+  voidFailureMessage,
+  withTimeout,
+} from "../src/lib/failures.js";
+import { RpcError } from "../src/lib/rpc.js";
+
+const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
+const SAVE_UNKNOWN =
+  "The receipt may not have been saved. Reload this page and check Recent receipts before saving again.";
+const VOID_UNKNOWN = "The receipt may not have been voided. Reload this page to see whether it was.";
+const noAnswer = (wrapper: string) => new RpcError(`${wrapper} failed: TypeError: fetch failed`, "");
+
+// STUB: AC-0072
+describe("AC-0072: save failure messages", () => {
+  it("says the receipt wasn't saved when a call before the write failed", () => {
+    expect(saveFailureMessage(new Error("getStock failed: TypeError: fetch failed"), "before-write")).toMatch(
+      /^The receipt wasn't saved\./,
+    );
+  });
+
+  it("says the receipt may not have been saved when the write got no engine answer", () => {
+    expect(saveFailureMessage(noAnswer("receiveLot"), "write")).toBe(SAVE_UNKNOWN);
+  });
+
+  it("keeps an engine refusal as wasn't saved", () => {
+    const inactive = new RpcError(
+      "receiveLot failed: receive_lot: product 6f1c2a9e-0b7d-4c2e-9a51-3d8e7f40b2c6 is inactive",
+      "P0001",
+    );
+    const outsider = new RpcError("receiveLot failed: receive_lot: not allowed (caller is not an operator)", "42501");
+    expect(saveFailureMessage(inactive, "write")).toBe("The receipt wasn't saved. This product is no longer active.");
+    expect(saveFailureMessage(outsider, "write")).toBe(`The receipt wasn't saved. ${NOT_ALLOWED}`);
+  });
+});
+
+// STUB: AC-0083
+describe("AC-0083 and AC-0077: void failure messages", () => {
+  it("says the receipt wasn't voided when a call before the write failed", () => {
+    expect(voidFailureMessage(new Error("isOperator failed: TypeError: fetch failed"), "before-write")).toMatch(
+      /^The receipt wasn't voided\./,
+    );
+  });
+
+  it("says the receipt may not have been voided when the write got no engine answer", () => {
+    expect(voidFailureMessage(noAnswer("voidReceipt"), "write")).toBe(VOID_UNKNOWN);
+  });
+
+  it("adds the reload hint to an engine refusal", () => {
+    const consumed = new RpcError(
+      "voidReceipt failed: void_receipt: invalid, lot 0c4b7e2d-5a19-4f63-b8e0-91d2a6c3f57e has been consumed",
+      "P0001",
+    );
+    expect(voidFailureMessage(consumed, "write")).toMatch(
+      /^The receipt wasn't voided\. .*Reload to see the latest stock\.$/,
+    );
+  });
+});
+
+// STUB: AC-0082
+describe("AC-0082: the request limit", () => {
+  it("is 10 seconds", () => {
+    expect(DB_CALL_TIMEOUT_MS).toBe(10_000);
+  });
+
+  it("aborts a request that never answers with an AbortError, which postgrest-js does not retry", async () => {
+    const never: typeof fetch = (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    await expect(withTimeout(never, 50)("http://127.0.0.1/rest/v1/lots")).rejects.toMatchObject({
+      name: "AbortError",
+    });
+  });
+});
+
+// STUB: AC-0070
+describe("AC-0070: sign-in failure messages", () => {
+  it("keeps the wrong-password message for bad credentials only", () => {
+    const later = "Couldn't sign in right now. Wait a few minutes and try again.";
+    expect(signInFailureMessage({ code: "invalid_credentials", status: 400 })).toBe("Email or password is incorrect.");
+    expect(signInFailureMessage({ code: "over_request_rate_limit", status: 429 })).toBe(later);
+    expect(signInFailureMessage({ code: "unexpected_failure", status: 500 })).toBe(later);
+    expect(signInFailureMessage({ status: 0 })).toBe(later);
+  });
+});
+
+// STUB: AC-0080
+describe("AC-0080: the sign-in failure log line", () => {
+  it("holds the code and status and nothing else from the error", () => {
+    const error = { code: "over_request_rate_limit", status: 429, message: "limit hit for owner@example.com" };
+    const line = authFailureLogLine(error);
+    expect(line).toContain("over_request_rate_limit");
+    expect(line).toContain("429");
+    expect(line).not.toContain("owner@example.com");
+  });
+
+  it("says no answer when the auth server sent no code or status", () => {
+    expect(authFailureLogLine({ status: 0 })).toContain("no answer");
+  });
+});
+
+// STUB: AC-0042
+describe("caller check: an ended session or a failed lookup", () => {
+  it("reads claims as signed in", () => {
+    expect(sessionOutcome({ claims: { sub: "user" }, error: null })).toBe("signed-in");
+  });
+
+  it("reads no claims with no error, or an auth refusal, as an ended session", () => {
+    expect(sessionOutcome({ claims: null, error: null })).toBe("ended");
+    expect(sessionOutcome({ claims: null, error: { code: "session_not_found", status: 403 } })).toBe("ended");
+  });
+
+  it("reads no answer, a rate limit, or a server error as a failed lookup", () => {
+    expect(sessionOutcome({ claims: null, error: { status: 0 } })).toBe("failed");
+    expect(sessionOutcome({ claims: null, error: { status: 429 } })).toBe("failed");
+    expect(sessionOutcome({ claims: null, error: { status: 503 } })).toBe("failed");
+  });
+});
+```
+
+- `listRawProducts`, which reads every raw product, moves next to the other typed reads and gains a local-stack case in `test/receiving-data-extra.test.ts`: an inactive raw product is included.
+
+**Approach:**
+- `RpcError` keeps each wrapper's existing message text, so the foundation suites' message checks still hold, and adds `code`.
+- `src/lib/failures.ts` is pure: no imports from `src/app/`, no environment reads.
+- `withTimeout` aborts through its own `AbortController`, combined with any signal the caller passed, so the fetch rejects with an `AbortError`.
+
+**Done when:** the suite is green and `npm test` is green.
+
+### T11: Failed saves, voids, and sign-ins keep their screens and say what happened
+
+**Depends on:** T9, T10
+**Touches:** src/app/_server/*, src/app/receiving/*, src/app/sign-in/*, src/proxy.ts, test/e2e/*
+
+**Tests:** no stub (manual QA exercised by E2E).
+- **AC-0071 and AC-0081:** `page.route` aborts the save action's request. The message reads as specified, every field keeps its value, and focus is on the message (AC-0057). The per-state helper runs on this page state.
+- **AC-0073:** `page.route` aborts the void action's request. The list stays, the message reads as specified, and focus is on it. The per-state helper runs on this page state.
+- **AC-0077:** the AC-0052 test asserts the reload hint, not the pre-refusal stock value.
+- **AC-0066:** both replay assertions check the action's full refusal text ("The receipt wasn't saved." or "The receipt wasn't voided." followed by the not-allowed sentence), not the bare sentence the not-allowed page also renders.
+- **AC-0005:** a second test signs out from the operator's receiving page.
+- The AC-0042, AC-0043, and AC-0044 tests pass through the shared caller check.
+
+**Approach:**
+- `saveReceipt` and `voidReceipt` use the shared caller check. `signIn` and `signOut` keep their own cookie-writing client.
+- Every server-side Supabase client, the proxy's included, fetches through `withTimeout`.
+- `saveReceipt` maps failures with `saveFailureMessage` by stage. It logs a failed read after the write with its message only and still shows the saved lot.
+- `voidReceipt` maps failures with `voidFailureMessage` by stage.
+- `signIn` uses `signInFailureMessage` and logs `authFailureLogLine`.
+- The form and the dialog catch rejected action calls.
+- `src/app/receiving/error.tsx` calls `retry` and focuses its heading.
+- `refusal.ts` is removed.
+
+**Done when:** `npm test` is green.
+
+### T12: The receiving screen stays current and correct across time, products, and voids
+
+**Depends on:** T11
+**Touches:** src/app/receiving/*, test/e2e/*, test/format-extra.test.ts
+
+**Tests:** no stub (manual QA exercised by E2E), plus one Vitest case.
+- **AC-0010 and AC-0011 across midnight:** with Playwright's clock set to 23:59 local, the form loads. The clock then moves past midnight, and a receipt dated the new day saves.
+- **AC-0009:** the browser clock is pinned to a moment when the device date and the UTC date differ, so a UTC-based default fails at any hour.
+- **AC-0078:** after the page loads, one inactive raw product is set active and one new raw product is inserted, both through `pg`. Typing each code and pressing Save writes one lot.
+- **AC-0010 and AC-0019 stay green:** the RAW-OLD case still shows the field message, and the made-inactive-after-load case still shows the engine refusal.
+- **AC-0007 after a save:** a product set active after page load shows its description once a save has re-rendered the page.
+- **AC-0076:** a receipt is saved through the form, then voided from the list on the same page. The panel says "This receipt was voided." and shows no totals. The per-state helper runs on this page state.
+- **AC-0079:** the open dialog's accessible description contains the lot number, weight, and vendor.
+- **AC-0026 with long numbers:** the after-save state runs the per-state helper with on-hand above 100,000 lbs with decimals.
+- **`test/e2e/a11y.ts`:** the Tab walk ends only when focus leaves the page or returns to the first element reached.
+- **Vitest:** `test/format-extra.test.ts` gains a case that fails for a date formatter built in the host's zone, whatever that zone is.
+
+**Approach:**
+- `submit()` reads the device date when Save is pressed, for the rule, the hidden field, and `max`.
+- The form reads the page's product list from its latest `products` prop.
+- A code missing from that list skips the browser's code rule and is sent marked for the server's current check.
+- The first-run notice adds "then reload this page".
+- The panel marks its lot voided when the re-rendered list shows that lot as void.
+- Result-panel cells may wrap between a number and its unit.
+- The dialog sets `aria-describedby` on its lot sentence.
+
+**Done when:** `npm test` is green.
+
+### T8: Durable docs match the code, and the goal-based checks and the recorded run pass
+
+**Depends on:** T7, T9, T11, T12
+**Touches:** docs/architecture/overview.md, AGENTS.md, docs/costing.md, .env.example, test/e2e/checks/ac0068-env-reload.sh, docs/specs/receiving/notes/verification-ledger.md
+
+**Tests:** no stub (goal-based and manual).
 - Commands for AC-0033, AC-0034, AC-0035, AC-0037, AC-0038, AC-0059, AC-0039, AC-0060, AC-0068, AC-0040, AC-0063, AC-0064, and AC-0065 (`npm run audit`), each recorded in the ledger. A high or critical advisory with no fix stops the task until the owner records a waiver.
+- `test/e2e/checks/ac0068-env-reload.sh` exits non-zero unless all three responses are 500 and the marker appears in no body and not in the dev log.
+- **Recorded run (AC-0070, AC-0080, AC-0072, AC-0081, AC-0082, AC-0083, AC-0074, AC-0075, and the error page state)**, against `npm run start`, one local service at a time:
+  1. Stop the auth container and sign in. Record the message and the server log line.
+  2. With the auth container started, load `/receiving` and fill a form. Restart the app server, so it holds no cached signing key and its caller check must reach the auth server. Stop the auth container and press Save. Record the message, the kept values, and where focus lands, then start the container.
+  3. Stop the REST container and load `/receiving`. Record the error page, focus on its heading, and the per-state checks from `test/e2e/a11y.ts`. Start the container, press Try again, and record the page shown.
+  4. With a form filled, stop the REST container and press Save. Record the message, the kept values, and where focus lands, then start the container.
+  5. With the list shown, stop the REST container and confirm a void. Record the message, the list, and where focus lands, then start the container.
+  6. Pause the REST container and press Save. Record the seconds from Save to the message, then unpause the container.
+  - The write-call clauses of AC-0072 and AC-0083 rest on T10 alone, because stopping a service fails the calls before the write first.
 - Foundation-hardening AC-0049 still holds for `AGENTS.md`: every cited path exists.
 
 **Approach:**
-- Write the durable outputs named in the spec.
-- The `docs/costing.md` Rounding note states the AC-0024 formats and the AC-0067 texts. Its opening names `test/format.test.ts` for the AC-0024 examples and `test/e2e/receiving.spec.ts` for the AC-0067 texts.
-- In `AGENTS.md`, the app's env file holds only `SUPABASE_URL` and `SUPABASE_ANON_KEY`, and the guard refuses the privileged variables. The one-time browser install is `npx playwright install chromium`, and `npm run audit` runs before merge.
-- The overview's app section records the trust-boundary items the spec's architecture row names.
+- Write the durable outputs named in the spec. The overview's trust-boundary section gains the AC-0069 Host refusal, the accepted dev-mode exposure, and the AC-0082 request limit.
+- The `docs/costing.md` Rounding note states the AC-0024 formats, with "trailing zeros dropped" for weight, and the AC-0067 texts. Its opening names `test/format.test.ts` and `test/e2e/receiving.spec.ts`.
+- `AGENTS.md` names `npm run build` then `npm run start` as the command for daily use, and `npm run dev` as for development only, with its accepted DNS-rebinding exposure.
+- The overview's caller-check sentence names `saveReceipt` and `voidReceipt`.
+- `.env.example` names only `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+- The ledger names every file a task changed outside its Touches, and records that T2, T3, and T4 ran no build.
 
 **Done when:** each check in Tests passes and `npm test` is green.
 
@@ -657,3 +906,25 @@ Local only. The app runs with `npm run dev` or `npm run build && npm run start` 
   - The AC-0039 source checks follow the name rule.
   - AC-0068 covers GET and POST.
   - Both ended-session cases are exercised.
+- 2026-10-08: controlled amendment after the post-build review (owner decisions recorded in the ledger). T1 to T7 are complete and unchanged. New tasks:
+  - T9: the Host check.
+  - T10: failure classification and the time limit, test-first.
+  - T11: failed actions and sign-ins keep their screens.
+  - T12: the date across midnight, new products, the panel after a void, the dialog description, and long numbers.
+  - T8 now runs last and also fixes the AC-0068 script, `.env.example`, and the ledger records.
+- 2026-10-08: amendment review round 1 repairs:
+  - The proxy matches every path, and a missing `Host` is refused too; dev mode is an accepted exposure.
+  - Save and void failures are keyed on the call that failed, and a read after the write stays a save.
+  - The caller check tells an ended session from a failed auth lookup, and it serves only `saveReceipt` and `voidReceipt`.
+  - The request limit is stated per REST request and the proxy's client is under it (T11).
+  - Codes missing from the page's product list get a current server check, so AC-0010, AC-0019, and AC-0078 all hold.
+  - The root error page is dropped; the recorded run covers the failure criteria the shared suite cannot.
+- 2026-10-08: amendment review round 2 repairs:
+  - A Host-less HTTP/1.1 request gets Node's 400, and a Host-less HTTP/1.0 request gets 421.
+  - The recorded run adds a save with the auth service stopped and records focus after each failure; the write-call clauses rest on T10, with a seam queued in the test-refinements intent.
+  - `AGENTS.md` names `npm run start` for daily use and `npm run dev` for development only.
+  - The failure log line says "no answer" when the auth server sent no code or status.
+- 2026-10-08: amendment review round 3 repairs:
+  - The recorded auth-stopped save restarts the app server first, because `getClaims` checks ES256 tokens with a signing key it caches for 10 minutes.
+  - The product-list definition rests on the latest server render alone.
+  - AC-0072 and AC-0083 name the calls before the write as examples, and bound only REST calls by time.

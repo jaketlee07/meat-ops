@@ -100,5 +100,18 @@ Owner decisions, in chat on 2026-10-08:
 2. Fix scope "nearly everything": the Concerns and the Major; the Host check; failure handling (a failed or unreachable save or void keeps the form and says honestly that the receipt may or may not be saved; a time limit on server database calls); sign-in failures that are not bad credentials; the stale result panel after voiding a just-saved receipt; the stale region after a refused void; the docs, ledger, and test-strength Nits. Two test-tool refinements go to the backlog: a test seam for the "saved, totals not loaded" branch, and opacity-aware ring scoring in `test/e2e/a11y.ts`.
 3. Sign-in failures other than bad credentials read "Couldn't sign in right now. Wait a few minutes and try again." and leave a server-side record; "Email or password is incorrect." stays for bad credentials.
 4. The void confirmation announces its lot sentence to screen readers (`aria-describedby`).
+5. Under `npm run dev`, Next.js answers its own dev-tool addresses before the proxy runs, so the Host check (AC-0069) covers `npm run start`, which becomes the command for daily use. The dev-mode exposure to a DNS-rebinding page is accepted (chosen in chat, 2026-10-08, during the amendment review).
 
 Review state: `findings-remain` (seq 24) and `review record` round 1 with 29 fingerprints. The new criteria go through a controlled contract amendment.
+
+## Amendment review (2026-10-08)
+
+The amendment (spec sha256 9e886c4d77ca9f45d686b2d8aab0893aff5020146b2942eeafe63d869cb59a6a, plan sha256 992456bdaef3f238238027433b5856d3f90f3a4d158e22eb76b6a65c81d48b22) closed clean after five rounds, numbered 6 to 10 after the five pre-EXECUTE rounds before the build. Artifacts are under the ignored `.context/reviews/8bd1023d-4bec-4e12-a2b5-8d29179b0f2c/`.
+
+- adversarial-reviewer: direct clean in rounds 9 and 10, after 11, 3, and 2 sustained findings in rounds 6 to 8.
+- security-reviewer: adjudicated clean in rounds 8 to 10, after round 6 (2 sustained, 1 refuted, 1 indeterminate made moot by covering every path) and round 7 (1 sustained, 1 refuted).
+- shaping-reviewer: Clean in round 5 of its own count, after 10, 7, 3, and 1 findings.
+- The final T10 stub was compiled against placeholder declarations of `RpcError` and the `src/lib/failures.ts` surface (exit 0) and, with the placeholder removed, failed with "Failed to load url ../src/lib/failures.js".
+- Facts probed during review: Node 22.17.0's default HTTP server answers an HTTP/1.1 request with no `Host` with 400 before any handler runs and passes an HTTP/1.0 one to the handler (scratch probe); the local auth server's key list holds one EC key with alg ES256.
+- Deviation: the spec and plan were revised between rounds without firing `findings-remain` and `spec-ready` around each revision. The state stayed SPEC-PLAN-REVIEW from seq 26, and every fired reviewer reached clean on the final hashes above.
+- Owner approval, in chat on 2026-10-08: the amended spec is approved, and the write-call clauses of AC-0072 and AC-0083 resting on unit rules alone is accepted, with the end-to-end test queued in `docs/product/intents/receiving-test-refinements.md`.

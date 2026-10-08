@@ -31,7 +31,9 @@ saving, the screen confirms the lot the engine wrote. It shows the product's
 pounds on hand and average cost per lb before and after the receipt. It also
 shows the suggested price of each finished product made from that raw product,
 before and after. If a receipt was typed wrong and nothing has used it yet, the
-owner voids it, with a reason, from the product's recent receipts. Every number
+owner voids it, with a reason, from the product's recent receipts. When a save
+fails, the form keeps what was typed; when a void fails, the list stays; either
+way the screen says plainly whether it may have gone through. Every number
 on screen comes from the database. The app computes no cost, price, average, or
 stock.
 
@@ -42,8 +44,8 @@ second, and numbers that are easy to trust third.
 
 | Semantic role | Applicability | Destination | Owner | Expected evidence | Closeout condition |
 | --- | --- | --- | --- | --- | --- |
-| Current architecture and app trust boundary | Applicable: the app layer, its routes, its auth flow, and a new database function change the map and the access model | `docs/architecture/overview.md` | jaketlee07 | The areas table has rows for `src/app/` and `test/e2e/`. The access model names `check_operator` for each role. The write path says the app changes the ledger only through `receive_lot` and `void_receipt` with the signed-in user's session. An app section names the only variables the app process holds and the guard that refuses the privileged ones; the auth cookie attributes and the session limits; the 127.0.0.1-only network posture and the accepted shared sign-in limit; and that the proxy refreshes sessions but authorizes nothing | close-work confirms each named row and sentence exists and matches the migrations, `supabase/config.toml`, and `src/` |
-| Agent guidance and commands | Applicable: `AGENTS.md` says there is no build step, and the dev server, the build, the browser suite, and local env setup are new | `AGENTS.md` "Build and test commands" | jaketlee07 | The section lists `npm run dev`, `npm run build`, `npm run test:e2e`, the one-time browser install, and which variables the app's env file holds; each command runs | close-work runs each listed command or confirms it ran in the closing gates |
+| Current architecture and app trust boundary | Applicable: the app layer, its routes, its auth flow, and a new database function change the map and the access model | `docs/architecture/overview.md` | jaketlee07 | The areas table has rows for `src/app/` and `test/e2e/`. The access model names `check_operator` for each role. The write path says the app changes the ledger only through `receive_lot` and `void_receipt` with the signed-in user's session. An app section names the only variables the app process holds and the guard that refuses the privileged ones; the auth cookie attributes and the session limits; the 127.0.0.1-only network posture, the AC-0069 Host refusal with the dev-mode exposure accepted beside it, and the accepted shared sign-in limit; the AC-0082 request limit; and that the proxy refreshes sessions but authorizes nothing | close-work confirms each named row and sentence exists and matches the migrations, `supabase/config.toml`, and `src/` |
+| Agent guidance and commands | Applicable: `AGENTS.md` says there is no build step, and the dev server, the build, the browser suite, and local env setup are new | `AGENTS.md` "Build and test commands" | jaketlee07 | The section lists `npm run build` with `npm run start` as the command for daily use, `npm run dev` as for development only with its accepted DNS-rebinding exposure, `npm run test:e2e`, the one-time browser install, and which variables the app's env file holds; each command runs | close-work runs each listed command or confirms it ran in the closing gates |
 | Display rounding (current product truth) | Applicable: the on-screen formats, missing-value texts, and rounding rule are a product decision that outlives this spec | `docs/costing.md` "Rounding note" | jaketlee07 | The note states the AC-0024 formats, the AC-0067 texts, and the half-away-from-zero rule, and the file's opening names the suites that assert them | close-work finds each AC-0024 example and AC-0067 text in the note and in a passing test |
 | Interface compatibility | Applicable: the new function changes the generated types | `src/lib/database.types.ts` | jaketlee07 | AC-0034 passes | `npm run gen:types` leaves no diff on the closing commit |
 | User documentation | Not applicable: no user-docs surface exists, the owner is the only user, and the screen labels carry the task | none | — | — | — |
@@ -83,9 +85,11 @@ second, and numbers that are easy to trust third.
 The Vitest suites and the Playwright browser suite run under `npm test` against the local Supabase stack. Goal-based checks run as the commands their criteria name.
 
 - **TDD, no database: display formats (AC-0024)** — each format row is a pure rule with exact examples, including rounding ties and time zones, that a wrong formatter fails. The form rules behind the receiving form's messages are unit-tested the same way, as construction for the browser criteria below.
+- **TDD, no database: failure classification, as construction for the recorded run below** — which message a sign-in, save, or void failure produces, what the server log line carries, how the caller check tells an ended session from an auth lookup that got no answer, and when a request gives up are pure rules over error codes, statuses, and a clock. The automated suites share one local stack, so they cannot stop or pause a service mid-run; these rules are proven directly, and the recorded run proves the wiring for every failure it can produce. Stopping a service always fails the calls before a write call first, so the write-call clauses of AC-0072 and AC-0083 rest on these unit rules alone; a test seam for them is queued in `docs/product/intents/receiving-test-refinements.md`.
 - **TDD against the local stack: the operator check and the recent-receipts read** — construction for the not-allowed page and the receipts list. The check's answer for an operator and a non-operator, and the read's ordering, count, and status rule, are fixed by users and lots built through the operations. The catalog-driven access suite in `test/access.test.ts` covers the new function for every role, as foundation-hardening requires.
-- **Manual QA exercised by an end-to-end (E2E) browser suite: sign-in, receiving, recent receipts, and void (AC-0001, AC-0002, AC-0003, AC-0041, AC-0004, AC-0005, AC-0061, AC-0006, AC-0044, AC-0066, AC-0007, AC-0008, AC-0009, AC-0010, AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0042, AC-0046, AC-0020, AC-0047, AC-0048, AC-0049, AC-0021, AC-0022, AC-0050, AC-0051, AC-0023, AC-0052, AC-0053, AC-0043, AC-0067)** — each criterion is a state, a trigger, and an on-screen outcome that only a real browser over the real server and database shows. The suite drives Chromium through Playwright and reads raw tables through `pg` to confirm what was or was not written.
-- **E2E accessibility and phone-width checks (AC-0025, AC-0026, AC-0054, AC-0027, AC-0055, AC-0028, AC-0056, AC-0057, AC-0029, AC-0030, AC-0031)** — axe-core, measured element boxes, and computed styles in the same browser suite give a pass or fail bar per page state.
+- **Manual QA exercised by an end-to-end (E2E) browser suite: sign-in, receiving, recent receipts, and void (AC-0001, AC-0002, AC-0003, AC-0041, AC-0004, AC-0005, AC-0061, AC-0006, AC-0044, AC-0066, AC-0007, AC-0008, AC-0009, AC-0010, AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0042, AC-0046, AC-0020, AC-0047, AC-0048, AC-0049, AC-0021, AC-0022, AC-0050, AC-0051, AC-0023, AC-0052, AC-0053, AC-0043, AC-0067, AC-0069, AC-0071, AC-0081, AC-0073, AC-0076, AC-0077, AC-0078)** — each criterion is a state, a trigger, and an on-screen outcome that only a real browser over the real server and database shows. The suite drives Chromium through Playwright and reads raw tables through `pg` to confirm what was or was not written.
+- **E2E accessibility and phone-width checks (AC-0025, AC-0026, AC-0054, AC-0027, AC-0055, AC-0028, AC-0056, AC-0057, AC-0029, AC-0030, AC-0031, AC-0079)** — axe-core, measured element boxes, and computed styles in the same browser suite give a pass or fail bar per page state.
+- **Manual QA recorded in the verification ledger (AC-0070, AC-0080, AC-0072, AC-0082, AC-0083, AC-0074, AC-0075, and the `/receiving` error page state)** — these outcomes need a stopped or paused local service. A recorded run against `npm run start` stops or pauses one service at a time: the auth service for a sign-in, and for a save pressed after the app server restarts, so it holds no cached signing key and its caller check must reach the auth server; the REST service for a page load, a save, and a void; then the REST service paused for the timing. It records each message, the log line, the seconds from Save to the message, the page-state checks on the error page, and the recovery after Try again. For each save and void failure it produces, it also records the AC-0081 kept values or the list, and the AC-0057 focus.
 - **Goal-based checks (AC-0062, AC-0033, AC-0034, AC-0035, AC-0036, AC-0037, AC-0038, AC-0059, AC-0039, AC-0060, AC-0068, AC-0040, AC-0063, AC-0064, AC-0065)** — each is settled by one command or one short scripted run: a build, a type regeneration diff, the security advisor, a dependency audit, a test run, a start attempt, an env-file change against a running dev server, a socket listing, a container inspection, or a `grep`.
 
 ## Acceptance Criteria
@@ -94,12 +98,14 @@ Definitions used by these criteria:
 
 - **Operator, non-operator, signed-out visitor:** the roles in the access model of [`docs/architecture/overview.md`](../../architecture/overview.md). A signed-out visitor holds no session.
 - **Active raw product:** a `products` row with `kind = 'raw'` and `active = true`.
+- **The page's product list:** the active raw products as of the receiving page's latest server render.
 - **Receipt:** one `lots` row of the chosen raw product, void or not. A **non-void receipt** has no `voided_at`.
 - **Untouched receipt:** a receipt that `void_receipt` accepts, per the `void_receipt` rule in [`docs/costing.md`](../../costing.md).
 - **Finished products made from a raw product:** the rows of `v_product_pricing` whose product has that raw product as its raw input.
-- **Page states:** sign-in; sign-in after a wrong password; the non-operator page; the empty receiving form; the form after an AC-0010 refusal of a blank weight; the form after an AC-0019 refusal; the form after an AC-0042 refusal; the form after a save; the open void confirmation; the receipts list after an AC-0052 refusal.
+- **Page states:** sign-in; sign-in after a wrong password; the non-operator page; the empty receiving form; the form after an AC-0010 refusal of a blank weight; the form after an AC-0019 refusal; the form after an AC-0042 refusal; the form after a save; the open void confirmation; the receipts list after an AC-0052 refusal; the form after an AC-0071 failure; the receipts list after an AC-0073 failure; the form after a save whose receipt was then voided (AC-0076); the `/receiving` error page.
 - **Focusable controls of a page state:** every element that receives focus when Tab is pressed repeatedly from the top of the page, until focus leaves the page or returns to the first element reached. An element that keeps focus across several Tab presses counts once and does not end the walk.
 - **Ended session:** the browser holds no Supabase auth cookie, or its access token has expired and the auth server refuses its refresh token. A session revoked at the auth server whose access token has not yet expired is not ended for these criteria.
+- **Host scope:** every criterion except AC-0069 concerns requests whose `Host` header names `127.0.0.1` or `localhost`.
 - **Advisory waivers:** none. Each waiver names an npm advisory ID, the date, and the owner's acceptance. Adding one changes this contract section, so it is an amendment.
 - **Privileged variable:** an environment variable whose name contains, ignoring case, `SERVICE_ROLE`, `SECRET`, `JWT`, `DB_URL`, `DATABASE_URL`, or `POSTGRES`. The check names are `SERVICE_ROLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SECRET_KEY`, `SUPABASE_SECRET_KEY`, `JWT_SECRET`, `S3_PROTOCOL_ACCESS_KEY_SECRET`, `DB_URL`, `DATABASE_URL`, and `POSTGRES_URL`.
 
@@ -116,10 +122,13 @@ Sign-in and access
 - [ ] **AC-0006.** Every Supabase auth cookie the app sets, at sign-in and when the proxy refreshes an expired access token, is `HttpOnly` and `SameSite=Lax`.
 - [ ] **AC-0044.** A save or void action request replayed with no session, or with a non-operator's session, writes no lot and no void mark.
 - [ ] **AC-0066.** A save or void action request replayed with no session returns the AC-0042 or AC-0043 message, and one replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
+- [ ] **AC-0069.** While the app runs under `npm run start`, a request for any path is refused before any page renders or server action runs, so a sign-in action posted that way creates no auth session, when its `Host` header names a host other than `127.0.0.1` or `localhost`, with or without a port (status 421), when it is an HTTP/1.0 request with no `Host` header (status 421), or when it is an HTTP/1.1 request with no `Host` header (Node's status 400).
+- [ ] **AC-0070.** When a sign-in fails for any reason other than bad credentials, including the auth server's rate limit, an error status, or no answer at all, `/sign-in` shows "Couldn't sign in right now. Wait a few minutes and try again."
+- [ ] **AC-0080.** Each AC-0070 failure writes one server log line that holds the auth error's code and status, or "no answer" when the auth server sent none, and holds neither the email nor the password.
 
 Receiving form
 
-- [ ] **AC-0007.** Typing the code of an active raw product into the product field shows that product's description and species, and its current pounds on hand and average cost per lb.
+- [ ] **AC-0007.** Typing the code of a product in the page's product list into the product field shows that product's description and species, and its current pounds on hand and average cost per lb.
 - [ ] **AC-0008.** The vendor field lists every vendor by name, in alphabetical order ignoring case.
 - [ ] **AC-0009.** The received date starts at today's date on the device.
 - [ ] **AC-0010.** Each input in this table is refused with its message shown beside its field. Within one field, the first matching row wins.
@@ -149,6 +158,11 @@ Receiving form
 - [ ] **AC-0019.** When the database refuses a save that passed the AC-0010 checks, such as for a product made inactive after the page loaded, the form shows a message that starts "The receipt wasn't saved."
 - [ ] **AC-0042.** When the session has ended after the receiving form loaded, Save shows "You're signed out. Sign in again to save this receipt."
 - [ ] **AC-0046.** Every refused save, whether refused by an AC-0010 rule, by the database as in AC-0019, or for an ended session as in AC-0042, keeps every field's value and writes no lot.
+- [ ] **AC-0071.** If the connection to the app drops while a save is in flight, the form shows "The receipt may not have been saved. Reload this page and check Recent receipts before saving again."
+- [ ] **AC-0072.** When a call that a save makes before its write call fails, or a REST call among them gets no answer within the AC-0082 limit, the form shows a message that starts "The receipt wasn't saved." Those calls include the caller check's auth lookup, unless the auth server ends the session (AC-0042), the operator check, and the reads before the write. When the write call itself fails with no answer from the engine, the form shows the AC-0071 message. A failure after the engine returns the written lot is a save, which AC-0012 and AC-0017 govern.
+- [ ] **AC-0081.** After an AC-0071 or AC-0072 failure, every field keeps its value.
+- [ ] **AC-0082.** The app abandons each request it sends to the database's REST service once 10 seconds pass after sending it with no response, and does not send it again. With the local REST service paused, so it accepts each request and never answers, the AC-0072 message appears 10 to 15 seconds after Save is pressed.
+- [ ] **AC-0078.** On a page whose product list holds at least one product, typing the code of an active raw product that is not in the page's product list and pressing Save writes one lot of it, without a reload.
 
 Recent receipts and void
 
@@ -164,6 +178,16 @@ Recent receipts and void
 - [ ] **AC-0052.** When the database refuses a void, such as for a lot production drew from after the list loaded, the screen shows a message that starts "The receipt wasn't voided." and the lot is unchanged.
 - [ ] **AC-0053.** Given RAW-TOM holds one receipt of 5,000 lbs at 1.68 and no other receipt, voiding it shows on hand 0 lbs, average cost "None yet", and 502's suggested price "No price yet".
 - [ ] **AC-0043.** When the session has ended after the list loaded, confirming a void shows "You're signed out. Sign in again to void this receipt." and the lot is unchanged.
+- [ ] **AC-0073.** If the connection to the app drops while a void is in flight, the list stays on screen and shows "The receipt may not have been voided. Reload this page to see whether it was."
+- [ ] **AC-0083.** When a call that a void makes before its write call fails, or a REST call among them gets no answer within the AC-0082 limit, the list stays and shows a message that starts "The receipt wasn't voided." Those calls include the caller check's auth lookup, unless the auth server ends the session (AC-0043), and the operator check. When the write call itself fails with no answer from the engine, the list stays and shows the AC-0073 message. A failure after `void_receipt` returns is not a void failure: the receipt is void, and the list shows it as void once the page renders again (AC-0023). The AC-0051, AC-0052, AC-0043, and AC-0066 outcomes keep their own messages.
+- [ ] **AC-0076.** After the receipt shown in the "Receipt saved" panel is voided from this page's Recent receipts list, the panel says "This receipt was voided." and no longer shows its before-and-after totals.
+- [ ] **AC-0077.** After an AC-0052 refusal, the message also says "Reload to see the latest stock."
+- [ ] **AC-0079.** The void confirmation's accessible description contains the lot number, weight, and vendor it names.
+
+Error page
+
+- [ ] **AC-0074.** After a `/receiving` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the receiving page without a browser reload.
+- [ ] **AC-0075.** When the `/receiving` error page appears, keyboard focus is on its heading.
 
 Display
 
@@ -187,7 +211,7 @@ Accessibility and phone width
 - [ ] **AC-0055.** After a save, keyboard focus is on the "Receipt saved" heading.
 - [ ] **AC-0028.** After an AC-0010 refusal, keyboard focus is on the first field with an error.
 - [ ] **AC-0056.** After an AC-0010 refusal, the `aria-describedby` of every field with an error points to that field's message.
-- [ ] **AC-0057.** After an AC-0019, AC-0042, AC-0043, or AC-0052 refusal, keyboard focus is on the message that states it.
+- [ ] **AC-0057.** After an AC-0019, AC-0042, AC-0043, or AC-0052 refusal, or an AC-0071, AC-0072, AC-0073, or AC-0083 failure, keyboard focus is on the message that states it.
 - [ ] **AC-0029.** The accessible name of the weight field contains "lbs" and that of the cost field contains "per lb".
 - [ ] **AC-0030.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
 - [ ] **AC-0031.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
@@ -220,6 +244,7 @@ Database and build
 ## Follow-ons
 
 - jaketlee07: [`docs/product/intents/app-https-hosting.md`](../../product/intents/app-https-hosting.md), host the app over HTTPS so receiving works from a phone at the dock.
+- jaketlee07: [`docs/product/intents/receiving-test-refinements.md`](../../product/intents/receiving-test-refinements.md), a test seam for the save action's remaining branches and opacity-aware focus-ring scoring.
 
 ## Assumptions
 
@@ -245,5 +270,10 @@ Database and build
 - Product: a session ends after 12 hours without activity and 7 days after sign-in; signing out ends this device's session on the auth server; an access token stays valid at the database for up to 3600 seconds after sign-out, accepted as a residual (source: user confirmation 2026-10-08; `supabase/config.toml` `jwt_expiry = 3600`)
 - Process: shipped dependencies are audited with `npm audit --omit=dev --audit-level=high` before merge; a high or critical advisory with no fix blocks shipping until the owner records a waiver in the Advisory waivers list; no secret scanner runs, accepted as a gap (source: user confirmation 2026-10-08)
 - Technical: the `DATABASE_URL` line was removed from the local `.env` with the owner's approval, so the app's guard admits that file (source: user confirmation 2026-10-08)
+- Product: after the post-build review the owner chose to fix nearly every finding in this spec: a Host-header check against DNS rebinding; a failed or unreachable save or void keeps the form and says honestly whether the receipt may be saved; a 10-second limit on server database calls; a distinct sign-in message for failures other than bad credentials; the result panel and stock after a void; the void dialog's description (source: user confirmation 2026-10-08; `docs/specs/receiving/notes/verification-ledger.md`, "Post-gates review, round 1")
+- Technical: Node 22.17.0's HTTP server, which `next start` builds with default options, answers an HTTP/1.1 request with no `Host` header with 400 before any handler runs, and passes an HTTP/1.0 request with no `Host` to the handler (scratch probe 2026-10-08: a plain `http.createServer` returned 400 with its handler not called, then 200 with it called)
+- Technical: the local auth server signs access tokens with ES256 (its key list, read 2026-10-08), so `getClaims` checks a token inside the app server with a signing key it caches for 10 minutes, and reaches the auth server only to fetch that key or to refresh an expired token (`node_modules/@supabase/auth-js/dist/main/GoTrueClient.js`, `JWKS_TTL`)
+- Product: under `npm run dev`, Next.js answers its own dev-tool addresses before the proxy runs, so AC-0069 covers `npm run start`, the command for daily use, and the dev-mode exposure to a DNS-rebinding page is accepted (source: user confirmation 2026-10-08)
+- Process: the write-call clauses of AC-0072 and AC-0083 rest on unit rules alone, and their end-to-end test waits in `docs/product/intents/receiving-test-refinements.md` (source: user confirmation 2026-10-08)
 - Process: the browser flow is checked by a Playwright suite that runs under `npm test` (source: user confirmation 2026-10-07)
 - Process: the owner approves the spec and the plan in chat, and the agent records the Approved status (source: foundation-hardening spec Assumptions; user confirmation 2026-10-07)
