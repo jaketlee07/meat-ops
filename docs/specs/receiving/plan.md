@@ -1,7 +1,7 @@
 # Plan: receiving
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md`.
   - **Typed reads** follow `src/lib/views.ts`, and **operation wrappers** follow `src/lib/rpc.ts`.

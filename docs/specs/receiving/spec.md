@@ -1,6 +1,6 @@
 # Spec: receiving
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §8 (web app, floor and office), §10 (owner login in scope), §11 (boundaries), §13 item 2; [`docs/costing.md`](../../costing.md) (average rule, void_receipt rule); the access model and the `supabase/migrations/` change guidance in [`docs/architecture/overview.md`](../../architecture/overview.md); foundation-hardening AC-0001, AC-0003, AC-0005, and AC-0052 ([`../foundation-hardening/spec.md`](../foundation-hardening/spec.md)), which hold for every `public` function, including the one this feature adds
@@ -111,27 +111,27 @@ Definitions used by these criteria:
 
 Sign-in and access
 
-- [ ] **AC-0001.** While signed out, a request for `/` or for `/receiving` ends on `/sign-in`, which shows an email field, a password field, and a Sign in button.
-- [ ] **AC-0002.** Signing in with an operator's email and password ends on `/receiving` with the receiving form shown.
-- [ ] **AC-0003.** Signing in with a wrong password stays on `/sign-in` and shows "Email or password is incorrect."
-- [ ] **AC-0041.** After a sign-in with a wrong password, the browser holds no Supabase auth cookie.
-- [ ] **AC-0004.** Signed in as a non-operator, `/receiving` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no receiving form.
-- [ ] **AC-0005.** Choosing Sign out ends on `/sign-in`, and a following request for `/receiving` ends on `/sign-in`.
-- [ ] **AC-0061.** After Sign out, the auth server refuses the refresh token the browser held before signing out.
-- [ ] **AC-0062.** The running local auth server is configured to end a session after 12 hours without activity and 168 hours after sign-in, as its container configuration shows after a stack restart.
-- [ ] **AC-0006.** Every Supabase auth cookie the app sets, at sign-in and when the proxy refreshes an expired access token, is `HttpOnly` and `SameSite=Lax`.
-- [ ] **AC-0044.** A save or void action request replayed with no session, or with a non-operator's session, writes no lot and no void mark.
-- [ ] **AC-0066.** A save or void action request replayed with no session returns the AC-0042 or AC-0043 message, and one replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
-- [ ] **AC-0069.** While the app runs under `npm run start`, a request for any path is refused before any page renders or server action runs, so a sign-in action posted that way creates no auth session, when its `Host` header names a host other than `127.0.0.1` or `localhost`, with or without a port (status 421), when it is an HTTP/1.0 request with no `Host` header (status 421), or when it is an HTTP/1.1 request with no `Host` header (Node's status 400).
-- [ ] **AC-0070.** When a sign-in fails for any reason other than bad credentials, including the auth server's rate limit, an error status, or no answer at all, `/sign-in` shows "Couldn't sign in right now. Wait a few minutes and try again."
-- [ ] **AC-0080.** Each AC-0070 failure writes one server log line that holds the auth error's code and status, or "no answer" when the auth server sent none, and holds neither the email nor the password.
+- [x] **AC-0001.** While signed out, a request for `/` or for `/receiving` ends on `/sign-in`, which shows an email field, a password field, and a Sign in button.
+- [x] **AC-0002.** Signing in with an operator's email and password ends on `/receiving` with the receiving form shown.
+- [x] **AC-0003.** Signing in with a wrong password stays on `/sign-in` and shows "Email or password is incorrect."
+- [x] **AC-0041.** After a sign-in with a wrong password, the browser holds no Supabase auth cookie.
+- [x] **AC-0004.** Signed in as a non-operator, `/receiving` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no receiving form.
+- [x] **AC-0005.** Choosing Sign out ends on `/sign-in`, and a following request for `/receiving` ends on `/sign-in`.
+- [x] **AC-0061.** After Sign out, the auth server refuses the refresh token the browser held before signing out.
+- [x] **AC-0062.** The running local auth server is configured to end a session after 12 hours without activity and 168 hours after sign-in, as its container configuration shows after a stack restart.
+- [x] **AC-0006.** Every Supabase auth cookie the app sets, at sign-in and when the proxy refreshes an expired access token, is `HttpOnly` and `SameSite=Lax`.
+- [x] **AC-0044.** A save or void action request replayed with no session, or with a non-operator's session, writes no lot and no void mark.
+- [x] **AC-0066.** A save or void action request replayed with no session returns the AC-0042 or AC-0043 message, and one replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
+- [x] **AC-0069.** While the app runs under `npm run start`, a request for any path is refused before any page renders or server action runs, so a sign-in action posted that way creates no auth session, when its `Host` header names a host other than `127.0.0.1` or `localhost`, with or without a port (status 421), when it is an HTTP/1.0 request with no `Host` header (status 421), or when it is an HTTP/1.1 request with no `Host` header (Node's status 400).
+- [x] **AC-0070.** When a sign-in fails for any reason other than bad credentials, including the auth server's rate limit, an error status, or no answer at all, `/sign-in` shows "Couldn't sign in right now. Wait a few minutes and try again."
+- [x] **AC-0080.** Each AC-0070 failure writes one server log line that holds the auth error's code and status, or "no answer" when the auth server sent none, and holds neither the email nor the password.
 
 Receiving form
 
-- [ ] **AC-0007.** Typing the code of a product in the page's product list into the product field shows that product's description and species, and its current pounds on hand and average cost per lb.
-- [ ] **AC-0008.** The vendor field lists every vendor by name, in alphabetical order ignoring case.
-- [ ] **AC-0009.** The received date starts at today's date on the device.
-- [ ] **AC-0010.** Each input in this table is refused with its message shown beside its field. Within one field, the first matching row wins.
+- [x] **AC-0007.** Typing the code of a product in the page's product list into the product field shows that product's description and species, and its current pounds on hand and average cost per lb.
+- [x] **AC-0008.** The vendor field lists every vendor by name, in alphabetical order ignoring case.
+- [x] **AC-0009.** The received date starts at today's date on the device.
+- [x] **AC-0010.** Each input in this table is refused with its message shown beside its field. Within one field, the first matching row wins.
 
   | Field | Input | Message |
   | --- | --- | --- |
@@ -147,51 +147,51 @@ Receiving form
   | Received date | a date after today on the device | The received date can't be after today. |
   | Notes | longer than 500 characters, counted as JavaScript string length | Keep notes to 500 characters or fewer. |
 
-- [ ] **AC-0011.** A form with weight 0.001, cost per lb 0, today's date, and a 500-character note saves one lot, and so does a form with weight 32.125 and cost per lb 1.6855.
-- [ ] **AC-0012.** After a save, the screen shows a "Receipt saved" heading with the lot number, product code and description, vendor name, received date, weight, and cost per lb of the lot the engine wrote, in the AC-0024 formats.
-- [ ] **AC-0013.** Given RAW-TOM holds one receipt of 5,000 lbs at 1.68, saving 3,000 lbs at 1.80 shows on hand before 5,000 lbs and after 8,000 lbs, and average cost before $1.6800/lb and after $1.7250/lb.
-- [ ] **AC-0014.** Given RAW-TOM has no receipts, saving 5,000 lbs at 1.68 shows on hand before 0 lbs and after 5,000 lbs, and average cost before "None yet" and after $1.6800/lb.
-- [ ] **AC-0015.** In the AC-0013 case, the result lists 502 Smoked Turkey Drums Tom with suggested price before $2.68/lb and after $2.74/lb; in the AC-0014 case, its price before is "No price yet" and after is $2.68/lb.
-- [ ] **AC-0016.** Saving a receipt for an active raw product that no finished product in `v_product_pricing` is made from shows "No finished products are made from this raw product."
-- [ ] **AC-0017.** After a save, the product, vendor, and date keep their values, and weight, cost per lb, and notes are empty.
-- [ ] **AC-0018.** While a save has not returned, pressing Save again writes no second lot.
-- [ ] **AC-0019.** When the database refuses a save that passed the AC-0010 checks, such as for a product made inactive after the page loaded, the form shows a message that starts "The receipt wasn't saved."
-- [ ] **AC-0042.** When the session has ended after the receiving form loaded, Save shows "You're signed out. Sign in again to save this receipt."
-- [ ] **AC-0046.** Every refused save, whether refused by an AC-0010 rule, by the database as in AC-0019, or for an ended session as in AC-0042, keeps every field's value and writes no lot.
-- [ ] **AC-0071.** If the connection to the app drops while a save is in flight, the form shows "The receipt may not have been saved. Reload this page and check Recent receipts before saving again."
-- [ ] **AC-0072.** When a call that a save makes before its write call fails, or a REST call among them gets no answer within the AC-0082 limit, the form shows a message that starts "The receipt wasn't saved." Those calls include the caller check's auth lookup, unless the auth server ends the session (AC-0042), the operator check, and the reads before the write. When the write call itself fails with no answer from the engine, the form shows the AC-0071 message. A failure after the engine returns the written lot is a save, which AC-0012 and AC-0017 govern.
-- [ ] **AC-0081.** After an AC-0071 or AC-0072 failure, every field keeps its value.
-- [ ] **AC-0082.** The app abandons each request it sends to the database's REST service once 10 seconds pass after sending it with no response, and does not send it again. With the local REST service paused, so it accepts each request and never answers, the AC-0072 message appears 10 to 15 seconds after Save is pressed.
-- [ ] **AC-0078.** On a page whose product list holds at least one product, typing the code of an active raw product that is not in the page's product list and pressing Save writes one lot of it, without a reload.
+- [x] **AC-0011.** A form with weight 0.001, cost per lb 0, today's date, and a 500-character note saves one lot, and so does a form with weight 32.125 and cost per lb 1.6855.
+- [x] **AC-0012.** After a save, the screen shows a "Receipt saved" heading with the lot number, product code and description, vendor name, received date, weight, and cost per lb of the lot the engine wrote, in the AC-0024 formats.
+- [x] **AC-0013.** Given RAW-TOM holds one receipt of 5,000 lbs at 1.68, saving 3,000 lbs at 1.80 shows on hand before 5,000 lbs and after 8,000 lbs, and average cost before $1.6800/lb and after $1.7250/lb.
+- [x] **AC-0014.** Given RAW-TOM has no receipts, saving 5,000 lbs at 1.68 shows on hand before 0 lbs and after 5,000 lbs, and average cost before "None yet" and after $1.6800/lb.
+- [x] **AC-0015.** In the AC-0013 case, the result lists 502 Smoked Turkey Drums Tom with suggested price before $2.68/lb and after $2.74/lb; in the AC-0014 case, its price before is "No price yet" and after is $2.68/lb.
+- [x] **AC-0016.** Saving a receipt for an active raw product that no finished product in `v_product_pricing` is made from shows "No finished products are made from this raw product."
+- [x] **AC-0017.** After a save, the product, vendor, and date keep their values, and weight, cost per lb, and notes are empty.
+- [x] **AC-0018.** While a save has not returned, pressing Save again writes no second lot.
+- [x] **AC-0019.** When the database refuses a save that passed the AC-0010 checks, such as for a product made inactive after the page loaded, the form shows a message that starts "The receipt wasn't saved."
+- [x] **AC-0042.** When the session has ended after the receiving form loaded, Save shows "You're signed out. Sign in again to save this receipt."
+- [x] **AC-0046.** Every refused save, whether refused by an AC-0010 rule, by the database as in AC-0019, or for an ended session as in AC-0042, keeps every field's value and writes no lot.
+- [x] **AC-0071.** If the connection to the app drops while a save is in flight, the form shows "The receipt may not have been saved. Reload this page and check Recent receipts before saving again."
+- [x] **AC-0072.** When a call that a save makes before its write call fails, or a REST call among them gets no answer within the AC-0082 limit, the form shows a message that starts "The receipt wasn't saved." Those calls include the caller check's auth lookup, unless the auth server ends the session (AC-0042), the operator check, and the reads before the write. When the write call itself fails with no answer from the engine, the form shows the AC-0071 message. A failure after the engine returns the written lot is a save, which AC-0012 and AC-0017 govern.
+- [x] **AC-0081.** After an AC-0071 or AC-0072 failure, every field keeps its value.
+- [x] **AC-0082.** The app abandons each request it sends to the database's REST service once 10 seconds pass after sending it with no response, and does not send it again. With the local REST service paused, so it accepts each request and never answers, the AC-0072 message appears 10 to 15 seconds after Save is pressed.
+- [x] **AC-0078.** On a page whose product list holds at least one product, typing the code of an active raw product that is not in the page's product list and pressing Save writes one lot of it, without a reload.
 
 Recent receipts and void
 
-- [ ] **AC-0020.** With a product chosen, the screen lists up to 10 of its receipts, last entered first.
-- [ ] **AC-0047.** Each listed receipt shows its lot number, received date, vendor, weight, cost per lb, and remaining lbs.
-- [ ] **AC-0048.** When the product has more than 10 receipts, the list says "Showing the 10 most recent of N receipts.", where N is the product's receipt count.
-- [ ] **AC-0049.** When the product has no receipts, the screen shows "No receipts for this product yet."
-- [ ] **AC-0021.** In the list, every untouched receipt has a Void button, every void receipt shows "Void: " and its reason, and every other receipt shows "In use". The check fixture holds an untouched receipt, one that production drew from, one adjusted down and back to its full weight, and a void one.
-- [ ] **AC-0022.** Void opens a confirmation that names the lot number, weight, and vendor, and asks for a reason.
-- [ ] **AC-0050.** Cancel closes the confirmation and changes nothing.
-- [ ] **AC-0051.** Confirming with a blank or spaces-only reason shows "Enter a reason for the void." and changes nothing.
-- [ ] **AC-0023.** Given RAW-TOM holds 1,000 lbs at 1.68 and then 500 lbs at 1.80, voiding the second with a reason shows it as "Void: " and that reason, on hand 1,000 lbs, and average cost $1.6800/lb.
-- [ ] **AC-0052.** When the database refuses a void, such as for a lot production drew from after the list loaded, the screen shows a message that starts "The receipt wasn't voided." and the lot is unchanged.
-- [ ] **AC-0053.** Given RAW-TOM holds one receipt of 5,000 lbs at 1.68 and no other receipt, voiding it shows on hand 0 lbs, average cost "None yet", and 502's suggested price "No price yet".
-- [ ] **AC-0043.** When the session has ended after the list loaded, confirming a void shows "You're signed out. Sign in again to void this receipt." and the lot is unchanged.
-- [ ] **AC-0073.** If the connection to the app drops while a void is in flight, the list stays on screen and shows "The receipt may not have been voided. Reload this page to see whether it was."
-- [ ] **AC-0083.** When a call that a void makes before its write call fails, or a REST call among them gets no answer within the AC-0082 limit, the list stays and shows a message that starts "The receipt wasn't voided." Those calls include the caller check's auth lookup, unless the auth server ends the session (AC-0043), and the operator check. When the write call itself fails with no answer from the engine, the list stays and shows the AC-0073 message. A failure after `void_receipt` returns is not a void failure: the receipt is void, and the list shows it as void once the page renders again (AC-0023). The AC-0051, AC-0052, AC-0043, and AC-0066 outcomes keep their own messages.
-- [ ] **AC-0076.** After the receipt shown in the "Receipt saved" panel is voided from this page's Recent receipts list, the panel says "This receipt was voided." and no longer shows its before-and-after totals.
-- [ ] **AC-0077.** After an AC-0052 refusal, the message also says "Reload to see the latest stock."
-- [ ] **AC-0079.** The void confirmation's accessible description contains the lot number, weight, and vendor it names.
+- [x] **AC-0020.** With a product chosen, the screen lists up to 10 of its receipts, last entered first.
+- [x] **AC-0047.** Each listed receipt shows its lot number, received date, vendor, weight, cost per lb, and remaining lbs.
+- [x] **AC-0048.** When the product has more than 10 receipts, the list says "Showing the 10 most recent of N receipts.", where N is the product's receipt count.
+- [x] **AC-0049.** When the product has no receipts, the screen shows "No receipts for this product yet."
+- [x] **AC-0021.** In the list, every untouched receipt has a Void button, every void receipt shows "Void: " and its reason, and every other receipt shows "In use". The check fixture holds an untouched receipt, one that production drew from, one adjusted down and back to its full weight, and a void one.
+- [x] **AC-0022.** Void opens a confirmation that names the lot number, weight, and vendor, and asks for a reason.
+- [x] **AC-0050.** Cancel closes the confirmation and changes nothing.
+- [x] **AC-0051.** Confirming with a blank or spaces-only reason shows "Enter a reason for the void." and changes nothing.
+- [x] **AC-0023.** Given RAW-TOM holds 1,000 lbs at 1.68 and then 500 lbs at 1.80, voiding the second with a reason shows it as "Void: " and that reason, on hand 1,000 lbs, and average cost $1.6800/lb.
+- [x] **AC-0052.** When the database refuses a void, such as for a lot production drew from after the list loaded, the screen shows a message that starts "The receipt wasn't voided." and the lot is unchanged.
+- [x] **AC-0053.** Given RAW-TOM holds one receipt of 5,000 lbs at 1.68 and no other receipt, voiding it shows on hand 0 lbs, average cost "None yet", and 502's suggested price "No price yet".
+- [x] **AC-0043.** When the session has ended after the list loaded, confirming a void shows "You're signed out. Sign in again to void this receipt." and the lot is unchanged.
+- [x] **AC-0073.** If the connection to the app drops while a void is in flight, the list stays on screen and shows "The receipt may not have been voided. Reload this page to see whether it was."
+- [x] **AC-0083.** When a call that a void makes before its write call fails, or a REST call among them gets no answer within the AC-0082 limit, the list stays and shows a message that starts "The receipt wasn't voided." Those calls include the caller check's auth lookup, unless the auth server ends the session (AC-0043), and the operator check. When the write call itself fails with no answer from the engine, the list stays and shows the AC-0073 message. A failure after `void_receipt` returns is not a void failure: the receipt is void, and the list shows it as void once the page renders again (AC-0023). The AC-0051, AC-0052, AC-0043, and AC-0066 outcomes keep their own messages.
+- [x] **AC-0076.** After the receipt shown in the "Receipt saved" panel is voided from this page's Recent receipts list, the panel says "This receipt was voided." and no longer shows its before-and-after totals.
+- [x] **AC-0077.** After an AC-0052 refusal, the message also says "Reload to see the latest stock."
+- [x] **AC-0079.** The void confirmation's accessible description contains the lot number, weight, and vendor it names.
 
 Error page
 
-- [ ] **AC-0074.** After a `/receiving` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the receiving page without a browser reload.
-- [ ] **AC-0075.** When the `/receiving` error page appears, keyboard focus is on its heading.
+- [x] **AC-0074.** After a `/receiving` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the receiving page without a browser reload.
+- [x] **AC-0075.** When the `/receiving` error page appears, keyboard focus is on its heading.
 
 Display
 
-- [ ] **AC-0024.** Numbers and dates on screen use these formats, rounding half away from zero from the decimal value the database returns:
+- [x] **AC-0024.** Numbers and dates on screen use these formats, rounding half away from zero from the decimal value the database returns:
 
   | Kind | Format | Examples |
   | --- | --- | --- |
@@ -200,41 +200,41 @@ Display
   | Price per lb (suggested price) | "$", 2 decimals, "/lb" | 2.6818 → $2.68/lb; 2.685 → $2.69/lb; 1.005 → $1.01/lb |
   | Date | month abbreviation, day, year | 2026-10-07 → Oct 7, 2026, in the UTC, America/Chicago, and Pacific/Auckland time zones |
 
-- [ ] **AC-0067.** Missing values show as text: on hand with no `inventory_balances` row shows "0 lbs"; the average of a raw product with no non-void receipt shows "None yet"; and the suggested price of a finished product whose raw product has no non-void receipt shows "No price yet".
+- [x] **AC-0067.** Missing values show as text: on hand with no `inventory_balances` row shows "0 lbs"; the average of a raw product with no non-void receipt shows "None yet"; and the suggested price of a finished product whose raw product has no non-void receipt shows "No price yet".
 
 Accessibility and phone width
 
-- [ ] **AC-0025.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
-- [ ] **AC-0026.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
-- [ ] **AC-0054.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
-- [ ] **AC-0027.** A receipt can be completed and saved with the keyboard alone.
-- [ ] **AC-0055.** After a save, keyboard focus is on the "Receipt saved" heading.
-- [ ] **AC-0028.** After an AC-0010 refusal, keyboard focus is on the first field with an error.
-- [ ] **AC-0056.** After an AC-0010 refusal, the `aria-describedby` of every field with an error points to that field's message.
-- [ ] **AC-0057.** After an AC-0019, AC-0042, AC-0043, or AC-0052 refusal, or an AC-0071, AC-0072, AC-0073, or AC-0083 failure, keyboard focus is on the message that states it.
-- [ ] **AC-0029.** The accessible name of the weight field contains "lbs" and that of the cost field contains "per lb".
-- [ ] **AC-0030.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
-- [ ] **AC-0031.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
+- [x] **AC-0025.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
+- [x] **AC-0026.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
+- [x] **AC-0054.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
+- [x] **AC-0027.** A receipt can be completed and saved with the keyboard alone.
+- [x] **AC-0055.** After a save, keyboard focus is on the "Receipt saved" heading.
+- [x] **AC-0028.** After an AC-0010 refusal, keyboard focus is on the first field with an error.
+- [x] **AC-0056.** After an AC-0010 refusal, the `aria-describedby` of every field with an error points to that field's message.
+- [x] **AC-0057.** After an AC-0019, AC-0042, AC-0043, or AC-0052 refusal, or an AC-0071, AC-0072, AC-0073, or AC-0083 failure, keyboard focus is on the message that states it.
+- [x] **AC-0029.** The accessible name of the weight field contains "lbs" and that of the cost field contains "per lb".
+- [x] **AC-0030.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
+- [x] **AC-0031.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
 
 Database and build
 
-- [ ] **AC-0033.** `supabase db advisors --local --type security --fail-on warn` exits 0 after all migrations apply.
-- [ ] **AC-0034.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
-- [ ] **AC-0035.** `npm run build` exits 0.
-- [ ] **AC-0036.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
-- [ ] **AC-0037.** `npm run typecheck` exits 0.
-- [ ] **AC-0038.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
-- [ ] **AC-0059.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
-- [ ] **AC-0039.** No code under `src/` or in `next.config.ts` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
+- [x] **AC-0033.** `supabase db advisors --local --type security --fail-on warn` exits 0 after all migrations apply.
+- [x] **AC-0034.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
+- [x] **AC-0035.** `npm run build` exits 0.
+- [x] **AC-0036.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
+- [x] **AC-0037.** `npm run typecheck` exits 0.
+- [x] **AC-0038.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
+- [x] **AC-0059.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
+- [x] **AC-0039.** No code under `src/` or in `next.config.ts` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
   - `grep -rniE "env(\.|\[['\"])[a-z0-9_]*(service_role|secret|jwt|db_url|database_url|postgres)" src/ next.config.ts | grep -v '^src/privileged-env.ts:'`
   - `grep -rnE "\}\s*=\s*process\.env" src/ next.config.ts`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`
-- [ ] **AC-0060.** For each check name of a privileged variable, running `npm run build`, `npm run start`, and `npm run dev`, each with only that variable added to the environment, exits non-zero and prints the variable's name and not its value.
-- [ ] **AC-0068.** While `npm run dev` runs, once it logs that it reloaded `.env.local` after a check-name variable was written there, the next GET for `/sign-in`, the next GET for `/receiving`, and the next POST to `/receiving` each answer with HTTP status 500 and a body that does not contain the variable's value.
-- [ ] **AC-0040.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
-- [ ] **AC-0063.** For each of `npm run start` and `npm run dev`, at least one process it starts listens on TCP, and every TCP listening socket held by any process it starts is bound to 127.0.0.1.
-- [ ] **AC-0064.** `grep -nE "allowedOrigins|allowedDevOrigins" next.config.ts` prints nothing.
-- [ ] **AC-0065.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
+- [x] **AC-0060.** For each check name of a privileged variable, running `npm run build`, `npm run start`, and `npm run dev`, each with only that variable added to the environment, exits non-zero and prints the variable's name and not its value.
+- [x] **AC-0068.** While `npm run dev` runs, once it logs that it reloaded `.env.local` after a check-name variable was written there, the next GET for `/sign-in`, the next GET for `/receiving`, and the next POST to `/receiving` each answer with HTTP status 500 and a body that does not contain the variable's value.
+- [x] **AC-0040.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
+- [x] **AC-0063.** For each of `npm run start` and `npm run dev`, at least one process it starts listens on TCP, and every TCP listening socket held by any process it starts is bound to 127.0.0.1.
+- [x] **AC-0064.** `grep -nE "allowedOrigins|allowedDevOrigins" next.config.ts` prints nothing.
+- [x] **AC-0065.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
 
 ## Retired identifiers
 

@@ -217,3 +217,17 @@ Block-only red run by the controller: with only `if (blocked) event.preventDefau
 Owner decision, in chat on 2026-10-08:
 
 8. The narrow window stays, named: a page render that fails right after a save whose totals loaded, inside the save's response or in the move to a newly saved product's page, can show the error page in place of "Receipt saved". The receipt is saved, and Recent receipts shows it after a reload. Adding this to the spec's Assumptions would change the approved, hash-locked spec, so it is recorded here and in the architecture overview.
+
+## Post-gates review, round 4, and close (2026-10-08)
+
+- Fix-only reviewers on `git diff dfb3bf8..45eff2d`: adversarial-reviewer and quality-engineer direct clean; security-reviewer clean with a Not checked footer, adjudicated clean. The frontend-reviewer's round-3 clean stands: that diff changed no HTML, CSS, or JS. experience-reviewer: named skip (not installed), as in every round.
+- Review state: `reviewers-clean` (seq 45) and `review record` round 4 (structural clean). The review retry count reached its cap of 3 on round 3; round 4 found nothing.
+- Spec `Status: Shipped` with all 80 criteria checked; plan `Status: Done`; `lint-spec-status` clean; `plan check-current` OK. AC-0045 was never assigned: no committed revision of the spec holds it, so it is a numbering gap from drafting, not a dropped criterion.
+- Final gates on this tree: `npm run typecheck` exit 0; `npm test` exit 0, Vitest 192 passed (14 files), Playwright 76 passed; the goal-based checks and the recorded runs are in the T8 and round-2 sections above.
+
+## Completion evidence
+
+- Implementation, by task: T1 7497e34, T2 3837238, T3 72f1939, T4 a6fcc19, T5 8c55adc, T6 29f7942, T7 b4a838d, T8 dc8294a then 2f90951, T9 29d56bf, T10 2205bb6, T11 b272bde, T12 3d20e8d; review fixes dfb3bf8 and 45eff2d; the amendment a818f94.
+- Durable outputs: `docs/architecture/overview.md` (areas, access model, write path, app trust boundary with the Host check, failure handling, accepted residuals); `AGENTS.md` "Build and test commands" (start for daily use, dev for development only, the stop-first rule, the env command); `docs/costing.md` Rounding note (AC-0024 formats, AC-0067 texts); `src/lib/database.types.ts` regenerates with no diff (AC-0034).
+- Accepted residuals, each with its owner decision above: the dev-mode exposure to DNS rebinding (decision 5); the write-call clauses of AC-0072 and AC-0083 resting on unit rules (amendment approval); the narrow post-save window (decision 8); the 3600-second access-token residual and the shared sign-in limit (spec Assumptions).
+- Follow-ons: `docs/product/intents/app-https-hosting.md` and `docs/product/intents/receiving-test-refinements.md`.
