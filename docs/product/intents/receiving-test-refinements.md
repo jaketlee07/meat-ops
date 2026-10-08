@@ -11,7 +11,7 @@ Every receiving branch that a test claims to cover can fail when the branch brea
 
 - Give the save action's decisions a test seam, so the 'saved, but totals could not be loaded' branch and the engine not-allowed refusal each have a test that fails when the branch changes.
 - Through the same seam, a save or void whose write call gets no engine answer has a test that fails when the action labels that failure as an earlier call (the write-call clauses of receiving AC-0072 and AC-0083).
-- Score the focus ring in test/e2e/a11y.ts as drawn, opacity included, or fail when it cannot; then the first-run Save ring reaches 3:1 or that test stops running the contrast check.
+- Score the focus ring in test/e2e/a11y.ts as drawn, opacity included, or fail when it cannot; then the first-run Save ring and the error page's pending "Trying again…" ring (both faded to 60 percent while aria-disabled) each reach 3:1, or the tests that check them stop running the contrast check on those states.
 
 ## Owner
 

@@ -65,9 +65,11 @@ const LOG_MESSAGE_LIMIT = 200;
 
 // The server log line for a failure that saveReceipt or voidReceipt turned into a
 // screen message. It names the action and the stage and identifies the failed call
-// by the error's own message and, for an RpcError, its code. Nothing comes from the
-// form. The engine's messages name ids and never form text, but a request can carry
-// any id, so the message is cut to one bounded line.
+// by the error's own message and, for an RpcError, its code. The line adds nothing
+// from the form, but the error's message can quote a value the request sent: Postgres
+// quotes a malformed vendor id, received date, or lot id when its cast fails, and the
+// engine names ids in its refusals. Only a signed-in operator's hand-made request can
+// carry such a value, and the message is cut to one bounded line.
 export function actionFailureLogLine(action: ReceivingAction, stage: FailureStage, error: unknown): string {
   const message = (error instanceof Error ? error.message : "unknown error")
     .replace(/\s+/g, " ")
