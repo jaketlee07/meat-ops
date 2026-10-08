@@ -25,5 +25,6 @@ open = [
   { path = "docs/product/intents/zero-stock-average-recompute.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Replace AC-0053 with a recompute from non-void lots before real data", needs = [] },
   { path = "docs/product/intents/corrections-consumed-receipts.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Corrections for consumed receipts and batch reversal need a spec", needs = [] },
   { path = "docs/product/intents/app-https-hosting.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving/spec.md", revision = "feat/receiving draft, 2026-10-08" }, summary = "Host the app over HTTPS so receiving works from a phone at the dock", needs = [] },
+  { path = "docs/product/intents/receiving-test-refinements.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving/notes/verification-ledger.md", revision = "8b4eb5d" }, summary = "Two receiving test-tool refinements deferred from the post-build review", needs = [] },
 ]
 closed = []
