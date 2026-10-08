@@ -31,6 +31,7 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
   const headingId = useId();
+  const sentenceId = useId();
   const errorId = useId();
 
   const [reason, setReason] = useState("");
@@ -118,6 +119,7 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
       <dialog
         ref={dialogRef}
         aria-labelledby={headingId}
+        aria-describedby={sentenceId}
         onClose={closed}
         onCancel={(event) => {
           // Escape must not hide a void that is already on its way.
@@ -140,7 +142,7 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
             </button>
           </div>
 
-          <p className="break-words text-base">{`Lot ${lotNumber}, ${weight}, from ${vendor}. Voiding takes it out of stock and can't be undone.`}</p>
+          <p id={sentenceId} className="break-words text-base">{`Lot ${lotNumber}, ${weight}, from ${vendor}. Voiding takes it out of stock and can't be undone.`}</p>
 
           <div>
             <label className="block text-base font-medium">

@@ -24,3 +24,12 @@ export function readFields(formData: FormData): ReceiptFields {
   }
   return fields;
 }
+
+// The hidden field the form sends, with the value "1", when the product code is
+// missing from the page's product list. It asks the save action to check the
+// code against the products active when Save is pressed.
+export const RECHECK_FIELD = "recheckCode";
+
+export function readRecheck(formData: FormData): boolean {
+  return formData.get(RECHECK_FIELD) === "1";
+}

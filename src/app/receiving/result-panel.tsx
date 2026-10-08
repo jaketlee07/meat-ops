@@ -11,6 +11,8 @@ interface Row {
 }
 
 // A table of values before and after the receipt, each as the database held it.
+// A cell may wrap between a number and its unit, so a long number never makes
+// the page scroll sideways on a phone.
 function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <table className="w-full border-collapse text-base">
@@ -33,8 +35,8 @@ function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
             <th scope="row" className="break-words py-2 pr-2 text-left font-normal">
               {row.label}
             </th>
-            <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums">{row.before}</td>
-            <td className="whitespace-nowrap py-2 pl-2 text-right font-medium tabular-nums">{row.after}</td>
+            <td className="px-2 py-2 text-right tabular-nums">{row.before}</td>
+            <td className="py-2 pl-2 text-right font-medium tabular-nums">{row.after}</td>
           </tr>
         ))}
       </tbody>
@@ -71,7 +73,17 @@ function TotalsView({ totals }: { totals: Totals }) {
 
 // The live region is in the page before it has content, so a screen reader
 // announces what is put into it. After a save the form moves focus to the heading.
-export function ResultPanel({ state, headingRef }: { state: SaveState; headingRef: Ref<HTMLHeadingElement> }) {
+// Once the receipts list shows the saved lot as void, the totals give way to a
+// line saying so: they describe a receipt that no longer counts.
+export function ResultPanel({
+  state,
+  headingRef,
+  voided,
+}: {
+  state: SaveState;
+  headingRef: Ref<HTMLHeadingElement>;
+  voided: boolean;
+}) {
   return (
     <div role="status" aria-label="Receipt result" className="mt-6 space-y-4">
       {state.status === "saved" && (
@@ -89,7 +101,9 @@ export function ResultPanel({ state, headingRef }: { state: SaveState; headingRe
               ["Cost per lb", formatCostPerLb(state.lot.unitCost)],
             ]}
           />
-          {state.totals ? (
+          {voided ? (
+            <p>This receipt was voided.</p>
+          ) : state.totals ? (
             <TotalsView totals={state.totals} />
           ) : (
             <p>The receipt was saved, but its new totals could not be loaded. Reload the page to see them.</p>

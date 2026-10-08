@@ -77,6 +77,31 @@ test.describe("the form", () => {
     await expect(factValue(f.region, "502 Smoked Turkey Drums Tom")).toHaveText("No price yet");
   });
 
+  test("AC-0007: a product made active after the page loaded shows its description once a save has re-rendered the page", async ({
+    page,
+  }) => {
+    await query(
+      "insert into products(code, description, species, kind, active) values ('RAW-LATE', 'Late raw product', 'Pork', 'raw', false)",
+    );
+    const f = await openForm(page);
+    await query("update products set active = true where code = 'RAW-LATE'");
+
+    // The page's product list predates the change, so the code shows no description.
+    await f.code.fill("RAW-LATE");
+    await expect(f.code).toHaveValue("RAW-LATE");
+    await expect(page.getByText("Late raw product · Pork")).toHaveCount(0);
+
+    // A save re-renders the page, which reads the products again.
+    await fillReceipt(f, {});
+    await f.save.click();
+    await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
+
+    await f.code.fill("RAW-LATE");
+    await expect(page.getByText("Late raw product · Pork")).toBeVisible();
+    await expect(factValue(f.region, "On hand")).toHaveText("0 lbs");
+    await expect(factValue(f.region, "Average cost")).toHaveText("None yet");
+  });
+
   test("the product region is busy while a product loads", async ({ page }) => {
     await seedReceipt(5000, 1.68);
     const f = await openForm(page);
@@ -99,12 +124,34 @@ test.describe("the form", () => {
   test("the first-run state says what is missing, and Save is aria-disabled", async ({ page }) => {
     await query("delete from vendors");
     const f = await openForm(page);
-    await expect(page.getByText("No vendors yet. Add one in Supabase Studio.")).toBeVisible();
+    await expect(page.getByText("No vendors yet. Add one in Supabase Studio, then reload this page.")).toBeVisible();
     await expect(f.save).toHaveAttribute("aria-disabled", "true");
     expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
     await f.save.click({ force: true });
     await expect(f.result).toBeEmpty();
     expect(await lotCount()).toBe(0);
+  });
+
+  test("the first-run state with no active raw product says to reload, and Save stays aria-disabled until it does", async ({
+    page,
+  }) => {
+    await query("update products set active = false where kind = 'raw'");
+    const f = await openForm(page);
+    await expect(
+      page.getByText("No active raw products yet. Add one in Supabase Studio, then reload this page."),
+    ).toBeVisible();
+    await expect(f.save).toHaveAttribute("aria-disabled", "true");
+
+    // A product made active now does not unblock a page that loaded without one.
+    await query("update products set active = true where id = $1", [RAW_TOM_ID]);
+    await fillReceipt(f, {});
+    await f.save.click({ force: true });
+    await expect(f.result).toBeEmpty();
+    await expect(f.save).toHaveAttribute("aria-disabled", "true");
+    expect(await lotCount()).toBe(0);
+
+    await page.reload();
+    await expect(f.save).not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("AC-0008: vendors are listed by name, alphabetical ignoring case", async ({ page }) => {
@@ -116,11 +163,39 @@ test.describe("the form", () => {
   test.describe("in a time zone far from UTC", () => {
     test.use({ timezoneId: "Pacific/Auckland" });
 
-    test("AC-0009: the received date starts at today on the device", async ({ page }) => {
+    test("AC-0009: the received date starts at today on the device, not the UTC date", async ({ page }) => {
+      // 03:00 on Jan 15 in Auckland (UTC+13) is 14:00 on Jan 14 in UTC. With the
+      // clock pinned there, a default taken from the UTC date is a day behind at
+      // any hour of the real day.
+      const pinned = new Date("2026-01-14T14:00:00Z");
+      expect(pinned.toISOString().slice(0, 10)).toBe("2026-01-14");
+      await page.clock.install({ time: pinned });
+
       const f = await openForm(page);
-      const today = await deviceDate(page);
-      await expect(f.date).toHaveValue(today);
-      await expect(f.date).toHaveAttribute("max", today);
+      expect(await deviceDate(page)).toBe("2026-01-15");
+      await expect(f.date).toHaveValue("2026-01-15");
+      await expect(f.date).toHaveAttribute("max", "2026-01-15");
+    });
+
+    test("AC-0010 and AC-0011 across midnight: a form loaded at 23:59 saves a receipt dated the new day", async ({
+      page,
+    }) => {
+      // 23:59 on Jan 14 in Auckland (UTC+13).
+      await page.clock.install({ time: new Date("2026-01-14T10:59:00Z") });
+      const f = await openForm(page);
+      await expect(f.date).toHaveValue("2026-01-14");
+      await fillReceipt(f, {});
+
+      // Two minutes pass, to 00:01 on Jan 15. The form was loaded the day before.
+      await page.clock.fastForward(120_000);
+      expect(await deviceDate(page)).toBe("2026-01-15");
+      await f.date.fill("2026-01-15");
+      await f.save.click();
+
+      await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
+      await expect(f.date).toHaveAttribute("max", "2026-01-15");
+      const lots = await query<{ date: string }>("select received_date::text as date from lots");
+      expect(lots).toEqual([{ date: "2026-01-15" }]);
     });
   });
 
@@ -315,6 +390,52 @@ test.describe("saving", () => {
     await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
     await expect(f.result.getByText("No finished products are made from this raw product.")).toBeVisible();
     await expect(beforeAfter(f.result, /^On hand/)).toHaveText(["0 lbs", "100 lbs"]);
+  });
+
+  test("AC-0078: codes that became active or were added after the page loaded save without a reload", async ({
+    page,
+  }) => {
+    await query(
+      "insert into products(code, description, species, kind, active) values ('RAW-LATE', 'Late raw product', 'Pork', 'raw', false)",
+    );
+    const f = await openForm(page);
+
+    // Set active after the page loaded: not in the page's product list.
+    await query("update products set active = true where code = 'RAW-LATE'");
+    await fillReceipt(f, { code: "RAW-LATE", weight: "100", cost: "2" });
+    await f.save.click();
+    await expect(factValue(f.result, "Product")).toHaveText("RAW-LATE Late raw product");
+
+    // Inserted after the save re-rendered the page, so it is not in the list either.
+    await query(
+      "insert into products(code, description, species, kind) values ('RAW-NEW', 'New raw product', 'Beef', 'raw')",
+    );
+    await fillReceipt(f, { code: "RAW-NEW", weight: "200", cost: "3" });
+    await f.save.click();
+    await expect(factValue(f.result, "Product")).toHaveText("RAW-NEW New raw product");
+
+    const written = await query<{ code: string; lots: number }>(
+      `select p.code, count(*)::int as lots
+       from lots l join products p on p.id = l.product_id
+       group by p.code order by p.code`,
+    );
+    expect(written).toEqual([
+      { code: "RAW-LATE", lots: 1 },
+      { code: "RAW-NEW", lots: 1 },
+    ]);
+  });
+
+  test("AC-0026 with long numbers: the after-save state fits 320 px with over 100,000 lbs on hand", async ({
+    page,
+  }) => {
+    await seedReceipt(100000.125, 1.68);
+    const f = await openForm(page, RAW_TOM_URL);
+    await fillReceipt(f, { weight: "200000.25", cost: "1.80" });
+    await f.save.click();
+
+    await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
+    await expect(beforeAfter(f.result, /^On hand/)).toHaveText(["100,000.125 lbs", "300,000.375 lbs"]);
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Void"]);
   });
 
   test("AC-0018: pressing Save again while a save is pending writes no second lot", async ({ page }) => {
@@ -600,6 +721,18 @@ test.describe("the void confirmation", () => {
     expect(await checkPageState(page)).toEqual(["button Cancel", "textarea reason", "button Void receipt"]);
   });
 
+  test("AC-0079: the open confirmation's accessible description holds the lot number, weight, and vendor", async ({
+    page,
+  }) => {
+    const lotNumber = await lotNumberOf(await seedReceipt(1000, 1.68));
+    await openForm(page, RAW_TOM_URL);
+    await voidButton(receiptItem(page, lotNumber)).click();
+
+    await expect(voidDialog(page)).toHaveAccessibleDescription(
+      new RegExp(`Lot ${lotNumber}, 1,000 lbs, from ${VENDOR}\\.`),
+    );
+  });
+
   test("AC-0050: Cancel and Escape close the confirmation and change nothing", async ({ page }) => {
     const id = await seedReceipt(1000, 1.68);
     const before = await lotState(id);
@@ -687,6 +820,35 @@ test.describe("voiding", () => {
     expect(await lotState(second)).toEqual({ remaining: 0, voided: true, reason: "keyed twice" });
     expect(await lotState(first)).toEqual({ remaining: 1000, voided: false, reason: null });
     expect(await voidMarks()).toBe(1);
+  });
+
+  test("AC-0076: voiding the saved receipt from the list marks the panel voided and drops its totals", async ({
+    page,
+  }) => {
+    await query(
+      "insert into products(code, description, kind) values ('RAW-PORK', 'Pork Shoulder (raw)', 'raw')",
+    );
+    const f = await openForm(page, RAW_TOM_URL);
+    await fillReceipt(f, { weight: "1000", cost: "1.68" });
+    await f.save.click();
+    await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
+    await expect(beforeAfter(f.result, /^On hand/)).toHaveText(["0 lbs", "1,000 lbs"]);
+
+    const lotNumber = (await factValue(f.result, "Lot number").textContent()) ?? "missing";
+    await voidThrough(page, receiptItem(page, lotNumber), "wrong product");
+
+    const voided = f.result.getByText("This receipt was voided.", { exact: true });
+    await expect(voided).toBeVisible();
+    await expect(f.result.getByRole("table")).toHaveCount(0);
+    await expect(f.result.getByText("Before")).toHaveCount(0);
+    await expect(factValue(f.result, "Lot number")).toHaveText(lotNumber);
+    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+
+    // Choosing another product swaps the list, and the panel still says so.
+    await f.code.fill("RAW-PORK");
+    await expect(factValue(f.region, "On hand")).toHaveText("0 lbs");
+    await expect(voided).toBeVisible();
+    await expect(f.result.getByRole("table")).toHaveCount(0);
   });
 
   test("AC-0053 and AC-0067: voiding the only receipt shows 0 lbs, None yet, and No price yet", async ({ page }) => {

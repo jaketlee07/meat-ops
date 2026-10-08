@@ -5,6 +5,7 @@ import { NOT_ALLOWED, saveFailureMessage, voidFailureMessage } from "../../lib/f
 import { parseReceiptForm, parseVoidReason, type ReceiptField } from "../../lib/receipt-input";
 import {
   getStock,
+  listActiveRawProducts,
   listFinishedPrices,
   listRawProducts,
   listVendors,
@@ -14,7 +15,7 @@ import {
 import { receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
 import type { TypedClient } from "../../lib/supabase";
 import { checkCaller } from "../_server/caller";
-import { readFields } from "./form-fields";
+import { readFields, readRecheck } from "./form-fields";
 import { priceView, stockView, type StockView } from "./stock-view";
 
 export interface SavedLot {
@@ -81,11 +82,15 @@ function priceChanges(
 }
 
 // Everything a save reads before its write call, in one place so a single catch
-// maps a failure in any of those calls. The save rules take every raw code, so a
-// product made inactive after the page loaded reaches receive_lot and is refused
-// there with its own reason.
+// maps a failure in any of those calls. For a code the page knew, the save rules
+// take every raw code, so a product made inactive after the page loaded reaches
+// receive_lot and is refused there with its own reason. For a code the form
+// marked as missing from the page's product list, they take the active raw
+// products as of now: an inactive code gets the field message, and one made
+// active since the page loaded saves. The mark only picks which message a
+// refused code gets; the engine refuses an inactive product either way.
 async function readBeforeWrite(supabase: TypedClient, formData: FormData) {
-  const rawProducts = await listRawProducts(supabase);
+  const rawProducts = readRecheck(formData) ? await listActiveRawProducts(supabase) : await listRawProducts(supabase);
   const byCode = new Map(rawProducts.map((product) => [product.code, product]));
   const parsed = parseReceiptForm(readFields(formData), new Set(byCode.keys()));
   if (!parsed.ok) return { ok: false as const, errors: parsed.errors };

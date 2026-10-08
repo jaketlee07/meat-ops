@@ -27,7 +27,7 @@ interface FocusedControl {
 
 type WalkStep =
   | { kind: "new"; control: FocusedControl }
-  | { kind: "same" } // focus stayed on the element it was on
+  | { kind: "seen" } // focus is on an element already counted, so it counts once
   | { kind: "end" }; // focus left the page, or came back to the first element
 
 export async function checkPageState(page: Page): Promise<string[]> {
@@ -57,7 +57,9 @@ export async function checkPageState(page: Page): Promise<string[]> {
 }
 
 // Presses Tab from the top of the page until focus leaves the page or returns
-// to the first element. An element that keeps focus across presses counts once.
+// to the first element reached. An element that keeps focus across presses
+// counts once. A cycle among later controls never ends the walk, so it runs
+// into the press limit below and fails the test.
 async function walkTabOrder(page: Page): Promise<FocusedControl[]> {
   await page.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
@@ -81,8 +83,9 @@ async function walkTabOrder(page: Page): Promise<FocusedControl[]> {
       const el = document.activeElement;
       if (!el || el === document.body || el === document.documentElement) return { kind: "end" };
       const index = seen.indexOf(el);
-      if (index === seen.length - 1 && index !== -1) return { kind: "same" };
-      if (index !== -1) return { kind: "end" };
+      // Back on the first element after reaching others: the walk is complete.
+      if (index === 0 && seen.length > 1) return { kind: "end" };
+      if (index !== -1) return { kind: "seen" };
       seen.push(el);
 
       const style = getComputedStyle(el);
