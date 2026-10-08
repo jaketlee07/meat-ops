@@ -8,7 +8,7 @@
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
     "start": "next start -H 127.0.0.1",
-    "test": "vitest run",
+    "test": "vitest run && npm run test:e2e",
     "test:e2e": "PLAYWRIGHT_FORCE_ASYNC_LOADER=1 playwright test",
     "test:costing": "vitest run test/costing.test.ts",
     "typecheck": "tsc --noEmit",

@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 import { privilegedVariableNames } from "./src/privileged-env";
 import { resolveStackEnv } from "./test/env";
 
@@ -23,12 +23,23 @@ const unsetPrivileged = privilegedVariableNames()
 
 export default defineConfig({
   testDir: "test/e2e",
-  testMatch: "**/*.spec.ts",
   // Every spec resets the one shared database, so tests run one at a time.
   fullyParallel: false,
   workers: 1,
   globalSetup: "./test/global-setup.ts",
   use: { baseURL: `http://${HOST}:${PORT}` },
+  projects: [
+    // Signs in once per role through the form and saves each session under
+    // test/e2e/.auth/, so the specs reuse it. The local auth server allows 30
+    // sign-ins per 5 minutes per address, and the Vitest suites share that limit.
+    { name: "setup", testMatch: "**/*.setup.ts" },
+    {
+      name: "chromium",
+      testMatch: "**/*.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+    },
+  ],
   webServer: {
     command: `env ${unsetPrivileged} sh -c "npm run build && npm run start -- -p ${PORT}"`,
     port: PORT,
