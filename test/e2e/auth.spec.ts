@@ -1,8 +1,10 @@
+import { connect } from "node:net";
+import { request as httpRequest } from "node:http";
 import { expect, test, type Cookie, type Page, type Request } from "@playwright/test";
 import { resolveStackEnv } from "../env";
 import { createTypedClient } from "../../src/lib/supabase";
 import { NON_OPERATOR_EMAIL, OPERATOR_EMAIL, TEST_PASSWORD } from "../users";
-import { resetTestData } from "../db";
+import { query, resetTestData } from "../db";
 import { checkPageState } from "./a11y";
 import {
   fillReceipt,
@@ -268,5 +270,142 @@ test.describe("a replayed void request", () => {
       await operator.dispose();
     }
     expect(await voidMarks(), "voids after the operator's own copy").toBe(1);
+  });
+});
+
+// A request sent straight to the test server, so the test picks every header,
+// including a Host the browser would never send.
+interface RawReply {
+  status: number;
+  body: string;
+}
+
+function rawRequest(
+  base: URL,
+  path: string,
+  { method = "GET", headers = {}, body, setHost = true }: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: Buffer;
+    setHost?: boolean;
+  } = {},
+): Promise<RawReply> {
+  return new Promise((resolve, reject) => {
+    const sent = httpRequest(
+      { hostname: base.hostname, port: base.port, path, method, headers, setHost, agent: false, timeout: 10_000 },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("error", reject);
+        response.on("end", () =>
+          resolve({ status: response.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf8") }),
+        );
+      },
+    );
+    sent.on("timeout", () => sent.destroy(new Error(`no answer for ${method} ${path}`)));
+    sent.on("error", reject);
+    sent.end(body);
+  });
+}
+
+// An HTTP/1.0 request with no Host header, written to a raw socket. Node's
+// client cannot send one, and the server keeps no connection open for it.
+function rawHttp10(base: URL, path: string): Promise<RawReply> {
+  return new Promise((resolve, reject) => {
+    const socket = connect({ host: base.hostname, port: Number(base.port), timeout: 10_000 });
+    const chunks: Buffer[] = [];
+    socket.on("connect", () => socket.write(`GET ${path} HTTP/1.0\r\n\r\n`));
+    socket.on("data", (chunk: Buffer) => chunks.push(chunk));
+    socket.on("timeout", () => socket.destroy(new Error(`no answer for HTTP/1.0 ${path}`)));
+    socket.on("error", reject);
+    socket.on("close", () => {
+      const text = Buffer.concat(chunks).toString("utf8");
+      const split = text.indexOf("\r\n\r\n");
+      const status = Number(/^HTTP\/1\.[01] (\d{3})/.exec(text)?.[1] ?? 0);
+      resolve({ status, body: split === -1 ? "" : text.slice(split + 4) });
+    });
+  });
+}
+
+const FOREIGN_HOST = "rebind.example:3100";
+const MISDIRECTED = "Misdirected request.";
+
+async function operatorSessionCount(): Promise<number> {
+  const rows = await query<{ n: number }>(
+    "select count(*)::int as n from auth.sessions s join auth.users u on u.id = s.user_id where u.email = $1",
+    [OPERATOR_EMAIL],
+  );
+  const [row] = rows;
+  if (!row) throw new Error("the session count returned no row");
+  return row.n;
+}
+
+test.describe("a request with a foreign or missing Host", () => {
+  const PATHS = ["/", "/sign-in", "/_next/static/x.js", "/_next/image", "/favicon.ico"];
+
+  test("AC-0069: a Host other than 127.0.0.1 or localhost is refused for every path", async ({ baseURL }) => {
+    const base = new URL(baseURL ?? "");
+    for (const path of PATHS) {
+      const reply = await rawRequest(base, path, { headers: { host: FOREIGN_HOST } });
+      expect(reply, `reply for ${path}`).toEqual({ status: 421, body: MISDIRECTED });
+    }
+  });
+
+  test("AC-0069: a request with no Host is refused, and no page renders", async ({ baseURL }) => {
+    const base = new URL(baseURL ?? "");
+    // Node's own server answers an HTTP/1.1 request with no Host before any handler runs.
+    const http11 = await rawRequest(base, "/sign-in", { setHost: false });
+    expect(http11.status).toBe(400);
+    expect(http11.body).not.toContain("Sign in");
+
+    // An HTTP/1.0 request with no Host reaches the app, and its proxy refuses it.
+    const http10 = await rawHttp10(base, "/sign-in");
+    expect(http10).toEqual({ status: 421, body: MISDIRECTED });
+  });
+
+  test("AC-0069: a sign-in action posted with a foreign Host creates no session", async ({ page, baseURL }) => {
+    const base = new URL(baseURL ?? "");
+
+    // Capture the request the sign-in form sends and stop it before the server
+    // sees it, so the capture spends no sign-in.
+    let captured: Request | undefined;
+    await page.route("**/sign-in", async (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && "next-action" in request.headers()) {
+        captured = request;
+        await route.abort();
+      } else {
+        await route.continue();
+      }
+    });
+    await submitSignIn(page, OPERATOR_EMAIL);
+    await expect.poll(() => captured).toBeDefined();
+    if (!captured) throw new Error("no sign-in request was captured");
+    const body = captured.postDataBuffer();
+    if (!body) throw new Error("the captured sign-in request has no body");
+
+    // Send it as a page on the foreign name would: that name as Host and Origin,
+    // so the framework's own origin check has nothing to refuse.
+    const headers = captured.headers();
+    for (const name of ["cookie", "content-length", "host"]) delete headers[name];
+    headers.host = FOREIGN_HOST;
+    headers.origin = `http://${FOREIGN_HOST}`;
+    headers.referer = `http://${FOREIGN_HOST}/sign-in`;
+
+    const before = await operatorSessionCount();
+    for (const path of ["/sign-in", "/favicon.ico"]) {
+      const reply = await rawRequest(base, path, { method: "POST", headers, body });
+      expect(reply, `reply for the sign-in posted to ${path}`).toEqual({ status: 421, body: MISDIRECTED });
+    }
+    expect(await operatorSessionCount(), "operator sessions after the foreign-Host posts").toBe(before);
+  });
+
+  test("AC-0069: 127.0.0.1 and localhost, with a port, are not refused", async ({ baseURL }) => {
+    const base = new URL(baseURL ?? "");
+    for (const host of [`127.0.0.1:${base.port}`, `localhost:${base.port}`]) {
+      const reply = await rawRequest(base, "/sign-in", { headers: { host } });
+      expect(reply.status, `status for Host ${host}`).toBe(200);
+      expect(reply.body, `page for Host ${host}`).toContain("Sign in");
+    }
   });
 });

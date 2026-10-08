@@ -4,19 +4,37 @@ import { SESSION_COOKIE_OPTIONS, supabaseEnv } from "./app/_server/session";
 import type { Database } from "./lib/database.types";
 import { privilegedVariableNames } from "./privileged-env";
 
-// Refreshes the session and sends a signed-out GET to /sign-in. It is an
-// optimistic check only and authorizes nothing: every page and every server
-// action creates its own client and settles the caller again.
+// The only Host values the app answers: 127.0.0.1 or localhost, on any port. A
+// page on another name that resolves to this machine (DNS rebinding) sends its
+// own name, so it is refused before anything runs.
+const LOCAL_HOST = /^(?:127\.0\.0\.1|localhost)(?::\d{1,5})?$/i;
+
+function refuse(status: number, body: string): NextResponse {
+  return new NextResponse(body, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
+}
+
+// Refuses a request whose Host is not local, then refreshes the session and
+// sends a signed-out GET to /sign-in. The session work is an optimistic check
+// only and authorizes nothing: every page and every server action creates its
+// own client and settles the caller again. The file exports no matcher, so Next
+// runs it on every request, including static files and images.
 export async function proxy(request: NextRequest): Promise<NextResponse> {
+  // The raw header, so a request with no Host is refused too.
+  const host = request.headers.get("host");
+  if (host === null || !LOCAL_HOST.test(host)) return refuse(421, "Misdirected request.");
+
   // A privileged variable can reach a running `next dev` when an env file
   // changes, after the boot check in next.config.ts has passed. Names only.
   const leaked = privilegedVariableNames();
   if (leaked.length > 0) {
     console.error(`Server misconfigured: privileged variable(s) in the app environment: ${leaked.join(", ")}`);
-    return new NextResponse("Server misconfigured.", {
-      status: 500,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+    return refuse(500, "Server misconfigured.");
+  }
+
+  // Build output and the favicon need no session work.
+  const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/_next/static/") || pathname === "/_next/image" || pathname === "/favicon.ico") {
+    return NextResponse.next();
   }
 
   const isRead = request.method === "GET" || request.method === "HEAD";
@@ -59,7 +77,3 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   return response;
 }
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-};

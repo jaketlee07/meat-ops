@@ -115,3 +115,12 @@ The amendment (spec sha256 9e886c4d77ca9f45d686b2d8aab0893aff5020146b2942eeafe63
 - Facts probed during review: Node 22.17.0's default HTTP server answers an HTTP/1.1 request with no `Host` with 400 before any handler runs and passes an HTTP/1.0 one to the handler (scratch probe); the local auth server's key list holds one EC key with alg ES256.
 - Deviation: the spec and plan were revised between rounds without firing `findings-remain` and `spec-ready` around each revision. The state stayed SPEC-PLAN-REVIEW from seq 26, and every fired reviewer reached clean on the final hashes above.
 - Owner approval, in chat on 2026-10-08: the amended spec is approved, and the write-call clauses of AC-0072 and AC-0083 resting on unit rules alone is accepted, with the end-to-end test queued in `docs/product/intents/receiving-test-refinements.md`.
+
+## T9 (2026-10-08)
+
+- Executed by the `implementer` subagent; the controller reran the gates.
+- Controller gates: `npm run typecheck` exit 0; `npm test` exit 0 in 61 s, Vitest 167 passed (12 files), Playwright 65 passed (2 setup, 63 specs). The implementer's `npm run build` exited 0.
+- `src/proxy.ts` exports no matcher, so it runs on every request. It refuses a missing or non-local Host with 421 before the privileged check, and skips session work for `/_next/static/`, `/_next/image`, and `/favicon.ico`.
+- `test/e2e/auth.spec.ts` adds four AC-0069 tests: a foreign Host on five paths gets 421; an HTTP/1.1 request with no Host gets Node's 400 and an HTTP/1.0 one gets 421; a captured sign-in action replayed with a foreign Host to `/sign-in` and `/favicon.ico` gets 421 and adds no `auth.sessions` row; `127.0.0.1:3100` and `localhost:3100` are served. The tests spend no sign-in.
+- Red check by the implementer: with the proxy from HEAD, the foreign-Host, no-Host, and replay tests failed (`/` answered 307; the Host-less HTTP/1.0 request got the 200 sign-in page).
+- Deviations: the replay also sets `origin` and `referer` to the foreign name, as a rebinding page would, so Next's own action origin check cannot mask the proxy's answer. The static paths match exactly (`/_next/image`, `/favicon.ico`) or by the `/_next/static/` prefix. The Host match ignores case.
