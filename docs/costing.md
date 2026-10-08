@@ -148,8 +148,7 @@ taken while another lot that is now void was on hand, the average after the
 last void can carry a voided receipt's cost, and can depend on the order of the
 voids. It stays that way while stock is 0, until a receipt or an upward
 adjustment brings stock above 0 and the stock-on-hand average takes over. The
-follow-on in the
-[foundation-hardening spec](specs/foundation-hardening/spec.md#follow-ons)
+[zero-stock average intent](product/intents/zero-stock-average-recompute.md)
 replaces these steps with a recompute from the non-void lots alone.
 
 ### void_sale
