@@ -33,5 +33,5 @@ The owner logs receipts from a phone at the dock over an encrypted connection.
 
 - Mode: repo-origin
 - Locator: docs/specs/receiving/spec.md
-- Revision: feat/receiving draft, 2026-10-08
+- Revision: 683782e
 - Authority: repo-origin
