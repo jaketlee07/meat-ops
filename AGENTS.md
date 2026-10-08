@@ -6,7 +6,7 @@
 
 ## Project overview
 
-This is Meat Ops, an inventory, costing, and lot traceability tool for a meat processor. The owner is its only user. The costing math lives in the Postgres database, and the app in `src/lib/` only calls it and reads its views.
+This is Meat Ops, an inventory, costing, and lot traceability tool for a meat processor. The owner is its only user. The costing math lives in the Postgres database. The Next.js app in `src/app/` and the data layer in `src/lib/` only call it and read its views.
 
 - [`SYSTEM-SPEC.md`](SYSTEM-SPEC.md) is the master brief: what the system does and its boundaries.
 - [`docs/costing.md`](docs/costing.md) is the costing reference: the average rule, the corrections, and the golden numbers the tests encode.
@@ -70,17 +70,33 @@ outranks existing guidance.
 ## Build and test commands
 
 ```bash
-npm ci                    # install
-supabase start            # local stack (Docker); tests run against it
-supabase migration up     # apply migrations to the local stack
-npm test                  # every suite
-npm run test:costing      # the golden costing suite only
-npm run typecheck         # tsc --noEmit
-npm run gen:types         # regenerate src/lib/database.types.ts from the local stack
+npm ci                            # install
+npx playwright install chromium   # once, the browser for the browser suite
+supabase start                    # local stack (Docker); tests run against it
+supabase migration up             # apply migrations to the local stack
+npm run dev                       # the app on http://127.0.0.1:3000
+npm run build                     # production build
+npm test                          # Vitest suites, then the Playwright browser suite
+npm run test:e2e                  # the browser suite only
+npm run test:costing              # the golden costing suite only
+npm run typecheck                 # tsc --noEmit
+npm run gen:types                 # regenerate src/lib/database.types.ts from the local stack
+npm run audit                     # audit shipped dependencies; run before merge
 ```
 
-There is no lint command and no build step. The tests refuse to run against any
-host except `127.0.0.1` or `localhost`.
+There is no lint command.
+
+The app reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the gitignored
+repository-root `.env`, and nothing else. Make the file from the local stack:
+
+```bash
+supabase status -o env --override-name api.url=SUPABASE_URL --override-name auth.anon_key=SUPABASE_ANON_KEY | grep -E '^SUPABASE_(URL|ANON_KEY)=' > .env
+```
+
+The app refuses to build, start, or run when a privileged variable is set: any
+name containing `SERVICE_ROLE`, `SECRET`, `JWT`, `DB_URL`, `DATABASE_URL`, or
+`POSTGRES`. Stop `npm run dev` before `npm test`, because both use `.next`. The
+tests refuse to run against any host except `127.0.0.1` or `localhost`.
 
 Use commands verified from repository guidance, manifests, task runners, or CI.
 Do not guess them from the detected language alone.
