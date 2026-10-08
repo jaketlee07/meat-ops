@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* Design tokens. Stripe Dashboard forms are the reference: a light surface,
+   high contrast, no gradients. Contrast pairs are checked by the browser suite. */
+@theme {
+  --color-surface: #ffffff;
+  --color-ink: #111827;
+  --color-ink-secondary: #4b5563;
+  --color-primary: #1d4ed8;
+  --color-on-primary: #ffffff;
+  --color-error: #b91c1c;
+  --color-success: #15803d;
+  --color-field-border: #6b7280;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --spacing-control: 44px;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  /* Every control is at least 44 px tall, and a button at least 44 px wide. */
+  button,
+  input,
+  select,
+  textarea {
+    min-height: var(--spacing-control);
+  }
+
+  button {
+    min-width: var(--spacing-control);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

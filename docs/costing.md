@@ -2,7 +2,9 @@
 
 This is the source of truth for the costing math. The tests in
 `test/costing.test.ts`, `test/engine.test.ts`, and `test/corrections.test.ts`
-encode every number below. If a change turns any of these red, the change is
+encode every costing number below. The display formats in the Rounding note are
+asserted by `test/format.test.ts`, and its missing-value texts by
+`test/e2e/receiving.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
 The math lives only in the Postgres functions `receive_lot`, `produce_batch`,
@@ -179,3 +181,21 @@ at 1.68 and 1,000 lbs at 1.80, then adjust the second lot to 250 lbs. Stock is
 v_product_pricing returns full-precision numeric. The 2.68 figure is a display
 rounding. Tests assert on Number(value).toFixed(2) for prices, and on exact
 equality only for values that are exact by construction (1.725, 1540).
+
+The screen rounds only for display, half away from zero, from the decimal value
+the database returns:
+
+| Kind | Format | Examples |
+| --- | --- | --- |
+| Weight | thousands separators, 0 to 3 decimals with trailing zeros dropped, then " lbs" | 5000 → 5,000 lbs; 32.5 → 32.5 lbs; 1234.5678 → 1,234.568 lbs |
+| Cost per lb (lot cost, average) | "$", 4 decimals, "/lb" | 1.725 → $1.7250/lb; 1.68 → $1.6800/lb |
+| Suggested price per lb | "$", 2 decimals, "/lb" | 2.6818 → $2.68/lb; 2.685 → $2.69/lb; 1.005 → $1.01/lb |
+| Date | month abbreviation, day, year, in any time zone | 2026-10-07 → Oct 7, 2026 |
+
+Where the database has nothing to show, the screen uses text:
+
+- On hand with no `inventory_balances` row shows "0 lbs".
+- The average of a raw product with no non-void receipt shows "None yet". A void
+  that leaves no live receipt can leave a stored average of 0, which is not shown.
+- The suggested price of a finished product whose raw product has no non-void
+  receipt shows "No price yet".

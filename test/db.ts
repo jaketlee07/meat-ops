@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
-import { expect } from "vitest";
 import type { TypedClient } from "../src/lib/supabase.js";
 import { resolveStackEnv } from "./env.js";
 import { OPERATOR_EMAIL } from "./users.js";
@@ -22,6 +21,13 @@ import { OPERATOR_EMAIL } from "./users.js";
 
 const env = resolveStackEnv();
 const pool = new Pool({ connectionString: env.dbUrl });
+
+// Vitest throws when it is imported outside its own runner, and the browser
+// suite imports this file. So the helpers that assert load `expect` when they
+// run, which only happens inside Vitest.
+async function loadExpect(): Promise<typeof import("vitest").expect> {
+  return (await import("vitest")).expect;
+}
 
 // Fixed UUIDs, matching supabase/seed.sql so numbers tie out to docs/costing.md.
 export const VENDOR_ID = "11111111-1111-1111-1111-111111111111";
@@ -219,6 +225,7 @@ async function expectRefusedVia(
   call: OpCall,
   keyword: RegExp,
 ): Promise<void> {
+  const expect = await loadExpect();
   const before = await tableFingerprints();
   const outcome = await send();
   expect(outcome.ok, `expected a refusal for ${call.fn} ${JSON.stringify(call.args)}`).toBe(false);
@@ -240,6 +247,7 @@ export function expectRefused(client: TypedClient, call: OpCall, keyword: RegExp
 // AC-0017: the batch drew exactly the lbs it was asked for, and the sale lines
 // add up to exactly the lbs sold. `requested` is the amount at the call site.
 export async function assertBatchConsumed(batchId: string, requested: number): Promise<void> {
+  const expect = await loadExpect();
   const [row] = await query(
     `select b.raw_lbs_in::float8 as raw_lbs_in,
             coalesce(sum(pbl.lbs_consumed), 0)::float8 as consumed
@@ -252,6 +260,7 @@ export async function assertBatchConsumed(batchId: string, requested: number): P
 }
 
 export async function assertSaleLines(saleId: string, requested: number): Promise<void> {
+  const expect = await loadExpect();
   const [row] = await query(
     "select coalesce(sum(lbs_sold), 0)::float8 as sold from sale_items where sale_id = $1",
     [saleId],
@@ -475,6 +484,7 @@ export async function tableFingerprints(): Promise<Record<string, string>> {
 // finished lot. Void lots and void sales are excluded from the remaining-lbs
 // equalities and checked for AC-0033 instead.
 export async function assertLedgerInvariants(): Promise<void> {
+  const expect = await loadExpect();
   const { rows } = await pool.query(`
     select 'AC-0030 qty_on_hand <> sum(remaining)' as violation, p.id::text as subject
     from products p
@@ -524,6 +534,7 @@ export async function assertLedgerInvariants(): Promise<void> {
 // AC-0028: every raw product with lbs on hand carries its stock-on-hand
 // average. The average is computed in SQL, never in TypeScript.
 export async function assertAverageIsStockOnHand(): Promise<void> {
+  const expect = await loadExpect();
   const { rows } = await pool.query(`
     select b.product_id, b.moving_avg_cost::float8 as stored, round(l.v / l.q, 4)::float8 as expected
     from inventory_balances b

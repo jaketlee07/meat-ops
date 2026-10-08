@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 // beforeEach, so they must not run in parallel against the same tables.
 export default defineConfig({
   test: {
+    include: ["test/**/*.test.ts"],
     globalSetup: ["./test/global-setup.ts"],
     fileParallelism: false,
     pool: "forks",

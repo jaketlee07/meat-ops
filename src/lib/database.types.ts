@@ -713,6 +713,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      check_operator: { Args: never; Returns: undefined }
       produce_batch: {
         Args: {
           p_batch_number?: string
