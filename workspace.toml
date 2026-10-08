@@ -19,5 +19,10 @@
 # repository root.
 
 [backlog]
-open = []
+open = [
+  { path = "docs/product/intents/hosted-supabase-rollout.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Hosted rollout needs scheduling; real data waits on a read-only access check", needs = [] },
+  { path = "docs/product/intents/seed-data-privacy.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Owner decides whether seed data is real before the catalog is loaded", needs = [] },
+  { path = "docs/product/intents/zero-stock-average-recompute.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Replace AC-0053 with a recompute from non-void lots before real data", needs = [] },
+  { path = "docs/product/intents/corrections-consumed-receipts.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Corrections for consumed receipts and batch reversal need a spec", needs = [] },
+]
 closed = []
