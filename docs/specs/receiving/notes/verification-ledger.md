@@ -124,3 +124,12 @@ The amendment (spec sha256 9e886c4d77ca9f45d686b2d8aab0893aff5020146b2942eeafe63
 - `test/e2e/auth.spec.ts` adds four AC-0069 tests: a foreign Host on five paths gets 421; an HTTP/1.1 request with no Host gets Node's 400 and an HTTP/1.0 one gets 421; a captured sign-in action replayed with a foreign Host to `/sign-in` and `/favicon.ico` gets 421 and adds no `auth.sessions` row; `127.0.0.1:3100` and `localhost:3100` are served. The tests spend no sign-in.
 - Red check by the implementer: with the proxy from HEAD, the foreign-Host, no-Host, and replay tests failed (`/` answered 307; the Host-less HTTP/1.0 request got the 200 sign-in page).
 - Deviations: the replay also sets `origin` and `referer` to the foreign name, as a rebinding page would, so Next's own action origin check cannot mask the proxy's answer. The static paths match exactly (`/_next/image`, `/favicon.ico`) or by the `/_next/static/` prefix. The Host match ignores case.
+
+## T10 (2026-10-08)
+
+- Executed by the `implementer` subagent; the controller made one fix and reran the gates.
+- Red: `test/failures.test.ts`, byte-identical to the plan's T10 stub, failed with "Failed to load url ../src/lib/failures.js" before the module existed; it then passed 14 of 14.
+- Controller gates: `npm run typecheck` exit 0; `npm test` exit 0 in 81 s, Vitest 182 passed (13 files), Playwright 65 passed.
+- `src/lib/rpc.ts` throws `RpcError` from every wrapper, `isOperator` included, with the old message text and PostgREST's code ("" when there is none). `src/lib/failures.ts` holds the messages, the sign-in mapping and log line, `sessionOutcome`, `withTimeout`, and `DB_CALL_TIMEOUT_MS` (10,000), and imports nothing. `listRawProducts` is in `src/lib/receiving.ts`, with a local-stack case that includes an inactive raw product; the private copy in `actions.ts` goes in T11.
+- Controller fix: an engine refusal of a void now ends its reason with a period before "Reload to see the latest stock.", and a not-allowed refusal (42501) carries no reload hint.
+- Observed: `withTimeout` bounds the wait for the response headers; a body that stalls after them is not bounded, which matches AC-0082's "no response".

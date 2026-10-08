@@ -106,6 +106,17 @@ export async function listActiveRawProducts(client: TypedClient): Promise<RawPro
   return data;
 }
 
+// Every raw product, active or not, for the save action. The save rules take every
+// code, so a product made inactive after the page loaded reaches receive_lot and is
+// refused there with its own reason.
+export async function listRawProducts(
+  client: TypedClient,
+): Promise<Pick<RawProduct, "id" | "code" | "description">[]> {
+  const { data, error } = await client.from("products").select("id, code, description").eq("kind", "raw");
+  if (error) throw new Error(`listRawProducts failed: ${error.message}`);
+  return data;
+}
+
 export async function listVendors(client: TypedClient): Promise<Vendor[]> {
   const { data, error } = await client.from("vendors").select("id, name");
   if (error) throw new Error(`listVendors failed: ${error.message}`);

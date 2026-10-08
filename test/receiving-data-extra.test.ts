@@ -3,6 +3,7 @@ import {
   getStock,
   listActiveRawProducts,
   listFinishedPrices,
+  listRawProducts,
   listRecentReceipts,
   listVendors,
 } from "../src/lib/receiving.js";
@@ -94,6 +95,23 @@ describe("listActiveRawProducts", () => {
       code: "RAW-TOM",
       description: "Turkey Drums TOM (raw)",
       species: "Turkey",
+    });
+  });
+});
+
+describe("listRawProducts", () => {
+  it("lists every raw product, active or not, and leaves out finished ones", async () => {
+    await query(
+      `insert into products(code, description, species, kind, active) values
+         ('RAW-BEEF', 'Beef Trim (raw)', 'Beef', 'raw', true),
+         ('RAW-OLD', 'Retired (raw)', 'Pork', 'raw', false)`,
+    );
+    const products = await listRawProducts(operator);
+    expect(products.map((p) => p.code).sort()).toEqual(["RAW-BEEF", "RAW-OLD", "RAW-TOM"]);
+    expect(products.find((p) => p.code === "RAW-TOM")).toEqual({
+      id: RAW_TOM_ID,
+      code: "RAW-TOM",
+      description: "Turkey Drums TOM (raw)",
     });
   });
 });

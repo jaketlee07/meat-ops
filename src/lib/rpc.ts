@@ -7,6 +7,25 @@ import type { TypedClient } from "./supabase.js";
 
 type Functions = Database["public"]["Functions"];
 
+// What every wrapper throws: the message text callers have always seen, plus
+// PostgREST's error code. An engine refusal carries a code (a SQLSTATE such as
+// 42501 or P0001). A transport failure, an abort, or a timeout carries none, so
+// its code is "" and src/lib/failures.ts reads that as "the engine did not answer".
+export class RpcError extends Error {
+  readonly code: string;
+
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = "RpcError";
+    this.code = code;
+  }
+}
+
+// postgrest-js leaves the code off an error body it could not parse, so a missing code reads as "".
+function rpcError(wrapper: string, error: { message: string; code?: string }): RpcError {
+  return new RpcError(`${wrapper} failed: ${error.message}`, error.code ?? "");
+}
+
 export type Lot = Functions["receive_lot"]["Returns"];
 export type ProductionBatch = Functions["produce_batch"]["Returns"];
 export type Sale = Functions["record_sale"]["Returns"];
@@ -31,7 +50,7 @@ export async function receiveLot(client: TypedClient, input: ReceiveLotInput): P
     p_lot_number: input.lotNumber,
     p_notes: input.notes,
   });
-  if (error) throw new Error(`receiveLot failed: ${error.message}`);
+  if (error) throw rpcError("receiveLot", error);
   return data as Lot;
 }
 
@@ -56,7 +75,7 @@ export async function produceBatch(
     p_batch_number: input.batchNumber,
     p_notes: input.notes,
   });
-  if (error) throw new Error(`produceBatch failed: ${error.message}`);
+  if (error) throw rpcError("produceBatch", error);
   return data as ProductionBatch;
 }
 
@@ -78,7 +97,7 @@ export async function recordSale(client: TypedClient, input: RecordSaleInput): P
     p_sale_date: input.saleDate,
     p_sale_number: input.saleNumber,
   });
-  if (error) throw new Error(`recordSale failed: ${error.message}`);
+  if (error) throw rpcError("recordSale", error);
   return data as Sale;
 }
 
@@ -86,7 +105,7 @@ export type VoidedSale = Functions["void_sale"]["Returns"];
 
 export async function voidReceipt(client: TypedClient, lotId: string, reason: string): Promise<Lot> {
   const { data, error } = await client.rpc("void_receipt", { p_lot_id: lotId, p_reason: reason });
-  if (error) throw new Error(`voidReceipt failed: ${error.message}`);
+  if (error) throw rpcError("voidReceipt", error);
   return data as Lot;
 }
 
@@ -96,7 +115,7 @@ export async function voidSale(
   reason: string,
 ): Promise<VoidedSale> {
   const { data, error } = await client.rpc("void_sale", { p_sale_id: saleId, p_reason: reason });
-  if (error) throw new Error(`voidSale failed: ${error.message}`);
+  if (error) throw rpcError("voidSale", error);
   return data as VoidedSale;
 }
 
@@ -114,7 +133,7 @@ export async function adjustLot(client: TypedClient, input: AdjustLotInput): Pro
     p_reason: input.reason,
     p_note: input.note,
   });
-  if (error) throw new Error(`adjustLot failed: ${error.message}`);
+  if (error) throw rpcError("adjustLot", error);
   return data as Lot;
 }
 
@@ -124,5 +143,5 @@ export async function isOperator(client: TypedClient): Promise<boolean> {
   const { error } = await client.rpc("check_operator");
   if (!error) return true;
   if (error.code === "42501") return false;
-  throw new Error(`isOperator failed: ${error.message}`);
+  throw rpcError("isOperator", error);
 }
