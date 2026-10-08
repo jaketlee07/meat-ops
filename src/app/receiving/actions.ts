@@ -1,7 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { NOT_ALLOWED, saveFailureMessage, voidFailureMessage } from "../../lib/failures";
+import {
+  actionFailureLogLine,
+  NOT_ALLOWED,
+  NOT_SAVED,
+  NOT_VOIDED,
+  saveFailureMessage,
+  voidFailureMessage,
+  type FailureStage,
+} from "../../lib/failures";
 import { parseReceiptForm, parseVoidReason, type ReceiptField } from "../../lib/receipt-input";
 import {
   getStock,
@@ -57,13 +65,23 @@ export type VoidState =
   | { status: "refused"; message: string }
   | { status: "voided" };
 
-const NOT_SAVED = "The receipt wasn't saved.";
 const SIGNED_OUT = "You're signed out. Sign in again to save this receipt.";
-const NOT_VOIDED = "The receipt wasn't voided.";
 const VOID_SIGNED_OUT = "You're signed out. Sign in again to void this receipt.";
 
 function refused(message: string): SaveState {
   return { status: "refused", message };
+}
+
+// A failure that becomes a screen message also leaves one server log line, so a
+// message that reads "Try again in a moment." on every try can still be traced.
+function saveFailed(error: unknown, stage: FailureStage): SaveState {
+  console.error(actionFailureLogLine("saveReceipt", stage, error));
+  return refused(saveFailureMessage(error, stage));
+}
+
+function voidFailed(error: unknown, stage: FailureStage): VoidState {
+  console.error(actionFailureLogLine("voidReceipt", stage, error));
+  return { status: "refused", message: voidFailureMessage(error, stage) };
 }
 
 function priceChanges(
@@ -96,7 +114,8 @@ async function readBeforeWrite(supabase: TypedClient, formData: FormData) {
   if (!parsed.ok) return { ok: false as const, errors: parsed.errors };
   const input = parsed.value;
   const product = byCode.get(input.productCode);
-  if (!product) throw new Error(`parseReceiptForm accepted unknown code ${input.productCode}`);
+  // Unreachable while the parse takes these codes. The message holds no form text, because it reaches the log.
+  if (!product) throw new Error("parseReceiptForm accepted a code that is not in the product list");
 
   // "Before" is read here, ahead of the write, never worked out from "after".
   const [stockBefore, pricesBefore, vendors] = await Promise.all([
@@ -118,14 +137,14 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
   const caller = await checkCaller();
   if (caller.status === "ended") return refused(SIGNED_OUT);
   if (caller.status === "not-operator") return refused(`${NOT_SAVED} ${NOT_ALLOWED}`);
-  if (caller.status === "failed") return refused(saveFailureMessage(caller.error, "before-write"));
+  if (caller.status === "failed") return saveFailed(caller.error, "before-write");
   const { supabase } = caller;
 
   let prior;
   try {
     prior = await readBeforeWrite(supabase, formData);
   } catch (error) {
-    return refused(saveFailureMessage(error, "before-write"));
+    return saveFailed(error, "before-write");
   }
   if (!prior.ok) return { status: "invalid", fieldErrors: prior.errors };
   const { input, product, stockBefore, pricesBefore, vendors } = prior;
@@ -141,7 +160,7 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
       notes: input.notes,
     });
   } catch (error) {
-    return refused(saveFailureMessage(error, "write"));
+    return saveFailed(error, "write");
   }
 
   // The lot is written. If this read fails, say so rather than throw: an error
@@ -166,7 +185,10 @@ export async function saveReceipt(formData: FormData): Promise<SaveState> {
     totals = null;
   }
 
-  revalidatePath("/receiving");
+  // A page render that follows a failed read would swap the form for the error
+  // page and lose this panel, so the page is revalidated only once the totals
+  // loaded. Otherwise the panel keeps the lot and says to reload.
+  if (totals) revalidatePath("/receiving");
   return {
     status: "saved",
     lot: {
@@ -194,9 +216,7 @@ export async function voidReceipt(lotId: string, reason: string): Promise<VoidSt
   if (caller.status === "not-operator") {
     return { status: "refused", message: `${NOT_VOIDED} ${NOT_ALLOWED}` };
   }
-  if (caller.status === "failed") {
-    return { status: "refused", message: voidFailureMessage(caller.error, "before-write") };
-  }
+  if (caller.status === "failed") return voidFailed(caller.error, "before-write");
 
   const parsed = parseVoidReason(typeof reason === "string" ? reason : "");
   if (!parsed.ok) return { status: "invalid", error: parsed.error };
@@ -204,7 +224,7 @@ export async function voidReceipt(lotId: string, reason: string): Promise<VoidSt
   try {
     await voidReceiptCall(caller.supabase, typeof lotId === "string" ? lotId : "", parsed.value);
   } catch (error) {
-    return { status: "refused", message: voidFailureMessage(error, "write") };
+    return voidFailed(error, "write");
   }
 
   revalidatePath("/receiving");

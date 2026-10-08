@@ -13,8 +13,10 @@ export const VOID_UNKNOWN = "The receipt may not have been voided. Reload this p
 export const SIGN_IN_BAD_CREDENTIALS = "Email or password is incorrect.";
 export const SIGN_IN_LATER = "Couldn't sign in right now. Wait a few minutes and try again.";
 
-const NOT_SAVED = "The receipt wasn't saved.";
-const NOT_VOIDED = "The receipt wasn't voided.";
+// The two lead sentences of every not-saved and not-voided message, shared with
+// the actions' own refusals so each prefix is spelled once.
+export const NOT_SAVED = "The receipt wasn't saved.";
+export const NOT_VOIDED = "The receipt wasn't voided.";
 const TRY_AGAIN = "Try again in a moment.";
 const RELOAD_STOCK = "Reload to see the latest stock.";
 
@@ -37,21 +39,42 @@ function refusalReason(error: unknown, code: string): string {
   return / is inactive$/.test(text) ? INACTIVE_PRODUCT : text;
 }
 
+// A call before the write call never carries a 42501: isOperator turns that
+// refusal into false, and the reads throw plain errors. So a before-write
+// failure always reads as "try again".
 export function saveFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_SAVED} ${TRY_AGAIN}`;
   const code = codeOf(error);
-  if (stage === "before-write") return `${NOT_SAVED} ${code === "42501" ? NOT_ALLOWED : TRY_AGAIN}`;
   if (code === "") return SAVE_UNKNOWN;
   return `${NOT_SAVED} ${refusalReason(error, code)}`;
 }
 
 export function voidFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_VOIDED} ${TRY_AGAIN}`;
   const code = codeOf(error);
-  if (stage === "before-write") return `${NOT_VOIDED} ${code === "42501" ? NOT_ALLOWED : TRY_AGAIN}`;
   if (code === "") return VOID_UNKNOWN;
   if (code === "42501") return `${NOT_VOIDED} ${NOT_ALLOWED}`;
   // The engine's text has no closing period; the reload hint is a sentence of its own.
   const reason = refusalReason(error, code);
   return `${NOT_VOIDED} ${/[.!?]$/.test(reason) ? reason : `${reason}.`} ${RELOAD_STOCK}`;
+}
+
+export type ReceivingAction = "saveReceipt" | "voidReceipt";
+
+const LOG_MESSAGE_LIMIT = 200;
+
+// The server log line for a failure that saveReceipt or voidReceipt turned into a
+// screen message. It names the action and the stage and identifies the failed call
+// by the error's own message and, for an RpcError, its code. Nothing comes from the
+// form. The engine's messages name ids and never form text, but a request can carry
+// any id, so the message is cut to one bounded line.
+export function actionFailureLogLine(action: ReceivingAction, stage: FailureStage, error: unknown): string {
+  const message = (error instanceof Error ? error.message : "unknown error")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, LOG_MESSAGE_LIMIT);
+  const code = codeOf(error);
+  return `${action} failed at ${stage}: ${message}${code ? ` (code ${code})` : ""}`;
 }
 
 // An auth-js error, read for its code and status only. Both are missing or 0
@@ -67,12 +90,12 @@ export function signInFailureMessage({ code }: AuthFailure): string {
   return code === "invalid_credentials" ? SIGN_IN_BAD_CREDENTIALS : SIGN_IN_LATER;
 }
 
-// The server log line for a failed sign-in (AC-0080). It reads the code and the
-// status and nothing else, so the email and the password cannot reach the log.
-export function authFailureLogLine({ code, status }: AuthFailure): string {
+// The server log line for a failed sign-in (AC-0080) or sign-out. It reads the code
+// and the status and nothing else, so the email and the password cannot reach the log.
+export function authFailureLogLine({ code, status }: AuthFailure, action = "sign-in"): string {
   const answered = status !== undefined && status !== 0;
-  if (!code && !answered) return "sign-in failed: no answer from the auth server";
-  return `sign-in failed: code=${code || "none"} status=${answered ? status : "none"}`;
+  if (!code && !answered) return `${action} failed: no answer from the auth server`;
+  return `${action} failed: code=${code || "none"} status=${answered ? status : "none"}`;
 }
 
 export type SessionOutcome = "signed-in" | "ended" | "failed";

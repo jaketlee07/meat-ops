@@ -65,10 +65,10 @@ export function ReceiptForm({ products, vendors, initialCode, regionCode, region
 
   // The page's product list: the active raw products as of the latest server
   // render, so a save or a void that re-renders the page refreshes it. A code
-  // missing from it skips the browser's code rule and goes to the server marked
-  // for a current check. A code in it that was made inactive since is checked by
-  // the server against every raw product, so the database refuses it with its
-  // own message.
+  // missing from it skips the browser's rules and goes to the server marked for
+  // a current check, which runs every rule so that every field error comes back
+  // together. A code in it that was made inactive since is checked by the server
+  // against every raw product, so the database refuses it with its own message.
   const known = new Map(products.map((product) => [product.code, product]));
 
   const [productCode, setProductCode] = useState(initialCode);
@@ -88,14 +88,15 @@ export function ReceiptForm({ products, vendors, initialCode, regionCode, region
   }, []);
 
   // The browser runs the same form rules first, so a typo is refused at once.
-  // Only a form that passes them goes to the server.
+  // Only a form that passes them goes to the server. A marked form (its code is
+  // missing from the product list) skips them: only the server knows the codes
+  // active now, and it runs the same rules over the whole form.
   const [state, formAction, pending] = useActionState(
     async (_previous: SaveState, formData: FormData): Promise<SaveState> => {
-      const fields = readFields(formData);
-      const codes = new Set(known.keys());
-      if (readRecheck(formData)) codes.add(fields.productCode.trim());
-      const parsed = parseReceiptForm(fields, codes);
-      if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
+      if (!readRecheck(formData)) {
+        const parsed = parseReceiptForm(readFields(formData), new Set(known.keys()));
+        if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
+      }
       try {
         return await saveReceipt(formData);
       } catch {
@@ -130,13 +131,25 @@ export function ReceiptForm({ products, vendors, initialCode, regionCode, region
   const errors = state.status === "invalid" ? state.fieldErrors : NO_ERRORS;
 
   // Each result moves focus to what the owner needs next, and a saved receipt
-  // empties the fields that belong to one delivery.
+  // empties the fields that belong to one delivery. This runs when a result
+  // arrives and not when regionCode changes, so it reads regionCode as that
+  // result's render left it.
   useEffect(() => {
     if (state.status === "saved") {
       setWeight("");
       setCost("");
       setNotes("");
       headingRef.current?.focus();
+      // A code the list did not hold has no region yet. Once the save has
+      // re-rendered the page with the code, the URL follows it, so the region
+      // shows the saved product's stock and receipts. With the totals unread the
+      // page was not re-rendered, and a render now could replace this panel.
+      const saved = state.lot.productCode;
+      if (state.totals && saved !== regionCode) {
+        startRegion(() => {
+          router.replace(`/receiving?product=${encodeURIComponent(saved)}`, { scroll: false });
+        });
+      }
     } else if (state.status === "refused") {
       messageRef.current?.focus();
     } else if (state.status === "invalid") {

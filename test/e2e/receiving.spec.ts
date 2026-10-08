@@ -32,6 +32,7 @@ import {
   receiptItem,
   SAVE_UNKNOWN,
   seedReceipt,
+  sendsActionRequest,
   SIGNED_OUT,
   VENDOR,
   VOID_SIGNED_OUT,
@@ -143,11 +144,15 @@ test.describe("the form", () => {
     await expect(f.save).toHaveAttribute("aria-disabled", "true");
 
     // A product made active now does not unblock a page that loaded without one.
+    // The filled form is valid and its code is marked for a server check, so only
+    // the aria-disabled block keeps the forced click from sending a save.
     await query("update products set active = true where id = $1", [RAW_TOM_ID]);
     await fillReceipt(f, {});
+    const sent = sendsActionRequest(page);
     await f.save.click({ force: true });
     await expect(f.result).toBeEmpty();
     await expect(f.save).toHaveAttribute("aria-disabled", "true");
+    expect(await sent, "a save request left the page").toBe(false);
     expect(await lotCount()).toBe(0);
 
     await page.reload();
@@ -290,6 +295,22 @@ test.describe("refused forms", () => {
     expect(await lotCount()).toBe(0);
   });
 
+  test("AC-0010, AC-0028, and AC-0078: a code missing from the page's list beside a blank weight shows both messages on the first Save", async ({
+    page,
+  }) => {
+    const f = await openForm(page);
+    await fillReceipt(f, { code: "RAW-NOPE", weight: "" });
+    await f.save.click();
+
+    // The code is not in the page's list, so the server runs every rule on the
+    // whole form and returns every field error together.
+    await expect(page.locator("#product-code-error")).toHaveText("No active raw product has code RAW-NOPE.");
+    await expect(page.locator("#weight-error")).toHaveText(WEIGHT_FORMAT);
+    await expect(f.code).toHaveAttribute("aria-describedby", "product-code-error");
+    await expect(f.code).toBeFocused();
+    expect(await lotCount()).toBe(0);
+  });
+
   test("the form after an AC-0010 refusal of a blank weight meets the page-state checks", async ({ page }) => {
     const f = await openForm(page);
     await fillReceipt(f, { weight: "" });
@@ -406,6 +427,11 @@ test.describe("saving", () => {
     await f.save.click();
     await expect(factValue(f.result, "Product")).toHaveText("RAW-LATE Late raw product");
 
+    // AC-0020: the page follows the saved code, so its region lists the saved lot.
+    await expect(page).toHaveURL(/\/receiving\?product=RAW-LATE$/);
+    await expect(receiptItem(page, await factValue(f.result, "Lot number").innerText())).toBeVisible();
+    await expect(factValue(f.region, "On hand")).toHaveText("100 lbs");
+
     // Inserted after the save re-rendered the page, so it is not in the list either.
     await query(
       "insert into products(code, description, species, kind) values ('RAW-NEW', 'New raw product', 'Beef', 'raw')",
@@ -413,6 +439,9 @@ test.describe("saving", () => {
     await fillReceipt(f, { code: "RAW-NEW", weight: "200", cost: "3" });
     await f.save.click();
     await expect(factValue(f.result, "Product")).toHaveText("RAW-NEW New raw product");
+    await expect(page).toHaveURL(/\/receiving\?product=RAW-NEW$/);
+    await expect(receiptItem(page, await factValue(f.result, "Lot number").innerText())).toBeVisible();
+    await expect(factValue(f.region, "On hand")).toHaveText("200 lbs");
 
     const written = await query<{ code: string; lots: number }>(
       `select p.code, count(*)::int as lots

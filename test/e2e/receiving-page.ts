@@ -98,6 +98,19 @@ export async function dropActionRequests(page: Page): Promise<{ readonly count: 
   return dropped;
 }
 
+// Whether the page sends a server action request (a POST with a next-action
+// header) within `ms` of this call. Call it before the step that might send one,
+// and read the answer after: the wait covers the whole window, so a request that
+// leaves a moment late is still seen.
+export function sendsActionRequest(page: Page, ms = 1500): Promise<boolean> {
+  return page
+    .waitForRequest((request) => request.method() === "POST" && "next-action" in request.headers(), { timeout: ms })
+    .then(
+      () => true,
+      () => false,
+    );
+}
+
 export async function lotCount(): Promise<number> {
   const [row] = await query<{ n: number }>("select count(*)::int as n from lots");
   return row?.n ?? -1;

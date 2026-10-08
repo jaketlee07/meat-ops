@@ -167,10 +167,36 @@ The amendment (spec sha256 9e886c4d77ca9f45d686b2d8aab0893aff5020146b2942eeafe63
   3. REST stopped, `/receiving`: the error page after 10.15 s, focus on its heading, the per-state checks passed (its one control is Try again); REST started, Try again showed the receiving form without a reload (AC-0074, AC-0075, the error page state).
   4. Form filled, REST stopped, Save: "The receipt wasn't saved. Try again in a moment." after 10.1 s; every field kept; focus on the message; no lot (AC-0072, AC-0081, AC-0057).
   5. List shown, REST stopped, void confirmed: "The receipt wasn't voided. Try again in a moment."; the list kept the receipt; focus on the message; the lot unchanged at 500 lbs, not void (AC-0083, AC-0057).
-  6. REST paused, Save: the message after 10.44 s; lots 1 before and after (AC-0082).
+  6. REST paused, Save: "The receipt wasn't saved. Try again in a moment." after 10.44 s; lots 1 before and after (AC-0082).
 - The write-call clauses of AC-0072 and AC-0083 rest on T10 (accepted by the owner); the T11 probe also showed the AC-0071 message at 10.1 s with only `receive_lot` hung.
 
 ## Records the post-build review asked for (2026-10-08)
 
-- Files changed outside a task's Touches: T3 added `test/format-extra.test.ts` and `test/receipt-input-extra.test.ts`, and T4 added `test/receiving-data-extra.test.ts`, each with cases beyond the plan's stubs (rounding ties, input edge cases, and read edge cases). T6 and T7 deviations are recorded in their entries above. T9 to T12 stayed inside their Touches.
+- Files changed outside a task's Touches: T3 added `test/format-extra.test.ts` and `test/receipt-input-extra.test.ts`, and T4 added `test/receiving-data-extra.test.ts`, each with cases beyond the plan's stubs (rounding ties, input edge cases, and read edge cases). T6 (commit 29f7942) created `test/e2e/receiving-page.ts`, the shared receiving test helpers, which its Touches do not list; it also edited `src/proxy.ts` and `src/app/_server/session.ts`, recorded in its entry. T7's deviations are recorded in its entry. T9 to T12 stayed inside their Touches.
 - Build gap: T2, T3, and T4 recorded typecheck and `npm test`, which then ran Vitest only, and no `npm run build` at commits 3837238, 72f1939, and a6fcc19. Every later task built, and the final tree builds (AC-0035 above).
+
+## Post-gates review, round 2 (2026-10-08)
+
+Reviewers on `git diff dc8294a..2f90951`, each report adjudicated (artifacts under the ignored `.context/reviews/8bd1023d-4bec-4e12-a2b5-8d29179b0f2c/2-post-gates-*`):
+
+- security-reviewer: 1 Concern sustained (a failed sign-out keeps the auth cookies, so the session can come back; AC-0005), 1 refuted (the hosting intent need not restate the Host check yet).
+- frontend-reviewer: 2 Minors sustained (a failed re-render after a save can replace the "Receipt saved" panel with the error page; the region stays blank after a marked save); 2 indeterminate, settled by the owner below.
+- adversarial-reviewer: 5 Nits sustained (the `AGENTS.md` stop-first rule omits `npm run start`; an unknown code beside another bad field gets its message a Save late; the same re-render failure; no quality verdict yet on the AC-0018 test; step 6 above did not quote its message); 1 indeterminate settled by git: `git log --diff-filter=A` shows T6's commit 29f7942 created `test/e2e/receiving-page.ts`, now recorded above.
+- quality-engineer: 5 Nits sustained (save and void failures leave no server log line; the overview understated the longest waits; two `failures.ts` branches can never run and the void not-allowed rule had no test; the first-run test cannot fail; the failure prefixes were defined twice), 2 refuted.
+
+Owner decisions, in chat on 2026-10-08:
+
+6. The error page's focused heading carries the failure message as its accessible description.
+7. Try again reads "Trying again…" and ignores presses while it waits.
+
+Review state: `findings-remain` (seq 39) and `review record` round 2 with 6 fingerprints. Every sustained finding is fixed in this pass; none needs a contract change.
+
+## Review round 2 fixes (2026-10-08)
+
+- Executed by the `implementer` subagent (code and tests) and the controller (`AGENTS.md`, the overview, this ledger); the controller reran the gates and the by-hand checks.
+- Controller gates: `npm run typecheck` exit 0; `npm test` exit 0 in 103 s, Vitest 192 passed (14 files), Playwright 76 passed. `test/failures.test.ts`, the pinned T10 stub, is unchanged. No em dashes in the added lines.
+- Fixes: `signOut` removes every `sb-…-auth-token` cookie and logs the auth error's code and status when the auth server returns an error or no answer; `saveReceipt` revalidates only when the after-write totals loaded, so a failed re-render cannot replace the "Receipt saved" panel; a marked save moves the URL to the saved product, so its region shows; a code missing from the page's product list sends the whole form to the server, which returns every field error; save and void failures write one log line (`actionFailureLogLine`: action, stage, the error's message and code, no form values); the unreachable before-write 42501 branches are gone; the failure prefixes come from `src/lib/failures.ts` alone; the error page's heading is described by its failure message and Try again reads "Trying again…" with `aria-disabled` while it waits; the first-run test shows that no save request left the page. `test/failures-extra.test.ts` adds 9 cases.
+- Red checks by the implementer: removing the write-stage 42501 void rule failed the new case ("…Meat Ops. Reload to see the latest stock."); reverting `receipt-form.tsx` failed the first-run test ("a save request left the page"), the unknown-code test (`#product-code-error` not found), and the AC-0078 test (the URL stayed `/receiving`).
+- Controller check against `npm run start`, scripted in the ignored `.context/recorded-run/round2.spec.ts`: with an expired access token and the auth container stopped, Sign out ended on `/sign-in` after 61.3 s with no auth cookie left, the log line read "sign-out failed: no answer from the auth server", and `/receiving` after the auth server came back ended on `/sign-in` (AC-0005). With REST stopped, the error page's heading was focused and described as "Couldn't load this page."; Try again read "Trying again…" with `aria-disabled="true"`, read "Try again" again after the second failure, passed the per-state checks, and showed the form once REST was back. The implementer reproduced the sign-out finding on the old code: the same run kept `sb-127-auth-token` and `/receiving` stayed signed in.
+- Deviations: the URL move after a marked save also waits for the totals, since a URL change renders the page; the unreachable invariant message in `readBeforeWrite` no longer quotes the typed code, so no form value reaches the log; the error page's pending button fades like Save.
+- Observed: the vendors-missing first-run test refuses before any request, so it does not depend on Save's `aria-disabled` block.
