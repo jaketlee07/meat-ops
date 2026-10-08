@@ -8,20 +8,9 @@
       "Bash(npm run test:*)",
       "Bash(npm run typecheck:*)",
       "Bash(npm run gen:types:*)",
-      "Bash(supabase db:*)"
-    ]
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 .claude/hooks/guard-lot-cost.py"
-          }
-        ]
-      }
+      "Bash(supabase db reset)",
+      "Bash(supabase migration up)",
+      "Bash(supabase db advisors --local --type security --fail-on warn)"
     ]
   }
 }

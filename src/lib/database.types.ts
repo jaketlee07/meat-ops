@@ -88,6 +88,7 @@ export type Database = {
           lbs_produced: number
           lbs_remaining: number
           produced_date: string
+          produced_seq: number
         }
         Insert: {
           batch_id: string
@@ -97,6 +98,7 @@ export type Database = {
           lbs_produced: number
           lbs_remaining: number
           produced_date?: string
+          produced_seq?: never
         }
         Update: {
           batch_id?: string
@@ -106,6 +108,7 @@ export type Database = {
           lbs_produced?: number
           lbs_remaining?: number
           produced_date?: string
+          produced_seq?: never
         }
         Relationships: [
           {
@@ -181,17 +184,59 @@ export type Database = {
           },
         ]
       }
+      lot_adjustments: {
+        Row: {
+          adjusted_at: string
+          id: string
+          lot_id: string
+          new_remaining_lbs: number
+          note: string | null
+          old_remaining_lbs: number
+          reason: string
+        }
+        Insert: {
+          adjusted_at?: string
+          id?: string
+          lot_id: string
+          new_remaining_lbs: number
+          note?: string | null
+          old_remaining_lbs: number
+          reason: string
+        }
+        Update: {
+          adjusted_at?: string
+          id?: string
+          lot_id?: string
+          new_remaining_lbs?: number
+          note?: string | null
+          old_remaining_lbs?: number
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot_adjustments_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lots: {
         Row: {
           created_at: string
           id: string
           lot_number: string
           notes: string | null
+          prior_avg_cost: number | null
           product_id: string
+          receipt_seq: number
           received_date: string
           remaining_lbs: number
           unit_cost: number
-          vendor_id: string | null
+          vendor_id: string
+          void_reason: string | null
+          voided_at: string | null
           weight_lbs: number
         }
         Insert: {
@@ -199,11 +244,15 @@ export type Database = {
           id?: string
           lot_number: string
           notes?: string | null
+          prior_avg_cost?: number | null
           product_id: string
+          receipt_seq?: never
           received_date?: string
           remaining_lbs: number
           unit_cost: number
-          vendor_id?: string | null
+          vendor_id: string
+          void_reason?: string | null
+          voided_at?: string | null
           weight_lbs: number
         }
         Update: {
@@ -211,11 +260,15 @@ export type Database = {
           id?: string
           lot_number?: string
           notes?: string | null
+          prior_avg_cost?: number | null
           product_id?: string
+          receipt_seq?: never
           received_date?: string
           remaining_lbs?: number
           unit_cost?: number
-          vendor_id?: string | null
+          vendor_id?: string
+          void_reason?: string | null
+          voided_at?: string | null
           weight_lbs?: number
         }
         Relationships: [
@@ -515,6 +568,8 @@ export type Database = {
           id: string
           sale_date: string
           sale_number: string
+          void_reason: string | null
+          voided_at: string | null
         }
         Insert: {
           created_at?: string
@@ -522,6 +577,8 @@ export type Database = {
           id?: string
           sale_date?: string
           sale_number: string
+          void_reason?: string | null
+          voided_at?: string | null
         }
         Update: {
           created_at?: string
@@ -529,6 +586,8 @@ export type Database = {
           id?: string
           sale_date?: string
           sale_number?: string
+          void_reason?: string | null
+          voided_at?: string | null
         }
         Relationships: [
           {
@@ -604,6 +663,7 @@ export type Database = {
       v_sale_traceability: {
         Row: {
           batch_number: string | null
+          customer: string | null
           finished_code: string | null
           finished_product: string | null
           lbs_sold: number | null
@@ -615,6 +675,7 @@ export type Database = {
           raw_product: string | null
           received_date: string | null
           sale_date: string | null
+          sale_item_id: string | null
           sale_number: string | null
           vendor: string | null
         }
@@ -622,6 +683,36 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_lot: {
+        Args: {
+          p_lot_id: string
+          p_new_remaining_lbs: number
+          p_note?: string
+          p_reason: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          lot_number: string
+          notes: string | null
+          prior_avg_cost: number | null
+          product_id: string
+          receipt_seq: number
+          received_date: string
+          remaining_lbs: number
+          unit_cost: number
+          vendor_id: string
+          void_reason: string | null
+          voided_at: string | null
+          weight_lbs: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       produce_batch: {
         Args: {
           p_batch_number?: string
@@ -666,11 +757,15 @@ export type Database = {
           id: string
           lot_number: string
           notes: string | null
+          prior_avg_cost: number | null
           product_id: string
+          receipt_seq: number
           received_date: string
           remaining_lbs: number
           unit_cost: number
-          vendor_id: string | null
+          vendor_id: string
+          void_reason: string | null
+          voided_at: string | null
           weight_lbs: number
         }
         SetofOptions: {
@@ -695,6 +790,51 @@ export type Database = {
           id: string
           sale_date: string
           sale_number: string
+          void_reason: string | null
+          voided_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sales"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      void_receipt: {
+        Args: { p_lot_id: string; p_reason: string }
+        Returns: {
+          created_at: string
+          id: string
+          lot_number: string
+          notes: string | null
+          prior_avg_cost: number | null
+          product_id: string
+          receipt_seq: number
+          received_date: string
+          remaining_lbs: number
+          unit_cost: number
+          vendor_id: string
+          void_reason: string | null
+          voided_at: string | null
+          weight_lbs: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      void_sale: {
+        Args: { p_reason: string; p_sale_id: string }
+        Returns: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          sale_date: string
+          sale_number: string
+          void_reason: string | null
+          voided_at: string | null
         }
         SetofOptions: {
           from: "*"

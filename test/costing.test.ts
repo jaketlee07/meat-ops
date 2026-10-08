@@ -1,13 +1,14 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createTypedClient, type TypedClient } from "../src/lib/supabase.js";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { TypedClient } from "../src/lib/supabase.js";
 import { produceBatch, receiveLot, recordSale } from "../src/lib/rpc.js";
 import { getPricing, getTrace } from "../src/lib/views.js";
-import { resolveStackEnv } from "./env.js";
+import { signInOperator } from "./users.js";
 import {
   CUSTOMER_ID,
   PROD_502_ID,
   RAW_TOM_ID,
   VENDOR_ID,
+  assertLedgerInvariants,
   closePool,
   getFinishedGoods,
   getInventoryBalance,
@@ -22,15 +23,19 @@ import {
 // tables. Prices are asserted on rounded display values (toFixed) per the doc;
 // values exact by construction (1.725, 1540, 3360) are asserted with equality.
 
-const env = resolveStackEnv();
+// The suite signs in as the operator with the anon key, the same path as the app.
 let client: TypedClient;
 
-beforeAll(() => {
-  client = createTypedClient(env.apiUrl, env.serviceRoleKey);
+beforeAll(async () => {
+  client = await signInOperator();
 });
 
 beforeEach(async () => {
   await resetTestData();
+});
+
+afterEach(async () => {
+  await assertLedgerInvariants();
 });
 
 afterAll(async () => {

@@ -6,9 +6,11 @@
 
 ## Project overview
 
-This is <project-name>—<one-line description of what it does and for whom>.
+This is Meat Ops, an inventory, costing, and lot traceability tool for a meat processor. The owner is its only user. The costing math lives in the Postgres database, and the app in `src/lib/` only calls it and reads its views.
 
-Link the repository's existing architecture or design source here when one exists. Do not relocate it to match a pack convention.
+- [`SYSTEM-SPEC.md`](SYSTEM-SPEC.md) is the master brief: what the system does and its boundaries.
+- [`docs/costing.md`](docs/costing.md) is the costing reference: the average rule, the corrections, and the golden numbers the tests encode.
+- [`docs/architecture/overview.md`](docs/architecture/overview.md) maps the areas, the access model per role, and how the owner account is created.
 
 ## Rule lookups
 
@@ -68,14 +70,30 @@ outranks existing guidance.
 ## Build and test commands
 
 ```bash
-<install command>
-<test command>
-<lint command>
-<build command>
+npm ci                    # install
+supabase start            # local stack (Docker); tests run against it
+supabase migration up     # apply migrations to the local stack
+npm test                  # every suite
+npm run test:costing      # the golden costing suite only
+npm run typecheck         # tsc --noEmit
+npm run gen:types         # regenerate src/lib/database.types.ts from the local stack
 ```
+
+There is no lint command and no build step. The tests refuse to run against any
+host except `127.0.0.1` or `localhost`.
 
 Use commands verified from repository guidance, manifests, task runners, or CI.
 Do not guess them from the detected language alone.
+
+## Hard rules
+
+1. Follow every boundary in [SYSTEM-SPEC §11](SYSTEM-SPEC.md#11-non-negotiable-boundaries-seed-these-into-project-rules).
+2. Every `public` table has RLS and explicit grants before it ships.
+3. Round every number that reaches the screen; the database is exact and JavaScript numbers are not.
+4. No em dashes in copy, comments, or commit messages.
+5. Commit messages use `type(scope): description`.
+6. After any change to a migration, a database function, or `src/lib/`, run `npm test`; a red costing test stops the work.
+7. Schema changes go through `supabase/migrations/` and the local stack; nothing writes to the hosted project without the owner's approval.
 
 ## Coding conventions
 
