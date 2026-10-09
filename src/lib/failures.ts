@@ -105,8 +105,14 @@ export function changeFailureMessage(error: unknown, stage: FailureStage): strin
   return `${NOT_SAVED_CHANGE} ${refusalReason(error, code)}`;
 }
 
-// The server actions whose failures are logged: the receiving actions and saveBatch.
-export type ReceivingAction = "saveReceipt" | "voidReceipt" | "saveBatch";
+// The server actions whose failures are logged: the receiving actions, saveBatch, and the three pricing change actions.
+export type ReceivingAction =
+  | "saveReceipt"
+  | "voidReceipt"
+  | "saveBatch"
+  | "saveTargetMargin"
+  | "removeTargetMargin"
+  | "saveListPrice";
 
 const LOG_MESSAGE_LIMIT = 200;
 

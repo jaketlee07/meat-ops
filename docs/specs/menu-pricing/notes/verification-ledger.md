@@ -65,3 +65,10 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - `listWhatIfRawProducts` is two reads (active finished products' `raw_product_id`, then active raw products `in` that list, `.order("code")`). The raw `RAW-OLD` that is inactive is left out even when an active finished product uses it.
 - `setTargetMargin` passes `null` through a cast, because the generated type of `p_target_percent` omits null. A test shows null removes the target.
 - Tests beyond the plan list: an empty picker when no finished product is active, and null removing a target.
+
+## T5
+
+- 2026-10-09: `test/save-change.test.ts` stub extracted from plan.md T5; `shasum -a 256` gives `6dec9c24eaa5d539390e8703c3a38297a918dc5315e468fb43f5575984a0e5d1`, matching the plan. `npx vitest run test/save-change.test.ts` before the module: 1 file failed, 0 tests, `Failed to load url ../src/app/pricing/save-change.js ... Does the file exist?`. The stub's first 17 lines still hash to the same value; the added imports and cases sit below them.
+- States: `idle`, `invalid { fieldError }` (the form rule's message, one value field), `refused { message }` (caller or database refusal), `saved { message, product }`. The change actions take `(formData)` like `saveBatch`, with fields `productId` and `value`.
+- `npm run build` passed, but no page imports `src/app/pricing/actions.ts` yet, so the build does not yet compile the actions under Turbopack. T6 must re-run the build once the forms import them.
+- Gates: `npm run typecheck` exit 0; `npx vitest run` 21 files, 353 tests passed (115 s); `npm run test:costing` 2 files, 35 tests passed (23 s); `npm run build` exit 0. Playwright not run.
