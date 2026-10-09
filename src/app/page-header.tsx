@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { signOut } from "./sign-in/actions";
 
-type PageName = "receiving" | "production";
+type PageName = "receiving" | "production" | "menu" | "pricing";
 
 const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string }> = [
   { name: "receiving", label: "Receiving", href: "/receiving" },
   { name: "production", label: "Production", href: "/production" },
+  { name: "menu", label: "Menu", href: "/menu" },
+  { name: "pricing", label: "Pricing", href: "/pricing" },
 ];
 
 // The heading, the links between the pages, and Sign out. The link to the page

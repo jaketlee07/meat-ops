@@ -13,6 +13,18 @@ if (leaked.length > 0) {
 const nextConfig: NextConfig = {
   // `next dev` otherwise writes a managed block into AGENTS.md when an agent runs it.
   agentRules: false,
+  // No page may load inside another page's frame: one press changes a price.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

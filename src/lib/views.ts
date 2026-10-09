@@ -23,7 +23,7 @@ export async function getPricing(
 }
 
 export async function getMenu(client: TypedClient): Promise<MenuItem[]> {
-  const { data, error } = await client.from("v_current_menu").select("*");
+  const { data, error } = await client.from("v_current_menu").select("*").order("code");
   if (error) throw new Error(`getMenu failed: ${error.message}`);
   return data;
 }

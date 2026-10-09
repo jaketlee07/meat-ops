@@ -41,3 +41,11 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - `test/pricing.test.ts`: 28 tests (the stub plus 27), green. The stub's 38 lines still hash to `4ede6cf9...c98e63`.
 - `npm run typecheck`: exit 0. `npm test`: Vitest 18 files, 282 tests passed; Playwright 146 passed (1.4 min); exit 0, 2m13s. `npm run test:costing`: 2 files, 35 tests passed, exit 0. `npm run gen:types`: exit 0; a second regeneration is byte-identical to the file committed to the working tree (the plain `git diff --exit-code` exits 1 only because the regenerated file is not yet committed).
 - `list_price_override` remains only in the pinned `spec.md` and `plan.md`, where it describes the old brief.
+
+## T2
+
+- 2026-10-09: `/menu`, the Menu and Pricing header links, the `frame-ancestors 'none'` and `X-Frame-Options: DENY` headers (`next.config.ts` `headers()`), and `test/e2e/menu.spec.ts` landed. The seeded 502 is active after `resetTestData`, so tests that need only their own products retire it through `retire502` in `test/e2e/menu-page.ts`.
+- The framing headers also appear on the proxy's redirect response for a signed-out request (checked with `maxRedirects: 0`), not only on the final page.
+- Next.js prefetches linked pages (`/receiving?_rsc=...`) on the menu page; AC-0046 to AC-0048 therefore assert the switch sends no request to `/menu` and no non-GET request, rather than no request at all.
+- A native checkbox is 24 px wide by default, under the 44 px control bar (AC-0132); the switch sets `h-control w-control` so the box itself is 44 px.
+- `/pricing` does not exist until T6, so the Pricing link 404s for now.

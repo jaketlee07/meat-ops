@@ -25,6 +25,8 @@ export const RECEIVING_FORM = "New receipt";
 export const FORM_CONTROLS = [
   "a Receiving",
   "a Production",
+  "a Menu",
+  "a Pricing",
   "button Sign out",
   "input #product-code",
   "select #vendor",
