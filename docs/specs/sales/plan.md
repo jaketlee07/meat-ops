@@ -1,7 +1,7 @@
 # Plan: sales
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Drafting <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md`.
   - **Analogous implementations:** the production page, `src/app/production/` (`page.tsx`, `actions.ts`, `save-batch.ts`, `recent-batches.tsx`, `error.tsx`), over `src/lib/production.ts`, `src/lib/batch-input.ts`, `src/lib/failures.ts`, and `src/lib/format.ts`; the receipt void, `src/app/receiving/void-dialog.tsx` and `voidReceipt` in `src/app/receiving/actions.ts`; the pricing page's URL-driven views (`?product=`, `?raw=&cost=`) in `src/app/pricing/page.tsx` and `what-if-form.tsx`; for a replaced view, `supabase/migrations/20261009070619_menu_pricing.sql`.

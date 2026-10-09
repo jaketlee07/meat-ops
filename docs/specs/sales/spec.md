@@ -1,6 +1,6 @@
 # Spec: sales
 
-- **Status:** Draft <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §4 (customers, sales, sale_items, `v_sale_traceability`), §5 "Record a sale" and "Void a sale", §6 invariant 7, §10 (the selling narrative's trace and reverse trace), §11 (boundaries), §12 (verification), §13 item 5; [`docs/costing.md`](../../costing.md) (invariant 7, the `void_sale` rule, the Rounding note); the access model, the write path, the `supabase/migrations/` change guidance, and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md)
