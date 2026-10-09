@@ -28,5 +28,6 @@ open = [
   { path = "docs/product/intents/receiving-test-refinements.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving/notes/verification-ledger.md", revision = "8b4eb5d" }, summary = "Two receiving test-tool refinements deferred from the post-build review", needs = [] },
   { path = "docs/product/intents/vitest-advisory-upgrade.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving/notes/verification-ledger.md", revision = "ea93f59" }, summary = "Upgrade Vitest, as its own change, to clear 6 dev-tool advisories", needs = [] },
   { path = "docs/product/intents/local-stack-network-exposure.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/production/notes/verification-ledger.md", revision = "uncommitted" }, summary = "Local Supabase ports 54321 to 54324 answer the whole network; limit them to this machine", needs = [] },
+  { path = "docs/product/intents/shared-display-parts.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/production/notes/verification-ledger.md", revision = "3be979d" }, summary = "Move Facts, stock-view, and BeforeAfter into a shared home both pages import", needs = [] },
 ]
 closed = []
