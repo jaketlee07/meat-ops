@@ -1,6 +1,6 @@
 # Spec: production
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §5 "Produce a batch", §8 (web app, floor and office), §11 (boundaries), §12 (verification), §13 item 3; [`docs/costing.md`](../../costing.md) (invariants 3 and 5, the Rounding note); the access model and the `supabase/migrations/` change guidance in [`docs/architecture/overview.md`](../../architecture/overview.md); the app trust boundary in the same file, which this feature's page and action sit inside
@@ -123,23 +123,23 @@ Definitions used by these criteria:
 
 Access and navigation
 
-- [ ] **AC-0001.** While signed out, a request for `/production` ends on `/sign-in`.
-- [ ] **AC-0002.** Signed in as a non-operator, `/production` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no production form.
-- [ ] **AC-0003.** A save action request replayed with no session, or with a non-operator's session, writes no batch and changes no lot.
-- [ ] **AC-0004.** A save action request replayed with no session returns "You're signed out. Sign in again to save this batch."
-- [ ] **AC-0067.** A save action request replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
-- [ ] **AC-0005.** `/receiving` and `/production` each show a navigation region with a link named "Receiving" to `/receiving` and a link named "Production" to `/production`.
-- [ ] **AC-0006.** In the AC-0005 navigation, the only link with an `aria-current` attribute is the link to the page being shown, and its value is `page`.
-- [ ] **AC-0007.** Choosing Sign out on `/production` ends on `/sign-in`.
-- [ ] **AC-0068.** After Sign out on `/production`, a following request for `/production` ends on `/sign-in`.
+- [x] **AC-0001.** While signed out, a request for `/production` ends on `/sign-in`.
+- [x] **AC-0002.** Signed in as a non-operator, `/production` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no production form.
+- [x] **AC-0003.** A save action request replayed with no session, or with a non-operator's session, writes no batch and changes no lot.
+- [x] **AC-0004.** A save action request replayed with no session returns "You're signed out. Sign in again to save this batch."
+- [x] **AC-0067.** A save action request replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
+- [x] **AC-0005.** `/receiving` and `/production` each show a navigation region with a link named "Receiving" to `/receiving` and a link named "Production" to `/production`.
+- [x] **AC-0006.** In the AC-0005 navigation, the only link with an `aria-current` attribute is the link to the page being shown, and its value is `page`.
+- [x] **AC-0007.** Choosing Sign out on `/production` ends on `/sign-in`.
+- [x] **AC-0068.** After Sign out on `/production`, a following request for `/production` ends on `/sign-in`.
 
 Production form
 
-- [ ] **AC-0008.** Typing the code of a product in the page's product list shows its description, its raw input's code and description, its shrink in the AC-0045 format, and its raw input's pounds on hand and average cost per lb.
-- [ ] **AC-0009.** The production date starts at today's date on the device.
-- [ ] **AC-0082.** When there is no active finished product, `/production` says "No active finished products yet. Add one in Supabase Studio, then reload this page."
-- [ ] **AC-0083.** When there is no active finished product, pressing Save opens no check step.
-- [ ] **AC-0010.** Each input in this table is refused with its message shown beside its field, and the check step does not open. Within one field, the first matching row wins.
+- [x] **AC-0008.** Typing the code of a product in the page's product list shows its description, its raw input's code and description, its shrink in the AC-0045 format, and its raw input's pounds on hand and average cost per lb.
+- [x] **AC-0009.** The production date starts at today's date on the device.
+- [x] **AC-0082.** When there is no active finished product, `/production` says "No active finished products yet. Add one in Supabase Studio, then reload this page."
+- [x] **AC-0083.** When there is no active finished product, pressing Save opens no check step.
+- [x] **AC-0010.** Each input in this table is refused with its message shown beside its field, and the check step does not open. Within one field, the first matching row wins.
 
   | Field | Input | Message |
   | --- | --- | --- |
@@ -156,99 +156,99 @@ Production form
   | Production date | a date after today on the device | The production date can't be after today. |
   | Notes | longer than 500 characters, counted as JavaScript string length | Keep notes to 500 characters or fewer. |
 
-- [ ] **AC-0069.** A save action request replayed with a production date or a `today` value that is not a calendar date written YYYY-MM-DD writes no batch.
-- [ ] **AC-0011.** A form with raw lbs 0.001, finished lbs 0.001, today's date, and a 500-character note saves one batch, and so does a form with raw lbs 2000 and finished lbs 2000.
-- [ ] **AC-0012.** Typing the code of an active finished product that is not in the page's product list, on a page whose list holds at least one product, and confirming the save writes one batch of it without a reload.
+- [x] **AC-0069.** A save action request replayed with a production date or a `today` value that is not a calendar date written YYYY-MM-DD writes no batch.
+- [x] **AC-0011.** A form with raw lbs 0.001, finished lbs 0.001, today's date, and a 500-character note saves one batch, and so does a form with raw lbs 2000 and finished lbs 2000.
+- [x] **AC-0012.** Typing the code of an active finished product that is not in the page's product list, on a page whose list holds at least one product, and confirming the save writes one batch of it without a reload.
 
 Check step
 
-- [ ] **AC-0013.** With every field valid, Save opens a check step that names the product code and description, the raw lbs, the production date, and the finished lbs typed or, when that field is blank, "From shrink" and the shrink in the AC-0045 format. Weights show in the Rounding note's weight format and the date in its date format: raw lbs typed as 2000 show as "2,000 lbs", and 2026-10-06 shows as "Oct 6, 2026".
-- [ ] **AC-0014.** The check step says "A batch can't be undone."
-- [ ] **AC-0015.** Choosing Go back in the check step closes it.
-- [ ] **AC-0070.** Choosing Go back in the check step writes no batch.
-- [ ] **AC-0071.** After Go back in the check step, every field keeps its value.
-- [ ] **AC-0016.** The check step's accessible description contains the product code, the raw lbs, and the production date it names.
-- [ ] **AC-0017.** While a save has not returned, pressing Save batch again writes no second batch.
+- [x] **AC-0013.** With every field valid, Save opens a check step that names the product code and description, the raw lbs, the production date, and the finished lbs typed or, when that field is blank, "From shrink" and the shrink in the AC-0045 format. Weights show in the Rounding note's weight format and the date in its date format: raw lbs typed as 2000 show as "2,000 lbs", and 2026-10-06 shows as "Oct 6, 2026".
+- [x] **AC-0014.** The check step says "A batch can't be undone."
+- [x] **AC-0015.** Choosing Go back in the check step closes it.
+- [x] **AC-0070.** Choosing Go back in the check step writes no batch.
+- [x] **AC-0071.** After Go back in the check step, every field keeps its value.
+- [x] **AC-0016.** The check step's accessible description contains the product code, the raw lbs, and the production date it names.
+- [x] **AC-0017.** While a save has not returned, pressing Save batch again writes no second batch.
 
 Batch result
 
-- [ ] **AC-0018.** After a save, the screen shows a "Batch saved" heading with the batch number, the product code and description, the production date, the raw lbs in, the finished lbs out, and a "Product shrink" line with the batch's stored shrink in the AC-0045 format, all from the batch the engine wrote.
-- [ ] **AC-0019.** The finished lbs out in the result reads "from shrink" when the finished lbs field was blank and "measured" when it was filled.
-- [ ] **AC-0072.** When the finished lbs field was filled, the result's "Product shrink" line also says "not used, finished lbs measured".
-- [ ] **AC-0081.** In the AC-0022 case, the result's "Product shrink" line shows 23% and says "not used, finished lbs measured".
-- [ ] **AC-0020.** In the 502 fixture, a batch of 502 with 2,000 raw lbs and a blank finished lbs field shows finished lbs out 1,540 lbs, one lot used (lot A, 2,000 lbs drawn at $1.6800/lb), raw cost $3,360.00, and cost per finished lb $2.6318/lb.
-- [ ] **AC-0021.** In the 502 fixture, a batch of 502 with 6,000 raw lbs shows finished lbs out 4,620 lbs, lot A with 5,000 lbs drawn and then lot B with 1,000 lbs drawn, raw cost $10,200.00, and cost per finished lb $2.6578/lb.
-- [ ] **AC-0022.** In the 502 fixture, a batch of 502 with 2,000 raw lbs and finished lbs 1500 shows finished lbs out 1,500 lbs, raw cost $3,360.00, and cost per finished lb $2.6900/lb.
-- [ ] **AC-0023.** Each lot used shows its lot number, received date, vendor, lbs drawn, and cost per lb.
-- [ ] **AC-0024.** The lots used are listed in draw order. The check fixture holds a lot received 2026-10-05 and entered first, and a lot received 2026-10-01 and entered second, and a batch that draws from both lists the 2026-10-01 lot first.
-- [ ] **AC-0025.** In the AC-0020 case, the result shows finished stock added of 1,540 lbs at $2.6318/lb.
-- [ ] **AC-0026.** In the AC-0020 case, the result shows the raw input's pounds on hand before 8,000 lbs and after 6,000 lbs, and its average cost before $1.7250/lb and after $1.7400/lb.
-- [ ] **AC-0027.** In the AC-0021 case, the result shows the raw input's pounds on hand after 2,000 lbs and its average cost after $1.8000/lb.
-- [ ] **AC-0028.** After a save, the product code and production date keep their values, and raw lbs, finished lbs, and notes are empty.
-- [ ] **AC-0029.** When a read that the save makes after the engine returns its batch fails, the result shows the AC-0018 fields of the batch the engine returned. Those reads are the lots used, the finished lot, and the raw input's stock after.
-- [ ] **AC-0073.** In the AC-0029 case, the result shows no lots used, finished stock added, or before-and-after stock, and in their place says "The batch was saved, but its lots and stock couldn't be loaded. Reload this page to see them."
+- [x] **AC-0018.** After a save, the screen shows a "Batch saved" heading with the batch number, the product code and description, the production date, the raw lbs in, the finished lbs out, and a "Product shrink" line with the batch's stored shrink in the AC-0045 format, all from the batch the engine wrote.
+- [x] **AC-0019.** The finished lbs out in the result reads "from shrink" when the finished lbs field was blank and "measured" when it was filled.
+- [x] **AC-0072.** When the finished lbs field was filled, the result's "Product shrink" line also says "not used, finished lbs measured".
+- [x] **AC-0081.** In the AC-0022 case, the result's "Product shrink" line shows 23% and says "not used, finished lbs measured".
+- [x] **AC-0020.** In the 502 fixture, a batch of 502 with 2,000 raw lbs and a blank finished lbs field shows finished lbs out 1,540 lbs, one lot used (lot A, 2,000 lbs drawn at $1.6800/lb), raw cost $3,360.00, and cost per finished lb $2.6318/lb.
+- [x] **AC-0021.** In the 502 fixture, a batch of 502 with 6,000 raw lbs shows finished lbs out 4,620 lbs, lot A with 5,000 lbs drawn and then lot B with 1,000 lbs drawn, raw cost $10,200.00, and cost per finished lb $2.6578/lb.
+- [x] **AC-0022.** In the 502 fixture, a batch of 502 with 2,000 raw lbs and finished lbs 1500 shows finished lbs out 1,500 lbs, raw cost $3,360.00, and cost per finished lb $2.6900/lb.
+- [x] **AC-0023.** Each lot used shows its lot number, received date, vendor, lbs drawn, and cost per lb.
+- [x] **AC-0024.** The lots used are listed in draw order. The check fixture holds a lot received 2026-10-05 and entered first, and a lot received 2026-10-01 and entered second, and a batch that draws from both lists the 2026-10-01 lot first.
+- [x] **AC-0025.** In the AC-0020 case, the result shows finished stock added of 1,540 lbs at $2.6318/lb.
+- [x] **AC-0026.** In the AC-0020 case, the result shows the raw input's pounds on hand before 8,000 lbs and after 6,000 lbs, and its average cost before $1.7250/lb and after $1.7400/lb.
+- [x] **AC-0027.** In the AC-0021 case, the result shows the raw input's pounds on hand after 2,000 lbs and its average cost after $1.8000/lb.
+- [x] **AC-0028.** After a save, the product code and production date keep their values, and raw lbs, finished lbs, and notes are empty.
+- [x] **AC-0029.** When a read that the save makes after the engine returns its batch fails, the result shows the AC-0018 fields of the batch the engine returned. Those reads are the lots used, the finished lot, and the raw input's stock after.
+- [x] **AC-0073.** In the AC-0029 case, the result shows no lots used, finished stock added, or before-and-after stock, and in their place says "The batch was saved, but its lots and stock couldn't be loaded. Reload this page to see them."
 
 Refused and failed saves
 
-- [ ] **AC-0030.** In the 502 fixture, a batch of 502 dated 2026-10-03 with 6,000 raw lbs is refused with "The batch wasn't saved. Only 5,000 lbs of raw on hand was received on or before Oct 3, 2026, and this batch needs 6,000 lbs."
-- [ ] **AC-0031.** When a product in the page's product list is made inactive after the page loaded, confirming a save of it shows "The batch wasn't saved. This product is no longer active."
-- [ ] **AC-0032.** When the raw input of a product in the page's product list is made inactive after the page loaded, confirming a save of it shows "The batch wasn't saved. Its raw product is no longer active."
-- [ ] **AC-0033.** When the session has ended after the production form loaded, confirming a save shows "You're signed out. Sign in again to save this batch."
-- [ ] **AC-0034.** When a call that a save makes before its write call fails, the form shows "The batch wasn't saved. Try again in a moment." Those calls are the caller check's auth lookup, unless the auth server ends the session (AC-0033), the operator check, and the reads before the write.
-- [ ] **AC-0035.** When the save's write call gets no answer from the engine, the form shows "The batch may not have been saved. Reload this page and check Recent batches before saving again."
-- [ ] **AC-0074.** When the connection to the app drops while a save is in flight, the form shows the AC-0035 message.
-- [ ] **AC-0075.** When the engine refuses a confirmed save for a reason other than those of AC-0030 to AC-0033 and AC-0080, the form shows "The batch wasn't saved." followed by the engine's reason, which is the refusal text after its `produce_batch: ` prefix. With a product of shrink 0.6 whose raw input has at least 0.001 lbs on hand in lots received on or before the production date, raw lbs 0.001 and a blank finished lbs field show "The batch wasn't saved. invalid yield, finished lbs out would be 0".
-- [ ] **AC-0080.** When the engine refuses a confirmed save because the caller is not an operator, the form shows "The batch wasn't saved. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0036.** Every save refusal writes no batch and changes no lot.
-- [ ] **AC-0037.** After a save refusal or a save failure, every field keeps its value.
+- [x] **AC-0030.** In the 502 fixture, a batch of 502 dated 2026-10-03 with 6,000 raw lbs is refused with "The batch wasn't saved. Only 5,000 lbs of raw on hand was received on or before Oct 3, 2026, and this batch needs 6,000 lbs."
+- [x] **AC-0031.** When a product in the page's product list is made inactive after the page loaded, confirming a save of it shows "The batch wasn't saved. This product is no longer active."
+- [x] **AC-0032.** When the raw input of a product in the page's product list is made inactive after the page loaded, confirming a save of it shows "The batch wasn't saved. Its raw product is no longer active."
+- [x] **AC-0033.** When the session has ended after the production form loaded, confirming a save shows "You're signed out. Sign in again to save this batch."
+- [x] **AC-0034.** When a call that a save makes before its write call fails, the form shows "The batch wasn't saved. Try again in a moment." Those calls are the caller check's auth lookup, unless the auth server ends the session (AC-0033), the operator check, and the reads before the write.
+- [x] **AC-0035.** When the save's write call gets no answer from the engine, the form shows "The batch may not have been saved. Reload this page and check Recent batches before saving again."
+- [x] **AC-0074.** When the connection to the app drops while a save is in flight, the form shows the AC-0035 message.
+- [x] **AC-0075.** When the engine refuses a confirmed save for a reason other than those of AC-0030 to AC-0033 and AC-0080, the form shows "The batch wasn't saved." followed by the engine's reason, which is the refusal text after its `produce_batch: ` prefix. With a product of shrink 0.6 whose raw input has at least 0.001 lbs on hand in lots received on or before the production date, raw lbs 0.001 and a blank finished lbs field show "The batch wasn't saved. invalid yield, finished lbs out would be 0".
+- [x] **AC-0080.** When the engine refuses a confirmed save because the caller is not an operator, the form shows "The batch wasn't saved. This account isn't allowed to use Meat Ops."
+- [x] **AC-0036.** Every save refusal writes no batch and changes no lot.
+- [x] **AC-0037.** After a save refusal or a save failure, every field keeps its value.
 
 Recent batches
 
-- [ ] **AC-0038.** With a product chosen, the screen lists the product's 10 last-entered batches, chosen by entry order and not by production date, or all of them when it has 10 or fewer. The check fixture holds 12 batches, and the last one entered has an earlier production date than every other batch.
-- [ ] **AC-0076.** The listed batches run last entered first. The check fixture holds batches whose production dates are not in the order they were entered.
-- [ ] **AC-0039.** Each listed batch shows its batch number, production date, raw lbs in, finished lbs out, and cost per finished lb, the last in the Rounding note's cost-per-lb format, such as $2.6318/lb.
-- [ ] **AC-0040.** When the product has more than 10 batches, the list says "Showing the 10 most recent of N batches.", where N is the product's batch count.
-- [ ] **AC-0041.** When the product has no batches, the screen shows "No batches for this product yet."
-- [ ] **AC-0042.** After a save whose result shows its lots used, the saved batch is the first in the list.
+- [x] **AC-0038.** With a product chosen, the screen lists the product's 10 last-entered batches, chosen by entry order and not by production date, or all of them when it has 10 or fewer. The check fixture holds 12 batches, and the last one entered has an earlier production date than every other batch.
+- [x] **AC-0076.** The listed batches run last entered first. The check fixture holds batches whose production dates are not in the order they were entered.
+- [x] **AC-0039.** Each listed batch shows its batch number, production date, raw lbs in, finished lbs out, and cost per finished lb, the last in the Rounding note's cost-per-lb format, such as $2.6318/lb.
+- [x] **AC-0040.** When the product has more than 10 batches, the list says "Showing the 10 most recent of N batches.", where N is the product's batch count.
+- [x] **AC-0041.** When the product has no batches, the screen shows "No batches for this product yet."
+- [x] **AC-0042.** After a save whose result shows its lots used, the saved batch is the first in the list.
 
 Error page
 
-- [ ] **AC-0043.** After a `/production` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the production page without a browser reload.
-- [ ] **AC-0044.** When the `/production` error page appears, keyboard focus is on its heading.
-- [ ] **AC-0077.** The `/production` error page says "If you were saving a batch, it may have been saved. Check Recent batches before saving it again."
+- [x] **AC-0043.** After a `/production` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the production page without a browser reload.
+- [x] **AC-0044.** When the `/production` error page appears, keyboard focus is on its heading.
+- [x] **AC-0077.** The `/production` error page says "If you were saving a batch, it may have been saved. Check Recent batches before saving it again."
 
 Display
 
-- [ ] **AC-0045.** A shrink shows as the stored fraction written as a percent, with 0 to 2 decimals, trailing zeros dropped, then "%": 0.23 → 23%, 0.235 → 23.5%, 0.2345 → 23.45%, 0 → 0%.
-- [ ] **AC-0046.** A raw cost total shows as "$", thousands separators, and 2 decimals, rounding half away from zero: 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01.
-- [ ] **AC-0047.** Choosing a product whose raw input has no `inventory_balances` row shows its raw on hand as "0 lbs" and its average cost as "None yet".
+- [x] **AC-0045.** A shrink shows as the stored fraction written as a percent, with 0 to 2 decimals, trailing zeros dropped, then "%": 0.23 → 23%, 0.235 → 23.5%, 0.2345 → 23.45%, 0 → 0%.
+- [x] **AC-0046.** A raw cost total shows as "$", thousands separators, and 2 decimals, rounding half away from zero: 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01.
+- [x] **AC-0047.** Choosing a product whose raw input has no `inventory_balances` row shows its raw on hand as "0 lbs" and its average cost as "None yet".
 
 Accessibility and phone width
 
-- [ ] **AC-0048.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
-- [ ] **AC-0049.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
-- [ ] **AC-0050.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
-- [ ] **AC-0051.** A batch can be completed, confirmed in the check step, and saved with the keyboard alone.
-- [ ] **AC-0052.** After a save, keyboard focus is on the "Batch saved" heading.
-- [ ] **AC-0053.** After an AC-0010 refusal, keyboard focus is on the first field with an error.
-- [ ] **AC-0054.** After an AC-0010 refusal, the `aria-describedby` of every field with an error points to that field's message.
-- [ ] **AC-0055.** After a save refusal other than an AC-0010 refusal, or after a save failure, keyboard focus is on the message that states it.
-- [ ] **AC-0056.** After Go back in the check step, keyboard focus is on the Save button.
-- [ ] **AC-0057.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
-- [ ] **AC-0058.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
-- [ ] **AC-0059.** The accessible names of the raw lbs field and the finished lbs field each contain "lbs".
+- [x] **AC-0048.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
+- [x] **AC-0049.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
+- [x] **AC-0050.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
+- [x] **AC-0051.** A batch can be completed, confirmed in the check step, and saved with the keyboard alone.
+- [x] **AC-0052.** After a save, keyboard focus is on the "Batch saved" heading.
+- [x] **AC-0053.** After an AC-0010 refusal, keyboard focus is on the first field with an error.
+- [x] **AC-0054.** After an AC-0010 refusal, the `aria-describedby` of every field with an error points to that field's message.
+- [x] **AC-0055.** After a save refusal other than an AC-0010 refusal, or after a save failure, keyboard focus is on the message that states it.
+- [x] **AC-0056.** After Go back in the check step, keyboard focus is on the Save button.
+- [x] **AC-0057.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
+- [x] **AC-0058.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
+- [x] **AC-0059.** The accessible names of the raw lbs field and the finished lbs field each contain "lbs".
 
 Build and repository checks
 
-- [ ] **AC-0060.** `npm run build` exits 0.
-- [ ] **AC-0061.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
-- [ ] **AC-0062.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
-- [ ] **AC-0063.** `npm run typecheck` exits 0.
-- [ ] **AC-0064.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
-- [ ] **AC-0065.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
-- [ ] **AC-0066.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
-- [ ] **AC-0078.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
-- [ ] **AC-0079.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
+- [x] **AC-0060.** `npm run build` exits 0.
+- [x] **AC-0061.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
+- [x] **AC-0062.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
+- [x] **AC-0063.** `npm run typecheck` exits 0.
+- [x] **AC-0064.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
+- [x] **AC-0065.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
+- [x] **AC-0066.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
+- [x] **AC-0078.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
+- [x] **AC-0079.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
   - `grep -rniE "env(\.|\[['\"])[a-z0-9_]*(service_role|secret|jwt|db_url|database_url|postgres)" src/ | grep -v '^src/privileged-env.ts:'`
   - `grep -rnE "\}\s*=\s*process\.env" src/`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`

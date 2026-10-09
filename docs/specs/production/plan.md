@@ -1,7 +1,7 @@
 # Plan: production
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md`.
   - **Analogous implementation:** the receiving page, `src/app/receiving/` (`page.tsx`, `actions.ts`, `receipt-form.tsx`, `void-dialog.tsx`, `error.tsx`), over `src/lib/receiving.ts`, `src/lib/receipt-input.ts`, `src/lib/failures.ts`, and `src/lib/format.ts`.
