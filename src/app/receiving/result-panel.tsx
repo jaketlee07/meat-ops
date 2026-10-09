@@ -13,7 +13,7 @@ interface Row {
 // A table of values before and after the receipt, each as the database held it.
 // A cell may wrap between a number and its unit, so a long number never makes
 // the page scroll sideways on a phone.
-function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
+export function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <table className="w-full border-collapse text-base">
       <thead>

@@ -27,8 +27,9 @@ export interface ProductChoice {
 interface Props {
   products: ProductChoice[];
   vendors: Vendor[];
-  // The code in the URL when the page loaded, shown in the product field.
-  initialCode: string;
+  // The product code in this render's URL (?product=), or "" when it has none.
+  // It fills the product field on the first render.
+  urlCode: string;
   // The code the server rendered `region` for, or null when it rendered none.
   regionCode: string | null;
   // The chosen product's stock and prices, rendered on the server.
@@ -59,7 +60,7 @@ function deviceToday(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-export function ReceiptForm({ products, vendors, initialCode, regionCode, region, voidedLots }: Props) {
+export function ReceiptForm({ products, vendors, urlCode, regionCode, region, voidedLots }: Props) {
   const router = useRouter();
   const [regionPending, startRegion] = useTransition();
 
@@ -71,7 +72,7 @@ export function ReceiptForm({ products, vendors, initialCode, regionCode, region
   // against every raw product, so the database refuses it with its own message.
   const known = new Map(products.map((product) => [product.code, product]));
 
-  const [productCode, setProductCode] = useState(initialCode);
+  const [productCode, setProductCode] = useState(urlCode);
   const [vendorId, setVendorId] = useState("");
   const [weight, setWeight] = useState("");
   const [cost, setCost] = useState("");
@@ -160,6 +161,19 @@ export function ReceiptForm({ products, vendors, initialCode, regionCode, region
 
   const code = productCode.trim();
   const chosen = known.get(code);
+
+  // A known code in the field that the URL's ?product= does not name (the page
+  // was reached again without it, as the current-page nav link does, or a late
+  // answer for another code landed) asks for its region, as typing the code does.
+  // The URL is the guard: a request that lands names the code in the URL, so a
+  // render that still has no region cannot loop, and a request that a newer
+  // navigation dropped or overtook leaves the URL naming something else, so it asks again.
+  useEffect(() => {
+    if (urlCode === code || regionPending || !known.has(code) || code === regionCode) return;
+    startRegion(() => {
+      router.replace(`/receiving?product=${encodeURIComponent(code)}`, { scroll: false });
+    });
+  }, [code, urlCode, regionCode, regionPending, products]);
   const recheckCode = code !== "" && !chosen;
 
   // Once the list has shown a saved lot as void, the panel keeps saying so, even

@@ -5,13 +5,14 @@
 
 ## Outcome
 
-The owner logs receipts from a phone at the dock over an encrypted connection.
+The owner logs receipts and batches from a phone on the floor over an encrypted connection, and can install the app on that phone.
 
 ## Boundary
 
 - Host the Next.js app so a phone reaches it over HTTPS, with every auth cookie marked Secure.
 - Keep the app environment free of privileged variables, as the receiving spec's guard enforces.
 - Revisit the shared sign-in rate limit, which the local-only scope accepted.
+- Make the app installable on a phone (a web app manifest), as `SYSTEM-SPEC.md` §8 asks; installing needs HTTPS, and the offline queue stays roadmap (§9).
 - Before the app is reachable from another machine, the hosted auth server ends a session after 12 hours without activity and 7 days after sign-in, the limits the receiving spec set locally.
 
 ## Owner

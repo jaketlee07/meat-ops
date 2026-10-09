@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Route } from "@playwright/test";
 import {
   adjustCall,
   callAsOperator,
@@ -1016,5 +1016,71 @@ test.describe("voiding after the session ended", () => {
     } finally {
       await context.close();
     }
+  });
+});
+
+test.describe("the current-page nav link", () => {
+  test("each press of Receiving keeps the product and renders its stock and recent receipts again", async ({ page }) => {
+    await seedReceipt(5000, 1.68);
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(factValue(f.region, "On hand")).toHaveText("5,000 lbs");
+
+    // Stock changes behind the page before each press, so only a fresh render
+    // of the region can show the new figure; the page before the press cannot.
+    for (const [lbs, onHand] of [[1000, "6,000 lbs"], [500, "6,500 lbs"]] as const) {
+      await seedReceipt(lbs, 1.68);
+      await page.getByRole("link", { name: "Receiving", exact: true }).click();
+      await expect(factValue(f.region, "On hand")).toHaveText(onHand);
+      await expect(f.code).toHaveValue(CODE);
+      await expect(page.getByRole("heading", { name: "Recent receipts" })).toBeVisible();
+      await expect(page).toHaveURL(/\/receiving\?product=RAW-TOM$/);
+    }
+  });
+
+  test("a press while the first region request is still loading still renders the region", async ({ page }) => {
+    await seedReceipt(5000, 1.68);
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(factValue(f.region, "On hand")).toHaveText("5,000 lbs");
+    // Every region request for this product is held until both presses are done,
+    // so the second press lands while the first request is still loading.
+    const held: Route[] = [];
+    await page.route(/product=RAW-TOM/, async (route) => {
+      if (route.request().resourceType() === "fetch") held.push(route);
+      else await route.continue();
+    });
+    await seedReceipt(1000, 1.68);
+    const link = page.getByRole("link", { name: "Receiving", exact: true });
+    await link.click();
+    await expect.poll(() => held.length).toBe(1);
+    await link.click();
+    // The newer navigation drops the first request, so the second press must ask again.
+    await expect.poll(() => held.length).toBe(2);
+    await page.unroute(/product=RAW-TOM/);
+    for (const route of held) await route.continue().catch(() => undefined);
+    await expect(factValue(f.region, "On hand")).toHaveText("6,000 lbs");
+    await expect(page).toHaveURL(/\/receiving\?product=RAW-TOM$/);
+  });
+
+  test("a late region answer for another code still ends with the field's product shown", async ({ page }) => {
+    await seedReceipt(5000, 1.68);
+    await query("insert into products(code, description, species, kind) values ('RAW-NECK', 'Turkey Necks (raw)', 'Turkey', 'raw')");
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(factValue(f.region, "On hand")).toHaveText("5,000 lbs");
+    // The other code's region answer is held until the field holds RAW-TOM again.
+    const held: Route[] = [];
+    await page.route(/product=RAW-NECK/, async (route) => {
+      if (route.request().resourceType() === "fetch") held.push(route);
+      else await route.continue();
+    });
+    await f.code.fill("RAW-NECK");
+    await expect.poll(() => held.length).toBe(1);
+    await f.code.fill("RAW-TOM");
+    // Stock changes behind the page, so only a fresh render of this product's
+    // region can show the new figure; the page before the answer landed cannot.
+    await seedReceipt(1000, 1.68);
+    await page.unroute(/product=RAW-NECK/);
+    for (const route of held) await route.continue().catch(() => undefined);
+    await expect(factValue(f.region, "On hand")).toHaveText("6,000 lbs");
+    await expect(page).toHaveURL(/\/receiving\?product=RAW-TOM$/);
   });
 });
