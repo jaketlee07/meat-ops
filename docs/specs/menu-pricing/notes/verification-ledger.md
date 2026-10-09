@@ -166,3 +166,30 @@ Method as in the production ledger: `npm run start -- -p 3200` on a build of the
 
 - 2026-10-09, owner decision on the review's zero-suggestion Nit: a raw product received at 0.00 per lb whose finished product has no fees gets a suggested list price of 0.00 and a Set or Lower button that always refuses: the change action's form rule (`parseListPrice`) answers "Price must be above 0." before any write, so `set_list_price` is never reached. The owner chose to leave it: a zero raw cost with no fees is not a real case for this business, and the refusal message tells the truth. No code changes.
 - The plan's `ReceivingAction` (plan Design and T5) is now `LoggedAction` in `src/lib/failures.ts`, because it names every server action whose failures are logged, the pricing change actions included.
+
+## Closing checks (2026-10-09, final commit e28e31e)
+
+These replace the T8 "closing tree" entries, which ran before the review fixes.
+
+- AC-0151 `npm test`: exit 0. Vitest 21 files, 354 tests; Playwright 220.
+- AC-0150 `npm run build`: exit 0. AC-0153 `npm run typecheck`: exit 0.
+- AC-0152 `npm run gen:types`: exit 0, and `git diff --exit-code src/lib/database.types.ts` exit 0.
+- AC-0154, AC-0155, AC-0157, AC-0158 (all three commands), AC-0159: each prints nothing (grep exit 1).
+- AC-0156 `npm audit --omit=dev --audit-level=high`: found 0 vulnerabilities.
+- AC-0160: the migration is unchanged since T1 (98b8556). `products` lists `id, code, description, brand, species, kind, pack_style, lbs_per_pack, raw_product_id, shrink_pct, active, created_at, target_margin_pct, list_price_per_lb`, the T1 baseline plus the two new columns; T8's `supabase db reset` comparison found no other difference.
+- AC-0161 `npm run test:costing`: exit 0, running `test/pricing.test.ts` (29 tests) and `test/costing.test.ts` (7 tests), 36 passed.
+
+## Post-build review
+
+The review ran four rounds over `main...e28e31e`, in the owner's layer order (database 98b8556, menu 99206d7, pricing 325b51a to 3829fe4, docs 3601d76 and 02d521f), with each fix reviewed as its own delta.
+
+- Adversarial: round 1 found one Blocker (a voided-only raw cost showed a stored average where AC-0075 and AC-0083 require "None yet"), fixed in cc1a481 with a test that fails without the fix; rounds 2 and 3 found Nits, fixed; round 4 clean.
+- Security: clean on the whole diff (its Not-checked footer adjudicated clean).
+- Quality: round 1 found one Concern (no dropped-connection test for Apply) and Nits, fixed in 0df2a10; round 2 Nits fixed in e28e31e; round 3 left two Nits, deferred below.
+- Frontend: round 1 found two screen-reader gaps (Enter-submitted field errors, what-if results) and a Back mismatch, fixed in 0df2a10; round 2 found a wrap Nit, fixed in e28e31e; round 3 clean.
+- Experience reviewer: named skip, not installed; the experience-design pack is absent (spec Assumptions).
+
+Deferred Nits (quality round 3, `.context/reviews/9c4bdfed-250f-4d1d-a62d-38242af39d34/4-post-gates-quality-engineer-raw.md`):
+
+- `src/app/pricing/figure.tsx:6-7`: no test fails if `min-w-0` is removed from the Figure row; every fixture's figure text is short or has spaces.
+- `test/e2e/pricing.spec.ts:639`: the Back test's title still carries `AC-0124:` although it pins construction behavior (the test at line 477 closes AC-0124).

@@ -1,6 +1,6 @@
 # Spec: menu-pricing
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §4 (products, `v_product_pricing`, `v_current_menu`), §7 "Advise" (pricing advisor), §10 (margin advisor with what-if), §11 (boundaries), §12 (verification), §13 item 4; [`docs/costing.md`](../../costing.md) (the cost build-up, invariant 2, the average rule, the Rounding note); the access model, the write path, the `supabase/migrations/` change guidance, and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md)
@@ -141,78 +141,78 @@ Definitions used by these criteria:
 
 Access and navigation
 
-- [ ] **AC-0001.** While signed out, a request for `/menu` or for `/pricing` ends on `/sign-in`.
-- [ ] **AC-0002.** Signed in as a non-operator, `/menu` and `/pricing` each show "This account isn't allowed to use Meat Ops." and a Sign out button, and show no product.
-- [ ] **AC-0003.** A change action request replayed with no session, or with a non-operator's session, changes no `products` row.
-- [ ] **AC-0004.** `/receiving`, `/production`, `/menu`, and `/pricing` each show a navigation region named "Primary" with a link named "Receiving" to `/receiving`, "Production" to `/production`, "Menu" to `/menu`, and "Pricing" to `/pricing`.
-- [ ] **AC-0005.** In the AC-0004 navigation, the only link with an `aria-current` attribute is the link to the page being shown, and its value is `page`.
-- [ ] **AC-0006.** The responses to page requests for `/sign-in`, `/receiving`, `/production`, `/menu`, and `/pricing`, signed in or not, each carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
+- [x] **AC-0001.** While signed out, a request for `/menu` or for `/pricing` ends on `/sign-in`.
+- [x] **AC-0002.** Signed in as a non-operator, `/menu` and `/pricing` each show "This account isn't allowed to use Meat Ops." and a Sign out button, and show no product.
+- [x] **AC-0003.** A change action request replayed with no session, or with a non-operator's session, changes no `products` row.
+- [x] **AC-0004.** `/receiving`, `/production`, `/menu`, and `/pricing` each show a navigation region named "Primary" with a link named "Receiving" to `/receiving`, "Production" to `/production`, "Menu" to `/menu`, and "Pricing" to `/pricing`.
+- [x] **AC-0005.** In the AC-0004 navigation, the only link with an `aria-current` attribute is the link to the page being shown, and its value is `page`.
+- [x] **AC-0006.** The responses to page requests for `/sign-in`, `/receiving`, `/production`, `/menu`, and `/pricing`, signed in or not, each carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
 
 Pricing rules
 
-- [ ] **AC-0010.** In the 502 fixture with a 20% target, the pricing view gives 502 a cost per lb of 2.6318, a suggested price of 3.29, and a suggested list price of 3.29.
-- [ ] **AC-0011.** In the 502 fixture with a target margin of 0, 502's suggested price is 2.64.
-- [ ] **AC-0012.** In the 502 fixture with a 20% target, 502's suggested price is 3.29 with a profit fee of 0.05 per lb and also with a profit fee of 0.50 per lb.
-- [ ] **AC-0013.** In the 502 fixture with a target margin of 0.225, 502's suggested price is 3.40.
-- [ ] **AC-0019.** In the 502 fixture with a 20% target, with RAW-TOM's only receipt at 1.6632 per lb in place of 1.68, 502's cost per lb is 2.6100, its suggested price is 3.27, and its margin at a 3.27 list price is 0.2018.
-- [ ] **AC-0014.** In the 502 fixture, 502's margin at list price is 0.0180 with a 2.68 list price, 0.2001 with a 3.29 list price, 0.2481 with a 3.50 list price, and −0.0527 with a 2.50 list price.
-- [ ] **AC-0015.** In the 502 fixture with a 20% target, 502's price action is Set with no list price, Raise with a 2.68 list price, Lower with a 3.50 list price, and none with a 3.29 list price.
-- [ ] **AC-0016.** In the 502 fixture, 502 is below target with a 20% target and a 2.68 list price, and is not below target with a 20% target and a 3.50 list price, nor with no target and a 2.68 list price.
-- [ ] **AC-0017.** In the 502 fixture with a 20% target and a 2.68 list price, after its only receipt is voided, the pricing view gives 502 no suggested list price, no margin at list price, and no price action, and 502 is not below target.
-- [ ] **AC-0018.** A non-operator reads 0 rows from the pricing view and 0 rows from the menu view, in a fixture where an operator reads at least one row from each.
-- [ ] **AC-0027.** The `service_role` role reads at least one row from the pricing view and from the menu view in the 502 fixture.
+- [x] **AC-0010.** In the 502 fixture with a 20% target, the pricing view gives 502 a cost per lb of 2.6318, a suggested price of 3.29, and a suggested list price of 3.29.
+- [x] **AC-0011.** In the 502 fixture with a target margin of 0, 502's suggested price is 2.64.
+- [x] **AC-0012.** In the 502 fixture with a 20% target, 502's suggested price is 3.29 with a profit fee of 0.05 per lb and also with a profit fee of 0.50 per lb.
+- [x] **AC-0013.** In the 502 fixture with a target margin of 0.225, 502's suggested price is 3.40.
+- [x] **AC-0019.** In the 502 fixture with a 20% target, with RAW-TOM's only receipt at 1.6632 per lb in place of 1.68, 502's cost per lb is 2.6100, its suggested price is 3.27, and its margin at a 3.27 list price is 0.2018.
+- [x] **AC-0014.** In the 502 fixture, 502's margin at list price is 0.0180 with a 2.68 list price, 0.2001 with a 3.29 list price, 0.2481 with a 3.50 list price, and −0.0527 with a 2.50 list price.
+- [x] **AC-0015.** In the 502 fixture with a 20% target, 502's price action is Set with no list price, Raise with a 2.68 list price, Lower with a 3.50 list price, and none with a 3.29 list price.
+- [x] **AC-0016.** In the 502 fixture, 502 is below target with a 20% target and a 2.68 list price, and is not below target with a 20% target and a 3.50 list price, nor with no target and a 2.68 list price.
+- [x] **AC-0017.** In the 502 fixture with a 20% target and a 2.68 list price, after its only receipt is voided, the pricing view gives 502 no suggested list price, no margin at list price, and no price action, and 502 is not below target.
+- [x] **AC-0018.** A non-operator reads 0 rows from the pricing view and 0 rows from the menu view, in a fixture where an operator reads at least one row from each.
+- [x] **AC-0027.** The `service_role` role reads at least one row from the pricing view and from the menu view in the 502 fixture.
 
 What-if rules
 
-- [ ] **AC-0020.** In the 502 fixture with a 20% target and a 3.29 list price, a what-if for RAW-TOM at 2.00 gives 502 a cost per lb of 3.0474, a suggested price of 3.81, and a margin at list price of 0.0737.
-- [ ] **AC-0021.** In the 502 fixture with no target, a what-if for RAW-TOM at 2.00 gives 502 a suggested price of 3.0974.
-- [ ] **AC-0022.** In a fixture holding two RAW-TOM receipts (5,000 lbs at 1.68 and 3,000 lbs at 1.80) and two active finished products made from RAW-TOM, one with a 20% target and a 3.29 list price and one with no target and no list price, a what-if for RAW-TOM at its raw average cost gives each product the cost per lb, suggested price, and margin at list price the pricing view gives it.
-- [ ] **AC-0023.** A what-if returns exactly the active finished products whose raw input is the given raw product. The check fixture holds a second active finished product made from RAW-TOM, an inactive finished product made from RAW-TOM, and an active finished product made from another raw product.
-- [ ] **AC-0026.** A what-if returns its products in code order. The check fixture enters products made from RAW-TOM out of code order.
-- [ ] **AC-0028.** In the 502 fixture with a 20% target and a 3.29 list price, after RAW-TOM's only receipt is voided, a what-if for RAW-TOM at 2.00 gives 502 a cost per lb of 3.0474, a suggested price of 3.81, a suggested list price of 3.81, and a margin at list price of 0.0737.
-- [ ] **AC-0024.** A what-if called by an operator changes no table.
-- [ ] **AC-0025.** A what-if is refused with SQLSTATE `42501` for a non-operator, and refused for a raw cost that is below 0, null, NaN, or infinite, and each refusal changes no table.
+- [x] **AC-0020.** In the 502 fixture with a 20% target and a 3.29 list price, a what-if for RAW-TOM at 2.00 gives 502 a cost per lb of 3.0474, a suggested price of 3.81, and a margin at list price of 0.0737.
+- [x] **AC-0021.** In the 502 fixture with no target, a what-if for RAW-TOM at 2.00 gives 502 a suggested price of 3.0974.
+- [x] **AC-0022.** In a fixture holding two RAW-TOM receipts (5,000 lbs at 1.68 and 3,000 lbs at 1.80) and two active finished products made from RAW-TOM, one with a 20% target and a 3.29 list price and one with no target and no list price, a what-if for RAW-TOM at its raw average cost gives each product the cost per lb, suggested price, and margin at list price the pricing view gives it.
+- [x] **AC-0023.** A what-if returns exactly the active finished products whose raw input is the given raw product. The check fixture holds a second active finished product made from RAW-TOM, an inactive finished product made from RAW-TOM, and an active finished product made from another raw product.
+- [x] **AC-0026.** A what-if returns its products in code order. The check fixture enters products made from RAW-TOM out of code order.
+- [x] **AC-0028.** In the 502 fixture with a 20% target and a 3.29 list price, after RAW-TOM's only receipt is voided, a what-if for RAW-TOM at 2.00 gives 502 a cost per lb of 3.0474, a suggested price of 3.81, a suggested list price of 3.81, and a margin at list price of 0.0737.
+- [x] **AC-0024.** A what-if called by an operator changes no table.
+- [x] **AC-0025.** A what-if is refused with SQLSTATE `42501` for a non-operator, and refused for a raw cost that is below 0, null, NaN, or infinite, and each refusal changes no table.
 
 Target margin and list price operations
 
-- [ ] **AC-0030.** An operator's `set_target_margin` call for 502 with 22.5 stores a target margin of 0.2250, with 0 stores 0, and with no value removes the target margin.
-- [ ] **AC-0031.** `set_target_margin` is refused, and changes no table, for each of: a target below 0, a target of 100 or more, a target with more than 2 decimal places, a NaN or infinite target, a raw product, an inactive finished product, an id that names no product, and a non-operator caller, the last with SQLSTATE `42501`.
-- [ ] **AC-0032.** An operator's `set_list_price` call for 502 with 3.29 stores a list price of 3.29.
-- [ ] **AC-0033.** `set_list_price` is refused, and changes no table, for each of: a price of 0 or below, a price with more than 2 decimal places, a price of 100,000,000 or more, a null, NaN, or infinite price, a raw product, an inactive finished product, an id that names no product, and a non-operator caller, the last with SQLSTATE `42501`.
-- [ ] **AC-0034.** A successful `set_target_margin` or `set_list_price` call changes only the named product's target margin or list price, respectively: every other column of that row, every other row, and every other table are unchanged.
-- [ ] **AC-0035.** The `anon` and `service_role` roles cannot execute `set_target_margin`, `set_list_price`, or `price_what_if`.
-- [ ] **AC-0036.** An update that gives a raw product a target margin or a list price is refused, run as `postgres`.
-- [ ] **AC-0037.** An update that sets a finished product's target margin below 0, to 1 or more, or to NaN, or its list price to 0 or below or to NaN, is refused, run as `postgres`.
-- [ ] **AC-0038.** Every function the migration adds sets `search_path` to an empty value.
+- [x] **AC-0030.** An operator's `set_target_margin` call for 502 with 22.5 stores a target margin of 0.2250, with 0 stores 0, and with no value removes the target margin.
+- [x] **AC-0031.** `set_target_margin` is refused, and changes no table, for each of: a target below 0, a target of 100 or more, a target with more than 2 decimal places, a NaN or infinite target, a raw product, an inactive finished product, an id that names no product, and a non-operator caller, the last with SQLSTATE `42501`.
+- [x] **AC-0032.** An operator's `set_list_price` call for 502 with 3.29 stores a list price of 3.29.
+- [x] **AC-0033.** `set_list_price` is refused, and changes no table, for each of: a price of 0 or below, a price with more than 2 decimal places, a price of 100,000,000 or more, a null, NaN, or infinite price, a raw product, an inactive finished product, an id that names no product, and a non-operator caller, the last with SQLSTATE `42501`.
+- [x] **AC-0034.** A successful `set_target_margin` or `set_list_price` call changes only the named product's target margin or list price, respectively: every other column of that row, every other row, and every other table are unchanged.
+- [x] **AC-0035.** The `anon` and `service_role` roles cannot execute `set_target_margin`, `set_list_price`, or `price_what_if`.
+- [x] **AC-0036.** An update that gives a raw product a target margin or a list price is refused, run as `postgres`.
+- [x] **AC-0037.** An update that sets a finished product's target margin below 0, to 1 or more, or to NaN, or its list price to 0 or below or to NaN, is refused, run as `postgres`.
+- [x] **AC-0038.** Every function the migration adds sets `search_path` to an empty value.
 
 Menu
 
-- [ ] **AC-0040.** `/menu` lists each active finished product once, with its code, description, list price, finished lbs on hand, raw lbs on hand, and "Sellable now" when it is sellable or "Not sellable now" when it is not.
-- [ ] **AC-0051.** `/menu` lists its products in code order. The check fixture enters products out of code order.
-- [ ] **AC-0041.** In the 502 fixture with a 3.29 list price, after a batch of 502 with 2,000 raw lbs, `/menu` shows 502 with list price $3.29/lb, finished on hand 1,540 lbs, raw on hand 3,000 lbs, and "Sellable now".
-- [ ] **AC-0042.** A product with no list price shows "No list price yet" in place of its list price.
-- [ ] **AC-0043.** A product shows "Sellable now" when its finished lbs on hand or its raw lbs on hand is above 0, and "Not sellable now" when both are 0. The check fixture holds one product with only finished stock, one with only raw stock, and one with neither.
-- [ ] **AC-0044.** In the 502 fixture, after RAW-TOM's lot is adjusted to 0 lbs, a reload of `/menu` shows 502 as "Not sellable now".
-- [ ] **AC-0045.** An inactive finished product does not appear on `/menu`.
-- [ ] **AC-0046.** On each load of `/menu`, the "Sellable only" switch is off and every active finished product is listed.
-- [ ] **AC-0047.** With "Sellable only" on, `/menu` lists exactly the sellable products. The check fixture holds one sellable and one unsellable product.
-- [ ] **AC-0048.** Turning "Sellable only" off again lists every active finished product.
-- [ ] **AC-0049.** With "Sellable only" on and no product sellable, `/menu` says "No product can be sold right now."
-- [ ] **AC-0050.** When there is no active finished product, `/menu` says "No active finished products yet. Add one in Supabase Studio, then reload this page."
+- [x] **AC-0040.** `/menu` lists each active finished product once, with its code, description, list price, finished lbs on hand, raw lbs on hand, and "Sellable now" when it is sellable or "Not sellable now" when it is not.
+- [x] **AC-0051.** `/menu` lists its products in code order. The check fixture enters products out of code order.
+- [x] **AC-0041.** In the 502 fixture with a 3.29 list price, after a batch of 502 with 2,000 raw lbs, `/menu` shows 502 with list price $3.29/lb, finished on hand 1,540 lbs, raw on hand 3,000 lbs, and "Sellable now".
+- [x] **AC-0042.** A product with no list price shows "No list price yet" in place of its list price.
+- [x] **AC-0043.** A product shows "Sellable now" when its finished lbs on hand or its raw lbs on hand is above 0, and "Not sellable now" when both are 0. The check fixture holds one product with only finished stock, one with only raw stock, and one with neither.
+- [x] **AC-0044.** In the 502 fixture, after RAW-TOM's lot is adjusted to 0 lbs, a reload of `/menu` shows 502 as "Not sellable now".
+- [x] **AC-0045.** An inactive finished product does not appear on `/menu`.
+- [x] **AC-0046.** On each load of `/menu`, the "Sellable only" switch is off and every active finished product is listed.
+- [x] **AC-0047.** With "Sellable only" on, `/menu` lists exactly the sellable products. The check fixture holds one sellable and one unsellable product.
+- [x] **AC-0048.** Turning "Sellable only" off again lists every active finished product.
+- [x] **AC-0049.** With "Sellable only" on and no product sellable, `/menu` says "No product can be sold right now."
+- [x] **AC-0050.** When there is no active finished product, `/menu` says "No active finished products yet. Add one in Supabase Studio, then reload this page."
 
 Pricing list
 
-- [ ] **AC-0060.** `/pricing` lists each active finished product once, with its code, description, cost per lb, list price, suggested price, margin at list price, and target margin.
-- [ ] **AC-0061.** In the 502 fixture with a 20% target and a 2.68 list price, `/pricing` shows 502 with cost per lb $2.6318/lb, list price $2.68/lb, suggested price $3.29/lb, margin at list price 1.8%, and target margin 20%.
-- [ ] **AC-0062.** A product with no list price shows "No list price yet" as its list price.
-- [ ] **AC-0074.** A product with no target margin shows "No target" as its target margin.
-- [ ] **AC-0075.** A product whose raw input has no cost shows "None yet" as its cost per lb and "No price yet" as its suggested price.
-- [ ] **AC-0076.** A product with no list price, or whose raw input has no cost, shows "None yet" as its margin at list price.
-- [ ] **AC-0063.** The products that need a new price are listed under a heading "Needs a new price", the products whose raw input has no cost under a heading "No cost yet", and every other product under a heading "Priced".
-- [ ] **AC-0077.** The group headings appear in this order: "Needs a new price", "Priced", "No cost yet".
-- [ ] **AC-0078.** A group heading appears only when the group has a product. In the AC-0069 state, neither "Needs a new price" nor "No cost yet" appears.
-- [ ] **AC-0064.** Under "Needs a new price", the below-target products come first, then the rest, each group in code order; under "Priced" and under "No cost yet", products are in code order. The check fixture holds four products that need a new price, two of them below target and, of the other two, one with a Lower action and one with a Set action, and two products in each other group, all entered out of that order.
-- [ ] **AC-0065.** Each product that needs a new price shows the advice for its case, where C is its cost per lb, S its suggested list price, T its target margin, L its list price, M its margin at list price, and F its margin fees per lb, each in its display format:
+- [x] **AC-0060.** `/pricing` lists each active finished product once, with its code, description, cost per lb, list price, suggested price, margin at list price, and target margin.
+- [x] **AC-0061.** In the 502 fixture with a 20% target and a 2.68 list price, `/pricing` shows 502 with cost per lb $2.6318/lb, list price $2.68/lb, suggested price $3.29/lb, margin at list price 1.8%, and target margin 20%.
+- [x] **AC-0062.** A product with no list price shows "No list price yet" as its list price.
+- [x] **AC-0074.** A product with no target margin shows "No target" as its target margin.
+- [x] **AC-0075.** A product whose raw input has no cost shows "None yet" as its cost per lb and "No price yet" as its suggested price.
+- [x] **AC-0076.** A product with no list price, or whose raw input has no cost, shows "None yet" as its margin at list price.
+- [x] **AC-0063.** The products that need a new price are listed under a heading "Needs a new price", the products whose raw input has no cost under a heading "No cost yet", and every other product under a heading "Priced".
+- [x] **AC-0077.** The group headings appear in this order: "Needs a new price", "Priced", "No cost yet".
+- [x] **AC-0078.** A group heading appears only when the group has a product. In the AC-0069 state, neither "Needs a new price" nor "No cost yet" appears.
+- [x] **AC-0064.** Under "Needs a new price", the below-target products come first, then the rest, each group in code order; under "Priced" and under "No cost yet", products are in code order. The check fixture holds four products that need a new price, two of them below target and, of the other two, one with a Lower action and one with a Set action, and two products in each other group, all entered out of that order.
+- [x] **AC-0065.** Each product that needs a new price shows the advice for its case, where C is its cost per lb, S its suggested list price, T its target margin, L its list price, M its margin at list price, and F its margin fees per lb, each in its display format:
 
   | Target margin | List price | Advice |
   | --- | --- | --- |
@@ -222,28 +222,28 @@ Pricing list
   | none | none | Cost is C. With no target margin, the suggested price is cost plus F in margin fees. This product has no list price yet. |
 
   In the AC-0061 case the advice reads "Cost is $2.6318/lb. $3.29/lb holds your 20% target margin. At your list price of $2.68/lb, the margin is 1.8%." In the 502 fixture the advice reads "Cost is $2.6318/lb. With no target margin, the suggested price is cost plus $0.0500/lb in margin fees. This product has no list price yet."
-- [ ] **AC-0066.** Each product that needs a new price shows one button, named "Set list price to S" for Set, "Raise list price to S" for Raise, and "Lower list price to S" for Lower, with S as in AC-0065. A product that does not need a new price shows no such button.
-- [ ] **AC-0067.** Pressing an AC-0066 button stores the price the button names as the product's list price, also when the product's cost per lb has changed since the page loaded.
-- [ ] **AC-0068.** After an AC-0066 button's save, the page says "List price for <code> saved: <price>.", with the list price the database stored in the suggested price format.
-- [ ] **AC-0069.** In the AC-0061 case, pressing "Raise list price to $3.29/lb" shows 502 under "Priced" with list price $3.29/lb and margin at list price 20.01%.
-- [ ] **AC-0070.** Each listed product's code and description form a link to that product's pricing detail.
-- [ ] **AC-0071.** When there is no active finished product, `/pricing` says "No active finished products yet. Add one in Supabase Studio, then reload this page." and shows no what-if section.
-- [ ] **AC-0072.** In the 502 fixture with a 20% target and a 2.68 list price, after a second RAW-TOM receipt of 3,000 lbs at 1.80 and a load of `/pricing` and of `/menu`, 502's stored list price is 2.68.
-- [ ] **AC-0073.** In the 502 fixture with a 20% target, choosing RAW-TOM on `/receiving` shows 502's suggested price as $3.29/lb.
+- [x] **AC-0066.** Each product that needs a new price shows one button, named "Set list price to S" for Set, "Raise list price to S" for Raise, and "Lower list price to S" for Lower, with S as in AC-0065. A product that does not need a new price shows no such button.
+- [x] **AC-0067.** Pressing an AC-0066 button stores the price the button names as the product's list price, also when the product's cost per lb has changed since the page loaded.
+- [x] **AC-0068.** After an AC-0066 button's save, the page says "List price for <code> saved: <price>.", with the list price the database stored in the suggested price format.
+- [x] **AC-0069.** In the AC-0061 case, pressing "Raise list price to $3.29/lb" shows 502 under "Priced" with list price $3.29/lb and margin at list price 20.01%.
+- [x] **AC-0070.** Each listed product's code and description form a link to that product's pricing detail.
+- [x] **AC-0071.** When there is no active finished product, `/pricing` says "No active finished products yet. Add one in Supabase Studio, then reload this page." and shows no what-if section.
+- [x] **AC-0072.** In the 502 fixture with a 20% target and a 2.68 list price, after a second RAW-TOM receipt of 3,000 lbs at 1.80 and a load of `/pricing` and of `/menu`, 502's stored list price is 2.68.
+- [x] **AC-0073.** In the 502 fixture with a 20% target, choosing RAW-TOM on `/receiving` shows 502's suggested price as $3.29/lb.
 
 Pricing detail
 
-- [ ] **AC-0080.** A product's pricing detail shows its code and description as its heading, then its cost build-up in this order: raw input code and description, raw average cost, shrink, cost after shrink, each processing fee by name in fee-type order, cost per lb; then, with a target margin, target margin and suggested price, or, with none, each margin fee by name in fee-type order, suggested price, and "No target margin. The suggested price is cost per lb plus the margin fees."; then list price and margin at list price.
-- [ ] **AC-0081.** In the AC-0061 case, 502's detail shows RAW-TOM Turkey Drums TOM (raw), raw average cost $1.6800/lb, shrink 23%, cost after shrink $2.1818/lb, Direct cost of material $0.0500/lb, Cost of freezing $0.0300/lb, Belmont overhead $0.3700/lb, cost per lb $2.6318/lb, target margin 20%, suggested price $3.29/lb, list price $2.68/lb, and margin at list price 1.8%.
-- [ ] **AC-0082.** In the 502 fixture, 502's detail shows Profit $0.0500/lb and suggested price $2.68/lb.
-- [ ] **AC-0083.** When a product's raw input has no cost, its detail shows raw average cost, cost after shrink, and cost per lb as "None yet", and suggested price as "No price yet".
-- [ ] **AC-0084.** A detail of a product that needs a new price shows that product's AC-0065 advice and AC-0066 button.
-- [ ] **AC-0085.** A detail requested for a code that is not the code of an active finished product, including an unknown code, a raw product's code, and an inactive finished product's code, says "No active finished product has code <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
+- [x] **AC-0080.** A product's pricing detail shows its code and description as its heading, then its cost build-up in this order: raw input code and description, raw average cost, shrink, cost after shrink, each processing fee by name in fee-type order, cost per lb; then, with a target margin, target margin and suggested price, or, with none, each margin fee by name in fee-type order, suggested price, and "No target margin. The suggested price is cost per lb plus the margin fees."; then list price and margin at list price.
+- [x] **AC-0081.** In the AC-0061 case, 502's detail shows RAW-TOM Turkey Drums TOM (raw), raw average cost $1.6800/lb, shrink 23%, cost after shrink $2.1818/lb, Direct cost of material $0.0500/lb, Cost of freezing $0.0300/lb, Belmont overhead $0.3700/lb, cost per lb $2.6318/lb, target margin 20%, suggested price $3.29/lb, list price $2.68/lb, and margin at list price 1.8%.
+- [x] **AC-0082.** In the 502 fixture, 502's detail shows Profit $0.0500/lb and suggested price $2.68/lb.
+- [x] **AC-0083.** When a product's raw input has no cost, its detail shows raw average cost, cost after shrink, and cost per lb as "None yet", and suggested price as "No price yet".
+- [x] **AC-0084.** A detail of a product that needs a new price shows that product's AC-0065 advice and AC-0066 button.
+- [x] **AC-0085.** A detail requested for a code that is not the code of an active finished product, including an unknown code, a raw product's code, and an inactive finished product's code, says "No active finished product has code <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
 
 Target margin
 
-- [ ] **AC-0090.** A detail's "Target margin %" field starts with the stored target margin written as a percent with trailing zeros dropped, such as 20 for 0.2000 and 22.5 for 0.2250, or empty when there is none.
-- [ ] **AC-0091.** Each target margin input in this table is refused with its message beside the field, and nothing is saved. The first matching row wins.
+- [x] **AC-0090.** A detail's "Target margin %" field starts with the stored target margin written as a percent with trailing zeros dropped, such as 20 for 0.2000 and 22.5 for 0.2250, or empty when there is none.
+- [x] **AC-0091.** Each target margin input in this table is refused with its message beside the field, and nothing is saved. The first matching row wins.
 
   | Input | Message |
   | --- | --- |
@@ -251,14 +251,14 @@ Target margin
   | more than 2 decimal places | Use at most 2 decimal places for a target margin. |
   | 100 or more | A target margin must be below 100. |
 
-- [ ] **AC-0092.** In the 502 fixture, saving a target margin of 22.5 for 502 shows "Target margin for 502 saved: 22.5%.", and the detail shows target margin 22.5% and suggested price $3.40/lb.
-- [ ] **AC-0093.** A detail shows a "Remove target margin" button when the product has a target margin, and no such button when it has none.
-- [ ] **AC-0094.** In the 502 fixture with a 20% target, pressing "Remove target margin" shows "Target margin for 502 removed.", and the detail shows Profit $0.0500/lb and suggested price $2.68/lb.
+- [x] **AC-0092.** In the 502 fixture, saving a target margin of 22.5 for 502 shows "Target margin for 502 saved: 22.5%.", and the detail shows target margin 22.5% and suggested price $3.40/lb.
+- [x] **AC-0093.** A detail shows a "Remove target margin" button when the product has a target margin, and no such button when it has none.
+- [x] **AC-0094.** In the 502 fixture with a 20% target, pressing "Remove target margin" shows "Target margin for 502 removed.", and the detail shows Profit $0.0500/lb and suggested price $2.68/lb.
 
 List price
 
-- [ ] **AC-0100.** A detail's "List price per lb" field starts with the stored list price written with 2 decimals, such as 3.29 for 3.29 and 3.50 for 3.5, or empty when there is none.
-- [ ] **AC-0101.** Each list price input in this table is refused with its message beside the field, and nothing is saved. The first matching row wins.
+- [x] **AC-0100.** A detail's "List price per lb" field starts with the stored list price written with 2 decimals, such as 3.29 for 3.29 and 3.50 for 3.5, or empty when there is none.
+- [x] **AC-0101.** Each list price input in this table is refused with its message beside the field, and nothing is saved. The first matching row wins.
 
   | Input | Message |
   | --- | --- |
@@ -267,31 +267,31 @@ List price
   | a value equal to 0 | Price must be above 0. |
   | 100000000 or more | Price must be below 100,000,000. |
 
-- [ ] **AC-0102.** In the 502 fixture, saving a list price of 3.50 for 502 shows "List price for 502 saved: $3.50/lb.", and the detail shows list price $3.50/lb and margin at list price 24.81%.
+- [x] **AC-0102.** In the 502 fixture, saving a list price of 3.50 for 502 shows "List price for 502 saved: $3.50/lb.", and the detail shows list price $3.50/lb and margin at list price 24.81%.
 
 Refused and failed changes
 
-- [ ] **AC-0109.** A change action request replayed with a non-operator's session returns "The change wasn't saved. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0110.** When the session has ended after the page loaded, a change action shows "You're signed out. Sign in again to save this change."
-- [ ] **AC-0113.** When a change action's caller check fails before its write call because its auth lookup or its operator check gets no answer, the action shows "The change wasn't saved. Try again in a moment."
-- [ ] **AC-0144.** When a change action's caller check fails before its write call because its auth lookup is answered with status 5xx or 429, or its operator check is answered with an error code other than `42501`, which `src/app/_server/caller.ts` reports as a failed check, the action returns "The change wasn't saved. Try again in a moment."
-- [ ] **AC-0114.** When a change action's write call gets no answer from the database, it shows "The change may not have been saved. Reload this page to check it."
-- [ ] **AC-0115.** When the connection to the app drops while a change is in flight, the page shows the AC-0114 message.
-- [ ] **AC-0116.** When the product was made inactive after the page loaded, a change action shows "The change wasn't saved. This product is no longer active."
-- [ ] **AC-0117.** When a change action's write call is refused because the caller is not an operator, it shows "The change wasn't saved. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0118.** When a change action's write call is refused for a reason other than those of AC-0116 and AC-0117, the action returns "The change wasn't saved." followed by the refusal text after its `set_target_margin: ` or `set_list_price: ` prefix. A replayed list price save whose product id is `00000000-0000-0000-0000-000000000000` returns "The change wasn't saved. product 00000000-0000-0000-0000-000000000000 not found".
-- [ ] **AC-0111.** After an AC-0091, AC-0101, AC-0110, AC-0115, or AC-0116 outcome, every field keeps its value.
-- [ ] **AC-0119.** After an AC-0113, AC-0114, or AC-0117 outcome, every field keeps its value.
-- [ ] **AC-0112.** An AC-0091, AC-0101, AC-0110, AC-0116, or AC-0118 outcome changes no `products` row.
-- [ ] **AC-0128.** An AC-0117 outcome changes no `products` row.
+- [x] **AC-0109.** A change action request replayed with a non-operator's session returns "The change wasn't saved. This account isn't allowed to use Meat Ops."
+- [x] **AC-0110.** When the session has ended after the page loaded, a change action shows "You're signed out. Sign in again to save this change."
+- [x] **AC-0113.** When a change action's caller check fails before its write call because its auth lookup or its operator check gets no answer, the action shows "The change wasn't saved. Try again in a moment."
+- [x] **AC-0144.** When a change action's caller check fails before its write call because its auth lookup is answered with status 5xx or 429, or its operator check is answered with an error code other than `42501`, which `src/app/_server/caller.ts` reports as a failed check, the action returns "The change wasn't saved. Try again in a moment."
+- [x] **AC-0114.** When a change action's write call gets no answer from the database, it shows "The change may not have been saved. Reload this page to check it."
+- [x] **AC-0115.** When the connection to the app drops while a change is in flight, the page shows the AC-0114 message.
+- [x] **AC-0116.** When the product was made inactive after the page loaded, a change action shows "The change wasn't saved. This product is no longer active."
+- [x] **AC-0117.** When a change action's write call is refused because the caller is not an operator, it shows "The change wasn't saved. This account isn't allowed to use Meat Ops."
+- [x] **AC-0118.** When a change action's write call is refused for a reason other than those of AC-0116 and AC-0117, the action returns "The change wasn't saved." followed by the refusal text after its `set_target_margin: ` or `set_list_price: ` prefix. A replayed list price save whose product id is `00000000-0000-0000-0000-000000000000` returns "The change wasn't saved. product 00000000-0000-0000-0000-000000000000 not found".
+- [x] **AC-0111.** After an AC-0091, AC-0101, AC-0110, AC-0115, or AC-0116 outcome, every field keeps its value.
+- [x] **AC-0119.** After an AC-0113, AC-0114, or AC-0117 outcome, every field keeps its value.
+- [x] **AC-0112.** An AC-0091, AC-0101, AC-0110, AC-0116, or AC-0118 outcome changes no `products` row.
+- [x] **AC-0128.** An AC-0117 outcome changes no `products` row.
 
 What-if
 
-- [ ] **AC-0120.** The pricing list has a section headed "What if raw cost changes?" with a "Raw product" picker, a "Raw cost per lb" field, and a "Show prices" button. The picker lists each active raw product that is the raw input of at least one active finished product, as its code and description.
-- [ ] **AC-0129.** The "Raw product" picker lists its raw products in code order. The check fixture enters raw products out of code order.
-- [ ] **AC-0121.** In the 502 fixture with a 20% target and a 3.29 list price, showing prices for RAW-TOM at 2.00 lists 502 with cost per lb $3.0474/lb, suggested price $3.81/lb, and margin at today's list price 7.37%.
-- [ ] **AC-0122.** In a what-if, a product with no list price shows "None yet" for margin at today's list price.
-- [ ] **AC-0123.** Each what-if input in this table is refused with its message beside its field, and no results show. Within one field, the first matching row wins.
+- [x] **AC-0120.** The pricing list has a section headed "What if raw cost changes?" with a "Raw product" picker, a "Raw cost per lb" field, and a "Show prices" button. The picker lists each active raw product that is the raw input of at least one active finished product, as its code and description.
+- [x] **AC-0129.** The "Raw product" picker lists its raw products in code order. The check fixture enters raw products out of code order.
+- [x] **AC-0121.** In the 502 fixture with a 20% target and a 3.29 list price, showing prices for RAW-TOM at 2.00 lists 502 with cost per lb $3.0474/lb, suggested price $3.81/lb, and margin at today's list price 7.37%.
+- [x] **AC-0122.** In a what-if, a product with no list price shows "None yet" for margin at today's list price.
+- [x] **AC-0123.** Each what-if input in this table is refused with its message beside its field, and no results show. Within one field, the first matching row wins.
 
   | Field | Input | Message |
   | --- | --- | --- |
@@ -299,51 +299,51 @@ What-if
   | Raw cost per lb | blank, or anything other than digits with at most one decimal point | Enter the cost per lb, like 1.68. |
   | Raw cost per lb | more than 4 decimal places | Use at most 4 decimal places for cost. |
 
-- [ ] **AC-0143.** In the AC-0028 case, showing prices for RAW-TOM at 2.00 lists 502 with cost per lb $3.0474/lb, suggested price $3.81/lb, and margin at today's list price 7.37%.
-- [ ] **AC-0124.** After Show prices, the raw product and the raw cost per lb keep their values.
-- [ ] **AC-0125.** A what-if requested for a code that is not the code of an active raw input of an active finished product, including an unknown code and a finished product's code, says "No active finished product is made from <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
+- [x] **AC-0143.** In the AC-0028 case, showing prices for RAW-TOM at 2.00 lists 502 with cost per lb $3.0474/lb, suggested price $3.81/lb, and margin at today's list price 7.37%.
+- [x] **AC-0124.** After Show prices, the raw product and the raw cost per lb keep their values.
+- [x] **AC-0125.** A what-if requested for a code that is not the code of an active raw input of an active finished product, including an unknown code and a finished product's code, says "No active finished product is made from <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
 
 Error pages
 
-- [ ] **AC-0126.** After a `/menu` or `/pricing` load fails because the database is unreachable, pressing Try again once the database is reachable again shows that page without a browser reload.
-- [ ] **AC-0127.** When the `/menu` or `/pricing` error page appears, keyboard focus is on its heading.
+- [x] **AC-0126.** After a `/menu` or `/pricing` load fails because the database is unreachable, pressing Try again once the database is reachable again shows that page without a browser reload.
+- [x] **AC-0127.** When the `/menu` or `/pricing` error page appears, keyboard focus is on its heading.
 
 Accessibility and phone width
 
-- [ ] **AC-0130.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
-- [ ] **AC-0131.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
-- [ ] **AC-0132.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
-- [ ] **AC-0133.** Each of these can be completed with the keyboard alone: an AC-0066 button, Save target, Remove target margin, Save price, Show prices, and the "Sellable only" switch.
-- [ ] **AC-0134.** After a change action's save, keyboard focus is on the message that states it.
-- [ ] **AC-0135.** After an AC-0091, AC-0101, or AC-0123 refusal, keyboard focus is on the first field with an error.
-- [ ] **AC-0136.** After an AC-0091, AC-0101, or AC-0123 refusal, the `aria-describedby` of every field with an error points to that field's message.
-- [ ] **AC-0137.** After an AC-0110, AC-0115, or AC-0116 outcome, keyboard focus is on the message that states it.
-- [ ] **AC-0142.** After an AC-0113, AC-0114, or AC-0117 outcome, keyboard focus is on the message that states it.
-- [ ] **AC-0138.** The accessible name of the target margin field contains "%", and the accessible names of the list price field and the raw cost field each contain "per lb".
-- [ ] **AC-0139.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
-- [ ] **AC-0141.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
+- [x] **AC-0130.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
+- [x] **AC-0131.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
+- [x] **AC-0132.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
+- [x] **AC-0133.** Each of these can be completed with the keyboard alone: an AC-0066 button, Save target, Remove target margin, Save price, Show prices, and the "Sellable only" switch.
+- [x] **AC-0134.** After a change action's save, keyboard focus is on the message that states it.
+- [x] **AC-0135.** After an AC-0091, AC-0101, or AC-0123 refusal, keyboard focus is on the first field with an error.
+- [x] **AC-0136.** After an AC-0091, AC-0101, or AC-0123 refusal, the `aria-describedby` of every field with an error points to that field's message.
+- [x] **AC-0137.** After an AC-0110, AC-0115, or AC-0116 outcome, keyboard focus is on the message that states it.
+- [x] **AC-0142.** After an AC-0113, AC-0114, or AC-0117 outcome, keyboard focus is on the message that states it.
+- [x] **AC-0138.** The accessible name of the target margin field contains "%", and the accessible names of the list price field and the raw cost field each contain "per lb".
+- [x] **AC-0139.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
+- [x] **AC-0141.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
 
 Display
 
-- [ ] **AC-0140.** A margin shows as the stored fraction written as a percent, with 0 to 2 decimals, trailing zeros dropped, then "%": 0.2 → 20%, 0.018 → 1.8%, 0.2001 → 20.01%, 0.2481 → 24.81%, −0.0527 → -5.27%, 0 → 0%.
+- [x] **AC-0140.** A margin shows as the stored fraction written as a percent, with 0 to 2 decimals, trailing zeros dropped, then "%": 0.2 → 20%, 0.018 → 1.8%, 0.2001 → 20.01%, 0.2481 → 24.81%, −0.0527 → -5.27%, 0 → 0%.
 
 Build and repository checks
 
-- [ ] **AC-0150.** `npm run build` exits 0.
-- [ ] **AC-0151.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
-- [ ] **AC-0152.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
-- [ ] **AC-0153.** `npm run typecheck` exits 0.
-- [ ] **AC-0154.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
-- [ ] **AC-0155.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
-- [ ] **AC-0156.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
-- [ ] **AC-0157.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
-- [ ] **AC-0158.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
+- [x] **AC-0150.** `npm run build` exits 0.
+- [x] **AC-0151.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
+- [x] **AC-0152.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
+- [x] **AC-0153.** `npm run typecheck` exits 0.
+- [x] **AC-0154.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
+- [x] **AC-0155.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
+- [x] **AC-0156.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
+- [x] **AC-0157.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
+- [x] **AC-0158.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
   - `grep -rniE "env(\.|\[['\"])[a-z0-9_]*(service_role|secret|jwt|db_url|database_url|postgres)" src/ | grep -v '^src/privileged-env.ts:'`
   - `grep -rnE "\}\s*=\s*process\.env" src/`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`
-- [ ] **AC-0159.** `grep -rniE "anthropic|openai|@ai-sdk|langchain" package.json src/` prints nothing.
-- [ ] **AC-0160.** Compared with the local database built from `main`'s migrations, the database after this branch's migrations has the same base tables in `public` with the same columns, except that `products` also has `target_margin_pct` and `list_price_per_lb`.
-- [ ] **AC-0161.** `npm run test:costing` runs `test/costing.test.ts` and `test/pricing.test.ts` and exits 0.
+- [x] **AC-0159.** `grep -rniE "anthropic|openai|@ai-sdk|langchain" package.json src/` prints nothing.
+- [x] **AC-0160.** Compared with the local database built from `main`'s migrations, the database after this branch's migrations has the same base tables in `public` with the same columns, except that `products` also has `target_margin_pct` and `list_price_per_lb`.
+- [x] **AC-0161.** `npm run test:costing` runs `test/costing.test.ts` and `test/pricing.test.ts` and exits 0.
 
 ## Follow-ons
 
