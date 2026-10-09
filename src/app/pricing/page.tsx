@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
-import { listPricing, listWhatIfRawProducts, runWhatIf, type WhatIfRow } from "../../lib/pricing";
+import { getPricingDetail, listPricing, listWhatIfRawProducts, runWhatIf, type WhatIfRow } from "../../lib/pricing";
 import { parseWhatIf } from "../../lib/price-input";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
 import { PageHeader } from "../page-header";
+import { PricingDetail } from "./pricing-detail";
 import { PricingList } from "./pricing-list";
 import { WhatIfForm } from "./what-if-form";
 import { WhatIfResults } from "./what-if-results";
@@ -30,11 +31,26 @@ export default async function PricingPage({
   // user who is not on the allowlist gets the not-allowed page.
   if (!(await isOperator(supabase))) return <NotAllowed />;
 
-  const [rows, rawProducts, query] = await Promise.all([
-    listPricing(supabase),
-    listWhatIfRawProducts(supabase),
-    searchParams,
-  ]);
+  const query = await searchParams;
+
+  // A product's detail is /pricing?product=<code>. A code that is not an active
+  // finished product's is shown back as plain text, never as markup.
+  const productCode = textParam(query.product);
+  if (productCode !== undefined) {
+    const detail = await getPricingDetail(supabase, productCode);
+    return (
+      <main className="mx-auto w-full max-w-xl p-4">
+        <PageHeader title="Pricing" current="pricing" />
+        {detail ? (
+          <PricingDetail key={detail.productId} detail={detail} />
+        ) : (
+          <p className="break-words text-base">{`No active finished product has code ${productCode}.`}</p>
+        )}
+      </main>
+    );
+  }
+
+  const [rows, rawProducts] = await Promise.all([listPricing(supabase), listWhatIfRawProducts(supabase)]);
 
   if (rows.length === 0) {
     return (

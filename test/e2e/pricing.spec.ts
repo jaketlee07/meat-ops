@@ -9,8 +9,12 @@ import {
   setListPrice,
 } from "./menu-page";
 import {
+  captureAction,
   card,
   CHANGE_SIGNED_OUT,
+  detail,
+  detailControls,
+  dropActionRequests,
   figure,
   GROUP_HEADINGS,
   group,
@@ -22,18 +26,22 @@ import {
   NOT_ACTIVE,
   NOT_SAVED,
   opens,
+  opensDetail,
   productsSnapshot,
   receive502Lot,
   refusedRegion,
+  replayText,
   savedRegion,
   setActive,
   setTarget,
   storedListPrice,
+  storedTarget,
   WHAT_IF_CONTROLS,
   WHAT_IF_HEADING,
   whatIf,
   ZERO_ID,
 } from "./pricing-page";
+import { CHANGE_UNKNOWN } from "../../src/lib/failures";
 import { factValue, NOT_ALLOWED, openForm as openReceiving } from "./receiving-page";
 import { NON_OPERATOR_STATE, OPERATOR_STATE } from "./states";
 
@@ -549,5 +557,429 @@ test.describe("the what-if", () => {
     }
     // The what-if for an AC-0125 code.
     expect(await checkPageState(page)).toEqual(WITH_502);
+  });
+});
+
+// The detail's figures as label and value pairs, in page order.
+async function figures(page: Page): Promise<Array<[string, string]>> {
+  const labels = await page.locator("main dt").allTextContents();
+  const values = await page.locator("main dd").allTextContents();
+  return labels.map((label, index) => [label.trim(), (values[index] ?? "").trim()]);
+}
+
+const NO_TARGET_SENTENCE = "No target margin. The suggested price is cost per lb plus the margin fees.";
+
+test.describe("the detail", () => {
+  test("AC-0080, AC-0081, and AC-0138: 502's build-up in order, with a target", async ({ page }) => {
+    await fixture502(0.2, 2.68);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    await expect(d.heading).toHaveText("502 Smoked Turkey Drums Tom");
+    expect(await figures(page)).toEqual([
+      ["Raw input", "RAW-TOM Turkey Drums TOM (raw)"],
+      ["Raw average cost", "$1.6800/lb"],
+      ["Shrink", "23%"],
+      ["Cost after shrink", "$2.1818/lb"],
+      ["Direct cost of material", "$0.0500/lb"],
+      ["Cost of freezing", "$0.0300/lb"],
+      ["Belmont overhead", "$0.3700/lb"],
+      ["Cost per lb", "$2.6318/lb"],
+      ["Target margin", "20%"],
+      ["Suggested price", "$3.29/lb"],
+      ["List price", "$2.68/lb"],
+      ["Margin at list price", "1.8%"],
+    ]);
+    await expect(page.getByText(NO_TARGET_SENTENCE)).toHaveCount(0);
+    // AC-0138: the names of the fields.
+    await expect(d.target).toHaveAccessibleName(/%/);
+    await expect(d.price).toHaveAccessibleName(/per lb/);
+    // The detail with a target margin.
+    expect(await checkPageState(page)).toEqual(
+      detailControls({ apply: "Raise list price to $3.29/lb", remove: true }),
+    );
+  });
+
+  test("AC-0080 and AC-0082: with no target, the margin fees, the suggested price, and the sentence", async ({
+    page,
+  }) => {
+    await fixture502(null, null);
+    await opensDetail(page, "502");
+    const figs = await figures(page);
+    expect(figs.slice(7)).toEqual([
+      ["Cost per lb", "$2.6318/lb"],
+      ["Profit", "$0.0500/lb"],
+      ["Suggested price", "$2.68/lb"],
+      ["List price", "No list price yet"],
+      ["Margin at list price", "None yet"],
+    ]);
+    expect(figs.map(([label]) => label)).not.toContain("Target margin");
+    await expect(page.getByText(NO_TARGET_SENTENCE, { exact: true })).toBeVisible();
+    // The sentence sits between the suggested price and the list price.
+    const order = await page.locator("main dt, main p").allTextContents();
+    const labels = order.map((text) => text.trim());
+    expect(labels.indexOf("Suggested price")).toBeLessThan(labels.indexOf(NO_TARGET_SENTENCE));
+    expect(labels.indexOf(NO_TARGET_SENTENCE)).toBeLessThan(labels.indexOf("List price"));
+    // The detail with no target margin.
+    expect(await checkPageState(page)).toEqual(detailControls({ apply: "Set list price to $2.68/lb", remove: false }));
+  });
+
+  test("AC-0083: a raw input with no cost shows None yet and No price yet", async ({ page }) => {
+    await retire502();
+    const raw = await addRaw("RAWN");
+    await addFinished("NOCOST", "Never received", raw);
+    await opensDetail(page, "NOCOST");
+    const main = page.locator("main");
+    for (const label of ["Raw average cost", "Cost after shrink", "Cost per lb"]) {
+      await expect(figure(main, label), label).toHaveText("None yet");
+    }
+    await expect(figure(main, "Suggested price")).toHaveText("No price yet");
+    await expect(figure(main, "Raw input")).toHaveText("RAWN RAWN raw");
+    await expect(figure(main, "Shrink")).toHaveText("10%");
+    await expect(main.getByRole("button", { name: /list price to/ })).toHaveCount(0);
+  });
+
+  test("AC-0084: a product that needs a new price shows its advice and button, and pressing it saves", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 2.68);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    await expect(page.getByText(ADVICE_502_WITH_BOTH, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Raise list price to $3.29/lb" }).click();
+    await expect(d.saved).toHaveText("List price for 502 saved: $3.29/lb.");
+    await expect(d.saved).toBeFocused();
+    await expect(figure(d.main, "List price")).toHaveText("$3.29/lb");
+    await expect(figure(d.main, "Margin at list price")).toHaveText("20.01%");
+    await expect(d.price).toHaveValue("3.29");
+    expect(await storedListPrice(PROD_502_ID)).toBe(3.29);
+    // At its suggested price the advice and the button are gone.
+    await expect(d.main.getByRole("button", { name: /list price to/ })).toHaveCount(0);
+    await expect(page.getByText(/^Cost is /)).toHaveCount(0);
+  });
+
+  test("AC-0085: a code that is no active finished product's is shown as text", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    const rawId = await addRaw("RAWO");
+    await addFinished("OLD", "Retired", rawId, { active: false });
+    for (const code of ["NOPE", "RAW-TOM", "OLD", "<b>9</b>"]) {
+      await opensDetail(page, code);
+      await expect(page.getByText(`No active finished product has code ${code}.`, { exact: true }), code).toBeVisible();
+      await expect(page.locator("main b"), code).toHaveCount(0);
+      await expect(page.getByRole("heading", { level: 2 }), code).toHaveCount(0);
+      await expect(detail(page).target, code).toHaveCount(0);
+    }
+    // The not-active-product detail.
+    expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+  });
+});
+
+test.describe("the target margin", () => {
+  test("AC-0090: the field starts with the stored percent, or empty", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    await expect(detail(page).target).toHaveValue("20");
+    await setTarget(PROD_502_ID, 0.225);
+    await page.reload();
+    await expect(detail(page).target).toHaveValue("22.5");
+    await setTarget(PROD_502_ID, null);
+    await page.reload();
+    await expect(detail(page).target).toHaveValue("");
+  });
+
+  test("AC-0091, AC-0111, AC-0112, AC-0135, and AC-0136: each refused input shows its message beside the field", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    const before = await productsSnapshot();
+    const cases: Array<[string, string]> = [
+      ["", "Enter a target margin, like 20 or 22.5."],
+      ["abc", "Enter a target margin, like 20 or 22.5."],
+      ["1.2.3", "Enter a target margin, like 20 or 22.5."],
+      ["20.123", "Use at most 2 decimal places for a target margin."],
+      ["100", "A target margin must be below 100."],
+      ["150.5", "A target margin must be below 100."],
+    ];
+    await d.price.fill("keep me");
+    for (const [input, message] of cases) {
+      await d.target.fill(input);
+      await d.saveTarget.click();
+      await expect(d.targetError, input).toHaveText(message);
+      await expect(d.target, input).toHaveAttribute("aria-describedby", "target-margin-error");
+      await expect(d.target, input).toBeFocused();
+      // The other field has no error, and every field keeps what was typed.
+      await expect(d.priceError, input).toHaveCount(0);
+      await expect(d.target, input).toHaveValue(input);
+      await expect(d.price, input).toHaveValue("keep me");
+      await expect(d.saved, input).toHaveText("");
+      await expect(d.refused, input).toHaveText("");
+    }
+    expect(await productsSnapshot()).toEqual(before);
+    // The detail after an AC-0091 refusal.
+    expect(await checkPageState(page)).toEqual(detailControls({ remove: true }));
+  });
+
+  test("AC-0092, AC-0133, and AC-0134: 22.5 saves by keyboard; the detail re-reads, and the field shows the stored value", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    await d.target.fill("");
+    await d.target.focus();
+    await page.keyboard.type("22.50");
+    await page.keyboard.press("Tab");
+    await expect(d.saveTarget).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(d.saved).toHaveText("Target margin for 502 saved: 22.5%.");
+    await expect(d.saved).toBeFocused();
+    await expect(d.saved).toHaveAttribute("role", "status");
+    await expect(d.refused).toHaveText("");
+    await expect(figure(d.main, "Target margin")).toHaveText("22.5%");
+    await expect(figure(d.main, "Suggested price")).toHaveText("$3.40/lb");
+    await expect(d.target).toHaveValue("22.5");
+    expect(await storedTarget(PROD_502_ID)).toBe(0.225);
+    // The detail after a target save.
+    expect(await checkPageState(page)).toEqual(
+      detailControls({ apply: "Raise list price to $3.40/lb", remove: true }),
+    );
+  });
+
+  test("AC-0093: Remove target margin shows only when there is a target", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    await expect(detail(page).removeTarget).toBeVisible();
+    await setTarget(PROD_502_ID, null);
+    await page.reload();
+    await expect(detail(page).removeTarget).toHaveCount(0);
+  });
+
+  test("AC-0094, AC-0133, and AC-0134: Remove target margin, by keyboard, brings back the margin fees", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    await d.removeTarget.focus();
+    await page.keyboard.press("Enter");
+    await expect(d.saved).toHaveText("Target margin for 502 removed.");
+    await expect(d.saved).toBeFocused();
+    await expect(figure(d.main, "Profit")).toHaveText("$0.0500/lb");
+    await expect(figure(d.main, "Suggested price")).toHaveText("$2.68/lb");
+    await expect(d.target).toHaveValue("");
+    await expect(d.removeTarget).toHaveCount(0);
+    expect(await storedTarget(PROD_502_ID)).toBeNull();
+    // The detail after a target removal.
+    expect(await checkPageState(page)).toEqual(
+      detailControls({ apply: "Lower list price to $2.68/lb", remove: false }),
+    );
+  });
+});
+
+test.describe("the list price", () => {
+  test("AC-0100: the field starts with the stored price with 2 decimals, or empty", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    await expect(detail(page).price).toHaveValue("3.29");
+    await setListPrice(PROD_502_ID, 3.5);
+    await page.reload();
+    await expect(detail(page).price).toHaveValue("3.50");
+    await setListPrice(PROD_502_ID, null);
+    await page.reload();
+    await expect(detail(page).price).toHaveValue("");
+  });
+
+  test("AC-0101, AC-0111, AC-0112, AC-0135, and AC-0136: each refused input shows its message beside the field", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    const before = await productsSnapshot();
+    const cases: Array<[string, string]> = [
+      ["", "Enter the price per lb, like 3.29."],
+      ["abc", "Enter the price per lb, like 3.29."],
+      ["1.2.3", "Enter the price per lb, like 3.29."],
+      ["3.456", "Use at most 2 decimal places for a price."],
+      ["0", "Price must be above 0."],
+      ["0.00", "Price must be above 0."],
+      ["100000000", "Price must be below 100,000,000."],
+    ];
+    await d.target.fill("keep me");
+    for (const [input, message] of cases) {
+      await d.price.fill(input);
+      await d.savePrice.click();
+      await expect(d.priceError, input).toHaveText(message);
+      await expect(d.price, input).toHaveAttribute("aria-describedby", "list-price-error");
+      await expect(d.price, input).toBeFocused();
+      await expect(d.targetError, input).toHaveCount(0);
+      await expect(d.price, input).toHaveValue(input);
+      await expect(d.target, input).toHaveValue("keep me");
+      await expect(d.saved, input).toHaveText("");
+      await expect(d.refused, input).toHaveText("");
+    }
+    expect(await productsSnapshot()).toEqual(before);
+    // The detail after an AC-0101 refusal.
+    expect(await checkPageState(page)).toEqual(detailControls({ remove: true }));
+  });
+
+  test("AC-0102, AC-0133, and AC-0134: 3.5 saves by keyboard and the detail shows 3.50 and 24.81%", async ({
+    page,
+  }) => {
+    await fixture502(null, null);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    await d.price.focus();
+    await page.keyboard.type("3.5");
+    await page.keyboard.press("Tab");
+    await expect(d.savePrice).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(d.saved).toHaveText("List price for 502 saved: $3.50/lb.");
+    await expect(d.saved).toBeFocused();
+    await expect(figure(d.main, "List price")).toHaveText("$3.50/lb");
+    await expect(figure(d.main, "Margin at list price")).toHaveText("24.81%");
+    await expect(d.price).toHaveValue("3.50");
+    expect(await storedListPrice(PROD_502_ID)).toBe(3.5);
+    // The detail after a list price save.
+    expect(await checkPageState(page)).toEqual(
+      detailControls({ apply: "Lower list price to $2.68/lb", remove: false }),
+    );
+  });
+
+  test("a second press while a save is pending sends nothing, and the form says so", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = detail(page);
+    let posts = 0;
+    await page.route("**/pricing**", async (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && "next-action" in request.headers()) {
+        posts += 1;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      await route.continue();
+    });
+    await d.price.fill("3.50");
+    await d.savePrice.click();
+    await expect(d.savePrice).toHaveAttribute("aria-disabled", "true");
+    await expect(page.locator("#list-price-heading + form [role=status]")).toHaveText("Saving…");
+    await d.savePrice.click({ force: true });
+    await expect(d.saved).toHaveText("List price for 502 saved: $3.50/lb.");
+    expect(posts).toBe(1);
+  });
+});
+
+test.describe("a replayed change request on a detail", () => {
+  test("AC-0003 and AC-0109: target saves, target removals, and price saves with no session or a non-operator's change nothing", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    await fixture502(0.2, 3.29);
+    const d = detail(page);
+    const presses = [
+      async () => {
+        await d.target.fill("25");
+        await d.saveTarget.click();
+      },
+      async () => {
+        await d.removeTarget.click();
+      },
+      async () => {
+        await d.price.fill("3.50");
+        await d.savePrice.click();
+      },
+    ];
+    const sent = [];
+    for (const press of presses) {
+      await opensDetail(page, "502");
+      sent.push(await captureAction(page, press));
+      await expect(d.saved).not.toHaveText("");
+      await setTarget(PROD_502_ID, 0.2);
+      await setListPrice(PROD_502_ID, 3.29);
+    }
+    const before = await productsSnapshot();
+    const replays = [
+      { who: "no session", storageState: undefined, message: CHANGE_SIGNED_OUT },
+      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: `${NOT_SAVED} ${NOT_ALLOWED}` },
+    ];
+    for (const { who, storageState, message } of replays) {
+      for (const [index, request] of sent.entries()) {
+        const text = await replayText(playwright, baseURL, request, storageState);
+        expect(text, `request ${index} with ${who}`).toContain(message);
+        expect(await productsSnapshot(), `products after request ${index} with ${who}`).toEqual(before);
+      }
+    }
+  });
+});
+
+test.describe("refused and failed changes on a detail", () => {
+  // Types a different value in each field, so a kept value shows.
+  async function typeBoth(page: Page) {
+    const d = detail(page);
+    await d.target.fill("25");
+    await d.price.fill("3.50");
+    return d;
+  }
+
+  test("AC-0110, AC-0111, AC-0112, and AC-0137: a session that ended after the load keeps both fields", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = await typeBoth(page);
+    const before = await productsSnapshot();
+    await page.context().clearCookies();
+    await d.saveTarget.click();
+    await expect(d.refused).toHaveText(CHANGE_SIGNED_OUT);
+    await expect(d.refused).toBeFocused();
+    await expect(d.refused).toHaveAttribute("role", "alert");
+    await expect(d.target).toHaveValue("25");
+    await expect(d.price).toHaveValue("3.50");
+    expect(await productsSnapshot()).toEqual(before);
+  });
+
+  test("AC-0116, AC-0111, AC-0112, and AC-0137: a product made inactive after the load keeps both fields", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = await typeBoth(page);
+    await setActive(PROD_502_ID, false);
+    const before = await productsSnapshot();
+    for (const button of [d.saveTarget, d.removeTarget, d.savePrice]) {
+      await button.click();
+      await expect(d.refused).toHaveText(NOT_ACTIVE);
+      await expect(d.refused).toBeFocused();
+      await expect(d.saved).toHaveText("");
+      await expect(d.target).toHaveValue("25");
+      await expect(d.price).toHaveValue("3.50");
+      expect(await productsSnapshot()).toEqual(before);
+      // Focus leaves the message, so the next refusal moves it back.
+      await d.target.focus();
+    }
+    // The detail after an AC-0116 refusal.
+    expect(await checkPageState(page)).toEqual(detailControls({ remove: true }));
+  });
+
+  test("AC-0115, AC-0111, and AC-0137: a save whose connection drops says it may not have been saved", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    await opensDetail(page, "502");
+    const d = await typeBoth(page);
+    const before = await productsSnapshot();
+    const dropped = await dropActionRequests(page);
+    await d.savePrice.click();
+    await expect(d.refused).toHaveText(CHANGE_UNKNOWN);
+    await expect(d.refused).toBeFocused();
+    expect(dropped.count).toBe(1);
+    await expect(d.target).toHaveValue("25");
+    await expect(d.price).toHaveValue("3.50");
+    await expect(d.savePrice).not.toHaveAttribute("aria-disabled", "true");
+    expect(await productsSnapshot()).toEqual(before);
+    // The detail after an AC-0115 failure.
+    expect(await checkPageState(page)).toEqual(detailControls({ remove: true }));
   });
 });

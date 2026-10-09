@@ -82,6 +82,16 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - The what-if picker shows "none chosen" for a URL code it does not list (AC-0125), so the code appears only in the message, as React text.
 - Vitest in `npm test` failed once, in `test/access.test.ts` "direct writes to ledger tables are refused for every role" (5 s timeout; the same test fails alone). Cause is the known Realtime slot catalog bloat: `pg_class` has 292,520 dead tuples and slot `cainophile_c7dz1ka3` holds `catalog_xmin` 43,950 transactions back. Not touched by T6. The slot fix needs the owner's approval, so it was not applied. With that test excluded, Vitest ran 352 of 353 green; `npm run test:e2e` (193 specs) and `npm run test:costing` (35 tests) exit 0.
 
+## T7
+
+- 2026-10-09: the detail at `/pricing?product=<code>`, its two forms, and 24 new browser tests landed. Playwright: 213 passed (2 setup, 211 specs) in 1.4 min. Vitest 21 files, 353 tests; `npm run test:costing` 35 tests; `npm run typecheck` exit 0.
+- Files: `pricing-detail.tsx` (client; build-up, message regions, field text), `change-form.tsx` (one generic field-and-buttons form used for the target and the price, in place of the planned `target-form.tsx` and `list-price-form.tsx`), `price-advice-block.tsx` (advice and Apply, now used by the list card and the detail). `page.tsx` takes the detail branch right after the operator check and awaits `searchParams` before it.
+- The detail keeps both fields' text in the detail component, so a saved field shows the stored value from the action's returned product (22.50 typed shows 22.5) and an Apply on the detail fills the price field. `PricingDetail` is keyed by product id so state never carries over between products.
+- Headings: h1 "Pricing" (PageHeader), h2 the product's code and description, then h2 "Target margin" and h2 "List price". A not-active code shows only the sentence under the h1.
+- Selectors for T8: fields `#target-margin` (name "Target margin %") and `#list-price` (name "List price per lb"); buttons "Save target", "Remove target margin" (only with a target), "Save price"; field errors `#target-margin-error` and `#list-price-error`; message regions `#change-saved` (`role=status`, `tabindex=-1`) and `#change-refused` (`role=alert`, `tabindex=-1`); each form's "Saving…" status is a bare `role=status` paragraph after its buttons. Tab order: nav, Apply (when shown), `#target-margin`, Save target, Remove target margin, `#list-price`, Save price.
+- A press clears the message regions first, so a new outcome with the same text is announced again and takes focus again.
+- The browser-side form rule refuses before any request; the server's `invalid` state is handled the same way (field error, focus on the field) but no browser test reaches it.
+
 ## Local stack maintenance
 
 - 2026-10-09: during T6, `test/access.test.ts`'s direct-write test timed out at 5 s with no code change behind it. `pg_class` held 305,267 dead rows and the Realtime slot `cainophile_c7dz1ka3` held `catalog_xmin` 45,069 transactions back. With the owner's approval that day, its backend was ended as `supabase_admin`, Realtime made a new slot at once (`cainophile_5a6zwnqk`, age 3), and `vacuum pg_class` left 0 dead rows. The full gates then passed: Vitest 21 files and 353 tests, Playwright 195, `test:costing` 35.

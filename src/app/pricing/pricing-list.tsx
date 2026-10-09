@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatCostPerLb, formatMargin, formatPricePerLb } from "../../lib/format";
-import { priceAdvice, type PriceAction } from "../../lib/price-advice";
 import type { PricingRow } from "../../lib/pricing";
-import { ApplyButton } from "./apply-button";
+import { PriceAdviceBlock } from "./price-advice-block";
 import type { ChangeState } from "./save-change";
 
 const GROUPS = [
@@ -17,10 +16,6 @@ const GROUPS = [
 interface Message {
   kind: "saved" | "refused";
   text: string;
-}
-
-function isPriceAction(value: string | null): value is PriceAction {
-  return value === "set" || value === "raise" || value === "lower";
 }
 
 // The three headed groups of product cards. The database sorted the rows and set
@@ -86,25 +81,6 @@ export function PricingList({ rows }: { rows: PricingRow[] }) {
 }
 
 function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: ChangeState) => void }) {
-  const advice =
-    row.needsNewPrice &&
-    isPriceAction(row.priceAction) &&
-    row.costPerLb !== null &&
-    row.suggestedListPrice !== null
-      ? {
-          action: row.priceAction,
-          suggestedListPrice: row.suggestedListPrice,
-          text: priceAdvice({
-            costPerLb: row.costPerLb,
-            suggestedListPrice: row.suggestedListPrice,
-            targetMarginPct: row.targetMargin,
-            listPricePerLb: row.listPrice,
-            marginAtListPct: row.marginAtList,
-            marginFeesPerLb: row.marginFeesPerLb ?? 0,
-          }),
-        }
-      : null;
-
   return (
     <li className="rounded-md border border-field-border p-3">
       <h3 className="text-lg font-semibold break-words">
@@ -134,17 +110,7 @@ function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: Cha
           value={row.targetMargin === null ? "No target" : formatMargin(row.targetMargin)}
         />
       </dl>
-      {advice && (
-        <>
-          <p className="mt-3 break-words text-base">{advice.text}</p>
-          <ApplyButton
-            productId={row.productId}
-            action={advice.action}
-            suggestedListPrice={advice.suggestedListPrice}
-            onResult={onResult}
-          />
-        </>
-      )}
+      <PriceAdviceBlock row={row} onResult={onResult} />
     </li>
   );
 }

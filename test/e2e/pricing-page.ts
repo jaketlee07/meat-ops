@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 import { query, RAW_TOM_ID } from "../db";
 import { MENU_CONTROLS, receive } from "./menu-page";
 import { factValue } from "./receiving-page";
@@ -99,3 +99,99 @@ export async function opens(page: Page, url = "/pricing"): Promise<void> {
 }
 
 export { productsSnapshot } from "./menu-page";
+
+// The detail at /pricing?product=<code>. Its message regions have ids of their own,
+// apart from the list's, and exist before they have text.
+export async function opensDetail(page: Page, code: string): Promise<void> {
+  await page.goto(`/pricing?product=${encodeURIComponent(code)}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Pricing" })).toBeVisible();
+}
+
+export function detail(page: Page) {
+  return {
+    main: page.locator("main"),
+    heading: page.getByRole("heading", { level: 2 }).first(),
+    target: page.getByRole("textbox", { name: "Target margin %" }),
+    price: page.getByRole("textbox", { name: "List price per lb" }),
+    saveTarget: page.getByRole("button", { name: "Save target" }),
+    removeTarget: page.getByRole("button", { name: "Remove target margin" }),
+    savePrice: page.getByRole("button", { name: "Save price" }),
+    saved: page.locator("#change-saved"),
+    refused: page.locator("#change-refused"),
+    targetError: page.locator("#target-margin-error"),
+    priceError: page.locator("#list-price-error"),
+  };
+}
+
+export type Detail = ReturnType<typeof detail>;
+
+// What Tab reaches on a detail, in order: an Apply button when the product needs
+// a new price, the target form (Remove only with a target), then the price form.
+export function detailControls(options: { apply?: string; remove: boolean }): string[] {
+  return [
+    ...NAV_CONTROLS,
+    ...(options.apply ? [`button ${options.apply}`] : []),
+    "input #target-margin",
+    "button Save target",
+    ...(options.remove ? ["button Remove target margin"] : []),
+    "input #list-price",
+    "button Save price",
+  ];
+}
+
+export async function storedTarget(productId: string): Promise<number | null> {
+  const [row] = await query<{ target: number | null }>(
+    "select target_margin_pct::float8 as target from products where id = $1",
+    [productId],
+  );
+  return row?.target ?? null;
+}
+
+// Aborts every server action request the pricing page sends from now on, as a
+// dropped connection would, before the server sees it. Returns a count of them.
+export async function dropActionRequests(page: Page): Promise<{ readonly count: number }> {
+  const dropped = { count: 0 };
+  await page.route("**/pricing**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) {
+      dropped.count += 1;
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  });
+  return dropped;
+}
+
+export interface SentAction {
+  url: string;
+  headers: Record<string, string>;
+  body: Buffer;
+}
+
+// Runs `press` and returns the action request it sent, without the operator's
+// cookie, as an attacker would replay it.
+export async function captureAction(page: Page, press: () => Promise<void>): Promise<SentAction> {
+  const captured = page.waitForRequest((request) => request.method() === "POST" && "next-action" in request.headers());
+  await press();
+  const request = await captured;
+  const headers = await request.allHeaders();
+  for (const name of ["cookie", "content-length", "host"]) delete headers[name];
+  return { url: request.url(), headers, body: request.postDataBuffer() ?? Buffer.alloc(0) };
+}
+
+// Replays a captured request in a fresh context and returns the response text.
+export async function replayText(
+  playwright: PlaywrightWorkerArgs["playwright"],
+  baseURL: string | undefined,
+  sent: SentAction,
+  storageState: string | undefined,
+): Promise<string> {
+  const replay = await playwright.request.newContext({ baseURL, storageState });
+  try {
+    const response = await replay.post(sent.url, { headers: sent.headers, data: sent.body });
+    return await response.text();
+  } finally {
+    await replay.dispose();
+  }
+}
