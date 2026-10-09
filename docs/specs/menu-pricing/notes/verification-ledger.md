@@ -72,3 +72,12 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - States: `idle`, `invalid { fieldError }` (the form rule's message, one value field), `refused { message }` (caller or database refusal), `saved { message, product }`. The change actions take `(formData)` like `saveBatch`, with fields `productId` and `value`.
 - `npm run build` passed, but no page imports `src/app/pricing/actions.ts` yet, so the build does not yet compile the actions under Turbopack. T6 must re-run the build once the forms import them.
 - Gates: `npm run typecheck` exit 0; `npx vitest run` 21 files, 353 tests passed (115 s); `npm run test:costing` 2 files, 35 tests passed (23 s); `npm run build` exit 0. Playwright not run.
+
+## T6
+
+- 2026-10-09: `/pricing` (list, Apply, what-if), its error page, and `test/e2e/pricing.spec.ts` (25 tests) with `test/e2e/pricing-page.ts` landed. Playwright: 195 passed (2 setup, 193 specs) in 3.7 min.
+- Group membership is by the view's flags only; the client list file holds the three predicates and the database's order is kept inside each group. A card's advice and button need `priceAction`, `costPerLb`, and `suggestedListPrice` all present; a row missing one shows no advice rather than a made-up one.
+- The message regions are two empty `tabindex="-1"` elements owned by the list (`role="status"` for saved, `role="alert"` for refused), because a saved product moves to another group and unmounts its card. Focus goes to whichever has text.
+- Playwright treats `aria-disabled="true"` as not enabled, so the pending-press test forces its second click.
+- The what-if picker shows "none chosen" for a URL code it does not list (AC-0125), so the code appears only in the message, as React text.
+- Vitest in `npm test` failed once, in `test/access.test.ts` "direct writes to ledger tables are refused for every role" (5 s timeout; the same test fails alone). Cause is the known Realtime slot catalog bloat: `pg_class` has 292,520 dead tuples and slot `cainophile_c7dz1ka3` holds `catalog_xmin` 43,950 transactions back. Not touched by T6. The slot fix needs the owner's approval, so it was not applied. With that test excluded, Vitest ran 352 of 353 green; `npm run test:e2e` (193 specs) and `npm run test:costing` (35 tests) exit 0.
