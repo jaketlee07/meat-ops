@@ -41,15 +41,15 @@ in place, or the computer is not a Mac, the run stops and says what is wrong
 and where the fix is. The owner runs every firewall command in their own
 Terminal, outside the agent session. Because the ports were open for an
 unknown time before this change, the local stack is then rebuilt from its
-migrations and seed with no data kept, and Studio's snippets folder on this Mac
+migrations and seed with no data kept, and the snippets folder Studio writes to
 is confirmed empty.
 
 ## Durable Outputs
 
 | Semantic role | Applicability | Destination | Owner | Expected evidence | Closeout condition |
 | --- | --- | --- | --- | --- | --- |
-| Maintainer procedure | The block is a one-time setup on the developer's Mac, and the refusal messages point to it | `docs/architecture/overview.md`, a new section `Keep the local stack on this Mac`, the one home for the posture | jaketlee07 | The commands as the owner ran them, in the verification ledger | The section gives the why, the four setup commands, what they cover, the undo commands, the answer to give (Deny) when the Mac asks whether Docker may accept incoming connections and that loopback keeps working after it, and the accepted residual: the check runs only when tests run |
-| Current architecture | The overview says only this machine reaches sign-in and that no client can change the operator list (the intent's Boundary), and its `test/` row lists every suite and harness file | `docs/architecture/overview.md`: the `private.operators` paragraph, the App trust boundary's Network bullet, and the Areas table's `test/` row | jaketlee07 | Diff of the three passages, reviewed | Each passage is accurate under the block and links to `Keep the local stack on this Mac`; the `test/` row names every harness and suite file this change adds |
+| Maintainer procedure | The block is a one-time setup on the developer's Mac, and the refusal messages point to it | `docs/architecture/overview.md`, a new section `Keep the local stack on this Mac`, the one home for the posture | jaketlee07 | The commands as the owner ran them, in the verification ledger | The section gives the why, the four setup commands, what they cover, the undo commands, the answer to give (Deny) when the Mac asks whether Docker may accept incoming connections and that loopback keeps working after it, the accepted residual that the check runs only when tests run, and the loopback web-page path, open until its follow-on intent closes, with a link to that intent |
+| Current architecture | The overview says only this machine reaches sign-in and that no client can change the operator list (the intent's Boundary), and its `test/` row lists every suite and harness file | `docs/architecture/overview.md`: the `private.operators` paragraph, the App trust boundary's Network bullet, and the Areas table's `test/` row | jaketlee07 | Diff of the three passages, reviewed | Each passage is accurate under the block and links to `Keep the local stack on this Mac`, the `private.operators` paragraph to its loopback note; the `test/` row names every harness and suite file this change adds |
 | Agent guidance and commands | `AGENTS.md` "Build and test commands" lists one-time setup and when the tests refuse; both change | `AGENTS.md`, "Build and test commands" | jaketlee07 | Diff of one line | One line says the tests also refuse without the block and links to the overview section |
 | Execution record | Refusal runs, the phone checks (the cellular attempt included), the loopback checks, and the rebuild need a home outside the contract | `docs/specs/local-ports/notes/verification-ledger.md` | work-loop | Ledger entries | Ledger holds every AC observation, and no global IPv6 address or prefix |
 | Intent closeout | The intent and its backlog entry close when this ships | `docs/product/intents/local-stack-network-exposure.md`, `workspace.toml` `[backlog]` | close-work | none | close-work records the intent as delivered by this spec |
@@ -65,7 +65,7 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 
 - Run the check right after the localhost guard: at Playwright config load, before the web server builds, and in the shared test global setup, before its first write.
 - Run each command the check uses with no shell, passing every value as its own argument.
-- End every state in which Docker is unblocked or the firewall is off, including a stop or an unexpected result, by putting the block back and reading it back; when the block itself failed, stop the stack with `supabase stop` instead. Do no other work while such a state is open.
+- End every exit from the test window, whether it completes, stops, or meets an unexpected result, with the owner putting the block back in their own Terminal and the agent reading it back. When the block itself failed, the agent stops the stack with `supabase stop` instead, and the stack stays stopped until the owner decides. Do no other work while the window is open.
 - Before any test run or the rebuild, confirm no test process from another worktree is running, because `meat-ops-sales` and `meat-ops-invoice` share this stack.
 - Keep every refusal message free of keys, passwords, connection strings, and IP addresses; name only the condition, the program path, the port, and the overview section.
 
@@ -75,7 +75,7 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 - Any change to Docker Desktop settings, the Docker daemon config, or `supabase/config.toml`.
 - Any way to skip or bypass the check, such as an environment variable.
 - The rebuild's start time, because other worktrees share the stack.
-- Deleting or changing any file found in `supabase/snippets/`.
+- Deleting or changing any file found in this worktree's `supabase/snippets/`, the folder Studio mounts.
 
 ### Never do
 
@@ -91,7 +91,7 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 - **Goal-based: the full suite with the block on (AC-0006)**: `npm test` passing shows the suites still reach the API (54321) and Postgres (54322) over loopback.
 - **Manual QA from this Mac, recorded in the ledger (AC-0009)**: a TCP connect to `127.0.0.1` on each published stack port, because no suite uses Studio, mail, or analytics.
 - **Manual QA by the owner from another device, recorded in the ledger (AC-0007, AC-0010, AC-0011)**: a phone on the same Wi-Fi loads Studio with Docker not blocked, then fails to load it with the block on, at the same addresses in the same session. The earlier successful load is what makes the later failure count. Whether the firewall filters this Mac's own network addresses is unknown (see Assumptions), so no probe from this Mac counts for these criteria.
-- **Manual QA recorded in the ledger (AC-0012, AC-0014)**: the rebuild's volume creation times and applied migrations, read after `supabase start`, and a listing of `supabase/snippets/`.
+- **Manual QA recorded in the ledger (AC-0012, AC-0014, AC-0015)**: the rebuild's volume list and creation times and its applied migrations, read after `supabase start`, and a listing of `supabase/snippets/`.
 
 Stub tally: T1 is covered by a validated stub; T2, T3, and T4 record `no stub (mode)`; none is uncovered.
 
@@ -103,6 +103,7 @@ Definitions used by these criteria:
 - **Refuses**: `npm test` or `npm run test:e2e` exits non-zero before any test runs (and, for `npm run test:e2e`, before the app is built), printing one message whose last sentence is `See "Keep the local stack on this Mac" in docs/architecture/overview.md.`
 - **Published stack port**: a host port that Docker publishes for a running container of the local Supabase stack whose database the tests use.
 - **The block**: the macOS application firewall on, the program serving every published stack port blocked, and automatic allow of downloaded signed software off.
+- **The test window**: the time from the first moment, for this work, that Docker is unblocked or the firewall is off, until the block is back on or the stack is stopped.
 
 - [ ] **AC-0001.** With the macOS firewall off, both commands refuse, and the message says the firewall is off.
 - [ ] **AC-0002.** With the firewall on and a program that serves a published stack port not blocked, both commands refuse, and the message names that program's path and the port.
@@ -115,9 +116,10 @@ Definitions used by these criteria:
 - [ ] **AC-0009.** With the block on, a TCP connection from this Mac to `127.0.0.1` succeeds on every published stack port.
 - [ ] **AC-0010.** In the same session as AC-0007 and AC-0011, with Docker not blocked, the same browser on the same device and Wi-Fi loads Studio at the Mac's IPv4 network address and at a global IPv6 address of the Mac.
 - [ ] **AC-0011.** With the block on, a browser on another device on the same Wi-Fi cannot load Studio at a global IPv6 address of the Mac.
-- [ ] **AC-0012.** With the block on and after every AC-0010 load, the local stack is rebuilt with no data kept: every Docker volume of the stack was created after the rebuild started, and `supabase_migrations.schema_migrations` lists exactly the migration files in `supabase/migrations/`.
+- [ ] **AC-0012.** After the test window closes, and only if no AC-0007 or AC-0011 load succeeded, the local stack is rebuilt with no data kept: `docker volume ls --filter label=com.supabase.cli.project=meat-ops` lists `supabase_db_meat-ops`, and every volume it lists was created after the rebuild started.
 - [ ] **AC-0013.** The check refuses when the firewall automatically allows downloaded signed software.
-- [ ] **AC-0014.** After the rebuild, `supabase/snippets/` holds no file.
+- [ ] **AC-0014.** After the rebuild, this worktree's `supabase/snippets/`, the folder Studio mounts, holds no file.
+- [ ] **AC-0015.** After the rebuild, `supabase_migrations.schema_migrations` lists exactly the migration files in `supabase/migrations/`.
 
 ## Follow-ons
 
@@ -143,6 +145,9 @@ Definitions used by these criteria:
 - Product: the owner tries Studio from the phone on cellular data while Docker is unblocked; the ledger records the result, and a successful load is reported to the owner, but it is not part of the AC-0010 control (source: user confirmation 2026-10-09)
 - Product: a web page reaching the stack through loopback is a separate follow-on, not this spec's scope (source: user confirmation 2026-10-09)
 - Technical: three worktrees (`meat-ops`, `meat-ops-sales`, `meat-ops-invoice`) share one local stack; on 2026-10-09 it held only `main`'s migrations, and neither other worktree had added a migration file (source: `git worktree list`, `supabase_migrations.schema_migrations`, `git ls-files` in each worktree)
-- Technical: Playwright loads its config again in every worker process and sets `TEST_WORKER_INDEX` there (source: `node_modules/playwright/lib/common/index.js` `deserializeConfig`, `node_modules/playwright/lib/worker/workerProcessEntry.js`)
+- Technical: Playwright loads its config again in every worker process, so the config-load check also runs in each worker (source: `node_modules/playwright/lib/common/index.js` `deserializeConfig`)
+- Technical: Studio's container bind-mounts this worktree's `supabase/snippets/`, read-write (source: `docker inspect supabase_studio_meat-ops`, 2026-10-09)
+- Technical: `supabase/config.toml` disables the CLI's seeding, so the seed is loaded through the container's psql after `supabase start` (source: `supabase/config.toml` `[db.seed]`, `docs/architecture/overview.md`)
+- Product: the owner never set a password on a local account that they use anywhere else, so no password needs changing after the exposure (source: user confirmation 2026-10-09)
 - Process: the owner runs every firewall command in their own Terminal and does the phone checks (source: user confirmation 2026-10-09)
 - Process: full mode, because the change alters a network trust boundary; spec and plan are approved by the owner in chat after adversarial, security, and shaping review, and ACs number from AC-0001 per spec (source: `docs/specs/receiving/spec.md`, `docs/specs/production/spec.md`)

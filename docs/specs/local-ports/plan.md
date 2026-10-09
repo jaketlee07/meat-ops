@@ -39,9 +39,9 @@ one short window, in a fixed order the owner runs from their own Terminal:
 unblock Docker, turn the firewall off, then put the block back. Each state
 gives one refusal run, and the phone loads in the first state are the control
 that makes the failed loads after the block count. Every exit from the window,
-a stop included, ends with the block back on or the stack stopped. T4 then
-rebuilds the local stack with no data kept, because anyone who reached it
-before the block could have changed it.
+a stop included, ends with the block back on or the stack stopped. If the block
+held, T4 then rebuilds the local stack with no data kept, because anyone who
+reached it before the block could have changed it.
 
 ## Constraints
 
@@ -77,7 +77,7 @@ before the block could have changed it.
 - **Ask before a lost block reopens.** With automatic allow for downloaded signed software off, a Docker update that drops the block entry makes the Mac ask instead of letting Docker in. The check refuses while automatic allow is on. Traces to: AC-0013.
 - **Check the serving program, not a fixed path.** The check finds which process listens on each published stack port and asks the firewall about that process's executable, as the kernel records it (`lsof -d txt`), not the name the process gives itself (`ps -o comm=`). Traces to: AC-0002, AC-0003.
 - **Find the stack from the port the tests use.** The project label comes from the container that publishes the database port in `DB_URL`, and then every container with that label is checked. This ties the check to the stack the suites write to without parsing `supabase/config.toml`. Traces to: AC-0003, AC-0008.
-- **Run at the guard's two call sites.** Playwright starts its web server before global setup, so the check also runs at Playwright config load; global setup covers Vitest. Playwright loads the config again in every worker process and sets `TEST_WORKER_INDEX` there, so the config-load check skips when that variable is set: workers start only after the main process and global setup have already run the check, and a refusal mid-suite would show as a worker error, not as a refusal. Traces to: AC-0001, AC-0002.
+- **Run at the guard's two call sites.** Playwright starts its web server before global setup, so the check also runs at Playwright config load; global setup covers Vitest. Playwright loads the config again in every worker process, so the check runs there too. It takes well under a second, and a refusal in a worker means the block changed mid-run, which still fails the run. No skip is added, because any skip would be a bypass (spec Ask first). Traces to: AC-0001, AC-0002.
 - **Injected runner.** `localStackRefusal` receives `run(file, args)`, which returns stdout or `null` on any failure. Unit tests replay recorded outputs; the real runner uses `execFileSync` with no shell and a 10-second timeout. Traces to: AC-0004, AC-0005.
 
 ### Behavior & rules
@@ -151,8 +151,8 @@ describe("Local stack network check", () => {
 - no stub (manual QA): with the block on, `nc -z -G 2 127.0.0.1 <port>` succeeds for every published stack port (AC-0009); the ports and results are recorded in the ledger.
 
 **Approach:**
-- In `test/global-setup.ts` and `playwright.config.ts`, right after `resolveStackEnv()`, call `localStackRefusal` with `process.platform`, the port from `DB_URL`, and `realRunner`, and throw the message when it is not `null`. In `playwright.config.ts`, skip the call when `TEST_WORKER_INDEX` is set.
-- In `docs/architecture/overview.md`, add the section `Keep the local stack on this Mac`: why (the CLI publishes on every interface, IPv4 and IPv6, and Docker Desktop cannot stop it), the four commands below run in the owner's own Terminal, what they cover (every Docker-published port on this Mac), the undo (`--unblockapp <path>`, `--setallowsignedapp on`, `--setglobalstate off`), the answer to give when the Mac asks whether Docker may accept incoming connections (Deny; loopback, the app, and the tests keep working), and the accepted residual that the check runs only when tests run.
+- In `test/global-setup.ts` and `playwright.config.ts`, right after `resolveStackEnv()`, call `localStackRefusal` with `process.platform`, the port from `DB_URL`, and `realRunner`, and throw the message when it is not `null`.
+- In `docs/architecture/overview.md`, add the section `Keep the local stack on this Mac`: why (the CLI publishes on every interface, IPv4 and IPv6, and Docker Desktop cannot stop it), the four commands below run in the owner's own Terminal, what they cover (every Docker-published port on this Mac), the undo (`--unblockapp <path>`, `--setallowsignedapp on`, `--setglobalstate off`), the answer to give when the Mac asks whether Docker may accept incoming connections (Deny; loopback, the app, and the tests keep working), the accepted residual that the check runs only when tests run, and the loopback web-page path, open until [its follow-on intent](../product/intents/local-stack-loopback-web-pages.md) closes.
 
 ```bash
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
@@ -161,7 +161,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --blockapp /Applications/Do
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 ```
 
-- Rewrite the Network bullet's last sentence so "only this machine reaches sign-in" points to the section. Change the `private.operators` sentence to say no Data API client can read or change the list, and that Postgres itself answers only this Mac under the block, linking to the section. Add every suite and harness file this change adds to the `test/` row.
+- Rewrite the Network bullet's last sentence so "only this machine reaches sign-in" points to the section. Change the `private.operators` sentence to say no Data API client can read or change the list, and that Postgres itself answers only this Mac under the block, linking to the section's loopback note. Add every suite and harness file this change adds to the `test/` row.
 - In `AGENTS.md` "Build and test commands", add one line: the tests also refuse unless the firewall block is on, linking to the overview section.
 
 **Done when:** every T2 test above passes and its observations are in the ledger.
@@ -175,7 +175,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 - no stub (manual QA), state 1, after the owner runs `--unblockapp <path>` (firewall on, Docker not blocked): `npm test` and `npm run test:e2e` each refuse with the AC-0002 message. The phone on the same Wi-Fi loads Studio at the Mac's IPv4 address and at one global IPv6 address (AC-0010). The phone on cellular data, Wi-Fi off, tries the same IPv6 address; the ledger records loaded or not, and this attempt is not part of the control.
 - no stub (manual QA), state 2, after the owner runs `--setglobalstate off`: `npm test` and `npm run test:e2e` each refuse with the AC-0001 message.
 - no stub (manual QA), state 3, after the owner runs `--setglobalstate on` and `--blockapp <path>`: the phone on the same Wi-Fi fails to load Studio at the IPv4 address (AC-0007) and the IPv6 address (AC-0011), and on cellular data fails at the IPv6 address. `npm test` passes again.
-- no stub (manual QA), every exit: whether the window completes or stops, its last ledger entry shows the three `socketfilterfw` reads with the block on, or, when the block itself failed, `supabase stop` run and no stack port listening. Nothing else runs between leaving state 3 or stopping and that entry.
+- no stub (manual QA), every exit: whether the window completes or stops, its last ledger entry shows the three `socketfilterfw` reads with the block on after the owner put it back, or, when the block itself failed, `supabase stop` run and no stack port listening. Nothing else runs between leaving state 3 or stopping and that entry.
 
 **Approach:**
 - Give the owner the IPv6 address in chat only. The ledger names it "a global IPv6 address of the Mac" and records the IPv4 address, which is private.
@@ -185,20 +185,21 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 
 **Done when:** the ledger holds every T3 observation above, its last entry is the exit entry, and the block is on or the stack is stopped.
 
-### T4: The local stack is rebuilt with no data kept, and Studio's snippets folder is empty
+### T4: The local stack is rebuilt with no data kept, and the snippets folder Studio mounts is empty
 
 **Depends on:** T3
 **Touches:** docs/specs/local-ports/notes/verification-ledger.md
 
 **Tests:**
-- no stub (manual QA): after the rebuild, `docker volume inspect` shows every volume labelled `com.supabase.cli.project=meat-ops` created after the recorded start time, and `supabase_migrations.schema_migrations` lists exactly the files in `supabase/migrations/` (AC-0012).
+- no stub (manual QA): after the rebuild, the volume list includes `supabase_db_meat-ops`, and `docker volume inspect` shows each listed volume created after the recorded start time (AC-0012).
+- no stub (manual QA): `supabase_migrations.schema_migrations` lists exactly the files in `supabase/migrations/` (AC-0015).
 - no stub (manual QA): `ls -A supabase/snippets` prints nothing (AC-0014).
 - no stub (goal-based): `npm test` passes after the rebuild.
 
 **Approach:**
-- Run once the block is on, whether T3 completed or stopped.
+- Run only after a T3 exit in which no state 3 load succeeded, whether T3 completed or stopped at state 1. After a failed block, the stack stays stopped and T4 waits for the owner's decision.
 - Confirm no vitest or playwright process runs from any worktree, then ask the owner for the go-ahead.
-- Record the start time, then run `supabase stop --no-backup` and `supabase start`; `supabase start` applies the migrations and the seed.
+- Record the start time, then run `supabase stop --no-backup` and `supabase start`, which applies the migrations. Then load the seed with `docker exec -i supabase_db_meat-ops psql -U postgres -v ON_ERROR_STOP=1 < supabase/seed.sql` and record its exit status.
 - Tell the owner to re-create the owner account with the overview's steps if they use one locally, and that the other worktrees re-apply any migrations of their own with `supabase migration up`.
 - If `supabase/snippets/` holds a file, show the owner its name and leave it (spec Ask first).
 
@@ -206,10 +207,10 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 
 ## Rollout
 
-- **Delivery:** the owner turned the block on in their own Terminal on 2026-10-09. T3 opens one short window and closes it. The undo is in the overview section. Nothing is irreversible.
+- **Delivery:** the owner turned the block on in their own Terminal on 2026-10-09. T3 opens one short window and closes it. The undo is in the overview section. The one irreversible step is T4's `supabase stop --no-backup`, which deletes the shared stack's data; the owner accepted that (spec Assumptions).
 - **Infrastructure:** the macOS application firewall on the developer's Mac. No hosted change.
 - **External-system integration:** Docker Desktop 4.68.0 and Supabase CLI 2.95.4 as installed; neither is changed.
-- **Deployment sequencing:** the check lands (T1, T2) before the window (T3), so every refusal comes from the shipped code. The rebuild (T4) comes after the last time Docker is unblocked, so nothing reaches the rebuilt stack from outside.
+- **Deployment sequencing:** the check lands (T1, T2) before the window (T3), so every refusal comes from the shipped code. The rebuild (T4) comes after the window closes with the block holding, so nothing reaches the rebuilt stack from outside; after a failed block, nothing restarts the stack until the owner decides.
 
 ## Risks
 
@@ -224,3 +225,4 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 - 2026-10-09: initial plan, after the owner chose the firewall block when the Docker setting probe failed.
 - 2026-10-09: revised after review round 1: the check also runs at Playwright config load; it reads each listener's executable through `lsof`, checks automatic allow, and refuses on any inexact output; T3 adds the phone control loads, IPv6, and cellular in one short window; T4 adds the leftovers check; the docs plan covers the `test/` row and `AGENTS.md`.
 - 2026-10-09: revised after review round 2: every window exit restores the block or stops the stack; the config-load check skips in Playwright workers; messages end with the overview pointer; T4 rebuilds the stack instead of a read-only check, as the owner chose.
+- 2026-10-09: revised after review round 3: the rebuild runs only if the block held and loads the seed through psql; the worker skip is dropped; the window's exit rule names the owner; the overview notes the loopback path.
