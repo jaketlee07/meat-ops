@@ -5,7 +5,7 @@ This is the source of truth for the costing math. The tests in
 `test/pricing.test.ts` encode every costing number below. The display formats in the Rounding note are
 asserted by `test/format.test.ts`, `test/production-rules.test.ts`, and
 `test/pricing-rules.test.ts`, and its
-missing-value texts by `test/e2e/receiving.spec.ts` and `test/e2e/production.spec.ts`. If a change turns any of these red, the change is
+missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, and `test/e2e/pricing.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,

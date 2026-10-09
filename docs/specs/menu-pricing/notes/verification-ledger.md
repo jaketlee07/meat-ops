@@ -92,6 +92,69 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - A press clears the message regions first, so a new outcome with the same text is announced again and takes focus again.
 - The browser-side form rule refuses before any request; the server's `invalid` state is handled the same way (field error, focus on the field) but no browser test reaches it.
 
+## T8
+
+### Docs (2026-10-09)
+
+- `docs/architecture/overview.md`: the migrations, `src/lib/`, `src/app/`, proxy, `test/`, and `test/e2e/` rows; the views paragraph (a replaced view sets `security_invoker` again); the access table and a paragraph for `set_target_margin`, `set_list_price` (SECURITY DEFINER, `private.assert_caller`, operator only) and `price_what_if` (SECURITY INVOKER under the tables' RLS, `42501` for a non-operator); the write path (master data only through the two setters); a Framing bullet in the app trust boundary. `docs/costing.md`: the opening names `test/e2e/pricing.spec.ts` beside the missing-value suites. No em dashes in either file.
+
+### Goal-based checks (2026-10-09, closing tree)
+
+- AC-0150 `npm run build`: exit 0 (routes `/menu` and `/pricing` listed as dynamic).
+- AC-0151 `npm test` after `supabase db reset`: exit 0, 85 s; Vitest 21 files and 353 tests passed; Playwright 213 passed.
+- AC-0152 `npm run gen:types`: exit 0; `git diff --exit-code src/lib/database.types.ts`: exit 0, no diff.
+- AC-0153 `npm run typecheck`: exit 0.
+- AC-0154, AC-0155, AC-0157, the three AC-0158 greps, AC-0159: each prints nothing (grep exit 1; the AC-0158 first line ends in `grep -v`, whose exit 1 also means no line).
+- AC-0156 `npm audit --omit=dev --audit-level=high`: exit 0, "found 0 vulnerabilities".
+- AC-0161 `npm run test:costing`: exit 0; ran `test/pricing.test.ts` (28 tests) and `test/costing.test.ts` (7 tests), 35 passed.
+- AC-0160: `supabase db reset` exit 0 (all six migrations and the seed re-applied). The catalog read (base tables of `public` with their columns in order, `information_schema.columns` joined to `tables` with `table_type = 'BASE TABLE'`) matches T1's baseline line for line, 13 tables, except `products`, which gains `target_margin_pct, list_price_per_lb` at the end. Nothing else differs (`diff` of the two outputs shows that one line).
+
+### Recorded run (2026-10-09)
+
+Method as in the production ledger: `npm run start -- -p 3200` on a build of the closing tree, the operator signed in through the form, driven by a scratch Playwright spec (scratch directory, not committed). The 502 fixture before the run: RAW-TOM receipt 5,000 lbs at 1.68 received 2026-10-01; 502 with a 20% target and a 2.68 list price (pricing view: cost 2.6318, suggested 3.29). Case 4 ran the app with `SUPABASE_URL` in its process environment set to a throwaway forwarder on 127.0.0.1:54400 in scratch (not committed; `.env` checksum unchanged). The fixture was rebuilt before each case. Every outcome below matched its criterion.
+
+1. REST container stopped before each load (AC-0127, AC-0126; checks AC-0130, AC-0131, AC-0132, AC-0139, AC-0141 for those states):
+   - `/menu`: status 500 after 10.6 s; heading "Menu"; text "Couldn't load this page." and button "Try again"; focus on the h1 ("Menu", `tabindex=-1`); `checkPageState` passed, one control, "button Try again".
+   - `/pricing`: status 500 after 10.6 s; heading "Pricing"; the same text and button; focus on the h1 ("Pricing"); `checkPageState` passed, one control, "button Try again".
+   - After `docker start supabase_rest_meat-ops` and Try again, with a page variable set before the press and still set after (no browser reload): `/menu` shows "Menu", the navigation, the Sellable only switch, and 502 with $2.68/lb, finished 0 lbs, raw 5,000 lbs, "Sellable now"; `/pricing` shows "Needs a new price" with 502 at $2.6318/lb, $2.68/lb, $3.29/lb, 1.8%, 20%, and its advice.
+2. REST stopped after `/pricing?product=502` loaded (fields 20 and 2.68; typed 25 and 3.10), Save target: after 10.4 s the message "The change wasn't saved. Try again in a moment." (AC-0113); fields `#target-margin` 25 and `#list-price` 3.10 (AC-0119); focus on `#change-refused` (`role=alert`) (AC-0142).
+3. App restarted after the detail loaded, then `docker stop supabase_auth_meat-ops`, typed 25 and 3.10, Save target: after 20.6 s "The change wasn't saved. Try again in a moment." (AC-0113); fields 25 and 3.10; focus on `#change-refused`.
+4a. Forwarder dropped the `set_list_price` call (never sent on; its log shows `dropped /rest/v1/rpc/set_list_price`); typed 25 and 3.50, Save price: after 10.4 s "The change may not have been saved. Reload this page to check it." (AC-0114); fields 25 and 3.50 (AC-0119); focus on `#change-refused`. A `pg` read shows 502's row unchanged.
+4b. Forwarder held `set_target_margin` (log: `held /rest/v1/rpc/set_target_margin`); typed 25 and 3.10, Save target; a `pg` session then deleted the operator's `private.operators` row (`DELETE 1`) and the forwarder released the call: after 0.8 s "The change wasn't saved. This account isn't allowed to use Meat Ops." (AC-0117); fields 25 and 3.10 (AC-0119); focus on `#change-refused` (AC-0142). A `pg` read of 502's whole row before and after is identical (target 0.2000, list price 2.68), and an md5 of every `products` row is identical (AC-0128).
+- Restored and confirmed: the operator row was inserted back (count for the operator's id 1; `private.operators` holds 2 rows, the operator and the password operator); both containers (`supabase_rest_meat-ops`, `supabase_auth_meat-ops`) are running; nothing listens on 3200 or 54400; `.env` is unchanged by checksum. The run's fixture rows are test data that `npm test` resets.
+
+### Rendered-page inspection (2026-10-09, frontend-engineering GATES step 5)
+
+- Setup: the same build on 127.0.0.1:3200, the 502 fixture above, the operator signed in. Channels: narrow 480 px wide and wide 1024 px wide, both "fallback bands, no declared minimum" (the app declares no breakpoints). Images are PNGs in the session scratch directory, not in the repository. Result state: completed. Verdict: pass, no Blocker.
+- Per capture, the route (query cut), viewport-width as the page reports it, viewport-height, the scroll offset reached, and page-scrollable. Heights 600 and 900.
+
+| Route (view) | Width x height | At rest | Scrolled |
+| --- | --- | --- | --- |
+| /menu | 480 x 600 | 480, 600, offset 0, scrollable no | page-scrollable: no |
+| /menu | 480 x 900 | 480, 900, offset 0, scrollable no | page-scrollable: no |
+| /menu | 1024 x 600 | 1024, 600, offset 0, scrollable no | page-scrollable: no |
+| /menu | 1024 x 900 | 1024, 900, offset 0, scrollable no | page-scrollable: no |
+| /pricing (list) | 480 x 600 | 480, 600, offset 0, scrollable yes | offset 242 |
+| /pricing (list) | 480 x 900 | 480, 900, offset 0, scrollable no | page-scrollable: no |
+| /pricing (list) | 1024 x 600 | 1024, 600, offset 0, scrollable yes | offset 194 |
+| /pricing (list) | 1024 x 900 | 1024, 900, offset 0, scrollable no | page-scrollable: no |
+| /pricing (detail 502) | 480 x 600 | 480, 600, offset 0, scrollable yes | offset 536 |
+| /pricing (detail 502) | 480 x 900 | 480, 900, offset 0, scrollable yes | offset 236 |
+| /pricing (detail 502) | 1024 x 600 | 1024, 600, offset 0, scrollable yes | offset 488 |
+| /pricing (detail 502) | 1024 x 900 | 1024, 900, offset 0, scrollable yes | offset 188 |
+| /pricing (what-if results) | 480 x 600 | 480, 600, offset 0, scrollable yes | offset 396 |
+| /pricing (what-if results) | 480 x 900 | 480, 900, offset 0, scrollable yes | offset 96 |
+| /pricing (what-if results) | 1024 x 600 | 1024, 600, offset 0, scrollable yes | offset 348 |
+| /pricing (what-if results) | 1024 x 900 | 1024, 900, offset 0, scrollable yes | offset 48 |
+
+- Every scrolled offset is the page's bottom (document height minus viewport height). The document's scroll width equals the viewport width in every capture (480 or 1024), so nothing runs sideways.
+- Observations, from looking at all 26 images: nothing wrong in any capture. No overlap, clipping, or text running out of its card; every label sits left and its value right with space between (the longest, "RAW-TOM Turkey Drums TOM (raw)", fits beside "Raw input" at 480); each button spans its card; no control is off-screen when its section is scrolled to; text and the blue buttons are high contrast. At 1024 the content stays in one 544 px column with white margins, the same as the floor pages. Short-viewport rests cut the page at a section heading (the list at 600 high ends on "What if raw cost changes?"), which scrolling then shows in full.
+- Noted, not a failure: with no raw product chosen, the what-if picker shows a blank box with no prompt text (list captures at 480 x 900 and 1024 x 600 scrolled); the "Choose a raw product." refusal covers it.
+
+### Closing gates (after every restore)
+
+- `npm run typecheck`: exit 0. `npm test`: exit 0, 95 s; Vitest 21 files and 353 tests passed; Playwright 213 passed. `npm run test:costing`: exit 0; 2 files, 35 tests passed.
+
 ## Local stack maintenance
 
 - 2026-10-09: during T6, `test/access.test.ts`'s direct-write test timed out at 5 s with no code change behind it. `pg_class` held 305,267 dead rows and the Realtime slot `cainophile_c7dz1ka3` held `catalog_xmin` 45,069 transactions back. With the owner's approval that day, its backend was ended as `supabase_admin`, Realtime made a new slot at once (`cainophile_5a6zwnqk`, age 3), and `vacuum pg_class` left 0 dead rows. The full gates then passed: Vitest 21 files and 353 tests, Playwright 195, `test:costing` 35.
