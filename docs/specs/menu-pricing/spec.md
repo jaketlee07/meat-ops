@@ -58,9 +58,9 @@ a phone second, and numbers that are easy to trust third.
 
 | Semantic role | Applicability | Destination | Owner | Expected evidence | Closeout condition |
 | --- | --- | --- | --- | --- | --- |
-| Costing truth | Applicable: the target-margin price rule, its round-up to the cent, the margin at list price, the price actions, the what-if rule, and the margin and fee display formats are costing rules that outlive this spec | `docs/costing.md` | jaketlee07 | A "Target margin and list price" section states the rules and the AC-0010, AC-0014, AC-0019, and AC-0020 numbers. The cost build-up formula names both price rules. The sentence on where the math lives names the pricing view and `price_what_if`. The Rounding note has a Margin row with the AC-0140 examples and a fee row with the AC-0081 example; its price row covers list prices; its cost-per-lb row covers cost after shrink and a product's cost per lb; its missing-value list has "No list price yet" and "No target". The file's opening names `test/pricing.test.ts` and `test/pricing-rules.test.ts` | close-work finds each named number in the file and in a passing test, and finds no claim that the margin fees always count |
+| Costing truth | Applicable: the target-margin price rule, its round-up to the cent, the margin at list price, the price actions, the what-if rule, and the margin and fee display formats are costing rules that outlive this spec | `docs/costing.md` | jaketlee07 | A "Target margin and list price" section states the rules and the AC-0010, AC-0014, AC-0019, and AC-0020 numbers. The cost build-up formula names both price rules. The sentence on where the math lives names the pricing view and `price_what_if`. The Rounding note has a Margin row with the AC-0140 examples and a fee row with the AC-0081 example; its price row covers list prices; its cost-per-lb row covers cost after shrink and a product's cost per lb; its missing-value list has "No list price yet", "No target", and "None yet" for cost per lb, cost after shrink, and margin at list price; its opening sentence on what the pricing view returns and which values tests compare exactly covers the pricing tests' exact values. The file's opening names `test/pricing.test.ts`, `test/pricing-rules.test.ts`, and `test/e2e/pricing.spec.ts` | close-work finds each named number in the file and in a passing test, and finds no claim that the margin fees always count |
 | Master brief (current product truth) | Applicable: the brief names `list_price_override`, a price that follows the suggestion unless overridden; this feature stores a list price that moves only on the owner's action, and keeps the sheet price for products with no target | `SYSTEM-SPEC.md` §4 (products fields, "Note on margin", `v_product_pricing`, `v_current_menu`) | jaketlee07 | §4 names `list_price_per_lb` and `target_margin_pct` with these meanings and no longer names `list_price_override` | close-work finds no `list_price_override` in `SYSTEM-SPEC.md` and finds both column names in §4 |
-| Current architecture and app trust boundary | Applicable: two routes, three server actions, new `src/lib/` modules, and the new database functions change the areas map, the access model, and the write path | `docs/architecture/overview.md` | jaketlee07 | The `src/app/` row names `/menu` and `/pricing` and their actions; the `src/lib/` row names the pricing reads and form rules; the `test/` and `test/e2e/` rows name the new suites; the access model names every new function, the private helper the views call, and who may run each; a write-path paragraph says the app changes master data only through `set_target_margin` and `set_list_price`; the views paragraph says a replaced view must set `security_invoker` again | close-work confirms each named row and sentence exists and matches `src/`, `supabase/`, and `test/` |
+| Current architecture and app trust boundary | Applicable: two routes, three server actions, new `src/lib/` modules, and the new database functions change the areas map, the access model, and the write path | `docs/architecture/overview.md` | jaketlee07 | The `src/app/` row names `/menu` and `/pricing` and their actions; the `src/lib/` row names the pricing reads and form rules; the `test/` and `test/e2e/` rows name the new suites; the access model names `set_target_margin`, `set_list_price`, and `price_what_if`, who may run each, and that `price_what_if` runs as the caller under the tables' RLS; a write-path paragraph says the app changes master data only through `set_target_margin` and `set_list_price`; the views paragraph says a replaced view must set `security_invoker` again; the app trust boundary names the AC-0006 framing headers | close-work confirms each named row and sentence exists and matches `src/`, `supabase/`, and `test/` |
 | Agent guidance and commands | Applicable: `npm run test:costing` also runs the pricing golden cases | `AGENTS.md` (Build and test commands), `package.json` | jaketlee07 | AC-0161 passes and the `AGENTS.md` comment for `test:costing` names both suites | close-work finds the comment and the script agree |
 | Interface compatibility | Applicable: the migration adds columns and functions, so the generated types change | `src/lib/database.types.ts` | jaketlee07 | AC-0152 passes | `npm run gen:types` leaves no diff on the closing commit |
 | User documentation | Not applicable: no user-docs surface exists, the owner is the only user, and the screen labels carry the task | none | n/a | n/a | n/a |
@@ -102,22 +102,22 @@ a phone second, and numbers that are easy to trust third.
 
 The Vitest suites and the Playwright browser suite run under `npm test` against the local Supabase stack. Goal-based checks run as the commands their criteria name. Each criterion is listed once, under the check that closes it.
 
-- **TDD against the local stack: the pricing rules and the new functions (AC-0010, AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0020, AC-0021, AC-0022, AC-0023, AC-0024, AC-0025, AC-0026, AC-0027, AC-0030, AC-0031, AC-0032, AC-0033, AC-0034, AC-0035, AC-0036, AC-0037, AC-0038)**: each is an exact number, an exact refusal, or a catalog fact over fixtures built through the operations and the new functions, so a wrong rule fails it. They are golden costing cases, run by `npm run test:costing` as well as `npm test`: a red one stops the work.
+- **TDD against the local stack: the pricing rules and the new functions (AC-0010, AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0020, AC-0021, AC-0022, AC-0023, AC-0024, AC-0025, AC-0026, AC-0027, AC-0030, AC-0031, AC-0032, AC-0033, AC-0034, AC-0035, AC-0036, AC-0037, AC-0038, AC-0028, AC-0160)**: each is an exact number, an exact refusal, or a catalog fact over fixtures built through the operations and the new functions, so a wrong rule fails it. They are golden costing cases, run by `npm run test:costing` as well as `npm test`: a red one stops the work.
 - **TDD, no database: the margin format (AC-0140)**: a pure rule with exact examples. The form rules, the advice sentences, the button names, and the change actions' decisions are unit-tested the same way, as construction for the browser and recorded criteria below.
-- **Manual QA exercised by the end-to-end (E2E) browser suite (AC-0001, AC-0002, AC-0003, AC-0004, AC-0005, AC-0040, AC-0041, AC-0042, AC-0043, AC-0044, AC-0045, AC-0046, AC-0047, AC-0048, AC-0049, AC-0050, AC-0051, AC-0060, AC-0061, AC-0062, AC-0063, AC-0064, AC-0065, AC-0066, AC-0067, AC-0068, AC-0069, AC-0070, AC-0071, AC-0072, AC-0073, AC-0074, AC-0075, AC-0076, AC-0080, AC-0081, AC-0082, AC-0083, AC-0084, AC-0085, AC-0090, AC-0091, AC-0092, AC-0093, AC-0094, AC-0100, AC-0101, AC-0102, AC-0110, AC-0111, AC-0112, AC-0115, AC-0116, AC-0118, AC-0120, AC-0121, AC-0122, AC-0123, AC-0124, AC-0125, AC-0129, AC-0133, AC-0134, AC-0135, AC-0136, AC-0137, AC-0138)**: each criterion is a state, a trigger, and an on-screen or returned outcome that only a real browser over the real server and database shows. The suite drives Chromium through Playwright, replays action requests through Playwright's request API, and reads and seeds raw tables through `pg`.
+- **Manual QA exercised by the end-to-end (E2E) browser suite (AC-0001, AC-0002, AC-0003, AC-0004, AC-0005, AC-0006, AC-0040, AC-0041, AC-0042, AC-0043, AC-0044, AC-0045, AC-0046, AC-0047, AC-0048, AC-0049, AC-0050, AC-0051, AC-0060, AC-0061, AC-0062, AC-0063, AC-0077, AC-0078, AC-0064, AC-0065, AC-0066, AC-0067, AC-0068, AC-0069, AC-0070, AC-0071, AC-0072, AC-0073, AC-0074, AC-0075, AC-0076, AC-0080, AC-0081, AC-0082, AC-0083, AC-0084, AC-0085, AC-0090, AC-0091, AC-0092, AC-0093, AC-0094, AC-0100, AC-0101, AC-0102, AC-0109, AC-0110, AC-0111, AC-0112, AC-0115, AC-0116, AC-0118, AC-0120, AC-0121, AC-0122, AC-0123, AC-0124, AC-0125, AC-0129, AC-0143, AC-0133, AC-0134, AC-0135, AC-0136, AC-0137, AC-0138)**: each criterion is a state, a trigger, and an on-screen or returned outcome that only a real browser over the real server and database shows. The suite drives Chromium through Playwright, replays action requests through Playwright's request API, and reads and seeds raw tables through `pg`.
 - **E2E accessibility and phone-width checks (AC-0130, AC-0131, AC-0132, AC-0139, AC-0141)**: axe-core, measured element boxes, and computed styles in the same browser suite give a pass or fail bar for each page state. The recorded run applies the same checks to the two error pages.
 - **Manual QA recorded in the verification ledger (AC-0113, AC-0114, AC-0117, AC-0119, AC-0126, AC-0127, AC-0128, AC-0142)**: a recorded run against `npm run start`.
   - With the local REST service stopped before a page load, it records each error page, its text, its focus, its page-state checks, and the recovery after Try again.
-  - With the REST service stopped after a detail loads, it records the AC-0113 message after Save target, every field's value, and the focused element.
+  - With the REST service stopped after a detail loads, it records the AC-0113 message after Save target, every field's value, and the focused element. With the app restarted after a detail loads and the local auth service then stopped, it records the same for the auth-lookup case.
   - With the app pointed at a throwaway forwarder between the app and the REST service, it records two cases. When the forwarder holds a list price save's write call past the 10-second limit, it records the AC-0114 message, every field's value, and the focused element. When the forwarder holds a target save's write call while a `pg` session removes the operator's allowlist row, then lets it through, it records the AC-0117 message, every field's value, the focused element, and that no `products` row changed; the row is restored afterwards.
-- **Goal-based checks (AC-0150, AC-0151, AC-0152, AC-0153, AC-0154, AC-0155, AC-0156, AC-0157, AC-0158, AC-0159, AC-0160, AC-0161)**: each is settled by one command or one set of commands: a build, a test run, a type regeneration diff, a typecheck, a `grep`, or a dependency audit.
+- **Goal-based checks (AC-0150, AC-0151, AC-0152, AC-0153, AC-0154, AC-0155, AC-0156, AC-0157, AC-0158, AC-0159, AC-0161)**: each is settled by one command or one set of commands: a build, a test run, a type regeneration diff, a typecheck, a `grep`, or a dependency audit.
 
 ## Acceptance Criteria
 
 Definitions used by these criteria:
 
 - **Operator, non-operator, signed-out visitor, active finished product, raw input, host scope:** as defined in the production spec's Acceptance Criteria definitions ([`../production/spec.md`](../production/spec.md)).
-- **Ended session, focusable controls of a page state, non-void receipt:** as defined in the receiving spec ([`../receiving/spec.md`](../receiving/spec.md)) and its Rounding-note texts in `docs/costing.md`. A raw input **has a cost** when it has at least one non-void receipt.
+- **Ended session, focusable controls of a page state, non-void receipt:** as defined in the receiving spec ([`../receiving/spec.md`](../receiving/spec.md)). A raw input **has a cost** when it has at least one non-void receipt.
 - **Pricing view, menu view:** `v_product_pricing` and `v_current_menu`.
 - **Cost per lb:** the pricing view's `cost_per_lb`, the cost build-up in `docs/costing.md`.
 - **Target margin:** a finished product's `target_margin_pct`, a fraction from 0 up to but not including 1, shown as a percent. `set_target_margin` takes it as the percent the owner types, such as 22.5 for 0.225.
@@ -129,12 +129,12 @@ Definitions used by these criteria:
 - **Needs a new price:** the raw input has a cost, and the product has no list price or its list price differs from its suggested list price.
 - **Price action:** for a product that needs a new price, Set when it has no list price, Raise when its list price is below the suggested list price, and Lower when it is above. A product that does not need a new price has none.
 - **Below target:** the raw input has a cost, and the product has a target margin and a list price, and its margin at list price is less than its target margin.
-- **What-if:** for a raw product and a raw cost per lb, each active finished product whose raw input is that raw product, with its cost per lb, suggested price, and margin at list price worked out by the rules above with that raw cost in place of the raw average cost.
+- **What-if:** for a raw product and a raw cost per lb, each active finished product whose raw input is that raw product, with its cost per lb, suggested price, and margin at list price worked out by the rules above with that raw cost in place of the raw average cost. The given raw cost counts as a cost, so a what-if gives a suggested list price and a margin at list price even for a raw product with no non-void receipt.
 - **Code order:** ascending by product code as the database sorts text: "1000" before "502", and "502" before "A1".
 - **Fee-type order:** ascending `fee_types.sort_order`.
 - **Finished lbs on hand, raw lbs on hand, sellable:** the menu view's `finished_lbs_available`, `raw_lbs_available`, and `sellable`.
 - **Change actions:** the server actions that save a target margin, remove a target margin, and save a list price, whether the price was typed or comes from an AC-0066 button.
-- **Change refusals:** the outcomes of AC-0110, AC-0116, AC-0117, and AC-0118. **Change failures:** the outcomes of AC-0113, AC-0114, and AC-0115.
+- **Change refusals:** the outcomes of AC-0109, AC-0110, AC-0116, AC-0117, and AC-0118.
 - **The 502 fixture:** RAW-TOM Turkey Drums TOM (raw) and 502 Smoked Turkey Drums Tom as in the `docs/costing.md` reference product and `test/db.ts`: shrink 0.23; processing fees Direct cost of material 0.05, Cost of freezing 0.03, and Belmont overhead 0.37 per lb; margin fee Profit 0.05 per lb. RAW-TOM has one receipt of 5,000 lbs at 1.68, received 2026-10-01. "With a 20% target" sets 502's target margin to 0.2, and "a 2.68 list price" sets its list price to 2.68; with neither named, 502 has no target margin and no list price.
 - **Page states:** the menu with products; the menu with "Sellable only" on; the menu with "Sellable only" on and nothing sellable; the menu with no active finished product; the pricing list with all three groups; the pricing list after a list price save; the pricing list after a change refusal; the pricing list with no active finished product; the what-if results; the what-if form after an AC-0123 refusal; the what-if for an AC-0125 code; a product's pricing detail with a target margin; a detail with no target margin; a detail after an AC-0091 refusal; a detail after an AC-0101 refusal; a detail after a target save; a detail after a target removal; a detail after a list price save; a detail after an AC-0116 refusal; a detail after an AC-0115 failure; the not-active-product detail; the non-operator page at `/menu` and at `/pricing`; the `/menu` and `/pricing` error pages.
 - **Advisory waivers:** none. Each waiver names an npm advisory ID, the date, and the owner's acceptance. Adding one changes this contract section, so it is an amendment.
@@ -146,6 +146,7 @@ Access and navigation
 - [ ] **AC-0003.** A change action request replayed with no session, or with a non-operator's session, changes no `products` row.
 - [ ] **AC-0004.** `/receiving`, `/production`, `/menu`, and `/pricing` each show a navigation region named "Primary" with a link named "Receiving" to `/receiving`, "Production" to `/production`, "Menu" to `/menu`, and "Pricing" to `/pricing`.
 - [ ] **AC-0005.** In the AC-0004 navigation, the only link with an `aria-current` attribute is the link to the page being shown, and its value is `page`.
+- [ ] **AC-0006.** The responses to page requests for `/sign-in`, `/receiving`, `/production`, `/menu`, and `/pricing`, signed in or not, each carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
 
 Pricing rules
 
@@ -168,6 +169,7 @@ What-if rules
 - [ ] **AC-0022.** In a fixture holding two RAW-TOM receipts (5,000 lbs at 1.68 and 3,000 lbs at 1.80) and two active finished products made from RAW-TOM, one with a 20% target and a 3.29 list price and one with no target and no list price, a what-if for RAW-TOM at its raw average cost gives each product the cost per lb, suggested price, and margin at list price the pricing view gives it.
 - [ ] **AC-0023.** A what-if returns exactly the active finished products whose raw input is the given raw product. The check fixture holds a second active finished product made from RAW-TOM, an inactive finished product made from RAW-TOM, and an active finished product made from another raw product.
 - [ ] **AC-0026.** A what-if returns its products in code order. The check fixture enters products made from RAW-TOM out of code order.
+- [ ] **AC-0028.** In the 502 fixture with a 20% target and a 3.29 list price, after RAW-TOM's only receipt is voided, a what-if for RAW-TOM at 2.00 gives 502 a cost per lb of 3.0474, a suggested price of 3.81, a suggested list price of 3.81, and a margin at list price of 0.0737.
 - [ ] **AC-0024.** A what-if called by an operator changes no table.
 - [ ] **AC-0025.** A what-if is refused with SQLSTATE `42501` for a non-operator, and refused for a raw cost that is below 0, null, NaN, or infinite, and each refusal changes no table.
 
@@ -180,7 +182,8 @@ Target margin and list price operations
 - [ ] **AC-0034.** A successful `set_target_margin` or `set_list_price` call changes only the named product's target margin or list price, respectively: every other column of that row, every other row, and every other table are unchanged.
 - [ ] **AC-0035.** The `anon` and `service_role` roles cannot execute `set_target_margin`, `set_list_price`, or `price_what_if`.
 - [ ] **AC-0036.** An update that gives a raw product a target margin or a list price is refused, run as `postgres`.
-- [ ] **AC-0037.** An update that sets a finished product's target margin below 0 or to 1 or more, or its list price to 0 or below, is refused, run as `postgres`.
+- [ ] **AC-0037.** An update that sets a finished product's target margin below 0, to 1 or more, or to NaN, or its list price to 0 or below or to NaN, is refused, run as `postgres`.
+- [ ] **AC-0160.** After the migrations, `public.products` has exactly the columns `id`, `code`, `description`, `brand`, `species`, `kind`, `pack_style`, `lbs_per_pack`, `raw_product_id`, `shrink_pct`, `active`, `created_at`, `target_margin_pct`, and `list_price_per_lb`, and the `public` schema holds exactly the tables `customers`, `fee_types`, `finished_goods`, `inventory_balances`, `lot_adjustments`, `lots`, `product_fees`, `production_batch_lots`, `production_batches`, `products`, `sale_items`, `sales`, and `vendors`.
 - [ ] **AC-0038.** Every function the migration adds sets `search_path` to an empty value.
 
 Menu
@@ -193,7 +196,7 @@ Menu
 - [ ] **AC-0044.** In the 502 fixture, after RAW-TOM's lot is adjusted to 0 lbs, a reload of `/menu` shows 502 as "Not sellable now".
 - [ ] **AC-0045.** An inactive finished product does not appear on `/menu`.
 - [ ] **AC-0046.** On each load of `/menu`, the "Sellable only" switch is off and every active finished product is listed.
-- [ ] **AC-0047.** With "Sellable only" on, `/menu` lists exactly the products that show "Sellable now". The check fixture holds one sellable and one unsellable product.
+- [ ] **AC-0047.** With "Sellable only" on, `/menu` lists exactly the sellable products. The check fixture holds one sellable and one unsellable product.
 - [ ] **AC-0048.** Turning "Sellable only" off again lists every active finished product.
 - [ ] **AC-0049.** With "Sellable only" on and no product sellable, `/menu` says "No product can be sold right now."
 - [ ] **AC-0050.** When there is no active finished product, `/menu` says "No active finished products yet. Add one in Supabase Studio, then reload this page."
@@ -206,8 +209,10 @@ Pricing list
 - [ ] **AC-0074.** A product with no target margin shows "No target" as its target margin.
 - [ ] **AC-0075.** A product whose raw input has no cost shows "None yet" as its cost per lb and "No price yet" as its suggested price.
 - [ ] **AC-0076.** A product with no list price, or whose raw input has no cost, shows "None yet" as its margin at list price.
-- [ ] **AC-0063.** The products that need a new price are listed under a heading "Needs a new price", the products whose raw input has no cost under a heading "No cost yet", and every other product under a heading "Priced". The headings appear in this order: "Needs a new price", "Priced", "No cost yet", each only when it has a product.
-- [ ] **AC-0064.** Under "Needs a new price", the below-target products come first, then the rest, each group in code order; under "Priced" and under "No cost yet", products are in code order. The check fixture holds four products that need a new price, two of them below target, and two products in each other group, entered out of that order.
+- [ ] **AC-0063.** The products that need a new price are listed under a heading "Needs a new price", the products whose raw input has no cost under a heading "No cost yet", and every other product under a heading "Priced".
+- [ ] **AC-0077.** The group headings appear in this order: "Needs a new price", "Priced", "No cost yet".
+- [ ] **AC-0078.** A group heading appears only when the group has a product. In the AC-0069 state, neither "Needs a new price" nor "No cost yet" appears.
+- [ ] **AC-0064.** Under "Needs a new price", the below-target products come first, then the rest, each group in code order; under "Priced" and under "No cost yet", products are in code order. The check fixture holds four products that need a new price, two of them below target and, of the other two, one with a Lower action and one with a Set action, and two products in each other group, all entered out of that order.
 - [ ] **AC-0065.** Each product that needs a new price shows the advice for its case, where C is its cost per lb, S its suggested list price, T its target margin, L its list price, M its margin at list price, and F its margin fees per lb, each in its display format:
 
   | Target margin | List price | Advice |
@@ -234,7 +239,7 @@ Pricing detail
 - [ ] **AC-0082.** In the 502 fixture, 502's detail shows Profit $0.0500/lb and suggested price $2.68/lb.
 - [ ] **AC-0083.** When a product's raw input has no cost, its detail shows raw average cost, cost after shrink, and cost per lb as "None yet", and suggested price as "No price yet".
 - [ ] **AC-0084.** A detail of a product that needs a new price shows that product's AC-0065 advice and AC-0066 button.
-- [ ] **AC-0085.** A detail requested for a code that is not the code of an active finished product, including an unknown code, a raw product's code, and an inactive finished product's code, says "No active finished product has code <code>."
+- [ ] **AC-0085.** A detail requested for a code that is not the code of an active finished product, including an unknown code, a raw product's code, and an inactive finished product's code, says "No active finished product has code <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
 
 Target margin
 
@@ -267,8 +272,9 @@ List price
 
 Refused and failed changes
 
+- [ ] **AC-0109.** A change action request replayed with a non-operator's session returns "The change wasn't saved. This account isn't allowed to use Meat Ops."
 - [ ] **AC-0110.** When the session has ended after the page loaded, a change action shows "You're signed out. Sign in again to save this change."
-- [ ] **AC-0113.** When the operator check a change action makes before its write call fails, the action shows "The change wasn't saved. Try again in a moment."
+- [ ] **AC-0113.** When a change action's caller check fails before its write call, because its auth lookup gets no answer or its operator check fails, the action shows "The change wasn't saved. Try again in a moment."
 - [ ] **AC-0114.** When a change action's write call gets no answer from the database, it shows "The change may not have been saved. Reload this page to check it."
 - [ ] **AC-0115.** When the connection to the app drops while a change is in flight, the page shows the AC-0114 message.
 - [ ] **AC-0116.** When the product was made inactive after the page loaded, a change action shows "The change wasn't saved. This product is no longer active."
@@ -293,8 +299,9 @@ What-if
   | Raw cost per lb | blank, or anything other than digits with at most one decimal point | Enter the cost per lb, like 1.68. |
   | Raw cost per lb | more than 4 decimal places | Use at most 4 decimal places for cost. |
 
+- [ ] **AC-0143.** In the AC-0028 case, showing prices for RAW-TOM at 2.00 lists 502 with cost per lb $3.0474/lb, suggested price $3.81/lb, and margin at today's list price 7.37%.
 - [ ] **AC-0124.** After Show prices, the raw product and the raw cost per lb keep their values.
-- [ ] **AC-0125.** A what-if requested for a code that is not the code of an active raw input of an active finished product, including an unknown code and a finished product's code, says "No active finished product is made from <code>."
+- [ ] **AC-0125.** A what-if requested for a code that is not the code of an active raw input of an active finished product, including an unknown code and a finished product's code, says "No active finished product is made from <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
 
 Error pages
 
@@ -335,7 +342,6 @@ Build and repository checks
   - `grep -rnE "\}\s*=\s*process\.env" src/`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`
 - [ ] **AC-0159.** `grep -rniE "anthropic|openai|@ai-sdk|langchain" package.json src/` prints nothing.
-- [ ] **AC-0160.** The migration adds no table and no column beyond the two named: `grep -ciE "create (unlogged |temp(orary)? )?table" supabase/migrations/*_menu_pricing.sql` prints 0, and `grep -oiE "add column( if not exists)? [a-z_]+" supabase/migrations/*_menu_pricing.sql | tr 'A-Z' 'a-z' | sort` prints exactly `add column list_price_per_lb` and `add column target_margin_pct`.
 - [ ] **AC-0161.** `npm run test:costing` runs `test/costing.test.ts` and `test/pricing.test.ts` and exits 0.
 
 ## Follow-ons
@@ -366,6 +372,9 @@ Build and repository checks
 - Product: two pages, `/menu` and `/pricing`, joined to the Primary navigation; `/` still opens Receiving; the menu starts with every product shown and a "Sellable only" switch hides the rest; pricing flags products whose list price differs from the suggestion, below-target first; suggestions go both ways; the advice is fixed text over database numbers with no AI call; Receiving shows no reprice prompt; the what-if saves nothing; all new math lives in the database; there is no price-history table (source: user confirmation 2026-10-08)
 - Product: the owner sets a target margin and a list price on the pricing detail, and can remove a target margin there (source: user confirmation 2026-10-08, "You set each product's target margin and list price on Pricing")
 - Product: design goals in order are hard to mistype, fast on a phone, and numbers easy to trust; plain, high contrast, no decoration; the experience-design pack is not installed, so design intent for these surfaces is grounded only in these goals (source: production spec Assumptions; skill roster, 2026-10-08)
+- Product: a what-if counts the typed raw cost as the cost, so it shows full prices for a raw product not yet received (source: user confirmation 2026-10-09)
+- Product: every page refuses to load inside another page's frame (source: user confirmation 2026-10-09)
+- Technical: `next.config.ts` holds no `headers()` today, and neither it nor `src/proxy.ts` sets `frame-ancestors` or `X-Frame-Options` (source: `next.config.ts`, `src/proxy.ts`)
 - Process: `npm run test:costing` runs the pricing golden cases too (source: user confirmation 2026-10-09)
 - Process: the work is built in three dependency-ordered parts, the database, then Menu, then Pricing, and one review at the end takes them in that order (source: user confirmation 2026-10-08; the work-loop reaches its review state only after the last task)
 - Process: this spec keeps its own Advisory waivers list, as receiving and production do (source: production spec Assumptions)

@@ -74,11 +74,12 @@ the what-if running as the caller (`docs/architecture/overview.md`, T8).
 
 - **One rule, written in two places side by side.** The pricing view and `price_what_if` each compute post-shrink cost, cost per lb, suggested price, suggested list price, and margin at list price with the same expressions, written next to each other in the migration. AC-0022 holds them equal over a fixture with a target and a no-target product. A shared private helper was rejected: the views call it as their reader, so `service_role` would need EXECUTE on it and USAGE on `private`, a grant change for a two-expression saving. The view keeps the sheet expression of `0001_init.sql` for a product with no target, so invariant 2 stays at 2.6818. Traces to: AC-0010 to AC-0017, AC-0019 to AC-0022, AC-0027.
 - **With a target, the suggested price is `round(ceil(cost_per_lb / (1 - target) * 100) / 100, 2)`,** where `cost_per_lb` is the view's 4-decimal value. Rounding up keeps the margin at the suggested price at or above the target; the screen shows that cost, so the owner can redo the division from what is shown. The suggested list price is `round(final_price_per_lb, 2)` for both rules, an identity for a target product, so the list, the button, and Receiving's display all show one number. Traces to: AC-0010, AC-0011, AC-0013, AC-0019, AC-0073, AC-0081.
-- **Existing columns keep their names, types, and order;** new ones are appended, because `CREATE OR REPLACE VIEW` allows only that and Receiving reads `final_price_per_lb`. Appended to the pricing view: `target_margin_pct`, `list_price_per_lb`, `has_cost` (a non-void receipt exists for the raw input), `suggested_list_price`, `margin_at_list_pct`, `price_action` (`'set' | 'raise' | 'lower'` or null), `below_target`. The last four are null or false when `has_cost` is false. Appended to the menu view: `list_price_per_lb`. Both views are re-created `with (security_invoker = true)`. Traces to: AC-0018, AC-0040, AC-0060.
+- **Existing columns keep their names, types, and order;** new ones are appended, because `CREATE OR REPLACE VIEW` allows only that and Receiving reads `final_price_per_lb`. Appended to the pricing view: `target_margin_pct`, `list_price_per_lb`, `has_cost` (a non-void receipt exists for the raw input), `suggested_list_price`, `margin_at_list_pct`, `price_action` (`'set' | 'raise' | 'lower'` or null), `needs_new_price` (`price_action is not null`), `below_target`. All but the first three are null or false when `has_cost` is false. Appended to the menu view: `list_price_per_lb`. Both views are re-created `with (security_invoker = true)`. Traces to: AC-0018, AC-0040, AC-0060.
 - **Writes through `SECURITY DEFINER` functions with `private.assert_caller` first,** as the six operations do, rather than through the operator's table UPDATE grant: the refusals then carry SQLSTATE 42501 and a `<function>: ` prefix the app already maps, and AC-0154 keeps `.update(` out of `src/`. `set_target_margin(p_product_id, p_target_percent)` takes the percent the owner typed and stores it ÷ 100, so no TypeScript divides; null removes the target. `set_list_price(p_product_id, p_price_per_lb)`. Each validates its value before any lock, then locks the product row `FOR NO KEY UPDATE`, checks it is an active finished product, and returns the `products` row. Refusal texts after the prefix: `product <id> not found`, `product <id> is not a finished product`, `product <id> is inactive`, and one text per value rule (`target must be from 0 up to but not including 100`, `target has more than 2 decimal places`, `price must be above 0`, `price must be below 100000000`, `price has more than 2 decimal places`, `<value> must be a finite number`). The inactive text ends in "is inactive", which `failures.ts` already turns into "This product is no longer active." Traces to: AC-0030 to AC-0035, AC-0116 to AC-0118.
-- **`price_what_if(p_raw_product_id, p_raw_cost_per_lb)`** is `SECURITY INVOKER`, `STABLE`, and refuses a caller for whom `private.is_operator()` is not true with SQLSTATE 42501, as `check_operator` does; `private.assert_caller` grants no EXECUTE to `authenticated`. It reads under the tables' RLS and writes nothing. It refuses a null, NaN, infinite, or negative cost. It returns one row per active finished product made from the raw product, in code order. Traces to: AC-0020 to AC-0026.
+- **`price_what_if(p_raw_product_id, p_raw_cost_per_lb)`** is `SECURITY INVOKER`, `STABLE`, and refuses a caller for whom `private.is_operator()` is not true with SQLSTATE 42501, as `check_operator` does; `private.assert_caller` grants no EXECUTE to `authenticated`. It reads under the tables' RLS and writes nothing. It refuses a null, NaN, infinite, or negative cost. It treats the given cost as a cost, so its rows carry a suggested list price and a margin whether or not the raw product has a receipt. It returns one row per active finished product made from the raw product, in code order. Traces to: AC-0020 to AC-0028.
 - **Every new function sets `search_path = ''` and schema-qualifies every name,** as the six operations do. Traces to: AC-0038.
-- **The value limits hold for every writer:** a check constraint `kind = 'finished' or (target_margin_pct is null and list_price_per_lb is null)`, plus column checks `target_margin_pct >= 0 and target_margin_pct < 1` and `list_price_per_lb > 0`, so Studio and the table grants cannot store a value that would make the views divide by zero. Traces to: AC-0036, AC-0037.
+- **The value limits hold for every writer:** a check constraint `kind = 'finished' or (target_margin_pct is null and list_price_per_lb is null)`, plus column checks `target_margin_pct >= 0 and target_margin_pct < 1` and `list_price_per_lb > 0 and list_price_per_lb <> 'NaN'`, so Studio and the table grants cannot store a value that would make the views divide by zero or show NaN. Postgres ranks NaN above every number, so `> 0` alone admits it; the target's `< 1` already refuses it. Traces to: AC-0036, AC-0037, AC-0160.
+- **Framing is refused for every page** through a `headers()` entry in `next.config.ts` for `/:path*` that sets `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`. The one-press Apply and Remove buttons are the reason; every page gets it because the rule costs nothing extra. Traces to: AC-0006.
 - **The database decides every comparison the screen shows:** price action, below-target, and has-cost come from the view. TypeScript maps each code to its words and orders rows only by those columns and by code. Traces to: AC-0062 to AC-0066, AC-0074 to AC-0076, the Never-do on TypeScript comparisons.
 - **The menu reuses `getMenu` in `src/lib/views.ts`,** with `.order("code")` added; nothing else calls it. `getPricing` stays as the golden tests use it. The pricing pages' reads live in a new `src/lib/pricing.ts`, because they need the fee names, the raw input, the three-group order, and the what-if, which no existing read carries. Traces to: AC-0040, AC-0051.
 - **The change actions share one decision module.** `src/app/pricing/save-change.ts` exports `decideChange(request, deps)`, where `deps` carries `caller()` and `write(client)`, as `save-batch.ts` does. The three server actions in `actions.ts` differ only in the form rule and the write they pass. Traces to: AC-0110, AC-0113 to AC-0118.
@@ -96,7 +97,7 @@ the what-if running as the caller (`docs/architecture/overview.md`, T8).
 ### Interfaces & contracts
 
 - `src/lib/rpc.ts`: `setTargetMargin(client, productId, targetPercent | null)` and `setListPrice(client, productId, pricePerLb)`, thin wrappers that throw `RpcError` like the others.
-- `src/lib/pricing.ts`: `listPricing(client)` (the list rows, ordered by `price_action` present first, then `has_cost`, then `below_target`, then code, for AC-0063 and AC-0064), `getPricingDetail(client, code)` (one row plus its fees by name in `fee_types.sort_order`, and its raw input's code and description), `listWhatIfRawProducts(client)`, and `runWhatIf(client, rawProductId, rawCostPerLb)`. Each returns numbers as the database delivered them.
+- `src/lib/pricing.ts`: `listPricing(client)` (the list rows, ordered by `needs_new_price desc, has_cost desc, below_target desc, code`, for AC-0063, AC-0064, and AC-0077), `getPricingDetail(client, code)` (one row plus its fees by name in `fee_types.sort_order`, and its raw input's code and description), `listWhatIfRawProducts(client)`, and `runWhatIf(client, rawProductId, rawCostPerLb)`. Each returns numbers as the database delivered them.
 - `src/lib/views.ts`: `getMenu` ordered by code.
 - `test/db.ts`: `OperationName` gains `set_target_margin`, `set_list_price`, and `price_what_if`; `PARAM_TYPES` gains `p_target_percent`, `p_raw_product_id`, and `p_raw_cost_per_lb`.
 
@@ -153,7 +154,7 @@ and the page shows the AC-0068, AC-0092, AC-0094, or AC-0102 message from it.
 
 - A change action settles the caller, runs its form rule, then calls its one write. There is no read before the write.
 - `changeFailureMessage` reads the stage and the code like `saveFailureMessage`: before-write gives "try again"; no code gives the may-not-have-been text; 42501 gives not-allowed; "is inactive" gives the inactive text; any other engine text follows "The change wasn't saved." with its prefix removed.
-- The list puts `price_action is not null` rows under "Needs a new price", ordered by `below_target desc, code`; rows with `has_cost` false under "No cost yet"; and the rest under "Priced", each in code order.
+- The list puts `needs_new_price` rows under "Needs a new price", below-target first and then by code whatever their action; rows with `has_cost` false under "No cost yet"; and the rest under "Priced", each in code order. A group with no rows prints no heading.
 - The pricing pages show `suggested_list_price` wherever they show a suggested price, and `margin_per_lb` as F in the advice.
 
 ### Failure, edge cases & resilience
@@ -170,17 +171,17 @@ and the page shows the AC-0068, AC-0092, AC-0094, or AC-0102 message from it.
 
 ## Tasks
 
-Stub validation, 2026-10-09 (rerun after review round 1): each `stub: true`
-block below was extracted from this file into a `git archive` copy of `HEAD` in
-scratch, outside the repository, and its sha256 recorded from that extraction
-(the code lines plus one terminal newline). Against placeholder declarations of
-the new modules and the T1 `test/db.ts` names, `tsc --noEmit` under the
-repository's compiler options exited 0 for all four. Against the current tree,
-`vitest run` exited 1 for each: T3, T4, and T5 failed to load their missing
-modules (`../src/lib/price-advice.js`, `../src/lib/pricing.js`,
-`../src/app/pricing/save-change.js`), and T1, with the `test/db.ts` names added,
-failed its assertion with `function public.set_target_margin(...) does not
-exist` from the local stack. The scratch copy was removed.
+Stub validation, 2026-10-09 (after review round 2). Each `stub: true` block below
+was extracted from this file into a `git archive` copy of `HEAD` in scratch,
+outside the repository, and its sha256 recorded from that extraction (the code
+lines plus one terminal newline); the extraction reproduced all four recorded
+digests.
+
+- **Compile:** against placeholder declarations of the new modules and the T1 `test/db.ts` names, `tsc --noEmit` under the repository's compiler options exited 0 for all four.
+- **Red, with the placeholders removed:** `vitest run` over the four files exited 1. T3, T4, and T5 failed to load their missing modules (`../src/lib/price-advice.js`, `../src/lib/pricing.js`, `../src/app/pricing/save-change.js`). T1, with the `test/db.ts` names added, failed its assertion with `function public.set_target_margin(...) does not exist` from the local stack.
+- **Isolation:** the run went through `sandbox-exec` with network denied except to `localhost`, file writes denied except under the scratch directory, the session's temporary directory, and `/private/var/folders`, and a 120-second `alarm`. The stack details came from `supabase status -o env` outside the sandbox and were passed in the environment, so no Docker or CLI call ran inside it. Vitest's results-cache write under `node_modules/.vite` was refused by the sandbox after the run.
+- **Declared test-harness side effects,** all on the local stack through `localhost`: global setup's idempotent creation of the test users and their allowlist rows; `resetTestData`'s truncate and reseed of the local database; and the T1 stub's committed `receive_lot` call. These are the side effects `npm test` has on every run.
+- The scratch copy was removed.
 
 ### T1: The migration's pricing rules and operations pass the golden pricing cases
 
@@ -232,12 +233,13 @@ it("AC-0010: a 20% target gives 502 a suggested price of 3.29", async () => {
 });
 ```
 
-- The same file then grows, in EXECUTE, with fixtures built through `receiveCall`, `produceCall`, `voidReceiptCall`, the new calls, and `query` for fee and product rows: one test per criterion: AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0020, AC-0021, AC-0022, AC-0023, AC-0024, AC-0025, AC-0026, AC-0027, AC-0030, AC-0031, AC-0032, AC-0033, AC-0034, AC-0035, AC-0036, AC-0037, AC-0038.
+- The same file then grows, in EXECUTE, with fixtures built through `receiveCall`, `produceCall`, `voidReceiptCall`, the new calls, and `query` for fee and product rows: one test per criterion: AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0020, AC-0021, AC-0022, AC-0023, AC-0024, AC-0025, AC-0026, AC-0027, AC-0030, AC-0031, AC-0032, AC-0033, AC-0034, AC-0035, AC-0036, AC-0037, AC-0038, AC-0028, AC-0160.
   - Refusals compare `tableFingerprints` before and after (AC-0025, AC-0031, AC-0033). NaN goes through `callAsOperator`, as the engine tests do; infinity is sent as `'Infinity'`.
   - AC-0034 compares every table's fingerprint except `products`, and the 502 row column by column.
   - AC-0018 reads both views as the non-operator through `signInNonOperator` after the operator reads a row from each; AC-0027 reads both as `service_role` through a service-role client.
   - AC-0035 checks `has_function_privilege` for `anon` and `service_role` on the three functions; AC-0038 reads `pg_proc.proconfig` for each function the migration adds.
-  - AC-0036 and AC-0037 run each update through `query` as `postgres` and expect a check-constraint refusal.
+  - AC-0036 and AC-0037 run each update through `query` as `postgres` and expect a check-constraint refusal; AC-0037 includes `'NaN'` for both columns.
+  - AC-0160 reads `information_schema.columns` for `public.products` and `pg_tables` for `public`.
 - `test/access.test.ts` gains a `validArgs` entry and an operator fixture call for each of `set_target_margin`, `set_list_price`, and `price_what_if`, so its catalog sweep refuses each for a non-operator with 42501 and no table change and accepts it for the operator. No function leaves the sweep.
 - `test/costing.test.ts`, `test/engine.test.ts`, and `test/receiving-data*.test.ts` stay unchanged and green.
 
@@ -253,18 +255,18 @@ it("AC-0010: a 20% target gives 502 a suggested price of 3.29", async () => {
 
 **Depends on:** T1
 
-**Touches:** `src/lib/views.ts`, `src/app/page-header.tsx`, `src/app/menu/*`, `test/e2e/menu.spec.ts`, `test/e2e/menu-page.ts`, `test/e2e/receiving-page.ts`, `test/e2e/production-page.ts`
+**Touches:** `src/lib/views.ts`, `src/app/page-header.tsx`, `src/app/menu/*`, `next.config.ts`, `test/e2e/menu.spec.ts`, `test/e2e/menu-page.ts`, `test/e2e/receiving-page.ts`, `test/e2e/production-page.ts`
 
 **Tests:** no stub (mode): manual QA exercised by the browser suite.
 - `test/e2e/menu.spec.ts`, signed in as the operator, with fixtures written through `pg` like `test/e2e/production-page.ts`:
-  - access and navigation: AC-0001 and AC-0002 for `/menu`; AC-0004 and AC-0005 on `/receiving`, `/production`, and `/menu` (and on `/pricing` in T6);
+  - access and navigation: AC-0001 and AC-0002 for `/menu`; AC-0004 and AC-0005 on `/receiving`, `/production`, and `/menu` (and on `/pricing` in T6); AC-0006 through Playwright's request API, signed out and as the operator, for `/sign-in`, `/receiving`, `/production`, and `/menu`;
   - the menu: AC-0040, AC-0051, AC-0041, AC-0042, AC-0043, AC-0044 (the adjustment made through `adjust_lot` as the operator), AC-0045, AC-0046, AC-0047, AC-0048, AC-0049, AC-0050;
   - keyboard: AC-0133 for the "Sellable only" switch;
   - `checkPageState` with no findings in the menu with products, with "Sellable only" on, with "Sellable only" on and nothing sellable, with no active finished product, and on the non-operator page: AC-0130, AC-0131, AC-0132, AC-0139, AC-0141 for those states.
 - `FORM_CONTROLS` in `test/e2e/receiving-page.ts` and `test/e2e/production-page.ts` gain "a Menu" and "a Pricing" after "a Production" and before "button Sign out", so `test/e2e/receiving.spec.ts` and `test/e2e/production.spec.ts` stay green with the wider navigation.
 
 **Approach:**
-- Order `getMenu`, widen the header, and build the page and switch on the production page's patterns.
+- Order `getMenu`, widen the header, add the framing headers, and build the page and switch on the production page's patterns.
 
 **Done when:** `npm test` exits 0 with the new and existing browser tests green.
 
@@ -444,12 +446,12 @@ it("AC-0117: a refusal from the write because the caller is not an operator", as
 
 **Tests:** no stub (mode): manual QA exercised by the browser suite.
 - `test/e2e/pricing.spec.ts`, signed in as the operator, with fixtures written through `pg`:
-  - access and navigation: AC-0001 and AC-0002 for `/pricing`; AC-0004 and AC-0005 on `/pricing`; AC-0003 with replayed Apply requests with no session and with a non-operator session, checked through `pg`;
-  - the list: AC-0060, AC-0061, AC-0062, AC-0074, AC-0075, AC-0076, AC-0063, AC-0064, AC-0065 (all four rows), AC-0066, AC-0067 (a new RAW-TOM receipt written through `pg` after the page loads and before the press), AC-0068, AC-0069, AC-0070, AC-0071, AC-0072 (the stored price read through `pg` after both loads);
+  - access and navigation: AC-0001 and AC-0002 for `/pricing`; AC-0004 and AC-0005 on `/pricing`; AC-0006 for `/pricing`; AC-0003 with replayed Apply requests with no session and with a non-operator session, checked through `pg`;
+  - the list: AC-0060, AC-0061, AC-0062, AC-0074, AC-0075, AC-0076, AC-0063, AC-0077, AC-0078, AC-0064 (with a Lower and a Set row among the products that are not below target), AC-0065 (all four rows), AC-0066, AC-0067 (a new RAW-TOM receipt written through `pg` after the page loads and before the press), AC-0068, AC-0069, AC-0070, AC-0071, AC-0072 (the stored price read through `pg` after both loads);
   - Receiving: AC-0073, through the receiving page helpers;
   - an Apply on a product made inactive through `pg` after the load, showing the AC-0116 message on the list (page state "the pricing list after a change refusal");
-  - AC-0118 with a replayed list price save for the AC-0118 product id, and AC-0112 for it through `pg`;
-  - the what-if: AC-0120, AC-0129, AC-0121, AC-0122, AC-0123 (each row), AC-0124, AC-0125;
+  - AC-0118 with a replayed list price save for the AC-0118 product id, and AC-0112 for it through `pg`; AC-0109 with a replayed Apply request under a non-operator's session;
+  - the what-if: AC-0120, AC-0129, AC-0121, AC-0143, AC-0122, AC-0123 (each row), AC-0124, AC-0125 (including the `<b>9</b>` code, checked by its text and by the absence of a `b` element);
   - keyboard and focus: AC-0133 for an AC-0066 button and Show prices, AC-0134 after Apply, AC-0135 and AC-0136 after an AC-0123 refusal;
   - `checkPageState` with no findings in the pricing list with all three groups, after a list price save, after a change refusal, with no active finished product, the what-if results, after an AC-0123 refusal, for an AC-0125 code, and on the non-operator page: AC-0130, AC-0131, AC-0132, AC-0139, AC-0141 for those states.
 
@@ -466,7 +468,7 @@ it("AC-0117: a refusal from the write because the caller is not an operator", as
 
 **Tests:** no stub (mode): manual QA exercised by the browser suite.
 - `test/e2e/pricing.spec.ts`:
-  - the detail: AC-0080, AC-0081, AC-0082, AC-0083, AC-0084, AC-0085;
+  - the detail: AC-0080, AC-0081, AC-0082, AC-0083, AC-0084, AC-0085 (including the `<b>9</b>` code, checked by its text and by the absence of a `b` element);
   - the target: AC-0090, AC-0091 (each row), AC-0092, AC-0093, AC-0094;
   - the list price: AC-0100, AC-0101 (each row), AC-0102;
   - AC-0003 with replayed target-save, target-removal, and list-price-save requests with no session and with a non-operator session, checked through `pg`;
@@ -489,11 +491,12 @@ it("AC-0117: a refusal from the write because the caller is not an operator", as
 - The recorded run in the verification ledger, against `npm run start`:
   - with the local REST service stopped before a load of `/menu` and of `/pricing`: each error page, its text, its focus, and `checkPageState` on it (AC-0127, and AC-0130, AC-0131, AC-0132, AC-0139, AC-0141 for those states); then Try again after the restart (AC-0126);
   - with the REST service stopped after a detail loads: the AC-0113 message on Save target, every field's value (AC-0119), and the focused element (AC-0142);
+  - with the app restarted after a detail loads and the local auth service then stopped, so the caller check's signing-key fetch gets no answer: the AC-0113 message on Save target, every field's value, and the focused element; the auth service is started again afterwards;
   - with the app's `SUPABASE_URL` pointed at a throwaway forwarder in scratch (not committed) in front of the local REST service, restored afterwards:
     - the forwarder holds a `set_list_price` call past the 10-second limit: the AC-0114 message, every field's value (AC-0119), and the focused element (AC-0142);
     - the forwarder holds a `set_target_margin` call while a `pg` session deletes the operator's `private.operators` row, then lets it through: the AC-0117 message, every field's value (AC-0119), the focused element (AC-0142), and a `pg` read showing no `products` row changed (AC-0128); the row is inserted back afterwards.
 - Rendered-page inspection, per `frontend-engineering` GATES step 5, of `/menu`, `/pricing`, `/pricing?product=502`, and `/pricing?raw=RAW-TOM&cost=2.00` over the seeded fixture, at the narrow and wide fallback channels, each at the four required captures, with the five fields and the observations recorded in the ledger for the `frontend-reviewer`.
-- The commands of AC-0150, AC-0151, AC-0152, AC-0153, AC-0154, AC-0155, AC-0156, AC-0157, AC-0158, AC-0159, AC-0160, and AC-0161, each with its exit code recorded in the ledger.
+- The commands of AC-0150, AC-0151, AC-0152, AC-0153, AC-0154, AC-0155, AC-0156, AC-0157, AC-0158, AC-0159, and AC-0161, each with its exit code recorded in the ledger.
 
 **Approach:**
 - Edit the overview rows and sentences named in the spec's Durable Outputs row.
@@ -513,9 +516,10 @@ it("AC-0117: a refusal from the write because the caller is not an operator", as
 - **Receiving's prices move for a product with a target.** That is the owner's decision; Receiving's tests use 502 with no target and stay green, and AC-0073 checks the target case.
 - **Shared modules and helpers.** `format.ts`, `failures.ts`, `views.ts`, `page-header.tsx`, and the floor pages' `FORM_CONTROLS` serve the floor pages too; their suites run in every gate.
 - **The function texts are matched by wording.** A T4 test against real refusals turns red first if a function's text changes.
-- **Same-site framing of one-press writes** (spec-review Nit, deferred): no response sets `frame-ancestors` or `X-Frame-Options`, so a page served from another local port could frame `/pricing` and steer a press. SameSite=Lax keeps the session out of cross-site frames, and the worst outcome is a reversible list price or target change.
+- **The framing headers apply to every page,** the floor pages included. Nothing in the app frames itself, and the browser suites run every page in the gate.
 
 ## Changelog
 
 - 2026-10-09: initial plan.
 - 2026-10-09: review round 1. The suggested price rounds up to the cent with a target (owner decision); products with no cost get a "No cost yet" group (owner decision); `test:costing` runs the pricing golden cases (owner decision). T1 now extends the access suite, T2 the floor pages' Tab-order lists, and T5 lists `failures.ts`; T4 depends on T3. The price rule is written in the view and in `price_what_if` rather than a shared helper, so `service_role` keeps reading the views; `price_what_if` runs as the caller. New criteria cover the round-up case, `service_role` view reads, what-if order, value limits for every writer, `search_path`, menu and picker order, the missing-value texts one by one, the stored list price after a receipt, Receiving's target price, the recorded not-allowed write, and the migration and `test:costing` greps. The T3 and T5 stub digests are recomputed and every stub is revalidated.
+- 2026-10-09: review round 2. Every page refuses framing (owner decision); a what-if counts the typed cost as a cost (owner decision). The list price check refuses NaN; the view gains `needs_new_price` so the list orders below-target rows first whatever their action; the URL codes shown back are pinned as literal text; the caller check's non-operator and auth-lookup messages get criteria; the heading order and empty-heading rule split out; AC-0160 reads the catalog instead of grepping; the stub validation records its sandbox and the harness side effects.
