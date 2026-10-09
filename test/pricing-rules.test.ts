@@ -134,6 +134,11 @@ describe("what-if rows (AC-0123)", () => {
       ok: true,
       value: { rawCode: "<b>9</b>", cost: 0 },
     });
+    // A padded code is not RAW-TOM's code, so it passes through as given.
+    expect(parseWhatIf({ rawCode: " RAW-TOM", cost: "2" })).toEqual({
+      ok: true,
+      value: { rawCode: " RAW-TOM", cost: 2 },
+    });
   });
 });
 

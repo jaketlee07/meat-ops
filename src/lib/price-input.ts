@@ -47,5 +47,5 @@ export function parseWhatIf(fields: WhatIfFields): WhatIfParse {
     errors.cost = "Use at most 4 decimal places for cost.";
   }
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { rawCode: fields.rawCode.trim(), cost: Number(fields.cost) } };
+  return { ok: true, value: { rawCode: fields.rawCode, cost: Number(fields.cost) } };
 }

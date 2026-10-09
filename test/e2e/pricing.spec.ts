@@ -473,6 +473,24 @@ test.describe("the what-if", () => {
     expect(await checkPageState(page)).toEqual(WITH_502);
   });
 
+  test("AC-0075 and AC-0083: after RAW-TOM's only receipt is voided, its costs show None yet", async ({ page }) => {
+    const lot = await fixture502(0.2, 3.29);
+    const voided = await callAsOperator(voidReceiptCall(lot));
+    expect(voided.ok, voided.error).toBe(true);
+    await opens(page);
+    const c = card(page, "502");
+    await expect(group(page, "No cost yet").getByRole("heading", { name: "502 Smoked Turkey Drums Tom" })).toBeVisible();
+    await expect(figure(c, "Cost per lb")).toHaveText("None yet");
+    await expect(figure(c, "Suggested price")).toHaveText("No price yet");
+    await expect(figure(c, "Margin at list price")).toHaveText("None yet");
+    await opensDetail(page, "502");
+    const main = page.locator("main");
+    for (const label of ["Raw average cost", "Cost after shrink", "Cost per lb"]) {
+      await expect(figure(main, label), label).toHaveText("None yet");
+    }
+    await expect(figure(main, "Suggested price")).toHaveText("No price yet");
+  });
+
   test("AC-0143: the same prices after RAW-TOM's only receipt is voided", async ({ page }) => {
     const lot = await fixture502(0.2, 3.29);
     const voided = await callAsOperator(voidReceiptCall(lot));
@@ -557,6 +575,10 @@ test.describe("the what-if", () => {
     }
     // The what-if for an AC-0125 code.
     expect(await checkPageState(page)).toEqual(WITH_502);
+    // A code padded with a space is not RAW-TOM's code.
+    await opens(page, `/pricing?raw=${encodeURIComponent(" RAW-TOM")}&cost=2`);
+    await expect(page.getByText(/^No active finished product is made from\s+RAW-TOM\.$/)).toBeVisible();
+    await expect(whatIf(page).cards).toHaveCount(0);
   });
 });
 
@@ -723,10 +745,13 @@ test.describe("the target margin", () => {
   test("AC-0092, AC-0133, and AC-0134: 22.5 saves by keyboard; the detail re-reads, and the field shows the stored value", async ({
     page,
   }) => {
-    await fixture502(0.2, 3.29);
+    await fixture502(null, null);
     await opensDetail(page, "502");
     const d = detail(page);
-    await d.target.fill("");
+    // Before the save: the no-target layout.
+    await expect(figure(d.main, "Profit")).toHaveText("$0.0500/lb");
+    await expect(d.main.getByText(NO_TARGET_SENTENCE, { exact: true })).toBeVisible();
+    await expect(d.target).toHaveValue("");
     await d.target.focus();
     await page.keyboard.type("22.50");
     await page.keyboard.press("Tab");
@@ -738,11 +763,14 @@ test.describe("the target margin", () => {
     await expect(d.refused).toHaveText("");
     await expect(figure(d.main, "Target margin")).toHaveText("22.5%");
     await expect(figure(d.main, "Suggested price")).toHaveText("$3.40/lb");
+    // After the save: the target layout, with no margin fee and no no-target sentence.
+    await expect(d.main.getByText(NO_TARGET_SENTENCE, { exact: true })).toHaveCount(0);
+    await expect(d.main.getByText("Profit", { exact: true })).toHaveCount(0);
     await expect(d.target).toHaveValue("22.5");
     expect(await storedTarget(PROD_502_ID)).toBe(0.225);
     // The detail after a target save.
     expect(await checkPageState(page)).toEqual(
-      detailControls({ apply: "Raise list price to $3.40/lb", remove: true }),
+      detailControls({ apply: "Set list price to $3.40/lb", remove: true }),
     );
   });
 

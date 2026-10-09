@@ -67,19 +67,19 @@ export function PricingDetail({ detail }: { detail: Detail }) {
           <Figure label="Raw input" value={detail.raw ? `${detail.raw.code} ${detail.raw.description}` : "None"} />
           <Figure
             label="Raw average cost"
-            value={detail.rawAverageCost === null ? "None yet" : formatCostPerLb(detail.rawAverageCost)}
+            value={!detail.hasCost || detail.rawAverageCost === null ? "None yet" : formatCostPerLb(detail.rawAverageCost)}
           />
           <Figure label="Shrink" value={detail.shrink === null ? "None yet" : formatShrink(detail.shrink)} />
           <Figure
             label="Cost after shrink"
-            value={detail.costAfterShrink === null ? "None yet" : formatCostPerLb(detail.costAfterShrink)}
+            value={!detail.hasCost || detail.costAfterShrink === null ? "None yet" : formatCostPerLb(detail.costAfterShrink)}
           />
           {detail.processingFees.map((fee) => (
             <Figure key={fee.name} label={fee.name} value={formatCostPerLb(fee.amountPerLb)} />
           ))}
           <Figure
             label="Cost per lb"
-            value={detail.costPerLb === null ? "None yet" : formatCostPerLb(detail.costPerLb)}
+            value={!detail.hasCost || detail.costPerLb === null ? "None yet" : formatCostPerLb(detail.costPerLb)}
           />
           {detail.targetMargin !== null && <Figure label="Target margin" value={formatMargin(detail.targetMargin)} />}
           {detail.targetMargin === null &&

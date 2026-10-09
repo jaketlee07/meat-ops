@@ -92,7 +92,10 @@ function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: Cha
         </Link>
       </h3>
       <dl className="mt-1 space-y-1 text-base tabular-nums">
-        <Figure label="Cost per lb" value={row.costPerLb === null ? "None yet" : formatCostPerLb(row.costPerLb)} />
+        <Figure
+          label="Cost per lb"
+          value={!row.hasCost || row.costPerLb === null ? "None yet" : formatCostPerLb(row.costPerLb)}
+        />
         <Figure
           label="List price"
           value={row.listPrice === null ? "No list price yet" : formatPricePerLb(row.listPrice)}

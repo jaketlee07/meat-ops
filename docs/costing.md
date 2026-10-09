@@ -268,6 +268,7 @@ Where the database has nothing to show, the screen uses text:
   receipt shows "No price yet".
 - The list price of a finished product with none shows "No list price yet".
 - The target margin of a finished product with none shows "No target".
-- A cost per lb, a cost after shrink, or a margin at list price that the
-  database has no value for (no non-void receipt, or no list price for the
-  margin) shows "None yet".
+- The raw average cost, cost after shrink, and cost per lb of a finished
+  product whose raw product has no non-void receipt show "None yet", whatever
+  average a void left stored. Its margin at list price shows "None yet" too, as
+  does the margin of a product with no list price.
