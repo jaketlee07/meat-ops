@@ -36,9 +36,9 @@ export type WhatIfParse =
   | { ok: true; value: { rawCode: string; cost: number } }
   | { ok: false; errors: Partial<Record<WhatIfField, string>> };
 
-// A code that is not in `rawCodes` is not a form error: AC-0125 answers it on
-// the results side. Only "none chosen" is refused here.
-export function parseWhatIf(fields: WhatIfFields, _rawCodes?: ReadonlySet<string>): WhatIfParse {
+// An unknown raw code is not a form error: AC-0125 answers it on the results
+// side. Only "none chosen" is refused here.
+export function parseWhatIf(fields: WhatIfFields): WhatIfParse {
   const errors: Partial<Record<WhatIfField, string>> = {};
   if (fields.rawCode.trim() === "") errors.rawCode = "Choose a raw product.";
   if (!NUMBER_TEXT.test(fields.cost)) {

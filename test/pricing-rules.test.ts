@@ -101,37 +101,36 @@ describe("list price rows (AC-0101)", () => {
 });
 
 describe("what-if rows (AC-0123)", () => {
-  const codes = new Set(["RAW-TOM"]);
   it("refuses no raw product, and keeps a good cost", () => {
-    expect(parseWhatIf({ rawCode: "", cost: "2.00" }, codes)).toEqual({
+    expect(parseWhatIf({ rawCode: "", cost: "2.00" })).toEqual({
       ok: false,
       errors: { rawCode: "Choose a raw product." },
     });
   });
   it("refuses both fields at once", () => {
-    expect(parseWhatIf({ rawCode: "", cost: "" }, codes)).toEqual({
+    expect(parseWhatIf({ rawCode: "", cost: "" })).toEqual({
       ok: false,
       errors: { rawCode: "Choose a raw product.", cost: "Enter the cost per lb, like 1.68." },
     });
   });
   it.each(["", "abc", "-1", "1.2.3"])("%j asks for the cost", (cost) => {
-    expect(parseWhatIf({ rawCode: "RAW-TOM", cost }, codes)).toEqual({
+    expect(parseWhatIf({ rawCode: "RAW-TOM", cost })).toEqual({
       ok: false,
       errors: { cost: "Enter the cost per lb, like 1.68." },
     });
   });
   it("refuses more than 4 decimal places", () => {
-    expect(parseWhatIf({ rawCode: "RAW-TOM", cost: "1.23456" }, codes)).toEqual({
+    expect(parseWhatIf({ rawCode: "RAW-TOM", cost: "1.23456" })).toEqual({
       ok: false,
       errors: { cost: "Use at most 4 decimal places for cost." },
     });
   });
   it("accepts a cost of 0 and passes an unknown code through", () => {
-    expect(parseWhatIf({ rawCode: "RAW-TOM", cost: "2.0000" }, codes)).toEqual({
+    expect(parseWhatIf({ rawCode: "RAW-TOM", cost: "2.0000" })).toEqual({
       ok: true,
       value: { rawCode: "RAW-TOM", cost: 2 },
     });
-    expect(parseWhatIf({ rawCode: "<b>9</b>", cost: "0" }, codes)).toEqual({
+    expect(parseWhatIf({ rawCode: "<b>9</b>", cost: "0" })).toEqual({
       ok: true,
       value: { rawCode: "<b>9</b>", cost: 0 },
     });
