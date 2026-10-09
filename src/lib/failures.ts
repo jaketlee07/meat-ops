@@ -3,6 +3,8 @@
 // components import the texts below. An error's PostgREST code is read from the
 // error itself (src/lib/rpc.ts RpcError), not by importing that class.
 
+import { formatDate, formatWeight } from "./format";
+
 export const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
 export const INACTIVE_PRODUCT = "This product is no longer active.";
 // AC-0071: the write call got no answer from the engine, so the save may have happened.
@@ -33,9 +35,13 @@ function codeOf(error: unknown): string {
 }
 
 // The engine's text without the "<wrapper> failed: " and "<function>: " prefixes.
+function engineText(error: unknown): string {
+  return (error instanceof Error ? error.message : "").replace(/^\w+ failed: /, "").replace(/^\w+: /, "");
+}
+
 function refusalReason(error: unknown, code: string): string {
   if (code === "42501") return NOT_ALLOWED;
-  const text = (error instanceof Error ? error.message : "").replace(/^\w+ failed: /, "").replace(/^\w+: /, "");
+  const text = engineText(error);
   return / is inactive$/.test(text) ? INACTIVE_PRODUCT : text;
 }
 
@@ -59,11 +65,47 @@ export function voidFailureMessage(error: unknown, stage: FailureStage): string 
   return `${NOT_VOIDED} ${/[.!?]$/.test(reason) ? reason : `${reason}.`} ${RELOAD_STOCK}`;
 }
 
-export type ReceivingAction = "saveReceipt" | "voidReceipt";
+// The lead sentence of every not-saved batch message, shared with the batch action.
+export const NOT_SAVED_BATCH = "The batch wasn't saved.";
+// AC-0035: the write call got no answer from the engine, so the batch may have been saved.
+export const BATCH_SAVE_UNKNOWN =
+  "The batch may not have been saved. Reload this page and check Recent batches before saving again.";
+const RAW_INACTIVE = "Its raw product is no longer active.";
+const SHORTFALL =
+  /^shortfall, only (\d+(?:\.\d+)?) lbs raw available on or before (\d{4}-\d{2}-\d{2}), need (\d+(?:\.\d+)?)$/;
+
+// AC-0030 to AC-0035, AC-0075, AC-0080. The raw-input refusal is checked before
+// the general "is inactive" rule because both texts end in "is inactive".
+export function batchSaveFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_SAVED_BATCH} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return BATCH_SAVE_UNKNOWN;
+  if (code === "42501") return `${NOT_SAVED_BATCH} ${NOT_ALLOWED}`;
+  const text = engineText(error);
+  if (/^raw input .+ is inactive$/.test(text)) return `${NOT_SAVED_BATCH} ${RAW_INACTIVE}`;
+  const shortfall = SHORTFALL.exec(text);
+  if (shortfall) {
+    const [, available, onOrBefore, needed] = shortfall;
+    return `${NOT_SAVED_BATCH} Only ${formatWeight(Number(available))} of raw on hand was received on or before ${formatDate(onOrBefore ?? "")}, and this batch needs ${formatWeight(Number(needed))}.`;
+  }
+  return `${NOT_SAVED_BATCH} ${refusalReason(error, code)}`;
+}
+
+// The server actions whose failures are logged: the receiving actions and saveBatch.
+export type ReceivingAction = "saveReceipt" | "voidReceipt" | "saveBatch";
 
 const LOG_MESSAGE_LIMIT = 200;
 
-// The server log line for a failure that saveReceipt or voidReceipt turned into a
+// The one rule for the error text in any action's log line: the error's own
+// message on one line, trimmed and cut to LOG_MESSAGE_LIMIT. It holds no form values.
+export function logMessage(error: unknown): string {
+  return (error instanceof Error ? error.message : "unknown error")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, LOG_MESSAGE_LIMIT);
+}
+
+// The server log line for a failure that an action turned into a
 // screen message. It names the action and the stage and identifies the failed call
 // by the error's own message and, for an RpcError, its code. The line adds nothing
 // from the form, but the error's message can quote a value the request sent: Postgres
@@ -71,12 +113,8 @@ const LOG_MESSAGE_LIMIT = 200;
 // engine names ids in its refusals. Only a signed-in operator's hand-made request can
 // carry such a value, and the message is cut to one bounded line.
 export function actionFailureLogLine(action: ReceivingAction, stage: FailureStage, error: unknown): string {
-  const message = (error instanceof Error ? error.message : "unknown error")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, LOG_MESSAGE_LIMIT);
   const code = codeOf(error);
-  return `${action} failed at ${stage}: ${message}${code ? ` (code ${code})` : ""}`;
+  return `${action} failed at ${stage}: ${logMessage(error)}${code ? ` (code ${code})` : ""}`;
 }
 
 // An auth-js error, read for its code and status only. Both are missing or 0

@@ -3,6 +3,8 @@
 // so they read no database, no environment, and no clock. The caller passes
 // the active raw product codes and today's date (YYYY-MM-DD).
 
+import { decimalPlaces, NUMBER_TEXT } from "./number-text";
+
 export interface ReceiptFields {
   productCode: string;
   vendorId: string;
@@ -29,14 +31,6 @@ export type ReceiptParse =
   | { ok: false; errors: Partial<Record<ReceiptField, string>> };
 
 const MAX_NOTES_LENGTH = 500;
-
-// Digits with at most one decimal point, and at least one digit.
-const NUMBER_TEXT = /^(\d+\.?\d*|\.\d+)$/;
-
-function decimalPlaces(text: string): number {
-  const dot = text.indexOf(".");
-  return dot === -1 ? 0 : text.length - dot - 1;
-}
 
 // Within one field the first matching rule wins, so each field gets one message.
 export function parseReceiptForm(fields: ReceiptFields, rawCodes: ReadonlySet<string>): ReceiptParse {
