@@ -6,9 +6,9 @@
   - **Area rules and access model:** `docs/architecture/overview.md`.
   - **Analogous implementations:** the production page, `src/app/production/` (`page.tsx`, `actions.ts`, `save-batch.ts`, `recent-batches.tsx`, `error.tsx`), over `src/lib/production.ts`, `src/lib/batch-input.ts`, `src/lib/failures.ts`, and `src/lib/format.ts`; the receipt void, `src/app/receiving/void-dialog.tsx` and `voidReceipt` in `src/app/receiving/actions.ts`; the pricing page's URL-driven views (`?product=`, `?raw=&cost=`) in `src/app/pricing/page.tsx` and `what-if-form.tsx`; for a replaced view, `supabase/migrations/20261009070619_menu_pricing.sql`.
   - **Their tests:** `test/production-rules.test.ts`, `test/production-data.test.ts`, `test/save-batch.test.ts`, `test/corrections.test.ts` (the trace view), `test/access.test.ts`, and the browser suites `test/e2e/production.spec.ts`, `test/e2e/receiving.spec.ts` (void), and `test/e2e/pricing.spec.ts` (URL-driven views, literal text), with their page helpers, `test/e2e/a11y.ts`, and `test/e2e/states.ts`. Fixtures come from `test/db.ts` (`resetTestData`, `callAsClient`, `callAsOperator`, `OpCall`, `tableFingerprints`, `assertLedgerInvariants`) and `test/users.ts`.
-  - **Named deviations:** the sale void dialog is a sales copy of the receipt dialog's pattern rather than a shared component, because sharing it changes the receiving page (an Ask-first change) and `docs/product/intents/shared-display-parts.md` owns moving shared parts. `/trace` is the first page with no server action: it reads only, through URL parameters, as the pricing what-if does.
+  - **Named deviations:** the sale void dialog is a sales copy of the receipt dialog's pattern rather than a shared component, because sharing it changes the receiving page (an Ask-first change) and `docs/product/intents/shared-display-parts.md` owns moving shared parts. `/trace` has no server action, like `/menu`: it reads only, through URL parameters, as the pricing what-if does.
   - **Read-only probes on the local stack, 2026-10-09:** `record_sale`'s shortfall text is `record_sale: shortfall, only <n> lbs finished available on or before <date>, need <n>`; the seed holds one customer and one sale; the `authenticator` role's settings hold no `pgrst.db_aggregates_enabled`, so PostgREST aggregates are off.
-  - **Disconfirming probe, 2026-10-09,** in a rolled-back transaction: `CREATE OR REPLACE VIEW public.v_sale_traceability with (security_invoker = true)` appending `sale_id`, `customer_id`, `raw_code`, `produced_seq`, and `receipt_seq` succeeded, and `reloptions` read `{security_invoker=true}`. A grouped `v_sale_summary` gave a 1,100.25-lb sale over two finished lots one row with `lbs_sold` 1100.250 and `price_per_lb` 3.2900, and the trace rows for it ordered by `produced_seq` and `receipt_seq` gave 1,040.000 lbs then 60.250 lbs. Nothing was kept.
+  - **Disconfirming probes, 2026-10-09,** each in a rolled-back transaction: `CREATE OR REPLACE VIEW public.v_sale_traceability with (security_invoker = true)` appending all six columns (`sale_id`, `sale_created_at`, `customer_id`, `raw_code`, `produced_seq`, `receipt_seq`) succeeded, and `reloptions` read `{security_invoker=true}` on both views. Over the spec's sale fixture, batch 1 and batch 2 made 4,620.000 and 770.000 finished lbs; a 5,000-lb sale dated 2026-10-06 was refused with `record_sale: shortfall, only 4620.000 lbs finished available on or before 2026-10-06, need 5000`; the 5,000-lb sale gave one `v_sale_summary` row with `lbs_sold` 5000.000 and `price_per_lb` 3.2900; and its trace rows in draw order were batch 1 over lot A (5,000.000 lbs drawn) and lot B (1,000.000), then batch 2 over lot B, with 4,620.000 and 380.000 lbs sold. Nothing was kept.
 
 > **Plan contract:** this is the implementation strategy. It may change
 > substantively only while its Status is `Drafting`, before approval records its
@@ -26,7 +26,7 @@
 The work lands as three dependency-ordered layers on `feat/sales`, then a
 closing task. Each layer is its own commits and leaves `npm test` green.
 
-1. **Database (T1).** One migration adds `v_sale_summary` and appends five columns to `v_sale_traceability`. The view tests go in `test/sales.test.ts` first. `SYSTEM-SPEC.md` §4 and the `docs/costing.md` sentence on where the math lives change with it.
+1. **Database (T1).** One migration adds `v_sale_summary` and appends six columns to `v_sale_traceability`. The view tests go in `test/sales.test.ts` first. `SYSTEM-SPEC.md` §4 and the `docs/costing.md` sentence on where the math lives change with it.
 2. **Sales (T2 to T5).** Pure rules and messages, then the reads, then the save and void decisions, then `/sales` with the two new navigation links.
 3. **Trace (T6).** `/trace` with its sale lookup, its lot finder, and the two trace views.
 4. **Closing (T7).** The docs, the goal-based checks, the recorded run, and the rendered-page inspection.
@@ -77,9 +77,11 @@ failure notes, T7).
 - **A view sums a sale, so the app never adds.** `v_sale_summary` gives one row per sale, void or not: `sale_id`, `sale_number`, `sale_date`, `created_at`, `customer_id`, `customer`, `finished_product_id`, `finished_code`, `finished_product`, `lbs_sold` (sum of the lines), `price_per_lb` (`min` of the lines' price; `record_sale` writes one price on every line), `voided_at`, and `void_reason`. It inner-joins the lines, so a sale with no line, which `record_sale` cannot write, has no row. The recent sales list, a trace's heading facts, and the "Sale saved" panel all read it. Traces to: AC-0010, AC-0011, and AC-0012, AC-0040, AC-0070, AC-0071, AC-0072, AC-0073, and AC-0074, AC-0095, AC-0102.
 - **The trace view gains the keys the pages need, appended.** `v_sale_traceability` keeps its 16 columns in name, type, and order, and appends `sale_id`, `sale_created_at`, `customer_id`, `raw_code`, `produced_seq`, and `receipt_seq`, because `CREATE OR REPLACE VIEW` allows only appending and three suites read the old columns. Both views are created `with (security_invoker = true)`. The forward trace orders by `production_date, produced_seq, received_date, receipt_seq`; a lot's sales order by `sale_date desc, sale_created_at desc, production_date, produced_seq`. The void filter stays, so a void sale has no trace rows and its trace page reads the summary view for its heading. Traces to: AC-0013, AC-0016, AC-0017, AC-0096, AC-0097, AC-0098, AC-0099, and AC-0100, AC-0122, AC-0123, AC-0124, AC-0125, and AC-0126.
 - **The price field fills from the page's product list.** The page reads the menu view (`product_id`, `code`, `description`, `list_price_per_lb`, `finished_lbs_available`) once per render. The client form sets the price field to `priceFieldText(list_price_per_lb)` (the existing 2-decimal text the pricing detail uses) or to empty whenever the code field comes to name a different product of that list, and leaves it alone otherwise. A typed code not in the list leaves the price field as it is. Traces to: AC-0020, AC-0021, AC-0022, AC-0023, and AC-0024, AC-0033.
+- **Save settles a code missing from the page's list the way production does.** When Save sale is pressed with a code the page's list lacks, the form re-requests `/sales?product=<code>` and, once that render returns, runs the form rules over the fresh active list (`awaiting` in `src/app/production/production-form.tsx`). An inactive or unknown code is then refused beside its field, and an active product added after the page loaded saves without a reload. The fresh render fills nothing: the price field changes only when the owner edits the code field, so a typed price survives. Traces to: AC-0029, AC-0033.
 - **The save action checks the code against every finished product,** active or not, as `saveBatch` does, so a product made inactive after the page loaded reaches `record_sale` and is refused there with its own reason. It checks the customer id against the customer list it reads before the write. Traces to: AC-0029, AC-0030, AC-0033, AC-0051.
-- **Before and after are two reads of the menu view's `finished_lbs_available`,** one before `record_sale` and one after it. Traces to: AC-0044.
+- **Before and after are two reads of the menu view's `finished_lbs_available`,** one before `record_sale` and one after it. The menu view keeps only active products, so a product made inactive since the page loaded has no row: the read before returns null rather than failing, the write still runs, and the engine's refusal is what the owner sees. Traces to: AC-0044, AC-0051.
 - **The result's finished lots come from the trace view,** read by `sale_id` in draw order and grouped by `sale_item_id` in first-seen order. The same read builds a sale's trace. Grouping is not arithmetic: each line's `lbs_sold` is shown as the database gave it. Traces to: AC-0041, AC-0042, and AC-0043, AC-0096, AC-0097, AC-0098, and AC-0099.
+- **A lot's trace reads every one of its trace rows.** PostgREST stops a read at 1,000 rows (`max_rows` in `supabase/config.toml`) without an error, so `getLotTrace` reads the lot's rows in pages with `.range()` and an exact count until it holds them all, and both the sales list and the customers come from that complete set. Traces to: AC-0135.
 - **A lot's customers are the distinct `customer_id`s among its trace rows,** sorted by name with `localeCompare(…, "en", { sensitivity: "base" })` as `listVendors` does, with "No customer" last when any row has none. Traces to: AC-0122.
 - **A lot's finished stock is two reads:** the batch ids from `production_batch_lots` for the lot, then the `finished_goods` of those batches with `lbs_remaining > 0`, ordered `produced_date, produced_seq`, with the batch number and product code and description. Traces to: AC-0128, AC-0129, AC-0130, and AC-0131.
 - **The lot finder reads `lots` of the raw product** with `voided_at is null`: with no date, ordered `received_date desc, receipt_seq desc`, limit 10, with an exact count; with a date, `received_date = <date>` ordered `receipt_seq desc`. The raw product is found by code among every raw product, active or not. Traces to: AC-0110, AC-0111, AC-0112, AC-0113, AC-0114, AC-0115, AC-0116, AC-0117, and AC-0118.
@@ -98,7 +100,7 @@ failure notes, T7).
 - `src/lib/sale-input.ts`: `SaleFields { productCode, lbs, pricePerLb, customerId, saleDate, today }`, `SaleField`, `SaleInput { productCode, lbs, pricePerLb, customerId?, saleDate }`, `parseSaleForm(fields, finishedCodes, customerIds): SaleParse`, `parseSaleNumber(text)`, and `parseLotFinder({ rawCode, received })`. An empty `customerId` means "No customer". The void reason reuses `parseVoidReason` from `receipt-input.ts`; the calendar-date rule is exported from `batch-input.ts` and reused.
 - `src/lib/failures.ts`: `NOT_SAVED_SALE`, `SALE_SAVE_UNKNOWN`, `NOT_VOIDED_SALE`, `SALE_VOID_UNKNOWN`, `saleSaveFailureMessage(error, stage)` with the finished-stock shortfall rule, and `saleVoidFailureMessage(error, stage)`; `LoggedAction` gains `saveSale` and `voidSale`.
 - `src/lib/sales.ts`: `listSaleProducts(client)` (the menu view rows in code order), `listCustomers(client)`, `getFinishedOnHand(client, productId)`, `listRecentSales(client)` returning `{ sales, total }`, and `getSaleSummary(client, saleId)`.
-- `src/lib/trace.ts`: `getSaleTrace(client, saleNumber)` returning the summary plus `lots: { saleItemId, batchNumber, productionDate, lbsSold, rawLots: { lotNumber, rawCode, rawProduct, vendor, receivedDate, lbsDrawn, costPerLb }[] }[]`, or null; `listSaleLots(client, saleId)` (the same `lots` for the "Sale saved" panel); `findLots(client, rawCode, received?)` returning `{ rawProduct, lots, total }` or null; and `getLotTrace(client, lotNumber)` returning the lot, its customers, its sales, and its finished stock, or null.
+- `src/lib/trace.ts`: `getSaleTrace(client, saleNumber)` returning the summary plus `lots: { saleItemId, batchNumber, productionDate, lbsSold, rawLots: { lotNumber, rawCode, rawProduct, vendor, receivedDate, lbsDrawn, costPerLb }[] }[]`, or null; `listSaleLots(client, saleId)` (the same `lots` for the "Sale saved" panel); `findLots(client, rawCode, received?)` returning `{ rawProduct, lots, total }` or null; and `getLotTrace(client, lotNumber)` returning the lot, its customers, its sales, and its finished stock, or null. `getTrace` and `getTraceByLot` in `src/lib/views.ts` stay as they are for `test/costing.test.ts` and `test/corrections.test.ts`; `trace.ts` reads the view itself because it needs the appended columns, an order, the summary view, and complete paging, which those two do not give.
 - `test/db.ts`: `PARAM_TYPES` gains `p_customer_id` and `p_sale_number`, so sale calls with a customer go through a pg operator session too.
 
 ### Component / module decomposition
@@ -142,7 +144,8 @@ State matrix (the applicable subset of the 18 states):
 | permission/denied | Not-allowed page with Sign out | AC-0002 |
 | high-zoom | 320 px reflow; cards, not tables | AC-0151 |
 | keyboard-only | Full keyboard path, visible focus | AC-0153, AC-0162 |
-| offline, blocked, long-content, large-data-set, reduced-motion, disabled | Not applicable: the office pages assume a connection (`SYSTEM-SPEC.md` §9); nothing blocks a sale but the engine's refusals, which are errors; descriptions wrap; lists are capped at 10 with a count, and a lot's sales and stock are bounded by its pounds; there is no animation; no control is shown disabled except while pending | n/a |
+| large-data-set | A lot's sales and customers can pass the API's 1,000-row cap, so its trace reads every row in pages and lists them all; the recent sales and lot lists are capped at 10 with a count; a sale's trace and a day's receipts are bounded by one sale and one day | AC-0135, AC-0074, AC-0111 |
+| offline, blocked, long-content, reduced-motion, disabled | Not applicable: the office pages assume a connection (`SYSTEM-SPEC.md` §9); nothing blocks a sale but the engine's refusals, which are errors; descriptions wrap; there is no animation; no control is shown disabled except while pending | n/a |
 
 A save moves through idle, invalid, pending, saved, and refused or failed. On
 success the action revalidates `/sales` only when `readAfter` succeeded, as
@@ -150,7 +153,7 @@ success the action revalidates `/sales` only when `readAfter` succeeded, as
 
 ### Behavior & rules
 
-- `saleSaveFailureMessage` reads the stage and the code like `batchSaveFailureMessage`: before-write gives "try again"; no code gives the may-not-have-been text; 42501 gives not-allowed; the finished-stock shortfall text gives the AC-0050 sentence, its numbers through `formatWeight` and its date through `formatDate`; "is inactive" gives the inactive text; any other engine text follows "The sale wasn't saved." with its prefix removed.
+- `saleSaveFailureMessage` reads the stage and the code like `batchSaveFailureMessage`: before-write gives "try again"; no code gives the may-not-have-been text; 42501 gives not-allowed; the finished-stock shortfall text gives the AC-0050 sentence (finished stock made on or before the date that is still on hand), its numbers through `formatWeight` and its date through `formatDate`; "is inactive" gives the inactive text; any other engine text follows "The sale wasn't saved." with its prefix removed.
 - `saleVoidFailureMessage` reads like `voidFailureMessage`, with the sale texts.
 - The form rules mirror `parseBatchForm`: first matching row wins per field, `NUMBER_TEXT` and `decimalPlaces` from `number-text.ts`, and an invalid `today` refuses the date.
 
@@ -169,7 +172,7 @@ success the action revalidates `/sales` only when `readAfter` succeeded, as
 
 ## Tasks
 
-Stub validation, 2026-10-09. Each `stub: true` block below was extracted from
+Stub validation, 2026-10-09, rerun after review round 1 with the same results. Each `stub: true` block below was extracted from
 this file into a `git archive` copy of `HEAD` in the session's scratch directory,
 outside the repository, and its sha256 recorded from that extraction (the code
 lines plus one terminal newline).
@@ -260,7 +263,6 @@ it("AC-0010: the sale summary gives the 5,000-lb sale its total lbs and price", 
 - `test/costing.test.ts`, `test/corrections.test.ts`, and `test/engine.test.ts` stay unchanged and green.
 
 **Approach:**
-- Before applying the migration, record in the verification ledger the columns of every base table and view in `public` and the list of `public` functions, from `information_schema` and `pg_proc`, with the local database at `main`'s migrations, for AC-0016 and AC-0017.
 - Write the migration as the Data & schema section says; apply it; run `npm run gen:types`.
 - In `SYSTEM-SPEC.md` §4, extend the `v_sale_traceability` entry and add `v_sale_summary`. In `docs/costing.md`, add `v_sale_summary` to the sentence on where the math lives.
 
@@ -273,7 +275,7 @@ it("AC-0010: the sale summary gives the 5,000-lb sale its total lbs and price", 
 **Touches:** `src/lib/sale-input.ts`, `src/lib/batch-input.ts`, `src/lib/failures.ts`, `test/sales-rules.test.ts`
 
 **Tests:**
-- `test/sales-rules.test.ts`, a new file, no database. stub: true. Test functions and ACs: "AC-0029: a price per lb of 100,000,000 is refused" (AC-0029), "AC-0050: a shortfall names the finished stock, the date, and the lbs needed" (AC-0050). sha256 `bd58a07197339340d20b9bc317a1015570e960bb073c0ba566c1cf0a6d2ad921`.
+- `test/sales-rules.test.ts`, a new file, no database. stub: true. Test functions and ACs: "AC-0029: a price per lb of 100,000,000 is refused" (AC-0029), "AC-0050: a shortfall names the finished stock, the date, and the lbs needed" (AC-0050). sha256 `d32a663048a6e04894b7b8c3cbd4ed1095e8c5a1d9dcfd0e4995f9216c3d4ba4`.
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -308,7 +310,7 @@ describe("sale messages", () => {
       "P0001",
     );
     expect(saleSaveFailureMessage(error, "write")).toBe(
-      "The sale wasn't saved. Only 4,620 lbs of finished stock was made on or before Oct 6, 2026, and this sale needs 5,000 lbs.",
+      "The sale wasn't saved. Only 4,620 lbs of finished stock made on or before Oct 6, 2026 is on hand, and this sale needs 5,000 lbs.",
     );
   });
 });
@@ -409,6 +411,7 @@ it("AC-0098: a sale's trace lists its finished lots and their raw lots in draw o
   - `getSaleTrace` returns the AC-0043 and AC-0100 orders, the summary for a void sale with no lots, and null for an unknown number;
   - `findLots` returns the AC-0110 choice and order with its total, the AC-0112 date filter, no void receipt, an inactive raw product's receipts, and null for a finished product's code;
   - `getLotTrace` returns the AC-0122 customers, the AC-0124 order, the AC-0125 lines, the AC-0129 and AC-0130 finished stock, and null for an unknown lot number;
+  - `getLotTrace` returns all 1,001 sale lines and the oldest line's customer for the AC-0135 fixture, which one pg operator session writes as 1,001 one-pound `record_sale` calls from one batch (construction for AC-0135);
   - a real `record_sale` shortfall refusal, caught from `recordSale` and fed to `saleSaveFailureMessage`, gives the AC-0050 sentence, pinning the T2 rule to the engine's wording.
 
 **Approach:**
@@ -475,7 +478,7 @@ it("AC-0053: a read before the write fails, so nothing is written", async () => 
 
 **Depends on:** T4
 
-**Touches:** `src/app/page-header.tsx`, `src/app/sales/*`, `src/app/trace/page.tsx` (a heading-only page so the new link resolves until T6), `test/e2e/sales.spec.ts`, `test/e2e/sales-page.ts`, `test/e2e/receiving-page.ts`, `test/e2e/production-page.ts`, `test/e2e/menu-page.ts`, `test/e2e/pricing-page.ts`
+**Touches:** `src/app/page-header.tsx`, `src/app/sales/*`, `src/app/trace/page.tsx` (a heading-only page so the new link resolves until T6), `test/e2e/sales.spec.ts`, `test/e2e/sales-page.ts`, `test/e2e/receiving-page.ts`, `test/e2e/production-page.ts`, `test/e2e/menu-page.ts`, `test/e2e/pricing.spec.ts`
 
 **Tests:** no stub (mode): manual QA exercised by the browser suite.
 - `test/e2e/sales.spec.ts`, signed in as the operator, with fixtures written through `pg` like `test/e2e/production-page.ts`:
@@ -486,7 +489,7 @@ it("AC-0053: a read before the write fails, so nothing is written", async () => 
   - recent sales and void: AC-0070, AC-0071, AC-0072, AC-0073, AC-0074, AC-0075, AC-0076, AC-0077, AC-0078, AC-0079, AC-0080, AC-0081, AC-0082, AC-0083, AC-0084, AC-0085, and AC-0086 and AC-0089, with AC-0084 voiding the sale through a pg operator call after the list loads, AC-0085 with an ended session, and AC-0086 with the request-dropping helper;
   - keyboard and focus: AC-0153 for a save and a void, AC-0154, AC-0155 and AC-0156 after an AC-0029 refusal, AC-0157, AC-0158, AC-0159 after AC-0084, AC-0085, and AC-0086, AC-0160, AC-0161;
   - `checkPageState` with no findings in every `/sales` page state the spec lists except the error page: AC-0150, AC-0151, AC-0152, AC-0162, AC-0163 for those states.
-- `FORM_CONTROLS` in `test/e2e/receiving-page.ts` and `test/e2e/production-page.ts`, `MENU_CONTROLS` in `test/e2e/menu-page.ts`, and the pricing helper's control list gain "a Sales" and "a Trace" after "a Pricing" and before "button Sign out", so the four earlier browser suites stay green with the wider navigation.
+- `FORM_CONTROLS` in `test/e2e/receiving-page.ts` and `test/e2e/production-page.ts` and `MENU_CONTROLS` in `test/e2e/menu-page.ts` (which `NAV_CONTROLS` in `test/e2e/pricing-page.ts` aliases) gain "a Sales" and "a Trace", in that order, after "a Pricing", and the navigation slice at `test/e2e/pricing.spec.ts` that compares the first five controls with `NAV_CONTROLS` compares `NAV_CONTROLS.length` controls instead, so the four earlier browser suites stay green with the wider navigation.
 
 **Approach:**
 - Widen the header, build the page, form, panel, list, and dialog on the production and receiving patterns and the design above, and give `/trace` a heading-only page until T6.
@@ -506,6 +509,7 @@ it("AC-0053: a read before the write fails, so nothing is written", async () => 
   - a sale's trace: AC-0095, AC-0096, AC-0097, AC-0098, AC-0099, AC-0100, AC-0101, and AC-0102;
   - find a raw lot: AC-0110, AC-0111, AC-0112, AC-0113, AC-0114, AC-0115, AC-0116, AC-0117, AC-0118, and AC-0119, with AC-0115 on a raw product made inactive through `pg` and AC-0116 including the `<b>9</b>` code;
   - a lot's trace: AC-0120, AC-0121, AC-0122, AC-0123, AC-0124, AC-0125, AC-0126, AC-0127, AC-0128, AC-0129, AC-0130, AC-0131, and AC-0132 and AC-0134 (including the `<b>9</b>` number);
+  - AC-0135 over the T3 fixture of 1,001 sale lines, checking the count of listed sales and the oldest line's customer;
   - keyboard and focus: AC-0153 for Show sale, Show lots, and following a lot and a sale link; AC-0155 and AC-0156 after AC-0092 and AC-0119 refusals;
   - `checkPageState` with no findings in every `/trace` page state the spec lists except the error page: AC-0150, AC-0151, AC-0152, AC-0162, AC-0163 for those states.
 
@@ -527,11 +531,12 @@ it("AC-0053: a read before the write fails, so nothing is written", async () => 
   - with the app's `SUPABASE_URL` pointed at a throwaway forwarder in scratch (not committed) in front of the local REST service, restored afterwards:
     - the forwarder holds a `record_sale` call past the 10-second limit: the AC-0054 message, every field's value, the focused element, and a `pg` read of whether a sale was written;
     - the forwarder holds a `void_sale` call past the limit: the AC-0088 message and the focused element;
-    - the forwarder holds a `record_sale` call while a `pg` session deletes the operator's `private.operators` row, then lets it through: the AC-0057 message, every field's value, the focused element, and a `pg` read showing no sale written (AC-0058); the row is inserted back afterwards.
+    - the forwarder holds a `record_sale` call while a `pg` session deletes the operator's `private.operators` row, then lets it through: the AC-0057 message, every field's value, the focused element, and `pg` reads showing no sale written and every finished lot's `lbs_remaining` unchanged (AC-0058); the row is inserted back afterwards.
 - Rendered-page inspection, per `frontend-engineering` GATES step 5, of `/sales`, `/sales` after a save, `/trace?sale=<the 5,000-lb sale>`, `/trace?raw=RAW-TOM`, and `/trace?lot=<lot B>` over the sale fixture, at the narrow and wide fallback channels, each at the four required captures, with the five fields and the observations recorded in the ledger for the `frontend-reviewer`.
-- The commands of AC-0170, AC-0171, AC-0172, AC-0173, AC-0174, AC-0175, AC-0176, AC-0177, AC-0178, and AC-0179, each with its exit code recorded in the ledger, and AC-0016 and AC-0017 as the same catalog reads after `supabase db reset` compared with T1's record.
+- The commands of AC-0170, AC-0171, AC-0172, AC-0173, AC-0174, AC-0175, AC-0176, AC-0177, AC-0178, and AC-0179, each with its exit code recorded in the ledger, and AC-0016 and AC-0017 as two catalog reads compared: the columns of every base table and view in `public` and the list of `public` functions, from `information_schema` and `pg_proc`, first with the local database built from the then-current `main` migrations, then with it built from this branch's.
 
 **Approach:**
+- For the AC-0016 and AC-0017 baseline, extract `origin/main`'s `supabase/` into scratch with `git archive`, run `supabase db reset --workdir <scratch>`, read the catalog, then run `supabase db reset` in this worktree and read it again; the stack check in Risks runs first.
 - Edit the overview rows and sentences named in the spec's Durable Outputs row; in `docs/costing.md`, extend the Rounding note's price row to a sale's price per lb, add "No customer" to the missing-value texts, and name `test/e2e/sales.spec.ts` and `test/e2e/trace.spec.ts` in the file's opening.
 
 **Done when:** every check above is recorded as passing in the ledger.
@@ -545,11 +550,12 @@ it("AC-0053: a read before the write fails, so nothing is written", async () => 
 ## Risks
 
 - **The trace view is replaced.** A missing `security_invoker` opens sales to a non-operator, and a moved column breaks the suites that read it. AC-0013, AC-0016, `test/costing.test.ts`, and `test/corrections.test.ts` catch each.
-- **Three worktrees share one local stack.** `meat-ops`, `meat-ops-invoice`, and this one all use the `meat-ops` containers. A test run in one truncates the data another run is using, and `npm run gen:types` and the AC-0016 and AC-0017 catalog reads see whatever migrations are applied. Before T1's catalog record, before each `npm test`, and before T7's checks, confirm no other worktree's test run is active and that `supabase_migrations.schema_migrations` holds only `main`'s migrations and this branch's.
-- **Parallel navigation change.** Invoice-photo entry may also add a Primary link; whichever branch merges second rebases and widens the Tab-order lists again.
+- **Three worktrees share one local stack.** `meat-ops`, `meat-ops-invoice`, and this one all use the `meat-ops` containers. A test run in one truncates the data another run is using, and `npm run gen:types` and the AC-0016 and AC-0017 catalog reads see whatever migrations are applied. Before each `npm test`, before `npm run gen:types`, and before T7's checks, confirm no other worktree's test run is active and that `supabase_migrations.schema_migrations` holds only `main`'s migrations and this branch's. When either check fails, stop and ask the owner before running anything: never run `supabase db reset` over another worktree's applied migration without the owner's go-ahead, and after any reset tell the owner which worktree needs `supabase migration up` again.
+- **Parallel navigation change.** Invoice-photo entry may also add a Primary link. AC-0007 holds the six links in relative order, so it stays true; whichever branch merges second rebases and widens the browser helpers' Tab-order lists with the other branch's link.
 - **Shared modules and helpers.** `format.ts`, `failures.ts`, `batch-input.ts`, `page-header.tsx`, and the four earlier pages' control lists serve the earlier pages too; their suites run in every gate.
 - **The engine's texts are matched by wording.** A T3 test against a real shortfall refusal turns red first if `record_sale`'s text changes.
 
 ## Changelog
 
 - 2026-10-09: initial plan.
+- 2026-10-09: review round 1. A lot's trace reads every row past the API's 1,000-row cap (new AC-0135). AC-0040 leaves out lbs and price after a save whose reads after the write failed. The shortfall message says the stock is on hand, not made. AC-0007 holds the links in relative order, so a parallel feature's link does not break it. T5 also updates the pricing suite's navigation slice. Save settles a code missing from the page's list by re-rendering, as production does, and the stock read before the write tolerates an inactive product. T7 builds its catalog baseline from the then-current `main`. The stack check names what to do when it fails, and the AC-0057 recorded case also reads the finished lots. The T2 stub is revalidated.
