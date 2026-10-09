@@ -74,6 +74,12 @@ price is $0.658 of it.
 The pricing view and `price_what_if` carry the same expressions, and
 `test/pricing.test.ts` holds them equal.
 
+A raw cost of 0.00 with no fees gives a suggested list price of 0.00. The list
+price rule takes only a price above 0, so that product's Set or Lower button
+always answers "Price must be above 0." and saves nothing. The owner chose on
+2026-10-09 to keep this: a zero raw cost with no fees is not a real case for
+this business, and the message tells the truth.
+
 Golden numbers, for product 502 with RAW-TOM received as 5,000 lbs at 1.68
 (cost per lb 2.6318):
 
