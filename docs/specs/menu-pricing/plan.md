@@ -1,7 +1,7 @@
 # Plan: menu-pricing
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Drafting <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md`.
   - **Analogous implementations:** the production page, `src/app/production/` (`page.tsx`, `actions.ts`, `save-batch.ts`, `error.tsx`), over `src/lib/production.ts`, `src/lib/batch-input.ts`, `src/lib/failures.ts`, and `src/lib/format.ts`; for database functions, `receive_lot` and `private.assert_caller` in `supabase/migrations/20261007181933_engine_hardening.sql` and `20261008110703_operator_check.sql`.

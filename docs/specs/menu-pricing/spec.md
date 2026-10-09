@@ -1,6 +1,6 @@
 # Spec: menu-pricing
 
-- **Status:** Draft <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §4 (products, `v_product_pricing`, `v_current_menu`), §7 "Advise" (pricing advisor), §10 (margin advisor with what-if), §11 (boundaries), §12 (verification), §13 item 4; [`docs/costing.md`](../../costing.md) (the cost build-up, invariant 2, the average rule, the Rounding note); the access model, the write path, the `supabase/migrations/` change guidance, and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md)
