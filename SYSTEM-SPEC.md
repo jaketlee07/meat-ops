@@ -58,7 +58,7 @@ key. Money is stored as exact decimals, never floating point. Weights are in pou
 ### Reference and catalog
 
 - vendors: id, name, contact_name, phone, email, notes, created_at
-- products: id, code (unique, the owner's own code), description, brand, species, kind (one of: raw, finished), pack_style, lbs_per_pack, raw_product_id (fk products, set only on finished products, the raw input it is made from), shrink_pct (set only on finished products, fraction between 0 and 1), target_margin_pct (finished only, the margin the advisor holds to), list_price_override (finished only, optional manual price when the owner deviates from the suggested price), active, created_at
+- products: id, code (unique, the owner's own code), description, brand, species, kind (one of: raw, finished), pack_style, lbs_per_pack, raw_product_id (fk products, set only on finished products, the raw input it is made from), shrink_pct (set only on finished products, fraction between 0 and 1), target_margin_pct (finished only, optional, a fraction from 0 up to but not including 1: the share of the selling price the owner wants as margin; with a target the suggested price is cost per lb divided by one minus the target, rounded up to the cent, and the margin fees stop counting for that product; with no target the product keeps the sheet price), list_price_per_lb (finished only, optional, the price the owner charges, in dollars and cents; it changes only when the owner sets it), active, created_at
 - fee_types: id, code, name, kind (one of: processing, margin), sort_order
 - product_fees: product_id (fk products), fee_type_id (fk fee_types), amount_per_lb. Composite key of the two ids. Holds the per-lb processing fees for each finished product.
 
@@ -67,7 +67,8 @@ exactly one raw product (a one-to-one recipe via raw_product_id). Multi-ingredie
 blends are a later extension via a separate components table.
 
 Note on margin: margin evolves from the spreadsheet's flat per-lb "profit" fee to a
-target_margin_pct per finished product, so margin holds as costs move. The flat
+target_margin_pct per finished product, so margin holds as costs move. A product
+with no target keeps the sheet price: cost plus its per-lb margin fees. The flat
 processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 
 ### Inventory and cost state
@@ -102,8 +103,8 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 Views are read-only shapes the app and the AI read from. They never contain logic
 the app is allowed to bypass.
 
-- v_product_pricing: per finished product, the full cost build-up: raw moving-average cost, post-shrink cost, processing fees, target margin, resulting cost per lb, and suggested price per lb. The AI advisor reads this.
-- v_current_menu: per finished product, its suggested price and whether it is sellable now (has finished stock, or has raw available to make it). The menu reads this.
+- v_product_pricing: per finished product, the full cost build-up: raw moving-average cost, post-shrink cost, processing fees, target margin, resulting cost per lb, and suggested price per lb, plus the list price, whether the raw input has a cost, the suggested list price, the margin at the list price, the price action (set, raise, or lower), and whether the product needs a new price or is below its target. The pricing page and the AI advisor read this. The what-if function price_what_if works out the same cost, price, and margin for a typed raw cost.
+- v_current_menu: per finished product, its suggested price, its list price, and whether it is sellable now (has finished stock, or has raw available to make it). The menu reads this.
 - v_sale_traceability: per sale line, the full chain: sale, customer name (empty when the sale has no customer), sale line id, finished product, lbs sold and price per lb on the line, batch, production date, raw lot, raw product, vendor, received date, lbs drawn from that lot, and that lot's cost. Void sales do not appear. Both forward trace (sale to origin) and reverse trace (lot to every sale) read this.
 
 ## 5. The deterministic engine (behavioral contracts, no code)

@@ -1,35 +1,92 @@
 # Costing reference and golden invariants
 
 This is the source of truth for the costing math. The tests in
-`test/costing.test.ts`, `test/engine.test.ts`, and `test/corrections.test.ts`
-encode every costing number below. The display formats in the Rounding note are
+`test/costing.test.ts`, `test/engine.test.ts`, `test/corrections.test.ts`, and
+`test/pricing.test.ts` encode every costing number below. The display formats in the Rounding note are
 asserted by `test/format.test.ts` and `test/production-rules.test.ts`, and its
 missing-value texts by `test/e2e/receiving.spec.ts` and `test/e2e/production.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
-The math lives only in the Postgres functions `receive_lot`, `produce_batch`,
-`record_sale`, `void_receipt`, `void_sale`, and `adjust_lot`. Nothing in
-TypeScript computes a cost, an average, or a price.
+The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
+`record_sale`, `void_receipt`, `void_sale`, and `adjust_lot`, the view
+`v_product_pricing`, and the function `price_what_if`. Nothing in TypeScript
+computes a cost, an average, or a price.
 
 ## Cost build-up per finished lb
 
-Costing is raw cost, adjusted for shrink, plus processing fees, plus margin.
+Costing is raw cost, adjusted for shrink, plus processing fees. The price is
+then set by one of two rules, depending on whether the product has a target
+margin.
 
 ```
 post_shrink_cost = raw_cost_per_lb / (1 - shrink_pct)
 cost_per_lb      = post_shrink_cost + sum(processing fees)
-final_price      = cost_per_lb + sum(margin fees)
+final_price      = cost_per_lb + sum(margin fees)                  with no target margin
+final_price      = ceil(cost_per_lb / (1 - target) * 100) / 100    with a target margin
 ```
 
 Processing fees are costs (cutting, defrosting, process, direct material, labor,
-freezing, seasoning, overhead). Margin fees are added to reach price (profit,
-broker commission). They are separated by fee_types.kind.
+freezing, seasoning, overhead). Margin fees (profit, broker commission) count
+only for a product with no target margin. They are separated by fee_types.kind.
 
 ## Reference product: Smoked Turkey Drums Tom (code 502)
 
 - Raw input: Turkey Drums TOM, shrink 23 percent (0.2300)
 - Processing fees per lb: direct material 0.05, freezing 0.03, overhead 0.37 (total 0.45)
 - Margin fees per lb: profit 0.05
+
+## Target margin and list price
+
+A finished product can have two prices the owner sets: a target margin and a
+list price. Margin means share of the selling price: a 20% margin on a $3.29
+price is $0.658 of it.
+
+- **Target margin** (`target_margin_pct`) is a fraction from 0 up to but not
+  including 1. The owner types the percent, such as 22.5, and the database
+  stores 0.2250. With a target, the suggested price is
+  `cost_per_lb / (1 - target)` rounded up to the next whole cent, using
+  `cost_per_lb` rounded to 4 decimals. Rounding up keeps the margin at the
+  suggested price at or above the target. The margin fees do not count.
+- **No target** keeps the sheet price: `cost_per_lb` plus the margin fees,
+  rounded to 4 decimals. Invariant 2 stays at 2.6818.
+- **List price** (`list_price_per_lb`) is what the owner charges, in dollars
+  and cents. It changes only when the owner sets it.
+- **Suggested list price** is the suggested price rounded to the cent, half away
+  from zero. It is the number every page shows as the suggested price.
+- **Has cost** is true when the product's raw input has at least one non-void
+  receipt. With no cost there is no suggested list price, no margin at list
+  price, no price action, and the product is not below target.
+- **Margin at list price** is `(list - cost_per_lb) / list`, rounded to 4
+  decimals, when the product has a cost and a list price.
+- **Price action** applies when the product has a cost: Set with no list price,
+  Raise when the list price is below the suggested list price, Lower when it is
+  above, and none when they are equal. A product with an action needs a new
+  price.
+- **Below target** means the product has a cost, a target, and a list price, and
+  its margin at list price is below the target.
+- **The what-if** (`price_what_if`) works out cost per lb, the suggested price,
+  the suggested list price, and the margin at list price for each active
+  finished product made from a raw product, with a typed raw cost in place of
+  the average. The typed cost always counts as a cost, so the what-if prices a
+  raw product with no receipt. It saves nothing.
+
+The pricing view and `price_what_if` carry the same expressions, and
+`test/pricing.test.ts` holds them equal.
+
+Golden numbers, for product 502 with RAW-TOM received as 5,000 lbs at 1.68
+(cost per lb 2.6318):
+
+- With a 20% target, the suggested price is 2.6318 / 0.8 = 3.28975, rounded up
+  to 3.29. With a target of 0 it is 2.64, and with 22.5% it is 3.40. A profit
+  fee of 0.05 or 0.50 changes none of them.
+- With no target, margin at list price is 0.0180 at a 2.68 list price, 0.2001 at
+  3.29, 0.2481 at 3.50, and -0.0527 at 2.50.
+- With a 20% target and RAW-TOM received at 1.6632, cost per lb is 2.6100, the
+  suggested price is 3.27, and the margin at a 3.27 list price is 0.2018.
+- A what-if for RAW-TOM at 2.00, with a 20% target and a 3.29 list price, gives
+  502 a cost per lb of 3.0474, a suggested price of 3.81 (3.0474 / 0.8 =
+  3.80925, rounded up), and a margin at list price of 0.0737. With no target the
+  suggested price is 3.0974.
 
 ## The average cost of a raw product
 
@@ -178,9 +235,13 @@ at 1.68 and 1,000 lbs at 1.80, then adjust the second lot to 250 lbs. Stock is
 
 ## Rounding note
 
-v_product_pricing returns full-precision numeric. The 2.68 figure is a display
-rounding. Tests assert on Number(value).toFixed(2) for prices, and on exact
-equality only for values that are exact by construction (1.725, 1540).
+v_product_pricing returns numbers the database has already rounded: cost per lb
+and the sheet price to 4 decimals, a target price and a suggested list price to
+the cent, and a margin at list price to 4 decimals. The pricing tests
+(`test/pricing.test.ts`) compare these values exactly, as text. The 2.68 figure
+of invariant 2 is a display rounding of 2.6818, which the older tests assert as
+Number(value).toFixed(2); they use exact equality only for values that are exact
+by construction (1.725, 1540).
 
 The screen rounds only for display, half away from zero, from the decimal value
 the database returns. The production check step shows the owner's own entries
