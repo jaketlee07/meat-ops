@@ -420,7 +420,7 @@ test.describe("the list", () => {
     expect(await storedListPrice(PROD_502_ID)).toBe(2.68);
   });
 
-  test("AC-0070, AC-0068, and AC-0063: list, detail, save, and back", async ({ page }) => {
+  test("AC-0070 and AC-0063: list, detail, save, and back", async ({ page }) => {
     await fixture502(0.2, 2.68);
     await opens(page);
     await card(page, "502").getByRole("link", { name: "502 Smoked Turkey Drums Tom" }).click();
@@ -612,7 +612,7 @@ test.describe("the what-if", () => {
     await expect(whatIf(page).cards).toHaveCount(0);
   });
 
-  test("AC-0136: a field error from Enter in the field is an alert, and absent without an error", async ({ page }) => {
+  test("a what-if field error from Enter in the field is an alert, and absent without an error", async ({ page }) => {
     await fixture502(0.2, 3.29);
     await opens(page);
     const w = whatIf(page);
@@ -624,7 +624,7 @@ test.describe("the what-if", () => {
     await expect(w.cost).toBeFocused();
   });
 
-  test("AC-0121 and AC-0124: the outcome sits inside a status region that exists before it", async ({ page }) => {
+  test("the what-if outcome sits inside a status region that exists before it", async ({ page }) => {
     await fixture502(0.2, 3.29);
     await opens(page);
     const status = whatIf(page).section.locator("[role=status]");
@@ -653,6 +653,28 @@ test.describe("the what-if", () => {
     await expect(page).toHaveURL(/cost=2\.00$/);
     await expect(w.cost).toHaveValue("2.00");
     await expect(w.raw).toHaveValue("RAW-TOM");
+    // Back to the page with nothing chosen: the raw product and cost clear too.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/pricing$/);
+    await expect(w.raw).toHaveValue("");
+    await expect(w.cost).toHaveValue("");
+  });
+
+  test("after Back, a field error from the URL shows again", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opens(page, "/pricing?raw=RAW-TOM&cost=abc");
+    const w = whatIf(page);
+    const costError = page.locator("#what-if-cost-error");
+    await expect(costError).toHaveText("Enter the cost per lb, like 1.68.");
+    await w.cost.fill("2.00");
+    await w.show.click();
+    await expect(page).toHaveURL(/cost=2\.00$/);
+    await expect(w.cards).toHaveCount(1);
+    await expect(costError).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL(/cost=abc$/);
+    await expect(costError).toHaveText("Enter the cost per lb, like 1.68.");
+    await expect(w.cost).toHaveValue("abc");
   });
 });
 
@@ -802,6 +824,7 @@ test.describe("the target margin", () => {
       await d.target.fill(input);
       await d.saveTarget.click();
       await expect(d.targetError, input).toHaveText(message);
+      await expect(d.targetError, input).toHaveAttribute("role", "alert");
       await expect(d.target, input).toHaveAttribute("aria-describedby", "target-margin-error");
       await expect(d.target, input).toBeFocused();
       // The other field has no error, and every field keeps what was typed.
@@ -913,6 +936,7 @@ test.describe("the list price", () => {
       await d.price.fill(input);
       await d.savePrice.click();
       await expect(d.priceError, input).toHaveText(message);
+      await expect(d.priceError, input).toHaveAttribute("role", "alert");
       await expect(d.price, input).toHaveAttribute("aria-describedby", "list-price-error");
       await expect(d.price, input).toBeFocused();
       await expect(d.targetError, input).toHaveCount(0);

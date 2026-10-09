@@ -3,8 +3,8 @@
 export function Figure({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap justify-between gap-x-2">
-      <dt className="text-ink-secondary">{label}</dt>
-      <dd className="break-words">{value}</dd>
+      <dt className="min-w-0 break-words text-ink-secondary">{label}</dt>
+      <dd className="min-w-0 break-words">{value}</dd>
     </div>
   );
 }
