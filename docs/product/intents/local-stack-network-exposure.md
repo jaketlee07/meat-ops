@@ -31,5 +31,5 @@ Only this machine can reach the local Supabase stack's API, database, Studio, an
 
 - Mode: repo-origin
 - Locator: docs/specs/production/notes/verification-ledger.md
-- Revision: uncommitted
+- Revision: 3be979d
 - Authority: repo-origin

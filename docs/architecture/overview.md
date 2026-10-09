@@ -117,6 +117,20 @@ join public.lots b
 Finished lots have no timestamp, and their old order broke ties by id, so the
 query covers lots only.
 
+## Local stack notes
+
+- On the local stack, the `authenticated` role has an 8-second statement
+  timeout, shorter than the app's 10-second request limit. A call held up inside
+  the database ends with a coded refusal (SQLSTATE `57014`), not with no answer.
+  To show a write call that gets no answer, put a throwaway forwarder between
+  the app and the REST service and hold the call there.
+- If the Vitest suites slow down run after run, check
+  `pg_replication_slots.catalog_xmin` and the dead rows in `pg_class`. A Realtime
+  slot that holds the catalog horizon back keeps vacuum from clearing the rows
+  test truncates leave. With the owner's approval, end the slot's backend as
+  `supabase_admin` (Realtime makes a new slot at once), then run
+  `vacuum pg_class`.
+
 ## Create the owner account
 
 Public sign-up is off, so the owner account is made by hand. Until step 3, the
