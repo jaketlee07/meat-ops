@@ -57,3 +57,11 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - `formatMargin` calls `formatShrink` (both use one private decimal-point move, `movedPercent`); `percentText` uses the same move. The list price field's starting value is `priceFieldText` (Intl, 2 decimals, no grouping).
 - `parseWhatIf` takes `rawCodes` for the T6 call shape but does not use it: AC-0125 answers an unknown code on the results side, so only "none chosen" is refused here.
 - Gates: `npm run typecheck` exit 0; `npx vitest run` 19 files, 332 tests passed (75 s); `npm run test:costing` 2 files, 35 tests passed (18 s). Playwright not run.
+
+## T4
+
+- 2026-10-09: `test/pricing-data.test.ts` stub extracted from plan.md T4; `shasum -a 256` gives `399e6a4d4beaa52b06149505209e195b6bffa592b45897c606bb1d83892c1fa5`, matching the plan. `npx vitest run test/pricing-data.test.ts` before the module: 1 file failed, 0 tests, `Failed to load url ../src/lib/pricing.js ... Does the file exist?`. The stub's first 31 lines still hash to the same value; the added cases sit below them.
+- `getPricingDetail` reads fees from `fee_types` with an inner embed of `product_fees` filtered by product, so PostgREST orders them by `sort_order` in the database. A fee a product has no row for is not listed.
+- `listWhatIfRawProducts` is two reads (active finished products' `raw_product_id`, then active raw products `in` that list, `.order("code")`). The raw `RAW-OLD` that is inactive is left out even when an active finished product uses it.
+- `setTargetMargin` passes `null` through a cast, because the generated type of `p_target_percent` omits null. A test shows null removes the target.
+- Tests beyond the plan list: an empty picker when no finished product is active, and null removing a target.

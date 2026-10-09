@@ -145,3 +145,33 @@ export async function isOperator(client: TypedClient): Promise<boolean> {
   if (error.code === "42501") return false;
   throw rpcError("isOperator", error);
 }
+
+export type Product = Functions["set_list_price"]["Returns"];
+
+// A null target removes the target. The database stores the percent divided by 100.
+export async function setTargetMargin(
+  client: TypedClient,
+  productId: string,
+  targetPercent: number | null,
+): Promise<Product> {
+  const { data, error } = await client.rpc("set_target_margin", {
+    p_product_id: productId,
+    // The function takes null to remove the target; the generated type omits null.
+    p_target_percent: targetPercent as number,
+  });
+  if (error) throw rpcError("setTargetMargin", error);
+  return data as Product;
+}
+
+export async function setListPrice(
+  client: TypedClient,
+  productId: string,
+  pricePerLb: number,
+): Promise<Product> {
+  const { data, error } = await client.rpc("set_list_price", {
+    p_product_id: productId,
+    p_price_per_lb: pricePerLb,
+  });
+  if (error) throw rpcError("setListPrice", error);
+  return data as Product;
+}
