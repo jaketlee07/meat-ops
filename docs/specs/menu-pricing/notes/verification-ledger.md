@@ -81,3 +81,7 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - Playwright treats `aria-disabled="true"` as not enabled, so the pending-press test forces its second click.
 - The what-if picker shows "none chosen" for a URL code it does not list (AC-0125), so the code appears only in the message, as React text.
 - Vitest in `npm test` failed once, in `test/access.test.ts` "direct writes to ledger tables are refused for every role" (5 s timeout; the same test fails alone). Cause is the known Realtime slot catalog bloat: `pg_class` has 292,520 dead tuples and slot `cainophile_c7dz1ka3` holds `catalog_xmin` 43,950 transactions back. Not touched by T6. The slot fix needs the owner's approval, so it was not applied. With that test excluded, Vitest ran 352 of 353 green; `npm run test:e2e` (193 specs) and `npm run test:costing` (35 tests) exit 0.
+
+## Local stack maintenance
+
+- 2026-10-09: during T6, `test/access.test.ts`'s direct-write test timed out at 5 s with no code change behind it. `pg_class` held 305,267 dead rows and the Realtime slot `cainophile_c7dz1ka3` held `catalog_xmin` 45,069 transactions back. With the owner's approval that day, its backend was ended as `supabase_admin`, Realtime made a new slot at once (`cainophile_5a6zwnqk`, age 3), and `vacuum pg_class` left 0 dead rows. The full gates then passed: Vitest 21 files and 353 tests, Playwright 195, `test:costing` 35.
