@@ -4,7 +4,7 @@ import { isOperator } from "../../lib/rpc";
 import type { TypedClient } from "../../lib/supabase";
 import { createSessionClient } from "./session";
 
-// Who is calling a receiving action. Every outcome but "operator" ends the action
+// Who is calling a server action. Every outcome but "operator" ends the action
 // before it reads or writes anything else.
 export type Caller =
   // Signed in and on the allowlist. `supabase` is the read-only session client
@@ -18,9 +18,9 @@ export type Caller =
   // known about the caller. The error is for the action's before-write message.
   | { status: "failed"; error: unknown };
 
-// The one caller check for saveReceipt and voidReceipt: the read-only session
+// The one caller check for saveReceipt, voidReceipt, and saveBatch: the read-only session
 // client, getClaims read through sessionOutcome, then isOperator. Keeping the
-// three steps in one place means a new receiving action cannot skip one or
+// three steps in one place means a new action cannot skip one or
 // forget the read-only flag. signIn and signOut write cookies on purpose, so
 // they keep their own client.
 export async function checkCaller(): Promise<Caller> {

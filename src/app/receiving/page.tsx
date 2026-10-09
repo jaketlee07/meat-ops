@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { NOT_ALLOWED } from "../../lib/failures";
 import {
   getStock,
   listActiveRawProducts,
@@ -9,7 +8,8 @@ import {
 } from "../../lib/receiving";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
-import { signOut } from "../sign-in/actions";
+import { NotAllowed } from "../not-allowed";
+import { PageHeader } from "../page-header";
 import { ProductRegion } from "./product-region";
 import { ReceiptForm } from "./receipt-form";
 
@@ -53,42 +53,15 @@ export default async function ReceivingPage({
 
   return (
     <main className="mx-auto w-full max-w-xl p-4">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Receiving</h1>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink"
-          >
-            Sign out
-          </button>
-        </form>
-      </div>
+      <PageHeader title="Receiving" current="receiving" />
       <ReceiptForm
         products={products.map(({ code, description, species }) => ({ code, description, species }))}
         vendors={vendors}
-        initialCode={requested}
+        urlCode={requested}
         regionCode={selected?.code ?? null}
         region={region}
         voidedLots={voidedLots}
       />
-    </main>
-  );
-}
-
-function NotAllowed() {
-  return (
-    <main className="mx-auto w-full max-w-sm p-4">
-      <h1 className="mb-4 text-2xl font-semibold">Not allowed</h1>
-      <p className="mb-6 text-base">{NOT_ALLOWED}</p>
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary"
-        >
-          Sign out
-        </button>
-      </form>
     </main>
   );
 }

@@ -23,6 +23,8 @@ export const RECEIVING_FORM = "New receipt";
 
 // What Tab reaches on the receiving page, in order.
 export const FORM_CONTROLS = [
+  "a Receiving",
+  "a Production",
   "button Sign out",
   "input #product-code",
   "select #vendor",
