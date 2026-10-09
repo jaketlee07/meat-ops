@@ -31,5 +31,6 @@ open = [
   { path = "docs/product/intents/shared-display-parts.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/production/notes/verification-ledger.md", revision = "3be979d" }, summary = "Move Facts, stock-view, and BeforeAfter into a shared home both pages import", needs = [] },
   { path = "docs/product/intents/menu-pricing-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/menu-pricing/notes/verification-ledger.md", revision = "1f93cdf" }, summary = "Pin the Figure wrap fix, retitle the Back test, and state the pricing view's rounding once", needs = [] },
   { path = "docs/product/intents/price-change-history.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/menu-pricing/spec.md", revision = "1f93cdf" }, summary = "Price-stale alerts need the date and cost of each list-price change, which nothing stores yet", needs = [] },
+  { path = "docs/product/intents/local-stack-loopback-web-pages.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/local-ports/spec.md", revision = "36fde54" }, summary = "A web page in the owner's browser could reach Studio and the API through 127.0.0.1", needs = [] },
 ]
 closed = []
