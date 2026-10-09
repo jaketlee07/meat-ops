@@ -38,10 +38,10 @@ it holds for other devices, which needs the ports briefly open again. T3 opens
 one short window, in a fixed order the owner runs from their own Terminal:
 unblock Docker, turn the firewall off, then put the block back. Each state
 gives one refusal run, and the phone loads in the first state are the control
-that makes the failed loads after the block count. Every exit from the window,
-a stop included, ends with the block back on or the stack stopped. If the block
-held, T4 then rebuilds the local stack with no data kept, because anyone who
-reached it before the block could have changed it.
+that makes the failed loads after the block count. Every opening ends with the
+block read back on, and a failed block quits Docker Desktop. If the block held,
+T4 then rebuilds the local stack with no data kept, because anyone who reached
+it before the block could have changed it.
 
 ## Constraints
 
@@ -175,15 +175,15 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 - no stub (manual QA), state 1, after the owner runs `--unblockapp <path>` (firewall on, Docker not blocked): `npm test` and `npm run test:e2e` each refuse with the AC-0002 message. The phone on the same Wi-Fi loads Studio at the Mac's IPv4 address and at one global IPv6 address (AC-0010). The phone on cellular data, Wi-Fi off, tries the same IPv6 address; the ledger records loaded or not, and this attempt is not part of the control.
 - no stub (manual QA), state 2, after the owner runs `--setglobalstate off`: `npm test` and `npm run test:e2e` each refuse with the AC-0001 message.
 - no stub (manual QA), state 3, after the owner runs `--setglobalstate on` and `--blockapp <path>`: the phone on the same Wi-Fi fails to load Studio at the IPv4 address (AC-0007) and the IPv6 address (AC-0011), and on cellular data fails at the IPv6 address. `npm test` passes again.
-- no stub (manual QA), every exit: whether the window completes or stops, its last ledger entry shows the three `socketfilterfw` reads with the block on after the owner put it back, or, when the block itself failed, `supabase stop` run and no stack port listening. Nothing else runs between leaving state 3 or stopping and that entry.
+- no stub (manual QA), every exit: the ledger shows each opening ending with the three `socketfilterfw` reads with the block on after the owner put it back, and nothing else run during it. On a failed block, its last entry shows Docker Desktop quit and `lsof` finding no stack port listening.
 
 **Approach:**
 - Give the owner the IPv6 address in chat only. The ledger names it "a global IPv6 address of the Mac" and records the IPv4 address, which is private.
 - Ask the owner to run each state's commands back to back in their own Terminal, so the ports are open only from state 1 to state 3.
 - Record the real `--getglobalstate`, `--getappblocked`, and `--getallowsigned` lines in each state. If any differs from T1's fixtures, update the fixtures and parsers after the window has closed, then re-run `npx vitest run test/network.test.ts`.
-- If a state 1 Wi-Fi load fails, the control is missing: the owner puts the block back, and T3 stops. If a state 3 load succeeds, the block does not hold: run `supabase stop`, confirm no stack port listens, and stop.
+- If a state 1 Wi-Fi load fails, the control is missing: the owner puts the block back, and T3 stops. On a failed block (spec Definitions), quit Docker Desktop with `osascript -e 'quit app "Docker"'`, confirm no stack port listens, and stop.
 
-**Done when:** the ledger holds every T3 observation above, its last entry is the exit entry, and the block is on or the stack is stopped.
+**Done when:** the ledger holds every T3 observation above, its last entry is the exit entry, and the block is on or Docker Desktop is quit.
 
 ### T4: The local stack is rebuilt with no data kept, and the snippets folder Studio mounts is empty
 
@@ -193,15 +193,15 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 **Tests:**
 - no stub (manual QA): after the rebuild, the volume list includes `supabase_db_meat-ops`, and `docker volume inspect` shows each listed volume created after the recorded start time (AC-0012).
 - no stub (manual QA): `supabase_migrations.schema_migrations` lists exactly the files in `supabase/migrations/` (AC-0015).
-- no stub (manual QA): `ls -A supabase/snippets` prints nothing (AC-0014).
+- no stub (manual QA): for each worktree `git worktree list` shows, `ls -A <worktree>/supabase/snippets` prints nothing or reports no such folder (AC-0014).
 - no stub (goal-based): `npm test` passes after the rebuild.
 
 **Approach:**
-- Run only after a T3 exit in which no state 3 load succeeded, whether T3 completed or stopped at state 1. After a failed block, the stack stays stopped and T4 waits for the owner's decision.
+- Run only after AC-0007 and AC-0011 have each recorded a failed load and no failed block occurred. After a stopped T3 or a failed block, T4 waits for the owner's decision. Read the block back just before `supabase start`.
 - Confirm no vitest or playwright process runs from any worktree, then ask the owner for the go-ahead.
 - Record the start time, then run `supabase stop --no-backup` and `supabase start`, which applies the migrations. Then load the seed with `docker exec -i supabase_db_meat-ops psql -U postgres -v ON_ERROR_STOP=1 < supabase/seed.sql` and record its exit status.
 - Tell the owner to re-create the owner account with the overview's steps if they use one locally, and that the other worktrees re-apply any migrations of their own with `supabase migration up`.
-- If `supabase/snippets/` holds a file, show the owner its name and leave it (spec Ask first).
+- Run the rebuild from this worktree. If any worktree's `supabase/snippets/` holds a file, show the owner its name and leave it (spec Ask first).
 
 **Done when:** every T4 test above passes and its observations are in the ledger.
 
@@ -210,7 +210,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 - **Delivery:** the owner turned the block on in their own Terminal on 2026-10-09. T3 opens one short window and closes it. The undo is in the overview section. The one irreversible step is T4's `supabase stop --no-backup`, which deletes the shared stack's data; the owner accepted that (spec Assumptions).
 - **Infrastructure:** the macOS application firewall on the developer's Mac. No hosted change.
 - **External-system integration:** Docker Desktop 4.68.0 and Supabase CLI 2.95.4 as installed; neither is changed.
-- **Deployment sequencing:** the check lands (T1, T2) before the window (T3), so every refusal comes from the shipped code. The rebuild (T4) comes after the window closes with the block holding, so nothing reaches the rebuilt stack from outside; after a failed block, nothing restarts the stack until the owner decides.
+- **Deployment sequencing:** the check lands (T1, T2) before the window (T3), so every refusal comes from the shipped code. The rebuild (T4) comes after the window closes with the block holding, so nothing reaches the rebuilt stack from outside; a failed block quits Docker Desktop, so no worktree restarts the stack until the owner decides.
 
 ## Risks
 
@@ -226,3 +226,4 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 - 2026-10-09: revised after review round 1: the check also runs at Playwright config load; it reads each listener's executable through `lsof`, checks automatic allow, and refuses on any inexact output; T3 adds the phone control loads, IPv6, and cellular in one short window; T4 adds the leftovers check; the docs plan covers the `test/` row and `AGENTS.md`.
 - 2026-10-09: revised after review round 2: every window exit restores the block or stops the stack; the config-load check skips in Playwright workers; messages end with the overview pointer; T4 rebuilds the stack instead of a read-only check, as the owner chose.
 - 2026-10-09: revised after review round 3: the rebuild runs only if the block held and loads the seed through psql; the worker skip is dropped; the window's exit rule names the owner; the overview notes the loopback path.
+- 2026-10-09: revised after review round 4: each opening is defined on its own and a failed block is defined once; a failed block quits Docker Desktop, as the owner chose; the rebuild needs both failed loads recorded; the snippets check covers every worktree.
