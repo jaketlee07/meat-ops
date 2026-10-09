@@ -49,3 +49,11 @@ vendors: id, name, contact_name, phone, email, notes, created_at
 - Next.js prefetches linked pages (`/receiving?_rsc=...`) on the menu page; AC-0046 to AC-0048 therefore assert the switch sends no request to `/menu` and no non-GET request, rather than no request at all.
 - A native checkbox is 24 px wide by default, under the 44 px control bar (AC-0132); the switch sets `h-control w-control` so the box itself is 44 px.
 - `/pricing` does not exist until T6, so the Pricing link 404s for now.
+
+## T3
+
+- 2026-10-09: `test/pricing-rules.test.ts` stub extracted from plan.md T3; `shasum -a 256` gives `b957b28c4d7f3f9d7c7f896f8ac502c89b4d956bc8644eada7c5f7c9adefc03d`, matching the plan. `npx vitest run test/pricing-rules.test.ts` before the modules: 1 file failed, 0 tests, `Failed to load url ../src/lib/price-advice.js ... Does the file exist?`.
+- After the work, the stub's first 56 lines still hash to the same value; the added cases sit below them, with their imports.
+- `formatMargin` calls `formatShrink` (both use one private decimal-point move, `movedPercent`); `percentText` uses the same move. The list price field's starting value is `priceFieldText` (Intl, 2 decimals, no grouping).
+- `parseWhatIf` takes `rawCodes` for the T6 call shape but does not use it: AC-0125 answers an unknown code on the results side, so only "none chosen" is refused here.
+- Gates: `npm run typecheck` exit 0; `npx vitest run` 19 files, 332 tests passed (75 s); `npm run test:costing` 2 files, 35 tests passed (18 s). Playwright not run.

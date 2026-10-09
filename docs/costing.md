@@ -3,7 +3,8 @@
 This is the source of truth for the costing math. The tests in
 `test/costing.test.ts`, `test/engine.test.ts`, `test/corrections.test.ts`, and
 `test/pricing.test.ts` encode every costing number below. The display formats in the Rounding note are
-asserted by `test/format.test.ts` and `test/production-rules.test.ts`, and its
+asserted by `test/format.test.ts`, `test/production-rules.test.ts`, and
+`test/pricing-rules.test.ts`, and its
 missing-value texts by `test/e2e/receiving.spec.ts` and `test/e2e/production.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
@@ -250,10 +251,12 @@ through the same formats:
 | Kind | Format | Examples |
 | --- | --- | --- |
 | Weight | thousands separators, 0 to 3 decimals with trailing zeros dropped, then " lbs" | 5000 → 5,000 lbs; 32.5 → 32.5 lbs; 1234.5678 → 1,234.568 lbs |
-| Cost per lb (lot cost, average, a batch's cost per finished lb, a finished lot's cost per lb) | "$", 4 decimals, "/lb" | 1.725 → $1.7250/lb; 1.68 → $1.6800/lb; 2.6318 → $2.6318/lb |
-| Suggested price per lb | "$", 2 decimals, "/lb" | 2.6818 → $2.68/lb; 2.685 → $2.69/lb; 1.005 → $1.01/lb |
+| Cost per lb (lot cost, average, a batch's cost per finished lb, a finished lot's cost per lb, cost after shrink, a finished product's cost per lb) | "$", 4 decimals, "/lb" | 1.725 → $1.7250/lb; 1.68 → $1.6800/lb; 2.6318 → $2.6318/lb |
+| Suggested price per lb, list price per lb | "$", 2 decimals, "/lb" | 2.6818 → $2.68/lb; 2.685 → $2.69/lb; 1.005 → $1.01/lb |
+| Fee per lb (a margin fee) | "$", 4 decimals, "/lb" | 0.05 → $0.0500/lb |
 | Date | month abbreviation, day, year, in any time zone | 2026-10-07 → Oct 7, 2026 |
 | Shrink | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.23 → 23%; 0.235 → 23.5%; 0.2345 → 23.45%; 0 → 0% |
+| Margin (at a list price) | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.2 → 20%; 0.018 → 1.8%; 0.2001 → 20.01%; 0.2481 → 24.81%; -0.0527 → -5.27%; 0 → 0% |
 | Raw cost total | "$", thousands separators, 2 decimals | 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01 |
 
 Where the database has nothing to show, the screen uses text:
@@ -263,3 +266,8 @@ Where the database has nothing to show, the screen uses text:
   that leaves no live receipt can leave a stored average of 0, which is not shown.
 - The suggested price of a finished product whose raw product has no non-void
   receipt shows "No price yet".
+- The list price of a finished product with none shows "No list price yet".
+- The target margin of a finished product with none shows "No target".
+- A cost per lb, a cost after shrink, or a margin at list price that the
+  database has no value for (no non-void receipt, or no list price for the
+  margin) shows "None yet".

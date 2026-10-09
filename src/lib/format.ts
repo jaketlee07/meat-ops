@@ -64,10 +64,34 @@ export function formatMoney(total: number): string {
   return money.format(total);
 }
 
-// The stored fraction as a percent. The decimal point moves two places in the
+// The stored fraction as percent text. The decimal point moves two places in the
 // number's decimal text; nothing is multiplied by 100.
-export function formatShrink(fraction: number): string {
+function movedPercent(fraction: number): number {
   const [whole = "0", part = ""] = fraction.toFixed(10).split(".");
-  const moved = `${whole}${part.slice(0, 2)}.${part.slice(2)}`;
-  return `${percent.format(Number(moved))}%`;
+  return Number(`${whole}${part.slice(0, 2)}.${part.slice(2)}`);
+}
+
+export function formatShrink(fraction: number): string {
+  return `${percent.format(movedPercent(fraction))}%`;
+}
+
+// A margin shows the same way as a shrink (pricing AC-0140).
+export function formatMargin(fraction: number): string {
+  return formatShrink(fraction);
+}
+
+// A target margin field's starting value: the percent without "%" (pricing AC-0090).
+export function percentText(fraction: number): string {
+  return percent.format(movedPercent(fraction));
+}
+
+const priceField = new Intl.NumberFormat("en-US", {
+  useGrouping: false,
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+// A list price field's starting value: 2 decimals, no "$" (pricing AC-0100).
+export function priceFieldText(price: number): string {
+  return priceField.format(price);
 }
