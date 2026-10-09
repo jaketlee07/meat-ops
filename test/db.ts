@@ -105,7 +105,10 @@ export type OperationName =
   | "record_sale"
   | "void_receipt"
   | "void_sale"
-  | "adjust_lot";
+  | "adjust_lot"
+  | "set_target_margin"
+  | "set_list_price"
+  | "price_what_if";
 
 export interface OpCall {
   fn: OperationName;
@@ -129,6 +132,9 @@ const PARAM_TYPES: Record<string, string> = {
   p_sale_id: "uuid",
   p_reason: "text",
   p_new_remaining_lbs: "numeric",
+  p_target_percent: "numeric",
+  p_raw_product_id: "uuid",
+  p_raw_cost_per_lb: "numeric",
 };
 
 export const receiveCall = (

@@ -19,6 +19,8 @@ export const BATCH_UNKNOWN =
 export const FORM_CONTROLS = [
   "a Receiving",
   "a Production",
+  "a Menu",
+  "a Pricing",
   "button Sign out",
   "input #product-code",
   "input #raw-lbs",

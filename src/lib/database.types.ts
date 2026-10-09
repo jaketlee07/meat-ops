@@ -462,10 +462,12 @@ export type Database = {
           id: string
           kind: string
           lbs_per_pack: number | null
+          list_price_per_lb: number | null
           pack_style: string | null
           raw_product_id: string | null
           shrink_pct: number | null
           species: string | null
+          target_margin_pct: number | null
         }
         Insert: {
           active?: boolean
@@ -476,10 +478,12 @@ export type Database = {
           id?: string
           kind: string
           lbs_per_pack?: number | null
+          list_price_per_lb?: number | null
           pack_style?: string | null
           raw_product_id?: string | null
           shrink_pct?: number | null
           species?: string | null
+          target_margin_pct?: number | null
         }
         Update: {
           active?: boolean
@@ -490,10 +494,12 @@ export type Database = {
           id?: string
           kind?: string
           lbs_per_pack?: number | null
+          list_price_per_lb?: number | null
           pack_style?: string | null
           raw_product_id?: string | null
           shrink_pct?: number | null
           species?: string | null
+          target_margin_pct?: number | null
         }
         Relationships: [
           {
@@ -637,6 +643,7 @@ export type Database = {
           description: string | null
           final_price_per_lb: number | null
           finished_lbs_available: number | null
+          list_price_per_lb: number | null
           product_id: string | null
           raw_lbs_available: number | null
           sellable: boolean | null
@@ -646,17 +653,25 @@ export type Database = {
       }
       v_product_pricing: {
         Row: {
+          below_target: boolean | null
           code: string | null
           cost_per_lb: number | null
           description: string | null
           final_price_per_lb: number | null
+          has_cost: boolean | null
+          list_price_per_lb: number | null
+          margin_at_list_pct: number | null
           margin_per_lb: number | null
+          needs_new_price: boolean | null
           post_shrink_cost_per_lb: number | null
+          price_action: string | null
           processing_fees_per_lb: number | null
           product_id: string | null
           raw_cost_per_lb: number | null
           shrink_pct: number | null
           species: string | null
+          suggested_list_price: number | null
+          target_margin_pct: number | null
         }
         Relationships: []
       }
@@ -714,6 +729,20 @@ export type Database = {
         }
       }
       check_operator: { Args: never; Returns: undefined }
+      price_what_if: {
+        Args: { p_raw_cost_per_lb: number; p_raw_product_id: string }
+        Returns: {
+          code: string
+          cost_per_lb: number
+          description: string
+          final_price_per_lb: number
+          list_price_per_lb: number
+          margin_at_list_pct: number
+          product_id: string
+          suggested_list_price: number
+          target_margin_pct: number
+        }[]
+      }
       produce_batch: {
         Args: {
           p_batch_number?: string
@@ -797,6 +826,56 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "sales"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_list_price: {
+        Args: { p_price_per_lb: number; p_product_id: string }
+        Returns: {
+          active: boolean
+          brand: string | null
+          code: string
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          lbs_per_pack: number | null
+          list_price_per_lb: number | null
+          pack_style: string | null
+          raw_product_id: string | null
+          shrink_pct: number | null
+          species: string | null
+          target_margin_pct: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_target_margin: {
+        Args: { p_product_id: string; p_target_percent: number }
+        Returns: {
+          active: boolean
+          brand: string | null
+          code: string
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          lbs_per_pack: number | null
+          list_price_per_lb: number | null
+          pack_style: string | null
+          raw_product_id: string | null
+          shrink_pct: number | null
+          species: string | null
+          target_margin_pct: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "products"
           isOneToOne: true
           isSetofReturn: false
         }

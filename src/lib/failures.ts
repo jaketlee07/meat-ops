@@ -91,8 +91,28 @@ export function batchSaveFailureMessage(error: unknown, stage: FailureStage): st
   return `${NOT_SAVED_BATCH} ${refusalReason(error, code)}`;
 }
 
-// The server actions whose failures are logged: the receiving actions and saveBatch.
-export type ReceivingAction = "saveReceipt" | "voidReceipt" | "saveBatch";
+// Pricing change actions (menu-pricing AC-0110, AC-0113 to AC-0118).
+export const NOT_SAVED_CHANGE = "The change wasn't saved.";
+// AC-0114: the write call got no answer from the engine, so the change may have happened.
+export const CHANGE_UNKNOWN = "The change may not have been saved. Reload this page to check it.";
+// AC-0110: the session ended after the page loaded.
+export const CHANGE_SIGNED_OUT = "You're signed out. Sign in again to save this change.";
+
+export function changeFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_SAVED_CHANGE} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return CHANGE_UNKNOWN;
+  return `${NOT_SAVED_CHANGE} ${refusalReason(error, code)}`;
+}
+
+// Every server action whose failures are logged: the receiving actions, saveBatch, and the three pricing change actions.
+export type LoggedAction =
+  | "saveReceipt"
+  | "voidReceipt"
+  | "saveBatch"
+  | "saveTargetMargin"
+  | "removeTargetMargin"
+  | "saveListPrice";
 
 const LOG_MESSAGE_LIMIT = 200;
 
@@ -112,7 +132,7 @@ export function logMessage(error: unknown): string {
 // quotes a malformed vendor id, received date, or lot id when its cast fails, and the
 // engine names ids in its refusals. Only a signed-in operator's hand-made request can
 // carry such a value, and the message is cut to one bounded line.
-export function actionFailureLogLine(action: ReceivingAction, stage: FailureStage, error: unknown): string {
+export function actionFailureLogLine(action: LoggedAction, stage: FailureStage, error: unknown): string {
   const code = codeOf(error);
   return `${action} failed at ${stage}: ${logMessage(error)}${code ? ` (code ${code})` : ""}`;
 }

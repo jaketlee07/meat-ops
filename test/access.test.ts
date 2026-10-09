@@ -294,6 +294,26 @@ beforeAll(async () => {
   expect(await isOperator(operatorTyped), "operator passes check_operator").toBe(true);
   exercised.add("check_operator");
 
+  // Pricing: the two writes and the what-if, each called once as the operator.
+  const setTarget = await loose(operatorTyped).rpc("set_target_margin", {
+    p_product_id: PROD_502_ID,
+    p_target_percent: 20,
+  });
+  expect(setTarget.error, "operator set_target_margin").toBeNull();
+  exercised.add("set_target_margin");
+  const setPrice = await loose(operatorTyped).rpc("set_list_price", {
+    p_product_id: PROD_502_ID,
+    p_price_per_lb: 5,
+  });
+  expect(setPrice.error, "operator set_list_price").toBeNull();
+  exercised.add("set_list_price");
+  const whatIf = await loose(operatorTyped).rpc("price_what_if", {
+    p_raw_product_id: RAW_TOM_ID,
+    p_raw_cost_per_lb: 2,
+  });
+  expect(whatIf.error, "operator price_what_if").toBeNull();
+  exercised.add("price_what_if");
+
   // Targets that stay valid: an untouched lot to void, a sale to void, a lot to adjust.
   const untouched = await receiveLot(operatorTyped, {
     productId: RAW_TOM_ID,
@@ -331,6 +351,9 @@ beforeAll(async () => {
     void_sale: { p_sale_id: spare.id, p_reason: "access test" },
     adjust_lot: { p_lot_id: adjusted.id, p_new_remaining_lbs: 600, p_reason: "count" },
     check_operator: {},
+    set_target_margin: { p_product_id: PROD_502_ID, p_target_percent: 25 },
+    set_list_price: { p_product_id: PROD_502_ID, p_price_per_lb: 6 },
+    price_what_if: { p_raw_product_id: RAW_TOM_ID, p_raw_cost_per_lb: 2.5 },
   };
 });
 
