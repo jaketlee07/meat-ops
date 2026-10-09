@@ -529,3 +529,18 @@ it("AC-0038: every function the migration adds sets search_path to an empty valu
   expect(rows.map((r) => r.proname)).toEqual(["price_what_if", "set_list_price", "set_target_margin"]);
   for (const row of rows) expect(row.proconfig, row.proname).toEqual(['search_path=""']);
 });
+
+it("the below-target check compares the rounded margin, so 0.19997 shown as 0.2000 is not below target", async () => {
+  await receive(1.6802);
+  expect((await setTarget(PROD_502_ID, 20)).error).toBeUndefined();
+  expect((await setPrice(PROD_502_ID, 3.29)).error).toBeUndefined();
+  const row = await pricingRow();
+  expect(row).toMatchObject({
+    cost_per_lb: "2.6321",
+    suggested_list_price: "3.30",
+    margin_at_list_pct: "0.2000",
+    price_action: "raise",
+    needs_new_price: true,
+    below_target: false,
+  });
+});

@@ -90,7 +90,8 @@ export default async function PricingPage({
           cost={cost ?? ""}
           urlErrors={parsed && !parsed.ok ? parsed.errors : {}}
         />
-        {results}
+        {/* The container is on every render, empty until a what-if is asked, so new results are announced. */}
+        <div role="status">{results}</div>
       </section>
     </main>
   );

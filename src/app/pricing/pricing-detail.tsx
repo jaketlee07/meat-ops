@@ -15,6 +15,7 @@ import { removeTargetMargin, saveListPrice, saveTargetMargin } from "./actions";
 import { ChangeForm } from "./change-form";
 import { PriceAdviceBlock } from "./price-advice-block";
 import type { ChangeState } from "./save-change";
+import { Figure } from "./figure";
 
 interface Message {
   kind: "saved" | "refused";
@@ -157,15 +158,6 @@ export function PricingDetail({ detail }: { detail: Detail }) {
         onStart={() => setMessage(null)}
         onResult={show}
       />
-    </div>
-  );
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-wrap justify-between gap-x-2">
-      <dt className="text-ink-secondary">{label}</dt>
-      <dd className="break-words">{value}</dd>
     </div>
   );
 }

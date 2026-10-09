@@ -113,7 +113,7 @@ export function ChangeForm({
             aria-describedby={error ? errorId : undefined}
           />
           {error && (
-            <p id={errorId} className="mt-1 break-words text-base font-medium text-error">
+            <p id={errorId} role="alert" className="mt-1 break-words text-base font-medium text-error">
               {error}
             </p>
           )}

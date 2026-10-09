@@ -6,6 +6,7 @@ import { formatCostPerLb, formatMargin, formatPricePerLb } from "../../lib/forma
 import type { PricingRow } from "../../lib/pricing";
 import { PriceAdviceBlock } from "./price-advice-block";
 import type { ChangeState } from "./save-change";
+import { Figure } from "./figure";
 
 const GROUPS = [
   { heading: "Needs a new price", pick: (row: PricingRow) => row.needsNewPrice },
@@ -115,14 +116,5 @@ function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: Cha
       </dl>
       <PriceAdviceBlock row={row} onResult={onResult} />
     </li>
-  );
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-wrap justify-between gap-x-2">
-      <dt className="text-ink-secondary">{label}</dt>
-      <dd>{value}</dd>
-    </div>
   );
 }

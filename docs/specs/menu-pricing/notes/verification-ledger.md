@@ -158,3 +158,10 @@ Method as in the production ledger: `npm run start -- -p 3200` on a build of the
 ## Local stack maintenance
 
 - 2026-10-09: during T6, `test/access.test.ts`'s direct-write test timed out at 5 s with no code change behind it. `pg_class` held 305,267 dead rows and the Realtime slot `cainophile_c7dz1ka3` held `catalog_xmin` 45,069 transactions back. With the owner's approval that day, its backend was ended as `supabase_admin`, Realtime made a new slot at once (`cainophile_5a6zwnqk`, age 3), and `vacuum pg_class` left 0 dead rows. The full gates then passed: Vitest 21 files and 353 tests, Playwright 195, `test:costing` 35.
+
+## Review round 2 fixes
+
+- Recovery stance for stored data: after a code-only revert, a stored `target_margin_pct` still drives `v_product_pricing.final_price_per_lb`, so Receiving would show the target price, and no screen could show or clear a target; `list_price_per_lb` would be unused. The stance is forward-fix. To return Receiving to sheet prices after a revert, clear every target through Supabase Studio, or run `update public.products set target_margin_pct = null` as postgres, with the owner's approval. Nothing is dropped, so no data is lost.
+- Deferred Nit: the pricing view repeats `round(final_price_per_lb, 2)` and the margin expression (`supabase/migrations/20261009070619_menu_pricing.sql` lines 55 to 74). Folding them needs a migration change. The spec forbids editing the existing migration, and a refactor-only migration is not warranted now. The rounding-edge test in `test/pricing.test.ts` (RAW-TOM at 1.6802, 20% target, 3.29 list price: cost 2.6321, suggested 3.30, margin 0.2000, `below_target` false) pins the current behavior.
+
+- 2026-10-09, owner decision on the review's zero-suggestion Nit: a raw product received at 0.00 per lb whose finished product has no fees gets a suggested list price of 0.00 and a Set or Lower button that `set_list_price` must refuse ("Price must be above 0."). The owner chose to leave it: a zero raw cost with no fees is not a real case for this business, and the refusal message tells the truth. No code changes.

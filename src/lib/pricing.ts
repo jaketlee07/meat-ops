@@ -47,11 +47,11 @@ export type WhatIfRow = {
   description: string;
   cost_per_lb: number;
   final_price_per_lb: number;
-  list_price_per_lb: number;
-  margin_at_list_pct: number;
+  list_price_per_lb: number | null;
+  margin_at_list_pct: number | null;
   product_id: string;
   suggested_list_price: number;
-  target_margin_pct: number;
+  target_margin_pct: number | null;
 };
 
 const PRICING_COLUMNS =

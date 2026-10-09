@@ -8,7 +8,7 @@ import {
   NOT_ALLOWED,
   NOT_SAVED_CHANGE,
   type FailureStage,
-  type ReceivingAction,
+  type LoggedAction,
 } from "../../lib/failures";
 import { parseListPrice, parseTargetMargin } from "../../lib/price-input";
 import type { Product } from "../../lib/rpc";
@@ -49,7 +49,7 @@ export interface ChangeDeps<C> {
   write: (client: C, change: ChangeWrite) => Promise<Product>;
 }
 
-const ACTION: Record<ChangeKind, ReceivingAction> = {
+const ACTION: Record<ChangeKind, LoggedAction> = {
   "list-price": "saveListPrice",
   target: "saveTargetMargin",
   "remove-target": "removeTargetMargin",

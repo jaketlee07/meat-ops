@@ -1,5 +1,6 @@
 import { formatCostPerLb, formatMargin, formatPricePerLb } from "../../lib/format";
 import type { WhatIfRow } from "../../lib/pricing";
+import { Figure } from "./figure";
 
 // What each finished product made from the raw product would cost and sell for
 // at the typed raw cost, every figure from price_what_if. The code in the
@@ -26,14 +27,5 @@ export function WhatIfResults({ rawCode, rows }: { rawCode: string; rows: WhatIf
         </li>
       ))}
     </ul>
-  );
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-wrap justify-between gap-x-2">
-      <dt className="text-ink-secondary">{label}</dt>
-      <dd>{value}</dd>
-    </div>
   );
 }

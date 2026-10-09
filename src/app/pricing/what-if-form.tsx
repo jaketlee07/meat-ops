@@ -37,6 +37,18 @@ export function WhatIfForm({
   const [costText, setCostText] = useState(cost);
   const [errors, setErrors] = useState<Errors>(urlErrors);
 
+  // After Back or Forward the URL changes under the form, so the fields and
+  // their errors are read again from the props. A key on the form would drop
+  // focus from Show prices, so the state is set during render instead.
+  const urlKey = JSON.stringify([rawCode, cost, urlErrors]);
+  const [seenKey, setSeenKey] = useState(urlKey);
+  if (seenKey !== urlKey) {
+    setSeenKey(urlKey);
+    setRaw(known.has(rawCode) ? rawCode : "");
+    setCostText(cost);
+    setErrors(urlErrors);
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const parsed = parseWhatIf({ rawCode: raw, cost: costText });
@@ -58,7 +70,7 @@ export function WhatIfForm({
   function fieldError(field: WhatIfField) {
     const message = errors[field];
     return message ? (
-      <p id={`${IDS[field]}-error`} className="mt-1 break-words text-base font-medium text-error">
+      <p id={`${IDS[field]}-error`} role="alert" className="mt-1 break-words text-base font-medium text-error">
         {message}
       </p>
     ) : null;

@@ -406,6 +406,37 @@ test.describe("the list", () => {
     // The pricing list after a change refusal.
     expect(await checkPageState(page)).toEqual(WITH_502_BUTTON("Raise list price to $3.29/lb"));
   });
+
+  test("AC-0115 and AC-0137: a dropped Apply says it may not have been saved", async ({ page }) => {
+    await fixture502(0.2, 2.68);
+    await opens(page);
+    const dropped = await dropActionRequests(page);
+    const button = page.getByRole("button", { name: "Raise list price to $3.29/lb" });
+    await button.click();
+    await expect(refusedRegion(page)).toHaveText("The change may not have been saved. Reload this page to check it.");
+    await expect(refusedRegion(page)).toBeFocused();
+    expect(dropped.count).toBe(1);
+    await expect(button).not.toHaveAttribute("aria-disabled", "true");
+    expect(await storedListPrice(PROD_502_ID)).toBe(2.68);
+  });
+
+  test("AC-0070, AC-0068, and AC-0063: list, detail, save, and back", async ({ page }) => {
+    await fixture502(0.2, 2.68);
+    await opens(page);
+    await card(page, "502").getByRole("link", { name: "502 Smoked Turkey Drums Tom" }).click();
+    await expect(page).toHaveURL(/\/pricing\?product=502$/);
+    const d = detail(page);
+    await expect(d.heading).toHaveText("502 Smoked Turkey Drums Tom");
+    await d.price.fill("3.29");
+    await d.savePrice.click();
+    await expect(d.saved).toHaveText("List price for 502 saved: $3.29/lb.");
+    await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Pricing" }).click();
+    await expect(page).toHaveURL(/\/pricing$/);
+    await expect(group(page, "Priced")).toBeVisible();
+    expect(await headingsIn(page, "Priced")).toEqual(["502 Smoked Turkey Drums Tom"]);
+    await expect(figure(card(page, "502"), "List price")).toHaveText("$3.29/lb");
+    await expect(figure(card(page, "502"), "Margin at list price")).toHaveText("20.01%");
+  });
 });
 
 test.describe("Receiving", () => {
@@ -579,6 +610,49 @@ test.describe("the what-if", () => {
     await opens(page, `/pricing?raw=${encodeURIComponent(" RAW-TOM")}&cost=2`);
     await expect(page.getByText(/^No active finished product is made from\s+RAW-TOM\.$/)).toBeVisible();
     await expect(whatIf(page).cards).toHaveCount(0);
+  });
+
+  test("AC-0136: a field error from Enter in the field is an alert, and absent without an error", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opens(page);
+    const w = whatIf(page);
+    await w.raw.selectOption({ value: "RAW-TOM" });
+    await w.cost.fill("abc");
+    await w.cost.press("Enter");
+    await expect(page.locator("#what-if-cost-error")).toHaveAttribute("role", "alert");
+    await expect(page.locator("#what-if-raw-error")).toHaveCount(0);
+    await expect(w.cost).toBeFocused();
+  });
+
+  test("AC-0121 and AC-0124: the outcome sits inside a status region that exists before it", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opens(page);
+    const status = whatIf(page).section.locator("[role=status]");
+    await expect(status).toHaveCount(1);
+    await expect(status).toHaveText("");
+    await opens(page, "/pricing?raw=RAW-TOM&cost=2.00");
+    await expect(status.getByRole("listitem")).toHaveCount(1);
+    await opens(page, "/pricing?raw=NOPE&cost=2");
+    await expect(status).toHaveText("No active finished product is made from NOPE.");
+  });
+
+  test("AC-0124: after Back, the fields match the URL", async ({ page }) => {
+    await fixture502(0.2, 3.29);
+    await opens(page);
+    const w = whatIf(page);
+    await w.raw.selectOption({ value: "RAW-TOM" });
+    await w.cost.fill("2.00");
+    await w.show.click();
+    await expect(page).toHaveURL(/cost=2\.00$/);
+    await expect(w.cards).toHaveCount(1);
+    await w.cost.fill("2.50");
+    await w.show.click();
+    await expect(page).toHaveURL(/cost=2\.50$/);
+    await expect(w.cost).toHaveValue("2.50");
+    await page.goBack();
+    await expect(page).toHaveURL(/cost=2\.00$/);
+    await expect(w.cost).toHaveValue("2.00");
+    await expect(w.raw).toHaveValue("RAW-TOM");
   });
 });
 
@@ -786,7 +860,7 @@ test.describe("the target margin", () => {
   test("AC-0094, AC-0133, and AC-0134: Remove target margin, by keyboard, brings back the margin fees", async ({
     page,
   }) => {
-    await fixture502(0.2, 3.29);
+    await fixture502(0.2, null);
     await opensDetail(page, "502");
     const d = detail(page);
     await d.removeTarget.focus();
@@ -800,7 +874,7 @@ test.describe("the target margin", () => {
     expect(await storedTarget(PROD_502_ID)).toBeNull();
     // The detail after a target removal.
     expect(await checkPageState(page)).toEqual(
-      detailControls({ apply: "Lower list price to $2.68/lb", remove: false }),
+      detailControls({ apply: "Set list price to $2.68/lb", remove: false }),
     );
   });
 });

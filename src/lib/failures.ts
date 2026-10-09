@@ -105,8 +105,8 @@ export function changeFailureMessage(error: unknown, stage: FailureStage): strin
   return `${NOT_SAVED_CHANGE} ${refusalReason(error, code)}`;
 }
 
-// The server actions whose failures are logged: the receiving actions, saveBatch, and the three pricing change actions.
-export type ReceivingAction =
+// Every server action whose failures are logged: the receiving actions, saveBatch, and the three pricing change actions.
+export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
   | "saveBatch"
@@ -132,7 +132,7 @@ export function logMessage(error: unknown): string {
 // quotes a malformed vendor id, received date, or lot id when its cast fails, and the
 // engine names ids in its refusals. Only a signed-in operator's hand-made request can
 // carry such a value, and the message is cut to one bounded line.
-export function actionFailureLogLine(action: ReceivingAction, stage: FailureStage, error: unknown): string {
+export function actionFailureLogLine(action: LoggedAction, stage: FailureStage, error: unknown): string {
   const code = codeOf(error);
   return `${action} failed at ${stage}: ${logMessage(error)}${code ? ` (code ${code})` : ""}`;
 }
