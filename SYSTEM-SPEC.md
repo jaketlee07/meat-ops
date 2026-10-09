@@ -309,8 +309,8 @@ extraction is low confidence.
 
 ## 13. Feature breakdown (units of work to spec and build)
 
-Build in this order. Each becomes its own per-feature spec. Each depends on the
-previous being complete and its gate green.
+Each feature becomes its own per-feature spec. The numbers name the features, and
+other documents cite them, so they stay fixed even where the build order differs.
 
 1. Foundation: the schema and the six operations, with the seven invariants as automated tests. (Largely already built and verified.)
 2. Receiving: log a raw purchase, see on-hand and average update.
@@ -320,6 +320,14 @@ previous being complete and its gate green.
 6. Ask your data: the typed query catalog and the plain-language answer surface.
 7. Alerts: the watch layer and the daily digest.
 8. Invoice-photo and conversational entry: the import-draft flow with confirmation.
+
+Build in this order, which follows the real dependencies. Each step starts only
+when every feature in the step before it is complete and its gate green.
+
+1. Features 1, 2, 3, and 4, one at a time in that order.
+2. Features 5 (Sales) and 8 (Invoice-photo entry), built at the same time. Neither depends on the other.
+3. Feature 7 (Alerts).
+4. Feature 6 (Ask your data). It needs the sales data from feature 5 and the AI connection that feature 8 sets up.
 
 ## 14. Glossary
 
