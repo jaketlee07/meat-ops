@@ -29,5 +29,7 @@ open = [
   { path = "docs/product/intents/vitest-advisory-upgrade.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving/notes/verification-ledger.md", revision = "ea93f59" }, summary = "Upgrade Vitest, as its own change, to clear 6 dev-tool advisories", needs = [] },
   { path = "docs/product/intents/local-stack-network-exposure.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/production/notes/verification-ledger.md", revision = "3be979d" }, summary = "Local Supabase ports 54321 to 54324 answer the whole network; limit them to this machine", needs = [] },
   { path = "docs/product/intents/shared-display-parts.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/production/notes/verification-ledger.md", revision = "3be979d" }, summary = "Move Facts, stock-view, and BeforeAfter into a shared home both pages import", needs = [] },
+  { path = "docs/product/intents/menu-pricing-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/menu-pricing/notes/verification-ledger.md", revision = "1f93cdf" }, summary = "Pin the Figure wrap fix, retitle the Back test, and state the pricing view's rounding once", needs = [] },
+  { path = "docs/product/intents/price-change-history.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/menu-pricing/spec.md", revision = "1f93cdf" }, summary = "Price-stale alerts need the date and cost of each list-price change, which nothing stores yet", needs = [] },
 ]
 closed = []
