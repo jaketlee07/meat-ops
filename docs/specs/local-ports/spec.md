@@ -42,8 +42,8 @@ and where the fix is. The owner runs every firewall command in their own
 Terminal, outside the agent session. Because the ports were open for an
 unknown time before this change, the local stack is then rebuilt from its
 migrations and seed with no data kept, and Studio's snippets folders are
-confirmed empty. If the phone test shows the block does not hold, Docker
-Desktop is quit, so no worktree can start the stack until the owner decides.
+confirmed empty. If the phone test shows the block does not hold, the stack is
+stopped and all work waits for the owner's decision.
 
 ## Durable Outputs
 
@@ -67,7 +67,7 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 - Run the check right after the localhost guard: at Playwright config load, before the web server builds, and in the shared test global setup, before its first write.
 - Run each command the check uses with no shell, passing every value as its own argument.
 - End every opening with the owner putting the block back in their own Terminal and the agent reading it back. Do no other work during an opening.
-- On a failed block, quit Docker Desktop at once (`osascript -e 'quit app "Docker"'`), confirm no stack port listens, and leave it quit until the owner decides.
+- On a failed block, run `supabase stop`, which removes the stack's containers so no Docker launch brings them back, and confirm no stack port listens. If one still listens, the owner quits Docker Desktop from its menu bar. All work then stops until the owner decides; it does not end while a stack port listens.
 - Before any test run or the rebuild, confirm no test process from another worktree is running, because `meat-ops-sales` and `meat-ops-invoice` share this stack.
 - Keep every refusal message free of keys, passwords, connection strings, and IP addresses; name only the condition, the program path, the port, and the overview section.
 
@@ -93,7 +93,7 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 - **Goal-based: the full suite with the block on (AC-0006)**: `npm test` passing shows the suites still reach the API (54321) and Postgres (54322) over loopback.
 - **Manual QA from this Mac, recorded in the ledger (AC-0009)**: a TCP connect to `127.0.0.1` on each published stack port, because no suite uses Studio, mail, or analytics.
 - **Manual QA by the owner from another device, recorded in the ledger (AC-0007, AC-0010, AC-0011)**: a phone on the same Wi-Fi loads Studio with Docker not blocked, then fails to load it with the block on, at the same addresses in the same session. The earlier successful load is what makes the later failure count. Whether the firewall filters this Mac's own network addresses is unknown (see Assumptions), so no probe from this Mac counts for these criteria.
-- **Manual QA recorded in the ledger (AC-0012, AC-0014, AC-0015)**: the rebuild's volume list and creation times and its applied migrations, read after `supabase start`, and a listing of `supabase/snippets/`.
+- **Manual QA recorded in the ledger (AC-0012, AC-0014, AC-0015)**: the AC-0010, AC-0007, and AC-0011 entries; the three `socketfilterfw` reads taken just before `supabase start`; the rebuild's volume list and creation times and its applied migrations, read after `supabase start`; and a listing of `supabase/snippets/` in every worktree `git worktree list` shows.
 
 Stub tally: T1 is covered by a validated stub; T2, T3, and T4 record `no stub (mode)`; none is uncovered.
 
@@ -106,7 +106,7 @@ Definitions used by these criteria:
 - **Published stack port**: a host port that Docker publishes for a running container of the local Supabase stack whose database the tests use.
 - **The block**: the macOS application firewall on, the program serving every published stack port blocked, and automatic allow of downloaded signed software off.
 - **An opening**: any period, for this work, that starts when Docker is unblocked or the firewall is turned off, and ends when the owner has put the block back and the agent has read it back on.
-- **A failed block**: any phone load that succeeds while the block is on (AC-0007, AC-0011, or the cellular attempt), or a restore whose read-back is not the block.
+- **A failed block**: any phone load that succeeds while the block is on (AC-0007, AC-0011, or the cellular attempt made with the block on), or a restore whose read-back is not the block.
 
 - [ ] **AC-0001.** With the macOS firewall off, both commands refuse, and the message says the firewall is off.
 - [ ] **AC-0002.** With the firewall on and a program that serves a published stack port not blocked, both commands refuse, and the message names that program's path and the port.
@@ -119,10 +119,10 @@ Definitions used by these criteria:
 - [ ] **AC-0009.** With the block on, a TCP connection from this Mac to `127.0.0.1` succeeds on every published stack port.
 - [ ] **AC-0010.** In the same session as AC-0007 and AC-0011, with Docker not blocked, the same browser on the same device and Wi-Fi loads Studio at the Mac's IPv4 network address and at a global IPv6 address of the Mac.
 - [ ] **AC-0011.** With the block on, a browser on another device on the same Wi-Fi cannot load Studio at a global IPv6 address of the Mac.
-- [ ] **AC-0012.** After the last opening ends, AC-0007 and AC-0011 have each recorded a failed load, and no failed block occurred, and with the block read back on just before `supabase start`, the local stack is rebuilt with no data kept: `docker volume ls --filter label=com.supabase.cli.project=meat-ops` lists `supabase_db_meat-ops`, and every volume it lists was created after the rebuild started.
+- [ ] **AC-0012.** After the last opening ends, once AC-0010 has recorded both loads, AC-0007 and AC-0011 have each recorded a failed load, and no phone load succeeded while the block was on, and with `socketfilterfw` read just before `supabase start` showing the firewall on, `/Applications/Docker.app/Contents/MacOS/com.docker.backend` blocked, and automatic allow of downloaded signed software off, the local stack is rebuilt from the `meat-ops` worktree with no data kept: `docker volume ls --filter label=com.supabase.cli.project=meat-ops` lists `supabase_db_meat-ops`, and every volume it lists was created after the rebuild started.
 - [ ] **AC-0013.** The check refuses when the firewall automatically allows downloaded signed software.
-- [ ] **AC-0014.** After the rebuild, which runs from this worktree, no worktree that `git worktree list` shows has a file in its `supabase/snippets/`.
-- [ ] **AC-0015.** After the rebuild, `supabase_migrations.schema_migrations` lists exactly the migration files in `supabase/migrations/`.
+- [ ] **AC-0014.** After the rebuild, no worktree that `git worktree list` shows has a file in its `supabase/snippets/`.
+- [ ] **AC-0015.** After the rebuild, `supabase_migrations.schema_migrations` lists exactly the migration files in the `meat-ops` worktree's `supabase/migrations/`.
 
 ## Follow-ons
 
@@ -150,7 +150,7 @@ Definitions used by these criteria:
 - Technical: three worktrees (`meat-ops`, `meat-ops-sales`, `meat-ops-invoice`) share one local stack; on 2026-10-09 it held only `main`'s migrations, and neither other worktree had added a migration file (source: `git worktree list`, `supabase_migrations.schema_migrations`, `git ls-files` in each worktree)
 - Technical: Playwright loads its config again in every worker process, so the config-load check also runs in each worker (source: `node_modules/playwright/lib/common/index.js` `deserializeConfig`)
 - Technical: Studio's container bind-mounts this worktree's `supabase/snippets/`, read-write, and neither other worktree has a `supabase/snippets/` folder (source: `docker inspect supabase_studio_meat-ops` and `ls`, 2026-10-09)
-- Product: on a failed block, the owner wants Docker Desktop quit, which also stops other projects' containers, so no worktree can restart the stack until they decide (source: user confirmation 2026-10-09)
+- Product: on a failed block, the owner wants the simple rule: the agent stops the stack, the owner quits Docker Desktop if a port still answers, and the owner tells the sales and invoice sessions not to start the stack until they decide; the spec binds only this session beyond that (source: user confirmation 2026-10-09)
 - Technical: `supabase/config.toml` disables the CLI's seeding, so the seed is loaded through the container's psql after `supabase start` (source: `supabase/config.toml` `[db.seed]`, `docs/architecture/overview.md`)
 - Product: the owner never set a password on a local account that they use anywhere else, so no password needs changing after the exposure (source: user confirmation 2026-10-09)
 - Process: the owner runs every firewall command in their own Terminal and does the phone checks (source: user confirmation 2026-10-09)
