@@ -1,7 +1,7 @@
 # Plan: local-ports
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Drafting <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the app trust boundary and access model in `docs/architecture/overview.md`; the localhost guard `assertLocalUrl`/`resolveStackEnv` in `test/env.ts` and its tests in `test/env.test.ts` (from foundation-hardening), the analogous harness refusal this check sits beside; its two call sites, `playwright.config.ts` at config load and `test/global-setup.ts` for both runners, the construction path. Deviation: none; the check runs at the same two points as the guard.
 
 > **Plan contract:** this is the implementation strategy. It may change

@@ -1,6 +1,6 @@
 # Spec: local-ports
 
-- **Status:** Draft <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`docs/product/intents/local-stack-network-exposure.md`](../../product/intents/local-stack-network-exposure.md) (the outcome, and the overview sentences that must match it); the access model and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md); the test harness's localhost guard (`resolveStackEnv` in `test/env.ts`, from [foundation-hardening](../foundation-hardening/spec.md)), which this check sits beside and does not weaken
