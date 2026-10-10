@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { privilegedVariableNames } from "./src/privileged-env";
 import { resolveStackEnv } from "./test/env";
+import { localStackRefusal, realRunner } from "./test/network";
 
 // Run this suite through `npm run test:e2e`. On Node 22.17 with Playwright 1.64,
 // the default synchronous module hooks fail to load @supabase/supabase-js
@@ -10,8 +11,16 @@ import { resolveStackEnv } from "./test/env";
 const HOST = "127.0.0.1";
 const PORT = 3100;
 
-// The localhost guard runs here, at config load, before any server starts.
+// The localhost guard and the network check run here, at config load, before
+// the web server builds the app. Playwright loads this file again in every
+// worker, so the check runs there too.
 const stack = resolveStackEnv();
+const refusal = localStackRefusal({
+  platform: process.platform,
+  dbPort: Number(new URL(stack.dbUrl).port),
+  run: realRunner,
+});
+if (refusal) throw new Error(refusal);
 
 // The runner keeps the admin values that global setup and the pg checks need,
 // and the web server inherits the runner's environment. So the server command

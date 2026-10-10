@@ -102,7 +102,10 @@ serves. Start the app again after a fresh build.
 `npm run dev` answers Next.js's own dev-tool addresses before the app's Host
 check runs, so a web page that points its name at this machine could reach them
 while it runs. The owner accepted that for development only. The
-tests refuse to run against any host except `127.0.0.1` or `localhost`.
+tests refuse to run against any host except `127.0.0.1` or `localhost`. They
+also refuse unless the macOS firewall block in
+[`docs/architecture/overview.md`](docs/architecture/overview.md#keep-the-local-stack-on-this-mac)
+is on.
 
 Use commands verified from repository guidance, manifests, task runners, or CI.
 Do not guess them from the detected language alone.
