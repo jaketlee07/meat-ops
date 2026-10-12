@@ -50,3 +50,16 @@ Execution observations, newest last. Each entry names the task, the command, and
 - Cellular attempt with the block on: with Wi-Fi off, the same IPv6 address with `?after2` failed to load. A 7-minute `netstat` watch from 15:15 saw no established connection from another device; the phone's cellular attempts reached only `SYN_RCVD` (15:17:14 to 15:18:01), and the remaining entries were state 1 connections closing. No failed block occurred.
 - After the window: `npm test` exit 0 in 230 s, Vitest 384 passed (22 files), Playwright 220 passed.
 - The recorded `socketfilterfw` lines match T1's fixtures, so the fixtures and parsers did not change.
+
+## T4 (2026-10-12)
+
+- Preconditions: AC-0010 recorded both loads, AC-0007 and AC-0011 each recorded a failed load, and no phone load succeeded with the block on. The stack held only the six migrations in `supabase/migrations/`; neither `meat-ops-sales` nor `meat-ops-invoice` had added one; no vitest or playwright process was running. The owner gave the go-ahead in chat.
+- Rebuild from the `meat-ops` worktree, started 2026-10-12T20:43:44Z: `supabase stop --no-backup` exit 0, leaving 0 stack containers and 0 stack volumes.
+- AC-0012 read-back just before `supabase start` (15:43:48 CDT): `Firewall is enabled. (State = 1)`, `Incoming connection to /Applications/Docker.app/Contents/MacOS/com.docker.backend is blocked.`, `Automatically allow downloaded signed software DISABLED.` Then `supabase start` exit 0.
+- Seed: `docker exec -i supabase_db_meat-ops psql -U postgres -v ON_ERROR_STOP=1 < supabase/seed.sql` exit 0.
+- AC-0012: `docker volume ls --filter label=com.supabase.cli.project=meat-ops` lists `supabase_db_meat-ops` (created 2026-10-12T20:43:48Z) and `supabase_storage_meat-ops` (created 20:44:05Z), both after the start time.
+- AC-0015: `supabase_migrations.schema_migrations` lists exactly the 6 files in `supabase/migrations/`.
+- AC-0014: `supabase/snippets/` holds 0 files in `meat-ops`; `meat-ops-invoice` and `meat-ops-sales` have no such folder.
+- The app's `.env` values for `SUPABASE_URL` and `SUPABASE_ANON_KEY` still match the rebuilt stack's.
+- `npm test` exit 0 in 89 s, Vitest 384 passed (22 files), Playwright 220 passed.
+- The local owner account, if one was made, is gone; re-create it with the overview's three steps. The other worktrees' next test run recreates their test users.
