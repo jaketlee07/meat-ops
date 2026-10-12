@@ -27,3 +27,26 @@ Execution observations, newest last. Each entry names the task, the command, and
 - Executed by the controller. `test/global-setup.ts` and `playwright.config.ts` call `localStackRefusal` right after `resolveStackEnv()`, with the port from `DB_URL` and `realRunner`, and throw its message. The overview gains `Keep the local stack on this Mac`; its `private.operators` paragraph, Network bullet, and `test/` row point to it; `AGENTS.md` "Build and test commands" links to it.
 - Controller gates, block on: `npm run typecheck` exit 0; `npm test` exit 0 in 218 s, Vitest 384 passed (22 files), Playwright 220 passed (AC-0006). No vitest or playwright process from another worktree was running.
 - AC-0009: `nc -z -G 2 127.0.0.1 <port>` succeeded for every published stack port: 54321, 54322, 54323, 54324, and 54327.
+
+## T3, first window (2026-10-12, stopped at state 1)
+
+- State 1: the owner ran `--unblockapp` on `com.docker.backend` in their own Terminal. Reads: `Firewall is enabled. (State = 1)`, `Incoming connection to /Applications/Docker.app/Contents/MacOS/com.docker.backend is permitted.`, `Automatically allow downloaded signed software DISABLED.`
+- AC-0002: `npm test` exit 1 and `npm run test:e2e` exit 1, each with "The macOS firewall lets other devices reach /Applications/Docker.app/Contents/MacOS/com.docker.backend, which serves the local Supabase stack's port 54322. Refusing to run. See "Keep the local stack on this Mac" in docs/architecture/overview.md." No test ran, and `npm run test:e2e` printed no build output. No vitest or playwright process from another worktree was running.
+- AC-0010 control, not met: on the owner's phone, Studio at `http://192.168.1.80:54323` stayed loading, and `http://192.168.1.80:54321` ended with Safari's "the server stopped responding". A 2-minute `netstat` watch on the Mac saw no connection from another device to 54321, 54323, or 54324. Per the plan, T3 stopped; state 2, state 3, and both cellular attempts did not run.
+- Exit: the owner ran `--blockapp` in their own Terminal; read back at 14:53 CDT: `Firewall is enabled. (State = 1)`, `... com.docker.backend is blocked.`, `Automatically allow downloaded signed software DISABLED.` Nothing else ran during the window.
+- Diagnosis after the stop: the phone's Wi-Fi address was `192.168.1.73` and its IPv6 addresses share the Mac's home prefix, so it was on the same network. The Mac pinged it (2 of 4 replies). A throwaway page with no data behind it, served by Python on port 8765 for at most 5 minutes, loaded on the phone at 15:04:31, then was stopped. Why the first unblock did not let the phone reach Docker's ports is unknown; the retry below worked. Starting that page made macOS add an allow entry for Xcode's `Python.app`; the owner can remove it with `socketfilterfw --remove`.
+
+## T3, second window (2026-10-12, completed)
+
+- State 1: the owner ran `--unblockapp` again; the block read `... com.docker.backend is permitted.` from 15:09:31.
+- AC-0010: on the same Wi-Fi, the phone loaded `http://192.168.1.80:54321`, Studio at `http://192.168.1.80:54323`, and Studio at a global IPv6 address of the Mac. The Mac's `netstat` showed established connections from `192.168.1.73` to 54321 and 54323 and over IPv6.
+- AC-0002 again: `npm test` exit 1 and `npm run test:e2e` exit 1, each with the "lets other devices reach ... com.docker.backend ... port 54322" refusal.
+- Cellular attempt with Docker unblocked: with Wi-Fi off, the phone opened Studio at the Mac's global IPv6 address and showed Studio's dark page; the Mac saw connections from an IPv6 prefix outside the home network. The home gateway passes unsolicited inbound IPv6, so before the block the stack was reachable from the internet, not only the home Wi-Fi.
+- State 2: the owner ran `--setglobalstate off`; read `Firewall is disabled. (State = 0)`.
+- AC-0001: `npm test` exit 1 and `npm run test:e2e` exit 1, each with "The macOS firewall is off, so other devices can reach the local Supabase stack. Refusing to run. See "Keep the local stack on this Mac" in docs/architecture/overview.md." No test ran, and no build output appeared.
+- State 3 and exit: the owner ran `--setglobalstate on` and `--blockapp`, and closed the earlier Safari tabs. Read back at 15:15:19 and again at 15:17:49: `Firewall is enabled. (State = 1)`, `... com.docker.backend is blocked.`, `Automatically allow downloaded signed software DISABLED.` No connection from another device was open at 15:15:19. Nothing else ran during either opening.
+- AC-0007: on the same Wi-Fi, `http://192.168.1.80:54323/?after` failed to load.
+- AC-0011: on the same Wi-Fi, Studio at the global IPv6 address with `?after` failed to load.
+- Cellular attempt with the block on: with Wi-Fi off, the same IPv6 address with `?after2` failed to load. A 7-minute `netstat` watch from 15:15 saw no established connection from another device; the phone's cellular attempts reached only `SYN_RCVD` (15:17:14 to 15:18:01), and the remaining entries were state 1 connections closing. No failed block occurred.
+- After the window: `npm test` exit 0 in 230 s, Vitest 384 passed (22 files), Playwright 220 passed.
+- The recorded `socketfilterfw` lines match T1's fixtures, so the fixtures and parsers did not change.
