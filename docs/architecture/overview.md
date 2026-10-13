@@ -162,6 +162,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 ```
 
 - The block covers every port Docker publishes on this Mac, other projects' containers included.
+- Only another device can prove the block works. With the block on, this Mac still reaches the stack at its own Wi-Fi address, so a test from this Mac proves nothing.
 - The last command makes the Mac ask before any downloaded app accepts outside connections. If it asks about Docker, after an update for example, answer **Deny**. Loopback, the app, and the tests keep working.
 - `npm test` and `npm run test:e2e` check the block before any test runs. Each refusal says what is wrong:
   - **The firewall is off:** run the first setup command.

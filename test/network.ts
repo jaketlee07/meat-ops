@@ -25,7 +25,8 @@ function isPort(text: string): boolean {
 
 const unreadable = (what: string) => `Could not read ${what}, ${CANNOT_CONFIRM} ${TAIL}`;
 
-// The executable from `lsof -a -p <pid> -d txt -Fn`: the pid's line, then only
+// The executable from `lsof -a -p <pid> -d txt -Fn`, as the kernel records it,
+// not the name the process gives itself in `ps`: the pid's line, then only
 // ftxt and absolute-path pairs; the first path is the program itself.
 function executableOf(out: string, pid: number): string | null {
   const lines = linesOf(out);
