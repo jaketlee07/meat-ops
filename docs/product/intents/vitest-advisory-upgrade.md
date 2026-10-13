@@ -1,6 +1,6 @@
 # Vitest upgrade for dev-tool advisories
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
@@ -20,11 +20,11 @@
 
 ## Unresolved questions
 
-- Which Vitest major clears all 6 advisories, and does it need config or test changes?
+- Which Vitest major clears all 6 advisories, and does it need config or test changes? Vitest 5 (5.0.3, resolved under a 7-day publish cutoff); 4.1.11 also clears them, but npm 11.4.2 cannot resolve it. The only config change drops `poolOptions`; no test changes.
 
 ## Projection
 
-- A standalone dependency upgrade through work-loop, once scheduled.
+- Fulfilled by vitest-upgrade (PR #16, merged 2026-10-13). The repository `.npmrc` also turns install scripts off for every package.
 
 
 ## Source
