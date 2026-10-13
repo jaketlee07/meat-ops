@@ -1,5 +1,5 @@
 import { formatCostPerLb, formatDate, formatMoney, formatShrink, formatWeight } from "../../lib/format";
-import { showAverage, showOnHand } from "../receiving/stock-view";
+import { showAverage, showOnHand } from "../stock-view";
 import type { SaveState } from "./save-batch";
 
 // What the "Batch saved" panel shows, as text. Every number is the one the

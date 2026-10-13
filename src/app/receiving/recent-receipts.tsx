@@ -1,7 +1,7 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { RecentReceipt, RecentReceipts as Receipts } from "../../lib/receiving";
+import { Facts } from "../facts";
 import { voidReceipt } from "./actions";
-import { Facts } from "./facts";
 import { VoidDialog } from "./void-dialog";
 
 const HEADING_ID = "recent-receipts-heading";

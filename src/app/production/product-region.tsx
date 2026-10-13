@@ -1,8 +1,8 @@
 import type { FinishedProduct, RecentBatches as Batches } from "../../lib/production";
 import type { ProductStock } from "../../lib/receiving";
 import { formatShrink } from "../../lib/format";
-import { Facts } from "../receiving/facts";
-import { showAverage, showOnHand, stockView } from "../receiving/stock-view";
+import { Facts } from "../facts";
+import { showAverage, showOnHand, stockView } from "../stock-view";
 import { RecentBatches } from "./recent-batches";
 
 const NO_SHRINK = "None";
