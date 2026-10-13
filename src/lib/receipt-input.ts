@@ -32,6 +32,29 @@ export type ReceiptParse =
 
 const MAX_NOTES_LENGTH = 500;
 
+// The weight, cost, and date rules, one message or null each. The invoice
+// reading rules (invoice-reading.ts) call them, so a drafted value is never
+// one that /receiving would refuse. They read the text, never a number.
+export function weightError(weight: string): string | null {
+  if (!NUMBER_TEXT.test(weight)) return "Enter the weight in lbs, like 5000 or 32.5.";
+  if (decimalPlaces(weight) > 3) return "Use at most 3 decimal places for weight.";
+  // A valid number text is zero exactly when it holds only zeros and a point.
+  if (/^[0.]+$/.test(weight)) return "Weight must be above 0.";
+  return null;
+}
+
+export function costError(cost: string): string | null {
+  if (!NUMBER_TEXT.test(cost)) return "Enter the cost per lb, like 1.68.";
+  if (decimalPlaces(cost) > 4) return "Use at most 4 decimal places for cost.";
+  return null;
+}
+
+export function receivedDateError(receivedDate: string, today: string): string | null {
+  if (receivedDate.trim() === "") return "Enter the received date.";
+  if (receivedDate > today) return "The received date can't be after today.";
+  return null;
+}
+
 // Within one field the first matching rule wins, so each field gets one message.
 export function parseReceiptForm(fields: ReceiptFields, rawCodes: ReadonlySet<string>): ReceiptParse {
   const errors: Partial<Record<ReceiptField, string>> = {};
@@ -48,26 +71,15 @@ export function parseReceiptForm(fields: ReceiptFields, rawCodes: ReadonlySet<st
   }
 
   const weightLbs = Number(fields.weight);
-  if (!NUMBER_TEXT.test(fields.weight)) {
-    errors.weight = "Enter the weight in lbs, like 5000 or 32.5.";
-  } else if (decimalPlaces(fields.weight) > 3) {
-    errors.weight = "Use at most 3 decimal places for weight.";
-  } else if (weightLbs === 0) {
-    errors.weight = "Weight must be above 0.";
-  }
+  const weightMessage = weightError(fields.weight);
+  if (weightMessage) errors.weight = weightMessage;
 
   const unitCost = Number(fields.cost);
-  if (!NUMBER_TEXT.test(fields.cost)) {
-    errors.cost = "Enter the cost per lb, like 1.68.";
-  } else if (decimalPlaces(fields.cost) > 4) {
-    errors.cost = "Use at most 4 decimal places for cost.";
-  }
+  const costMessage = costError(fields.cost);
+  if (costMessage) errors.cost = costMessage;
 
-  if (fields.receivedDate.trim() === "") {
-    errors.receivedDate = "Enter the received date.";
-  } else if (fields.receivedDate > fields.today) {
-    errors.receivedDate = "The received date can't be after today.";
-  }
+  const dateMessage = receivedDateError(fields.receivedDate, fields.today);
+  if (dateMessage) errors.receivedDate = dateMessage;
 
   if (fields.notes.length > MAX_NOTES_LENGTH) {
     errors.notes = "Keep notes to 500 characters or fewer.";
