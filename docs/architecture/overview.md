@@ -163,7 +163,13 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
 
 - The block covers every port Docker publishes on this Mac, other projects' containers included.
 - The last command makes the Mac ask before any downloaded app accepts outside connections. If it asks about Docker, after an update for example, answer **Deny**. Loopback, the app, and the tests keep working.
-- `npm test` and `npm run test:e2e` check the block before any test runs. They refuse when the firewall is off, when a program serving a stack port is not blocked, when automatic allow is on, or on a computer that is not a Mac. If Docker is installed elsewhere, use the path the refusal names.
+- `npm test` and `npm run test:e2e` check the block before any test runs. Each refusal says what is wrong:
+  - **The firewall is off:** run the first setup command.
+  - **Other devices can reach a program** (the message names it and the port): run `--add` and `--blockapp` with the path it names. A Docker update that drops the block entry shows up this way, because the firewall reports a program missing from its list as permitted.
+  - **Automatic allow is on:** run the last setup command.
+  - **Not a Mac:** the check knows only the macOS firewall.
+  - **No published port, or no program serving one:** start the stack with `supabase start`, or let a restart finish.
+  - **Could not read something:** a tool failed, timed out, or printed new wording, often after a macOS or Docker update. The commands and their exact expected output are in `test/network.ts`; run the one the message names by hand and compare. If only the wording changed, update `test/network.ts` and its tests. Those tests run behind the same check, so while it refuses, run them with a throwaway Vitest config that has no global setup.
 - The check runs only when tests run, so a firewall turned off between test runs is caught at the next run. The owner accepted that gap.
 - The block leaves loopback open by design, so a web page open in this Mac's browser could still reach Studio and the API through `127.0.0.1`. That path stays open until [its follow-on intent](../product/intents/local-stack-loopback-web-pages.md) closes.
 

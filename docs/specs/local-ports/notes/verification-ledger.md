@@ -5,7 +5,7 @@ Execution observations, newest last. Each entry names the task, the command, and
 ## Gates before EXECUTE (2026-10-09)
 
 - Pre-EXECUTE reviews closed after six rounds. Raw and adjudication artifacts are under the ignored `.context/reviews/b255718d-6ae7-44cb-a90c-c0d659d0b99d/`.
-  - adversarial-reviewer: round 1 sustained 1 Blocker and 5 smaller findings, with 2 left undecided until the owner steered; rounds 2 to 5 sustained 6, 5, 1, and 3 advisory findings or Nits; round 6 returned `Clean — ready to commit.`
+  - adversarial-reviewer: round 1 sustained 1 Blocker and 5 smaller findings, with 2 left undecided until the owner steered; rounds 2 to 5 sustained 6, 5, 1, and 3 advisory findings or Nits; round 6 returned Clean.
   - security-reviewer: rounds 1 to 5 sustained 5, 5, 3, 3, and 3 advisory findings or Nits; round 6 returned 2 Nits, deferred below.
   - shaping-reviewer: 10, 5, 5, 3, 3, 2, and 1 findings in rounds 1 to 7 (the last two on Assumptions and one Testing Strategy line); Clean in round 8 on commit `87d6c98`.
 - Deferred Nits from security round 6:
@@ -40,7 +40,7 @@ Execution observations, newest last. Each entry names the task, the command, and
 
 - State 1: the owner ran `--unblockapp` again; the block read `... com.docker.backend is permitted.` from 15:09:31.
 - AC-0010: on the same Wi-Fi, the phone loaded `http://192.168.1.80:54321`, Studio at `http://192.168.1.80:54323`, and Studio at a global IPv6 address of the Mac. The Mac's `netstat` showed established connections from `192.168.1.73` to 54321 and 54323 and over IPv6.
-- AC-0002 again: `npm test` exit 1 and `npm run test:e2e` exit 1, each with the "lets other devices reach ... com.docker.backend ... port 54322" refusal.
+- AC-0002 again: `npm test` exit 1 and `npm run test:e2e` exit 1, each with the "lets other devices reach ... com.docker.backend ... port 54322" refusal. No vitest or playwright process from another worktree was running before these runs, nor before the state 2 runs, the `npm test` after the window, or the `npm test` after the T4 rebuild.
 - Cellular attempt with Docker unblocked: with Wi-Fi off, the phone opened Studio at the Mac's global IPv6 address and showed Studio's dark page; the Mac saw connections from an IPv6 prefix outside the home network. The home gateway passes unsolicited inbound IPv6, so before the block the stack was reachable from the internet, not only the home Wi-Fi.
 - State 2: the owner ran `--setglobalstate off`; read `Firewall is disabled. (State = 0)`.
 - AC-0001: `npm test` exit 1 and `npm run test:e2e` exit 1, each with "The macOS firewall is off, so other devices can reach the local Supabase stack. Refusing to run. See "Keep the local stack on this Mac" in docs/architecture/overview.md." No test ran, and no build output appeared.
@@ -63,3 +63,15 @@ Execution observations, newest last. Each entry names the task, the command, and
 - The app's `.env` values for `SUPABASE_URL` and `SUPABASE_ANON_KEY` still match the rebuilt stack's.
 - `npm test` exit 0 in 89 s, Vitest 384 passed (22 files), Playwright 220 passed.
 - The local owner account, if one was made, is gone; re-create it with the overview's three steps. The other worktrees' next test run recreates their test users.
+
+## Review fixes (2026-10-12)
+
+- Post-gates review round 1: adversarial-reviewer, security-reviewer, and quality-engineer each returned no Blocker. Two adjudications held one question each for the owner; the owner decided both in chat.
+- Firewall side effect: the controller started the T3 diagnosis page, which made macOS add an allow entry for Xcode's `Python.app` without a prompt, because built-in signed software is allowed automatically. That changed the application firewall from the agent session, against the spec's Never do. The owner chose to remove it and ran `--remove` in their own Terminal; read back at 19:50 CDT, the app list holds no `Python.app` entry, `com.docker.backend` is blocked, and automatic allow for downloaded signed software is off. The `/usr/bin/python3` entry was already listed on 2026-10-09, before any change in this work. Built-in signed automatic allow stays on.
+- The owner kept the check's own unit tests behind the shared global setup; the overview says how to run them while the check refuses.
+- `test/network.ts`: the program lookup now refuses unless its output is exactly the requested pid's line followed by `ftxt` and absolute-path pairs; the non-macOS message names the check once.
+- `test/network.test.ts`: six new cases (a second permitted program on one port, a program missing from the firewall's list, the database port used to find the stack, a pid line without its prefix, an unpublished entry other than `<port>/tcp`, and a program lookup for another pid or with an extra line); labels now name the criterion or rule each case checks. 36 cases.
+- Mutation proof: each of seven rule breaks in `test/network.ts` (first pid only, no `<port>/tcp` check, no pid-line check, a fixed database port, an ignored pid line, ignored extra lookup lines, a missing automatic-allow read treated as a pass) turned `npx vitest run test/network.test.ts` red; the file was restored byte for byte.
+- `--getappblocked` for a program not in the firewall's list prints `Incoming connection to <path> is permitted.` (recorded with `/usr/bin/true`), so a lost Docker entry gives the refusal that names the program and port.
+- The overview lists every refusal kind with its next step.
+- Gates: `npm run typecheck` exit 0; `npm test` exit 0 in 97 s, Vitest 390 passed (22 files), Playwright 220 passed; no test process from another worktree was running.

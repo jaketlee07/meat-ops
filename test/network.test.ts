@@ -42,22 +42,22 @@ function baseline(): Record<string, string> {
   };
 }
 
-function check(outputs: Record<string, string>, platform = "darwin"): string | null {
-  return localStackRefusal({ platform, dbPort: 54322, run: replay(outputs) });
+function check(outputs: Record<string, string>, platform = "darwin", dbPort = 54322): string | null {
+  return localStackRefusal({ platform, dbPort, run: replay(outputs) });
 }
 
 const TAIL = 'Refusing to run. See "Keep the local stack on this Mac" in docs/architecture/overview.md.';
 
 describe("Local stack network check, more states", () => {
-  it("AC-0006: passes when the firewall is on, automatic allow of downloaded apps is off, and every executable is blocked", () => {
+  it("passes when the firewall is on, automatic allow of downloaded apps is off, and every executable is blocked", () => {
     expect(check(baseline())).toBeNull();
   });
 
-  it("AC-0001: treats State = 2 as the firewall on", () => {
+  it("reads State = 2 as the firewall on", () => {
     expect(check({ ...baseline(), [`${FW} --getglobalstate`]: "Firewall is enabled. (State = 2)\n" })).toBeNull();
   });
 
-  it("AC-0001: every message ends with the overview pointer", () => {
+  it("Refuses: the firewall-off message ends with the overview pointer", () => {
     const message = check({ ...baseline(), [`${FW} --getglobalstate`]: "Firewall is disabled. (State = 0)\n" });
     expect(message).toMatch(/^The macOS firewall is off, so other devices can reach the local Supabase stack\. /);
     expect(message?.endsWith(TAIL)).toBe(true);
@@ -79,6 +79,34 @@ describe("Local stack network check, more states", () => {
       [`${FW} --getappblocked ${OTHER}`]: permittedLine(OTHER),
     });
     expect(message).toContain(`reach ${OTHER}, which serves the local Supabase stack's port 54327.`);
+  });
+
+  it("AC-0003: refuses when a second program on the same port is permitted", () => {
+    const message = check({
+      ...baseline(),
+      [lsofPort(54322)]: "p48398\nf171\np5000\nf9\n",
+      [lsofTxt(5000)]: `p5000\nftxt\nn${OTHER}\n`,
+      [`${FW} --getappblocked ${OTHER}`]: permittedLine(OTHER),
+    });
+    expect(message).toContain(`reach ${OTHER}, which serves the local Supabase stack's port 54322.`);
+  });
+
+  it("AC-0002: refuses a program missing from the firewall's list, which reads as permitted", () => {
+    // Recorded 2026-10-12: `--getappblocked /usr/bin/true`, a path not in the list.
+    const missing = "/usr/bin/true";
+    expect(permittedLine(missing)).toBe("Incoming connection to /usr/bin/true is permitted.\n");
+    const message = check({
+      ...baseline(),
+      [lsofTxt(48398)]: `p48398\nftxt\nn${missing}\n`,
+      [`${FW} --getappblocked ${missing}`]: permittedLine(missing),
+    });
+    expect(message).toContain(`reach ${missing}, which serves the local Supabase stack's port 54322.`);
+  });
+
+  it("finds the stack from the database port it is given", () => {
+    const otherProject = `docker ps --filter publish=55322 --format {{.Label "com.supabase.cli.project"}}`;
+    expect(check({ ...baseline(), [otherProject]: "meat-ops\n" }, "darwin", 55322)).toBeNull();
+    expect(check(baseline(), "darwin", 55322)).toMatch(/^Could not read the local Supabase project name, /);
   });
 
   it("AC-0003: passes when two ports are served by two blocked executables", () => {
@@ -150,6 +178,21 @@ describe("Local stack network check, more states", () => {
     expect(message).toMatch(/^Could not read the program serving port 54322, /);
   });
 
+  it("AC-0005: refuses a pid line without its p prefix, even when its digits name a real pid", () => {
+    const message = check({ ...baseline(), [lsofPort(54322)]: "x48398\nf171\n" });
+    expect(message).toMatch(/^Could not read the program serving port 54322, /);
+  });
+
+  it("AC-0005: refuses an unpublished entry that is not <port>/tcp", () => {
+    const message = check({ ...baseline(), [PORTS_CMD]: `8080/udp\n${PORTS_LINE}` });
+    expect(message).toMatch(/^Could not read the local Supabase stack's published ports, /);
+  });
+
+  it("AC-0005: refuses a program lookup for another pid or with an unrecognized line", () => {
+    expect(check({ ...baseline(), [lsofTxt(48398)]: `p99999\nftxt\nn${API}\n` })).toMatch(/^Could not read the program serving port 54322, /);
+    expect(check({ ...baseline(), [lsofTxt(48398)]: `p48398\nftxt\nn${API}\nxyz\n` })).toMatch(/^Could not read the program serving port 54322, /);
+  });
+
   it("AC-0005: refuses an executable that is not an absolute path", () => {
     const message = check({ ...baseline(), [lsofTxt(48398)]: "p48398\nftxt\nncom.docker.backend\n" });
     expect(message).toMatch(/^Could not read the program serving port 54322, /);
@@ -184,12 +227,12 @@ describe("Local stack network check, more states", () => {
     expect(message?.endsWith(TAIL)).toBe(true);
   });
 
-  it("AC-0001: checks run in order, so a firewall that is off is reported before a bad project name", () => {
+  it("checks run in order, so a firewall that is off is reported before a bad project name", () => {
     const message = check({ [`${FW} --getglobalstate`]: "Firewall is disabled. (State = 0)\n", [PROJECT_CMD]: "\n" });
     expect(message).toMatch(/firewall is off/);
   });
 
-  it("AC-0005: keeps addresses out of every message", () => {
+  it("Boundaries: keeps addresses out of every message", () => {
     const messages = [
       check({ ...baseline(), [`${FW} --getappblocked ${API}`]: permittedLine(API) }),
       check({ ...baseline(), [PORTS_CMD]: "10.0.0.1:54322->5432/tcp\n" }),

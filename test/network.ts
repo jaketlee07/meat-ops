@@ -25,6 +25,17 @@ function isPort(text: string): boolean {
 
 const unreadable = (what: string) => `Could not read ${what}, ${CANNOT_CONFIRM} ${TAIL}`;
 
+// The executable from `lsof -a -p <pid> -d txt -Fn`: the pid's line, then only
+// ftxt and absolute-path pairs; the first path is the program itself.
+function executableOf(out: string, pid: number): string | null {
+  const lines = linesOf(out);
+  if (lines[0] !== `p${pid}` || lines.length < 3 || (lines.length - 1) % 2 !== 0) return null;
+  for (let i = 1; i < lines.length; i += 2) {
+    if (lines[i] !== "ftxt" || !/^n\/./.test(lines[i + 1]!)) return null;
+  }
+  return lines[2]!.slice(1);
+}
+
 // The first host port of each published entry; null when an entry is unrecognized.
 function publishedPorts(out: string): number[] | null {
   const ports: number[] = [];
@@ -54,7 +65,7 @@ export function localStackRefusal({
   run: Runner;
 }): string | null {
   if (platform !== "darwin") {
-    return `The network check supports only macOS, ${CANNOT_CONFIRM} ${TAIL}`;
+    return `The network check supports only macOS, so it cannot confirm that only this computer reaches the local Supabase stack. ${TAIL}`;
   }
 
   const globalState = run(FIREWALL, ["--getglobalstate"]);
@@ -124,13 +135,8 @@ export function localStackRefusal({
   for (const [port, pids] of pidsByPort) {
     for (const pid of pids) {
       const out = run("lsof", ["-a", "-p", String(pid), "-d", "txt", "-Fn"]);
-      const lines = out === null ? [] : linesOf(out);
-      const txt = lines.indexOf("ftxt");
-      const name = txt === -1 ? undefined : lines.slice(txt + 1).find((line) => line.startsWith("n"));
-      if (name === undefined || !name.startsWith("n/")) {
-        return unreadable(`the program serving port ${port}`);
-      }
-      const path = name.slice(1);
+      const path = out === null ? null : executableOf(out, pid);
+      if (path === null) return unreadable(`the program serving port ${port}`);
       if (!portByPath.has(path)) portByPath.set(path, port);
     }
   }
