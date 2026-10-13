@@ -12,7 +12,7 @@ import {
   photoMediaType,
 } from "../../lib/invoice-reading";
 import { readPhoto, readText, type ReadState } from "./actions";
-import { PHOTO_FIELD, TEXT_FIELD, TODAY_FIELD } from "./form-fields";
+import { deviceToday, PHOTO_FIELD, TEXT_FIELD, TODAY_FIELD } from "./form-fields";
 
 // The longest edge the model reads (AC-0013).
 const LONG_EDGE = 2576;
@@ -20,19 +20,15 @@ const READING = "Reading. This can take up to two minutes.";
 
 const IDLE: ReadState = { status: "idle" };
 const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
+// The photo field's own selector button, styled to look like a button.
+const FILE_BUTTON =
+  "file:mr-3 file:rounded-md file:border file:border-field-border file:bg-surface file:px-3 file:py-1 file:text-base file:font-medium file:text-ink";
 const BUTTON =
   "w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60";
 
 type Press =
   | { source: "photo"; file: File | undefined; today: string }
   | { source: "text"; text: string; today: string };
-
-// The date on this device, as YYYY-MM-DD.
-function deviceToday(): string {
-  const now = new Date();
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
 
 // AC-0012 and AC-0013: checks the chosen file's first bytes, then draws it on a
 // canvas no larger than the model reads and sends that JPEG. The re-encode drops
@@ -91,6 +87,8 @@ export function ReadForms() {
   const [state, dispatch, pending] = useActionState(run, IDLE);
   const [text, setText] = useState("");
   const photoRef = useRef<HTMLInputElement>(null);
+  // Which Read button was pressed last, so the reading message sits beside it.
+  const [pressed, setPressed] = useState<"photo" | "text" | null>(null);
 
   // A read that made a draft opens its review; the form stays busy until it does.
   const busy = pending || state.status === "read";
@@ -108,12 +106,14 @@ export function ReadForms() {
   function submitPhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    setPressed("photo");
     startTransition(() => dispatch({ source: "photo", file: photoRef.current?.files?.[0], today: deviceToday() }));
   }
 
   function submitText(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    setPressed("text");
     startTransition(() => dispatch({ source: "text", text, today: deviceToday() }));
   }
 
@@ -121,16 +121,18 @@ export function ReadForms() {
     state.status === "invalid" && state.source === source ? state.message : null;
   const failure = (source: "photo" | "text") =>
     state.status === "refused" && state.source === source ? state.message : null;
+  // The line is reserved, so neither form moves when the text appears. The
+  // regions are in the page before they have text, so the change is announced.
+  const reading = (source: "photo" | "text") => (
+    <div role="status" className="min-h-6 text-base">
+      {busy && pressed === source ? READING : null}
+    </div>
+  );
   const photoError = fieldError("photo");
   const textError = fieldError("text");
 
   return (
     <>
-      {/* The live regions are in the page before they have text, so the changes are announced. */}
-      <div role="status" className="mb-4 text-base">
-        {busy ? READING : null}
-      </div>
-
       <section aria-labelledby="read-photo-heading" className="mb-8 space-y-4">
         <h2 id="read-photo-heading" className="text-xl font-semibold">
           Read an invoice
@@ -146,7 +148,7 @@ export function ReadForms() {
               name={PHOTO_FIELD}
               type="file"
               accept="image/*"
-              className={`${CONTROL} py-2`}
+              className={`${CONTROL} ${FILE_BUTTON} py-2`}
               aria-invalid={photoError ? true : undefined}
               aria-describedby={photoError ? "invoice-photo-error" : undefined}
             />
@@ -162,6 +164,7 @@ export function ReadForms() {
           <button type="submit" aria-disabled={busy ? true : undefined} className={BUTTON}>
             Read photo
           </button>
+          {reading("photo")}
         </form>
       </section>
 
@@ -196,6 +199,7 @@ export function ReadForms() {
           <button type="submit" aria-disabled={busy ? true : undefined} className={BUTTON}>
             Read text
           </button>
+          {reading("text")}
         </form>
       </section>
     </>

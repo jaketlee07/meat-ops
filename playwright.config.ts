@@ -14,11 +14,12 @@ const HOST = "127.0.0.1";
 const ownStackFile = readOwnStackFile();
 const PORT = e2ePort(process.env.E2E_PORT, namesOwnStack(ownStackFile));
 
-// The fake model service listens on the next port up, and the spare app that the
-// invoice specs start for AC-0021 and AC-0028 on the one after, so two folders'
-// runs (3100 and 3200) never collide.
+// The fake model service listens on the next port up, the spare app that the
+// invoice specs start for AC-0021 and AC-0028 on the one after, and a small
+// forwarder in front of the database API (AC-0097) on the one after that, so two
+// folders' runs (3100 and 3200) never collide.
 const FAKE_MODEL_PORT = PORT + 1;
-if (PORT + 2 > 65535) throw new Error("E2E_PORT must leave room for two more ports (at most 65533). Refusing to run.");
+if (PORT + 3 > 65535) throw new Error("E2E_PORT must leave room for three more ports (at most 65532). Refusing to run.");
 
 // What the invoice specs expect the app to hold. Keep these two in step with
 // ANTHROPIC_TEST_KEY in test/e2e/invoices-page.ts. The suite sets all three

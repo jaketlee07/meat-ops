@@ -103,6 +103,30 @@ describe("listWaitingDrafts", () => {
   });
 });
 
+describe("listWaitingDrafts paging", () => {
+  it("lists every waiting draft past the first 100 once each, newest first", async () => {
+    const total = 230;
+    // Seeded through pg: 230 text drafts, one second apart, each with one line.
+    const ids = await query<{ id: string }>(
+      `insert into public.import_drafts (source, capture_text, captured_on, captured_at, model)
+       select 'text', 'typed ' || n, '2026-10-09', timestamp with time zone '2026-10-09 12:00:00+00' + n * interval '1 second', 'claude-opus-5-5'
+       from generate_series(1, $1::int) as n
+       returning id`,
+      [total],
+    );
+    expect(ids).toHaveLength(total);
+    await query(
+      `insert into public.import_draft_lines (import_draft_id, line_no, words)
+       select id, 1, 'line of ' || capture_text from public.import_drafts`,
+    );
+    const expected = await query<{ id: string }>("select id from public.import_drafts order by captured_at desc");
+    const listed = (await listWaitingDrafts(operator)).map((draft) => draft.id);
+    expect(listed).toHaveLength(total);
+    expect(new Set(listed).size).toBe(total);
+    expect(listed).toEqual(expected.map((row) => row.id));
+  });
+});
+
 describe("getDraft", () => {
   it("returns the draft with its lines in line order and no photo bytes", async () => {
     const created = await photoDraft([

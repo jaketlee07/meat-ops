@@ -1,4 +1,3 @@
-import type { Ref } from "react";
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import { BeforeAfter } from "../before-after";
 import { Facts } from "../facts";
@@ -7,16 +6,15 @@ import type { SaveState } from "./save-draft";
 
 type Saved = Extract<SaveState, { status: "saved" }>;
 
+// The outcome sentence. The review puts it in its status region, so a screen
+// reader announces it, and a save moves focus to it.
+export const savedSentence = (count: number) => (count === 1 ? "Saved 1 receipt." : `Saved ${count} receipts.`);
+
 // What a save made: each new lot, then each touched raw product's stock before
-// and after. The status region around it is in the page before it has content,
-// so a screen reader announces what is put into it; a save moves focus to the heading.
-export function SavedResult({ saved, headingRef }: { saved: Saved; headingRef: Ref<HTMLHeadingElement> }) {
-  const count = saved.lots.length;
+// and after. It sits outside the status region, so only the sentence is announced.
+export function SavedResult({ saved }: { saved: Saved }) {
   return (
-    <>
-      <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">
-        {count === 1 ? "Saved 1 receipt." : `Saved ${count} receipts.`}
-      </h2>
+    <section aria-label="Saved receipts" className="space-y-4">
       <ul className="space-y-4">
         {saved.lots.map((lot) => (
           <li key={lot.lotNumber}>
@@ -47,6 +45,6 @@ export function SavedResult({ saved, headingRef }: { saved: Saved; headingRef: R
       ) : (
         <p>The receipts were saved, but the new totals could not be loaded. Reload the page to see them.</p>
       )}
-    </>
+    </section>
   );
 }

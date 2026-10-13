@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Locator, type Page } from "@playwright/test";
 import { receiveLot } from "../../src/lib/rpc";
 import { callAsOperator, query, RAW_CHK_ID, RAW_TOM_ID, VENDOR_ID } from "../db";
 import { resolveStackEnv } from "../env";
@@ -26,6 +26,7 @@ import {
   type FakeAnswer,
   FakeModel,
   fakeModel,
+  type Forwarder,
   FORM_CONTROLS,
   FRAMING,
   GIF,
@@ -36,6 +37,7 @@ import {
   lineRows,
   lotCount,
   lotRows,
+  NAV_CONTROLS,
   NO_LINES,
   NOT_ALLOWED_DISCARD,
   NOT_ALLOWED_READ,
@@ -46,6 +48,8 @@ import {
   openInvoices,
   openReview,
   parseParts,
+  parts,
+  PHOTO_NOT_LOADED,
   type Parts,
   PHOTO_NONE,
   PHOTO_TOO_LARGE,
@@ -68,12 +72,15 @@ import {
   seedLines,
   type SeedLine,
   sentImage,
+  type SpareApp,
+  startForwarder,
   startSpare,
   storedImage,
   TEXT_BLANK,
   TEXT_TOO_LONG,
   TOO_LONG,
   TRY_AGAIN,
+  TRY_LATER,
   TURKEY,
   TURKEY_LINES,
   withLocation,
@@ -258,21 +265,65 @@ test.describe("the read forms", () => {
     expect(await lineRows(id)).toHaveLength(1);
   });
 
-  test("AC-0014: while a read is in flight the page says so and both Read buttons are disabled", async ({ page }) => {
-    await model.answer({ hold: true, then: TURKEY });
+  test("AC-0012, AC-0015: a typed line break is stored and sent as LF, with the code points the box held", async ({
+    page,
+  }) => {
+    await model.answer({ reading: [TURKEY_LINES[0]!] });
     const p = await openInvoices(page);
-    await expect(p.status).toHaveText("");
-    await readText(p);
-    await model.waitForRequests(1);
-    await expect(p.status).toHaveText(READING);
-    await expect(p.readPhoto).toBeDisabled();
-    await expect(p.readText).toBeDisabled();
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
-
-    await model.release();
+    const typed = "5000 lbs RAW-TOM\nfrom Reyes Meats at 1.68 today";
+    await p.text.fill(typed);
+    const inBox = await p.text.inputValue();
+    await p.readText.click();
     await draftIdFromUrl(page);
-    expect(await draftCount()).toBe(1);
+    const [draft] = await draftRows();
+    expect(draft?.capture_text).toBe(typed);
+    expect(draft?.capture_text).not.toContain("\r");
+    expect(Array.from(draft?.capture_text ?? "")).toHaveLength(Array.from(inBox).length);
+    const sent = JSON.stringify((await onlyRequest()).body.messages);
+    expect(sent).toContain("RAW-TOM\\nfrom Reyes");
+    expect(sent).not.toContain("\\r");
   });
+
+  test("the photo field's selector button looks like a button and the field stays 44 px tall", async ({ page }) => {
+    const p = await openInvoices(page);
+    const button = await p.photo.evaluate((input) => {
+      const style = getComputedStyle(input, "::file-selector-button");
+      return { border: style.borderTopWidth, radius: style.borderTopLeftRadius, padding: style.paddingLeft, weight: style.fontWeight };
+    });
+    expect(button).toEqual({ border: "1px", radius: "6px", padding: "12px", weight: "500" });
+    expect((await p.photo.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  });
+
+  for (const source of ["text", "photo"] as const) {
+    test(`AC-0014: while a ${source} read is in flight the message sits by that Read button, nothing moves, and both buttons are disabled`, async ({
+      page,
+    }) => {
+      await model.answer({ hold: true, then: TURKEY });
+      const p = await openInvoices(page);
+      const [here, other] = source === "text" ? [p.textStatus, p.photoStatus] : [p.photoStatus, p.textStatus];
+      await expect(here).toHaveText("");
+      await expect(other).toHaveText("");
+      const before = [await p.readPhoto.boundingBox(), await p.readText.boundingBox(), await p.text.boundingBox(), await p.draftsSection.boundingBox()];
+      if (source === "text") {
+        await readText(p);
+      } else {
+        await p.photo.setInputFiles(pngFile(300, 200));
+        await p.readPhoto.click();
+      }
+      await model.waitForRequests(1);
+      await expect(here).toHaveText(READING);
+      await expect(other).toHaveText("");
+      await expect(p.readPhoto).toBeDisabled();
+      await expect(p.readText).toBeDisabled();
+      // The line was reserved, so neither form moved when the text appeared.
+      expect([await p.readPhoto.boundingBox(), await p.readText.boundingBox(), await p.text.boundingBox(), await p.draftsSection.boundingBox()]).toEqual(before);
+      expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+
+      await model.release();
+      await draftIdFromUrl(page);
+      expect(await draftCount()).toBe(1);
+    });
+  }
 
   test("AC-0025 and AC-0098: each waiting draft once, newest first, with its date, kind, line count, and first words", async ({
     page,
@@ -459,7 +510,7 @@ test.describe("read failures", () => {
       await expect(p.textMessage).toHaveText(message);
       await expect(p.textMessage).toBeFocused();
       await expect(p.text).toHaveValue(RECEIPT_TEXT);
-      await expect(p.status).toHaveText("");
+      await expect(p.textStatus).toHaveText("");
       expect(await draftCount()).toBe(0);
       expect(await ledgerFingerprints()).toEqual(before);
       expect(await model.requests()).toHaveLength(1);
@@ -487,6 +538,7 @@ test.describe("read failures", () => {
     await expect(p.text).toHaveValue(RECEIPT_TEXT);
     expect(await draftCount()).toBe(0);
     expect(await model.requests()).toEqual([]);
+    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
   });
 
   test("AC-0185: a draft write refused after the model answered says why and creates no draft", async ({ page }) => {
@@ -502,6 +554,7 @@ test.describe("read failures", () => {
     await expect(p.textMessage).toBeFocused();
     expect(await draftCount()).toBe(0);
     expect(await lotCount()).toBe(0);
+    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
   });
 });
 
@@ -665,6 +718,8 @@ test.describe("what the model receives", () => {
     await again.photo.setInputFiles(pngFile(200, 100));
     await again.readPhoto.click();
     await expect.poll(async () => (await model.requests()).length).toBe(2);
+    // Let the second read finish, so it does not outlive the test.
+    await draftIdFromUrl(page);
     const [first, second] = await model.requests();
     expect(JSON.stringify(first!.body.messages)).not.toContain("RAW-NEW");
     expect(JSON.stringify(second!.body.messages)).toContain("RAW-NEW");
@@ -684,6 +739,7 @@ test.describe("what the model receives", () => {
       os.hostname(),
       os.type(),
       os.platform(),
+      `Other:${os.platform()}`,
       "macOS",
       "Windows",
       "Linux",
@@ -757,6 +813,7 @@ test.describe("an app started without a usable key or address", () => {
       await expect(p.text).toHaveValue(RECEIPT_TEXT);
       expect(await draftCount()).toBe(0);
       expect(await model.requests()).toEqual([]);
+      expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
       await expect.poll(() => spare.output().split("readInvoice failed").length - 1).toBe(1);
       expect(spare.output()).toContain("readInvoice failed: kind=not-set-up\n");
       expect(spare.output()).not.toContain(RECEIPT_TEXT);
@@ -776,7 +833,13 @@ test.describe("an app started without a usable key or address", () => {
       ANTHROPIC_AUTH_TOKEN: ANTHROPIC_TEST_AUTH_TOKEN,
       ANTHROPIC_WEBHOOK_SIGNING_KEY: "whsec-webhook-sentinel",
       ANTHROPIC_LOG: "debug",
-      ANTHROPIC_CUSTOM_HEADERS: "X-Machine-Secret: custom-header-sentinel",
+      // Lines that name headers the request must carry itself, beside one it must not carry.
+      ANTHROPIC_CUSTOM_HEADERS: [
+        "X-Machine-Secret: custom-header-sentinel",
+        "x-api-key: custom-key-sentinel",
+        "anthropic-version: custom-version-sentinel",
+        "accept: custom-accept-sentinel",
+      ].join("\n"),
     });
     const context = await browser.newContext({ baseURL: spare.url, storageState: OPERATOR_STATE });
     try {
@@ -787,14 +850,61 @@ test.describe("an app started without a usable key or address", () => {
       await draftIdFromUrl(page);
       const { headers, body } = await onlyRequest();
       expect(headers["x-api-key"]).toBe(ANTHROPIC_TEST_KEY);
+      expect(headers["anthropic-version"]).toBe("2023-06-01");
+      expect(headers.accept).toBe("application/json");
+      expect(headers["content-type"]).toBe("application/json");
       expect(headers.authorization).toBeUndefined();
       expect(headers["x-machine-secret"]).toBeUndefined();
-      expect(JSON.stringify({ headers, body })).not.toContain("custom-header-sentinel");
+      for (const sentinel of ["custom-header-sentinel", "custom-key-sentinel", "custom-version-sentinel", "custom-accept-sentinel"]) {
+        expect(JSON.stringify({ headers, body }), sentinel).not.toContain(sentinel);
+      }
       const output = spare.output();
-      for (const secret of [RECEIPT_TEXT, "Turkey Drums TOM (raw)", ANTHROPIC_TEST_KEY, ANTHROPIC_TEST_AUTH_TOKEN, "custom-header-sentinel", "whsec-webhook-sentinel"]) {
+      for (const secret of [RECEIPT_TEXT, "Turkey Drums TOM (raw)", ANTHROPIC_TEST_KEY, ANTHROPIC_TEST_AUTH_TOKEN, "custom-header-sentinel", "custom-key-sentinel", "whsec-webhook-sentinel"]) {
         expect(output, secret).not.toContain(secret);
       }
       expect(output).not.toMatch(/log_[0-9a-f]{6}/);
+    } finally {
+      await context.close();
+      await spare.stop();
+    }
+  });
+
+  test("AC-0057: each model failure logs its own kind, and the log holds no key, typed text, or product description", async ({
+    browser,
+    baseURL,
+  }) => {
+    const spare = await startSpare(ports(baseURL).spare, {
+      ANTHROPIC_API_KEY: ANTHROPIC_TEST_KEY,
+      ANTHROPIC_BASE_URL: model.base,
+    });
+    const context = await browser.newContext({ baseURL: spare.url, storageState: OPERATOR_STATE });
+    const typed = "kind mapping sentinel 5521";
+    const cases: Array<{ answer: FakeAnswer; line: string }> = [
+      { answer: { drop: true }, line: "readInvoice failed: kind=service-error" },
+      { answer: { status: 529 }, line: "readInvoice failed: kind=service-error status=529" },
+      { answer: { status: 401 }, line: "readInvoice failed: kind=key-refused status=401" },
+      { answer: { reading: [], stop_reason: "refusal" }, line: "readInvoice failed: kind=declined" },
+      { answer: { reading: lines(2), stop_reason: "max_tokens" }, line: "readInvoice failed: kind=too-long" },
+      { answer: { text: JSON.stringify({ lines: [], extra: 1 }) }, line: "readInvoice failed: kind=unreadable" },
+      { answer: { rawBody: "this is not JSON", status: 200, contentType: "application/json" }, line: "readInvoice failed: kind=unreadable" },
+    ];
+    try {
+      const page = await context.newPage();
+      const p = await openInvoices(page);
+      await p.text.fill(typed);
+      const logged = () => spare.output().split("\n").filter((line) => line.startsWith("readInvoice failed"));
+      for (const [index, { answer, line }] of cases.entries()) {
+        await model.answer(answer);
+        await p.readText.click();
+        await expect.poll(logged, { message: line }).toHaveLength(index + 1);
+        expect(logged()[index]).toBe(line);
+        await expect(p.readText).toBeEnabled();
+      }
+      expect(logged()).toEqual(cases.map(({ line }) => line));
+      const output = spare.output();
+      for (const secret of [ANTHROPIC_TEST_KEY, typed, "Turkey Drums TOM (raw)", "Chicken Thighs (raw)"]) {
+        expect(output, secret).not.toContain(secret);
+      }
     } finally {
       await context.close();
       await spare.stop();
@@ -818,6 +928,7 @@ test.describe("an app started without a usable key or address", () => {
       await expect(p.textMessage).toBeFocused();
       expect(await draftCount()).toBe(0);
       expect(await model.requests()).toEqual([]);
+      expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
       await expect.poll(() => spare.output().split("readInvoice failed").length - 1).toBe(1);
       expect(spare.output()).toContain("readInvoice failed: kind=address-refused\n");
       expect(spare.output()).not.toContain(ANTHROPIC_TEST_KEY);
@@ -831,7 +942,6 @@ test.describe("an app started without a usable key or address", () => {
 // ---- Reviewing, saving, and discarding a draft ----
 
 const TOM_LABEL = "RAW-TOM Turkey Drums TOM (raw)";
-const NAV_CONTROLS = FORM_CONTROLS.slice(0, 6);
 
 // The turkey reading's two lines as a waiting draft holds them.
 const TURKEY_SEED: SeedLine[] = [
@@ -1055,6 +1165,81 @@ test.describe("the draft review", () => {
     expect(await checkPageState(page)).toEqual(reviewControls(2));
   });
 
+  test("every draft state shows Back to invoices, with a 44 px target, and it leads to the list", async ({ page }) => {
+    const waiting = await seedLines(TURKEY_SEED);
+    const saved = await seedLines(TURKEY_SEED);
+    await confirmAtEngine(saved, 2);
+    const discarded = await seedLines(TURKEY_SEED);
+    await discardAtEngine(discarded);
+    const states: Array<[string, string]> = [
+      ["a waiting draft", waiting],
+      ["a saved draft", saved],
+      ["a discarded draft", discarded],
+      ["an unknown id", ZERO_ID],
+    ];
+    for (const [which, id] of states) {
+      await page.goto(`/invoices?draft=${id}`);
+      const back = review(page).back;
+      await expect(back, which).toBeVisible();
+      await expect(back, which).toHaveAttribute("href", "/invoices");
+      const box = await back.boundingBox();
+      expect(box?.height, which).toBeGreaterThanOrEqual(44);
+      expect(box?.width, which).toBeGreaterThanOrEqual(44);
+      // The shared header is unchanged: its Invoices link keeps aria-current.
+      await expect(page.getByRole("navigation", { name: "Primary" }).locator("[aria-current]")).toHaveCount(1);
+      await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Back to invoices" })).toHaveCount(0);
+    }
+
+    // After a save and after a discard, on the same page.
+    const r = await openReview(page, waiting);
+    await r.save.click();
+    await expect(r.result).toHaveText("Saved 2 receipts.");
+    await expect(r.back).toBeVisible();
+    const other = await seedLines(TURKEY_SEED);
+    const second = await openReview(page, other);
+    await second.discard.click();
+    await expect(second.result).toHaveText("Draft discarded.");
+    await expect(second.back).toBeVisible();
+    await second.back.click();
+    await expect(page).toHaveURL(/\/invoices$/);
+    await expect(parts(page).readText).toBeVisible();
+  });
+
+  test("the photo's box keeps its shape, so the lines do not move when the bytes arrive", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED, { source: "photo" });
+    let letThrough: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      letThrough = resolve;
+    });
+    await page.route("**/invoices/photo/**", async (route) => {
+      await gate;
+      await route.continue();
+    });
+    // The held photo keeps the load event from firing, so wait for the document only.
+    await page.goto(`/invoices?draft=${id}`, { waitUntil: "domcontentloaded" });
+    const r = review(page);
+    await expect(r.heading).toBeVisible();
+    await expect(r.photo).toHaveAttribute("alt", "Invoice photo");
+    const box = r.photo.locator("xpath=..");
+    const boxBefore = await box.boundingBox();
+    const lineBefore = await r.line(1).group.boundingBox();
+    expect((boxBefore?.height ?? 0) / (boxBefore?.width ?? 1)).toBeCloseTo(4 / 3, 2);
+    letThrough();
+    await expect.poll(() => r.photo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    expect(await box.boundingBox()).toEqual(boxBefore);
+    expect(await r.line(1).group.boundingBox()).toEqual(lineBefore);
+  });
+
+  test("a photo that cannot be loaded is replaced by a message to reload, and the lines stay", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED, { source: "photo" });
+    await page.route("**/invoices/photo/**", (route) => route.abort());
+    const r = await openReview(page, id);
+    await expect(page.getByText(PHOTO_NOT_LOADED, { exact: true })).toBeVisible();
+    await expect(r.photo).toHaveCount(0);
+    await expect(r.groups).toHaveCount(2);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
   test("AC-0138: the Weight and Cost fields are named for lbs and per lb, inside their line's group", async ({
     page,
   }) => {
@@ -1152,6 +1337,9 @@ test.describe("saving a draft", () => {
     const heading = r.result.getByRole("heading", { name: "Saved 2 receipts." });
     await expect(heading).toBeVisible();
     await expect(heading).toBeFocused();
+    // The live region holds the outcome sentence only; the lots and totals follow it.
+    await expect(r.result).toHaveText("Saved 2 receipts.");
+    await expect(r.result.getByRole("listitem")).toHaveCount(0);
     expect(await draftStatus(id)).toBe("confirmed");
 
     const lots = await lotRows();
@@ -1173,7 +1361,7 @@ test.describe("saving a draft", () => {
         received: "2026-10-05",
       },
     ]);
-    const items = r.result.getByRole("listitem");
+    const items = r.details.getByRole("listitem");
     await expect(items).toHaveCount(2);
     const shown = [
       { weight: "5,000 lbs", cost: "$1.6800/lb", received: "Oct 1, 2026" },
@@ -1188,9 +1376,9 @@ test.describe("saving a draft", () => {
       await expect(factValue(item, "Cost per lb")).toHaveText(expected.cost);
       await expect(factValue(item, "Received")).toHaveText(expected.received);
     }
-    await expect(beforeAfter(r.result, /^On hand/)).toHaveText(["0 lbs", "8,000 lbs"]);
-    await expect(beforeAfter(r.result, /^Average cost/)).toHaveText(["None yet", "$1.7250/lb"]);
-    await expect(r.result.getByRole("columnheader", { name: TOM_LABEL })).toBeVisible();
+    await expect(beforeAfter(r.details, /^On hand/)).toHaveText(["0 lbs", "8,000 lbs"]);
+    await expect(beforeAfter(r.details, /^Average cost/)).toHaveText(["None yet", "$1.7250/lb"]);
+    await expect(r.details.getByRole("columnheader", { name: TOM_LABEL })).toBeVisible();
     // The fields and buttons give way to the result.
     await expect(r.save).toHaveCount(0);
     await expect(r.groups).toHaveCount(0);
@@ -1218,7 +1406,7 @@ test.describe("saving a draft", () => {
     const r = await openReview(page, id);
     await r.save.click();
     await expect(r.result.getByRole("heading", { name: "Saved 2 receipts." })).toBeFocused();
-    const tables = r.result.getByRole("table");
+    const tables = r.details.getByRole("table");
     await expect(tables).toHaveCount(2);
     const chk = tables.filter({ hasText: "RAW-CHK Chicken Thighs (raw)" });
     await expect(chk.getByRole("row", { name: /^On hand/ }).getByRole("cell")).toHaveText(["0 lbs", "250 lbs"]);
@@ -1260,7 +1448,7 @@ test.describe("saving a draft", () => {
         received: "2026-10-02",
       },
     ]);
-    const first = r.result.getByRole("listitem").first();
+    const first = r.details.getByRole("listitem").first();
     await expect(factValue(first, "Weight")).toHaveText("4,000.125 lbs");
     await expect(factValue(first, "Cost per lb")).toHaveText("$1.6855/lb");
   });
@@ -1627,5 +1815,86 @@ test.describe("discarding a draft", () => {
     const unknown = await replayWith(playwright, baseURL, sent, OPERATOR_STATE, { draftId: ZERO_ID });
     expect(unknown).toContain(message(`${NOT_DISCARDED} draft ${ZERO_ID} not found`));
     expect(await allFingerprints()).toEqual(before);
+  });
+});
+
+// AC-0097: a database call that fails before the write. The spare app talks to
+// the database through a forwarder that fails the one call a test names.
+test.describe("a database call that fails before the write", () => {
+  async function withFault(
+    browser: Browser,
+    baseURL: string | undefined,
+    run: (page: Page, forwarder: Forwarder) => Promise<void>,
+  ): Promise<void> {
+    const forwarder = await startForwarder(ports(baseURL).forwarder);
+    let spare: SpareApp | undefined;
+    try {
+      spare = await startSpare(ports(baseURL).spare, {
+        SUPABASE_URL: forwarder.url,
+        ANTHROPIC_API_KEY: ANTHROPIC_TEST_KEY,
+        ANTHROPIC_BASE_URL: model.base,
+      });
+      const context = await browser.newContext({ baseURL: spare.url, storageState: OPERATOR_STATE });
+      try {
+        await run(await context.newPage(), forwarder);
+      } finally {
+        await context.close();
+      }
+    } finally {
+      await spare?.stop();
+      await forwarder.stop();
+    }
+  }
+
+  const SAVES: Array<[string, string]> = [
+    ["its caller check fails", "/rest/v1/rpc/check_operator"],
+    ["its stock read before the write fails", "/rest/v1/inventory_balances"],
+  ];
+  for (const [which, path] of SAVES) {
+    test(`AC-0097, AC-0137: a save with ${which}: says the receipts weren't saved, changes nothing, and keeps the fields`, async ({
+      browser,
+      baseURL,
+    }) => {
+      const id = await seedLines(TURKEY_SEED);
+      await withFault(browser, baseURL, async (page, forwarder) => {
+        const r = await openReview(page, id);
+        await r.line(1).weight.fill("4999");
+        await r.line(2).tick.uncheck();
+        const typed = await reviewValues(r, 2);
+        const before = await allFingerprints();
+        forwarder.failNext(path);
+        await r.save.click();
+        await expect(r.message).toHaveText(`${NOT_SAVED} ${TRY_LATER}`);
+        await expect(r.message).toBeFocused();
+        expect(forwarder.failures()).toBe(1);
+        expect(await reviewValues(r, 2)).toEqual(typed);
+        expect(await lotCount()).toBe(0);
+        expect(await draftStatus(id)).toBe("pending");
+        expect(await allFingerprints()).toEqual(before);
+        expect(await checkPageState(page)).toEqual(reviewControls(2));
+      });
+    });
+  }
+
+  test("AC-0097, AC-0137: a discard whose caller check fails says the draft wasn't discarded and keeps the fields", async ({
+    browser,
+    baseURL,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    await withFault(browser, baseURL, async (page, forwarder) => {
+      const r = await openReview(page, id);
+      await r.line(1).weight.fill("4999");
+      const typed = await reviewValues(r, 2);
+      const before = await allFingerprints();
+      forwarder.failNext("/rest/v1/rpc/check_operator");
+      await r.discard.click();
+      await expect(r.message).toHaveText(`${NOT_DISCARDED} ${TRY_LATER}`);
+      await expect(r.message).toBeFocused();
+      expect(forwarder.failures()).toBe(1);
+      expect(await reviewValues(r, 2)).toEqual(typed);
+      expect(await draftStatus(id)).toBe("pending");
+      expect(await allFingerprints()).toEqual(before);
+      expect(await checkPageState(page)).toEqual(reviewControls(2));
+    });
   });
 });

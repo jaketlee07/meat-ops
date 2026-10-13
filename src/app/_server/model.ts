@@ -17,23 +17,27 @@ import type { ModelReadiness, ModelResult } from "../invoices/read-invoice";
 // from .env only when the process has no value, so a value the shell or the test
 // suite sets wins.
 
-// The longest a read waits for the model's answer (AC-0115).
+// The longest a read waits for the model's answer to start (AC-0115). In the
+// installed SDK the timer covers the wait for the response headers only; the
+// body is read without it.
 const MODEL_TIMEOUT_MS = 120_000;
 
-// The only request headers a read sends. The SDK adds its own platform headers
-// (operating system, architecture, runtime version, user agent) and reads more
-// from ANTHROPIC_CUSTOM_HEADERS; this drops every one of them (AC-0184).
-const SENT_HEADERS = ["accept", "anthropic-version", "content-type", "x-api-key"];
-
-const sparseFetch: typeof fetch = (input, init) => {
-  const given = new Headers(init?.headers);
-  const headers = new Headers();
-  for (const name of SENT_HEADERS) {
-    const value = given.get(name);
-    if (value !== null) headers.set(name, value);
-  }
-  return fetch(input, { ...init, headers });
-};
+// The only request headers a read sends, with values set here. The SDK adds its
+// own platform headers (operating system, architecture, runtime version, user
+// agent) and merges ANTHROPIC_CUSTOM_HEADERS after its own, so a value it holds
+// could replace the key or the version. This drops every SDK header and sends
+// these four with the values below (AC-0184).
+function sparseFetch(apiKey: string): typeof fetch {
+  return (input, init) => {
+    const headers = new Headers({
+      accept: "application/json",
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+    });
+    return fetch(input, { ...init, headers });
+  };
+}
 
 // instanceof, not class names: the production build renames classes. The timeout
 // error is a kind of connection error, so it is checked first.
@@ -62,22 +66,26 @@ export async function readReceipt(input: ReadInput, catalog: Catalog, today: str
   if (!ready.ok) return ready;
   const baseURL = modelAddress(process.env.ANTHROPIC_BASE_URL);
   if (baseURL === null) return { ok: false, kind: "address-refused" };
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { ok: false, kind: "not-set-up" };
 
   const client = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
+    apiKey,
     baseURL,
     authToken: null,
     webhookKey: null,
     logLevel: "off",
     timeout: MODEL_TIMEOUT_MS,
     maxRetries: 0,
-    fetch: sparseFetch,
+    fetch: sparseFetch(apiKey),
   });
 
   let message;
   try {
     message = await client.messages.create(requestParams(input, catalog, today));
   } catch (error) {
+    // A 200 answer whose body is not JSON makes the SDK throw a plain SyntaxError.
+    if (error instanceof SyntaxError) return { ok: false, kind: "unreadable" };
     const description = describe(error);
     return {
       ok: false,

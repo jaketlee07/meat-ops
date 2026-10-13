@@ -145,6 +145,8 @@ export const DRAFT_DISCARDED_NOW = "Draft discarded.";
 export const DRAFT_SAVED = "This draft was saved.";
 export const DRAFT_WAS_DISCARDED = "This draft was discarded.";
 export const NO_DRAFT = "No draft has this id.";
+export const PHOTO_NOT_LOADED = "The photo couldn't be loaded. Reload the page to try again.";
+export const BACK_TO_INVOICES = "Back to invoices";
 
 const ALREADY_SETTLED = /^draft .+ is already saved or discarded$/;
 // confirm_import_draft re-raises a receive_lot refusal as "line N: receive_lot: <text>", with no function prefix.

@@ -9,11 +9,13 @@ import {
   DRAFT_SAVED,
   DRAFT_WAS_DISCARDED,
   ENTER_FROM_INVOICE,
+  PHOTO_NOT_LOADED,
   RECEIPTS_UNKNOWN,
 } from "../../lib/failures";
 import type { Draft } from "../../lib/invoices";
 import { discardDraft, saveDraft, type DiscardState, type SaveState } from "./actions";
-import { SavedResult } from "./saved-result";
+import { deviceToday } from "./form-fields";
+import { SavedResult, savedSentence } from "./saved-result";
 import {
   checkSave,
   discardFormData,
@@ -49,13 +51,6 @@ const LABELS: Record<LineField, string> = {
   cost: "Cost per lb",
   date: "Received date",
 };
-
-// The date on this device, as YYYY-MM-DD.
-function deviceToday(): string {
-  const now = new Date();
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
 
 // The picker's first option says what its field message says, without the period.
 const prompt = (message: string) => message.replace(/\.$/, "");
@@ -111,6 +106,34 @@ function LineBox({
           {ENTER_FROM_INVOICE}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+// The photo has its own address, so the page holds no copy of its bytes. The box
+// has a fixed shape, so the lines below do not move when the bytes arrive. An
+// image that failed before the page became interactive fired its error event
+// unheard, so the mount checks for it too.
+function Photo({ draftId }: { draftId: string }) {
+  const [failed, setFailed] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const image = imageRef.current;
+    if (image && image.complete && image.naturalWidth === 0) setFailed(true);
+  }, []);
+  return (
+    <div className="aspect-3/4 w-full overflow-hidden rounded-md border border-field-border">
+      {failed ? (
+        <p className="p-3 text-base">{PHOTO_NOT_LOADED}</p>
+      ) : (
+        <img
+          ref={imageRef}
+          src={`/invoices/photo/${draftId}`}
+          alt="Invoice photo"
+          onError={() => setFailed(true)}
+          className="block h-full w-full object-contain"
+        />
+      )}
     </div>
   );
 }
@@ -180,15 +203,21 @@ export function DraftReview({ draft, products, vendors }: Props) {
 
   return (
     <>
-      {/* The live region is in the page before it has content, so a result is announced. */}
-      <div role="status" aria-label="Draft result" className="space-y-4">
-        {state.status === "saved" && <SavedResult saved={state} headingRef={headingRef} />}
+      {/* The live region is in the page before it has content, so a result is
+          announced. It holds the outcome sentence only; the details follow it. */}
+      <div role="status" aria-label="Draft result">
+        {state.status === "saved" && (
+          <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">
+            {savedSentence(state.lots.length)}
+          </h2>
+        )}
         {state.status === "discarded" && (
           <p ref={discardedRef} tabIndex={-1} className="text-xl font-semibold text-success">
             {DRAFT_DISCARDED_NOW}
           </p>
         )}
       </div>
+      {state.status === "saved" && <SavedResult saved={state} />}
 
       {!done && draft.status === "confirmed" && (
         <div className="space-y-2 text-base">
@@ -215,12 +244,7 @@ export function DraftReview({ draft, products, vendors }: Props) {
                 <h3 id="capture-heading" className="text-lg font-semibold">
                   Invoice photo
                 </h3>
-                {/* The photo has its own address, so the page holds no copy of its bytes. */}
-                <img
-                  src={`/invoices/photo/${draft.id}`}
-                  alt="Invoice photo"
-                  className="block h-auto max-w-full rounded-md border border-field-border"
-                />
+                <Photo draftId={draft.id} />
               </>
             ) : (
               <>

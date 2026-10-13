@@ -265,6 +265,36 @@ describe("create_import_draft", () => {
       expect.objectContaining({ words: "bare", product_id: null, vendor_id: null, weight_lbs: null, unit_cost: null, received_date: null, unsure_fields: [], status: "pending" }),
     ]);
   });
+
+  it("stores and saves the number texts Receiving accepts, .5 and 5000., exactly", async () => {
+    const id = await makeDraft([
+      draftLine({ weight_lbs: ".5", unit_cost: "5000." }),
+      draftLine({ weight_lbs: "5000.", unit_cost: ".5", received_date: "2026-10-02" }),
+    ]);
+    const lines = await linesOf(id);
+    expect(lines.map((l) => [l.weight_lbs, l.unit_cost])).toEqual([
+      ["0.500", "5000.0000"],
+      ["5000.000", "0.5000"],
+    ]);
+    // The text is still refused when it has no digit or a second point.
+    await refused(createCall([draftLine({ weight_lbs: "." })]), /^create_import_draft: line 1 weight is not a number/);
+    await refused(createCall([draftLine({ unit_cost: "1.2.3" })]), /^create_import_draft: line 1 cost is not a number/);
+
+    const saved = await callAsOperator(
+      confirmCall(id, [
+        given(lines[0]!.id, { weight_lbs: ".5", unit_cost: "5000." }),
+        given(lines[1]!.id, { weight_lbs: "5000.", unit_cost: ".5", received_date: "2026-10-02" }),
+      ]),
+    );
+    expect(saved.error).toBeUndefined();
+    const lots = await query<{ weight_lbs: string; unit_cost: string }>(
+      "select weight_lbs::text, unit_cost::text from public.lots order by received_date",
+    );
+    expect(lots).toEqual([
+      { weight_lbs: "0.500", unit_cost: "5000.0000" },
+      { weight_lbs: "5000.000", unit_cost: "0.5000" },
+    ]);
+  });
 });
 
 describe("confirm_import_draft", () => {

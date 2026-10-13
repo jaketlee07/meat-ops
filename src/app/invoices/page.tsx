@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { NO_DRAFT } from "../../lib/failures";
+import { BACK_TO_INVOICES, NO_DRAFT } from "../../lib/failures";
 import { getDraft, isUuid, listWaitingDrafts, readCatalog } from "../../lib/invoices";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
@@ -33,6 +34,12 @@ export default async function InvoicesPage({
     return (
       <main className="mx-auto w-full max-w-xl p-4">
         <PageHeader title="Invoices" current="invoices" />
+        <Link
+          href="/invoices"
+          className="mb-4 inline-flex min-h-control min-w-control items-center rounded-md px-3 text-base font-medium text-primary underline"
+        >
+          {BACK_TO_INVOICES}
+        </Link>
         <section aria-labelledby="review-heading" className="space-y-4">
           <h2 id="review-heading" className="text-xl font-semibold">
             Draft review

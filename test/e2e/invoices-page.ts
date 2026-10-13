@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { createServer, request as httpRequest } from "node:http";
 import { crc32, deflateSync } from "node:zlib";
 import { expect, type Locator, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 import { privilegedVariableNames } from "../../src/privileged-env";
@@ -52,10 +53,17 @@ export const FORM_CONTROLS = [
   "button Read text",
 ];
 
-// The app's port and the two beside it: the fake model, and the spare app.
-export function ports(baseURL: string | undefined): { app: number; model: number; spare: number } {
+// The link every ?draft= state shows, after Sign out.
+export const BACK_LINK = "a Back to invoices";
+
+// What Tab reaches on a draft's address with nothing to edit: the navigation,
+// Sign out, and the way back.
+export const NAV_CONTROLS = [...FORM_CONTROLS.slice(0, 6), BACK_LINK];
+
+// The app's port and the three beside it: the fake model, and the spare app.
+export function ports(baseURL: string | undefined): { app: number; model: number; spare: number; forwarder: number } {
   const app = Number(new URL(baseURL ?? "").port);
-  return { app, model: app + 1, spare: app + 2 };
+  return { app, model: app + 1, spare: app + 2, forwarder: app + 3 };
 }
 
 // ---- The fake model ----
@@ -175,7 +183,8 @@ export function parts(page: Page) {
     text: page.getByLabel("Receipt text"),
     readPhoto: page.getByRole("button", { name: "Read photo" }),
     readText: page.getByRole("button", { name: "Read text" }),
-    status: page.getByRole("status"),
+    photoStatus: page.getByRole("region", { name: "Read an invoice" }).getByRole("status"),
+    textStatus: page.getByRole("region", { name: "Type a receipt" }).getByRole("status"),
     photoMessage: page.locator("#photo-message"),
     textMessage: page.locator("#text-message"),
     photoError: page.locator("#invoice-photo-error"),
@@ -317,6 +326,8 @@ export const SAVE_UNKNOWN =
   "The receipts may have been saved. Reload this page to check the draft before saving again.";
 export const DISCARD_UNKNOWN = "The draft may have been discarded. Reload this page to check it.";
 export const ENTER_FROM_INVOICE = "Enter this from the invoice.";
+export const TRY_LATER = "Try again in a moment.";
+export const PHOTO_NOT_LOADED = "The photo couldn't be loaded. Reload the page to try again.";
 
 // What Tab reaches in a waiting draft's review, after the Primary navigation and
 // Sign out: every line's checkbox and five fields in order, then the two buttons.
@@ -326,7 +337,7 @@ export function reviewControls(lineCount: number): string[] {
       (label) => label.replace("N", String(i + 1)),
     ),
   );
-  return [...FORM_CONTROLS.slice(0, 6), ...lines.flat(), "button Save receipts", "button Discard draft"];
+  return [...NAV_CONTROLS, ...lines.flat(), "button Save receipts", "button Discard draft"];
 }
 
 // The lines of a draft's review, one group each.
@@ -353,7 +364,10 @@ export function review(page: Page) {
     save: page.getByRole("button", { name: "Save receipts" }),
     discard: page.getByRole("button", { name: "Discard draft" }),
     message: page.locator("#draft-message"),
+    // The live region: the outcome sentence only. The lots and totals are in details.
     result: page.getByRole("status", { name: "Draft result" }),
+    details: page.getByRole("region", { name: "Saved receipts" }),
+    back: page.getByRole("link", { name: "Back to invoices" }),
   };
 }
 
@@ -756,4 +770,58 @@ export async function startSpare(port: number, env: Record<string, string>): Pro
 // A sentence in the page's message region that appears once the read has an outcome.
 export function messageIn(p: Parts, source: "photo" | "text"): Locator {
   return source === "photo" ? p.photoMessage : p.textMessage;
+}
+
+// ---- The forwarder (AC-0097) ----
+
+export interface Forwarder {
+  url: string;
+  // The next request whose path starts with `prefix` is answered 500 with a
+  // PostgREST-shaped error, and the one after it goes through again.
+  failNext: (prefix: string) => void;
+  // How many requests were answered 500.
+  failures: () => number;
+  stop: () => Promise<void>;
+}
+
+// A small server on 127.0.0.1 that passes every request through to the stack's
+// API unchanged until a test arms it. A spare app started with SUPABASE_URL set
+// to it can then be made to fail one database call it makes. The status is 500
+// because postgrest-js retries 503 and 520.
+export async function startForwarder(port: number): Promise<Forwarder> {
+  const target = new URL(resolveStackEnv().apiUrl);
+  let armed: string | null = null;
+  let failed = 0;
+  const server = createServer((req, res) => {
+    if (armed !== null && (req.url ?? "").startsWith(armed)) {
+      armed = null;
+      failed += 1;
+      req.resume();
+      res.writeHead(500, { "content-type": "application/json" });
+      res.end(JSON.stringify({ code: "XX000", details: null, hint: null, message: "forced failure for the test" }));
+      return;
+    }
+    const upstream = httpRequest(
+      { host: target.hostname, port: target.port, path: req.url, method: req.method, headers: { ...req.headers, host: target.host } },
+      (answer) => {
+        res.writeHead(answer.statusCode ?? 502, answer.headers);
+        answer.pipe(res);
+      },
+    );
+    upstream.on("error", () => res.destroy());
+    req.pipe(upstream);
+  });
+  await new Promise<void>((done) => server.listen(port, "127.0.0.1", done));
+  return {
+    url: `http://127.0.0.1:${port}`,
+    failNext: (prefix) => {
+      armed = prefix;
+    },
+    failures: () => failed,
+    stop: () =>
+      new Promise((done) => {
+        server.close(() => done());
+        server.closeAllConnections();
+      }),
+  };
 }

@@ -124,7 +124,7 @@ export const INSTRUCTIONS = [
   "Give a weight only when the line states its own weight in lbs. Give a cost only when the line prints a price per lb in dollars. Never compute a value, convert units such as kg or cases, or divide a total by a weight. If the line does not state the value that way, give null and mark the field unsure.",
   "Give a received date only when the receipt states one, written YYYY-MM-DD. Resolve a relative date such as today against the device's today given in the message. If the receipt states no date, give null.",
   "When you are not sure of a field, give null and list the field in unsure rather than guess.",
-  "List at most 31 lines.",
+  `List at most ${MAX_LINES + 1} lines.`,
 ].join("\n");
 
 const nullable = (schema: object) => ({ anyOf: [schema, { type: "null" }] });
