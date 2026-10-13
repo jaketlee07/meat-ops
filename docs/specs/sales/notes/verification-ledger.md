@@ -36,3 +36,11 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - `test/db.ts` gains `p_customer_id` and `p_sale_number` in `PARAM_TYPES`, `VALLEY_ID`, and `saleFixture({ listPrice, sale })`, which returns the lot, batch, and sale ids and the lot numbers.
 - Controller fix: the implementer's added imports sat below the stub's test; they now join the stub's import block, which also takes `VALLEY_ID` from `test/db.ts` instead of a second copy.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 108 s, Vitest 414 passed (26 files), Playwright 220 passed; `npm run gen:types` leaves no diff.
+
+## T2 (2026-10-13)
+
+- Executed by the `implementer` subagent; controller reran every gate.
+- Stub materialized byte-identical at `test/sales-rules.test.ts` (sha256 d32a6630…3d4ba4); observed red: `Cannot find module '../src/lib/sale-input.js'`. The file then grew to 46 cases.
+- Built: `src/lib/sale-input.ts` (`parseSaleForm`, `parseSaleNumber`, `parseLotFinder`), the sale texts and `saleSaveFailureMessage` and `saleVoidFailureMessage` in `src/lib/failures.ts`, and `isCalendarDate` exported from `src/lib/batch-input.ts`.
+- Deviation: a refused sale void reads "The sale wasn't voided." and the engine's reason with a closing period, with no "Reload to see the latest stock." tail, because a sale void gives stock back. AC-0084 asks only for the lead sentence.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 139 s, Vitest 460 passed (27 files), Playwright 220 passed.
