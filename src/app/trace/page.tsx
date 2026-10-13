@@ -68,10 +68,8 @@ export default async function TracePage({
         received={received ?? ""}
         lotErrors={lotErrors}
       />
-      {/* The container is on every render, empty until a lookup is asked, so a new result is announced. */}
-      <div role="status" className="mt-8">
-        {result}
-      </div>
+      {/* No live region: a trace can list over 1,000 sales. Show sale and Show lots move focus to the result's heading instead. */}
+      <div className="mt-8">{result}</div>
     </main>
   );
 }

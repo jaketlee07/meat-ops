@@ -10,11 +10,11 @@ const LINK =
 // raw lots that batch drew from stacked inside. Every value is React text, so a
 // number typed into the URL shows as typed and never as markup.
 export function SaleTraceView({ number, trace }: { number: string; trace: SaleTrace | null }) {
-  if (!trace) return <p className="break-words text-base">{`No sale has number ${number}.`}</p>;
+  if (!trace) return <p tabIndex={-1} data-result-focus className="break-words text-base">{`No sale has number ${number}.`}</p>;
   const { sale, lots } = trace;
   return (
     <section aria-labelledby="sale-trace-heading" className="space-y-4">
-      <h2 id="sale-trace-heading" className="break-words text-xl font-semibold">
+      <h2 id="sale-trace-heading" tabIndex={-1} data-result-focus className="break-words text-xl font-semibold">
         {sale.saleNumber}
       </h2>
       <Facts

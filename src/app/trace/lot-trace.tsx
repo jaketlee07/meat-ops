@@ -9,11 +9,11 @@ const LINK =
 // A raw lot's trace: the receipt, the customers and sales its stock reached, and
 // the finished stock still on hand from it. Every value is React text.
 export function LotTraceView({ number, trace }: { number: string; trace: LotTrace | null }) {
-  if (!trace) return <p className="break-words text-base">{`No receipt has lot number ${number}.`}</p>;
+  if (!trace) return <p tabIndex={-1} data-result-focus className="break-words text-base">{`No receipt has lot number ${number}.`}</p>;
   const { lot, customers, hasNoCustomer, sales, finishedStock } = trace;
   return (
     <section aria-labelledby="lot-trace-heading" className="space-y-4">
-      <h2 id="lot-trace-heading" className="break-words text-xl font-semibold">
+      <h2 id="lot-trace-heading" tabIndex={-1} data-result-focus className="break-words text-xl font-semibold">
         {lot.lotNumber}
       </h2>
       <Facts

@@ -8,11 +8,11 @@ const LINK =
 
 // The receipts of one raw product, newest first, or those of one received date.
 export function LotList({ code, received, found }: { code: string; received?: string; found: FoundLots | null }) {
-  if (!found) return <p className="break-words text-base">{`No raw product has code ${code}.`}</p>;
+  if (!found) return <p tabIndex={-1} data-result-focus className="break-words text-base">{`No raw product has code ${code}.`}</p>;
   const { rawProduct, lots, total } = found;
   return (
     <section aria-labelledby="lot-list-heading" className="space-y-4">
-      <h2 id="lot-list-heading" className="break-words text-xl font-semibold">
+      <h2 id="lot-list-heading" tabIndex={-1} data-result-focus className="break-words text-xl font-semibold">
         {`Receipts of ${rawProduct.code}`}
       </h2>
       {lots.length === 0 ? (

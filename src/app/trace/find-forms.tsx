@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseLotFinder, parseSaleNumber } from "../../lib/sale-input";
 
 const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
@@ -9,6 +9,11 @@ const BUTTON = "w-full rounded-md bg-primary px-4 text-base font-medium text-on-
 const SALE_ID = "find-sale-number";
 const RAW_ID = "find-raw-code";
 const RECEIVED_ID = "find-received";
+
+// The heading (or the no-result sentence) of the result on the page; each view marks it.
+function focusResult() {
+  document.querySelector<HTMLElement>("[data-result-focus]")?.focus();
+}
 
 type LotErrors = { rawCode?: string; received?: string };
 
@@ -54,6 +59,16 @@ function FindSale({ sale, urlError }: { sale: string; urlError?: string }) {
   const [text, setText] = useState(sale);
   const [error, setError] = useState(urlError);
 
+  // The sale number a Show sale press asked for. Focus moves to the result only
+  // once the page's own sale value is that number, so a stale render cannot take it.
+  const asked = useRef<string | null>(null);
+  useEffect(() => {
+    if (asked.current !== null && asked.current === sale) {
+      asked.current = null;
+      focusResult();
+    }
+  }, [sale]);
+
   const urlKey = JSON.stringify([sale, urlError]);
   const [seenKey, setSeenKey] = useState(urlKey);
   if (seenKey !== urlKey) {
@@ -71,6 +86,11 @@ function FindSale({ sale, urlError }: { sale: string; urlError?: string }) {
       return;
     }
     setError(undefined);
+    if (parsed.value === sale) {
+      focusResult();
+      return;
+    }
+    asked.current = parsed.value;
     router.push(`/trace?${new URLSearchParams({ sale: parsed.value }).toString()}`, { scroll: false });
   }
 
@@ -110,6 +130,16 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
   const [dateText, setDateText] = useState(received);
   const [errors, setErrors] = useState<LotErrors>(urlErrors);
 
+  // The lookup a Show lots press asked for, compared with the page's own values.
+  const asked = useRef<string | null>(null);
+  const shown = JSON.stringify([rawCode, received]);
+  useEffect(() => {
+    if (asked.current !== null && asked.current === shown) {
+      asked.current = null;
+      focusResult();
+    }
+  }, [shown]);
+
   const urlKey = JSON.stringify([rawCode, received, urlErrors]);
   const [seenKey, setSeenKey] = useState(urlKey);
   if (seenKey !== urlKey) {
@@ -129,6 +159,12 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
       return;
     }
     setErrors({});
+    const key = JSON.stringify([parsed.value.rawCode, parsed.value.received ?? ""]);
+    if (key === shown) {
+      focusResult();
+      return;
+    }
+    asked.current = key;
     const params = new URLSearchParams({ raw: parsed.value.rawCode });
     if (parsed.value.received !== undefined) params.set("received", parsed.value.received);
     router.push(`/trace?${params.toString()}`, { scroll: false });

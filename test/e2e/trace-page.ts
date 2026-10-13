@@ -40,7 +40,8 @@ export function finders(page: Page) {
     code: page.getByLabel("Raw product code"),
     received: page.getByLabel("Received date"),
     showLots: page.getByRole("button", { name: "Show lots" }),
-    status: page.getByRole("status"),
+    // The heading or no-result sentence of the result on the page; none until a lookup is shown.
+    result: page.locator("[data-result-focus]"),
   };
 }
 
