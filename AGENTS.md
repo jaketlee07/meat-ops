@@ -124,18 +124,29 @@ runs tests at a time. Two stacks let two folders test side by side:
   55322, shadow database 55320. It runs only the database, auth, REST, and the
   API gateway. A folder uses it when its gitignored `supabase/.env` is an exact
   copy of `supabase/stack-b.env`. Every `supabase` command in that folder then
-  reaches stack B.
+  reaches stack B, unless the shell sets a `SUPABASE_*` name, which wins over
+  the file. So reset stack B only with `npm run db:reset:stack-b`, which passes
+  the file's settings to the CLI directly.
 
 Both stacks rely on the firewall block in
 [Keep the local stack on this Mac](docs/architecture/overview.md#keep-the-local-stack-on-this-mac).
 The tests refuse when a folder's `supabase/.env` names a stack the run does not
-reach. In such a folder they also refuse unless `E2E_PORT` is set.
+reach. In any folder whose `supabase/.env` names its own stack, the browser
+suite also refuses unless `E2E_PORT` is set.
+
+Before a reset or a stop, list the folders running tests or the app:
+
+```bash
+for pid in $(pgrep -f 'vitest|playwright|next-server|next (start|dev)'); do lsof -a -p "$pid" -d cwd -Fn | sed -n 's/^n//p'; done | sort -u
+```
+
+A listed folder uses stack B if it has a `supabase/.env`, and stack A if not.
 
 Set up a folder on stack A:
 
 1. `npm ci`
 2. `supabase start`
-3. Check that no other folder on stack A is running tests or the app, then run
+3. Run the check above. When no other stack A folder is listed, run
    `supabase db reset`. It rebuilds stack A from this folder's migrations. It
    deletes every row, the owner account included, for every folder on stack A.
 4. Make the `.env` with the command above.
@@ -146,14 +157,16 @@ Set up a folder on stack B:
 1. `npm ci`
 2. `cp supabase/stack-b.env supabase/.env`
 3. `supabase start`
-4. `npm run db:reset:stack-b`. It rebuilds stack B from this folder's
+4. Run the check above. When no other stack B folder is listed, run
+   `npm run db:reset:stack-b`. It rebuilds stack B from this folder's
    migrations. If `supabase/.env` is not an exact copy of
    `supabase/stack-b.env`, it exits with an error and resets nothing; go back
    to step 2.
 5. Make the `.env` with the command above.
 6. `E2E_PORT=3200 npm test`
 
-Stop stack B and delete its data, from any folder:
+Stop stack B and delete its data, from any folder, once the check above lists
+no stack B folder:
 
 ```bash
 supabase stop --project-id meat-ops-b --no-backup
@@ -161,8 +174,8 @@ supabase stop --project-id meat-ops-b --no-backup
 
 Never run `supabase stop --all`. It stops every Supabase stack on this Mac.
 
-To move a folder back to stack A, delete its `supabase/.env` and make the
-`.env` again.
+To move a folder back to stack A, delete its `supabase/.env`, then follow the
+stack A steps from step 3.
 
 ## Hard rules
 
