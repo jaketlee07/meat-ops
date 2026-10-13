@@ -104,5 +104,6 @@ docs/knowledge/**/*.lock.stale-*
 docs/knowledge/*.lock.stale-*
 .loop-run/
 
-# Supabase CLI local branch scratch
+# Supabase CLI local branch scratch and CLI cache
 supabase/.branches/
+supabase/.temp/
