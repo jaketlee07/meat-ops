@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { privilegedVariableNames } from "./src/privileged-env";
-import { resolveStackEnv } from "./test/env";
+import { e2ePort, resolveStackEnv } from "./test/env";
 import { localStackRefusal, realRunner } from "./test/network";
 
 // Run this suite through `npm run test:e2e`. On Node 22.17 with Playwright 1.64,
@@ -9,7 +9,8 @@ import { localStackRefusal, realRunner } from "./test/network";
 // PLAYWRIGHT_FORCE_ASYNC_LOADER=1 selects the older loader, and the script sets it.
 
 const HOST = "127.0.0.1";
-const PORT = 3100;
+// Set E2E_PORT to run this suite beside another folder's run; 3100 when unset.
+const PORT = e2ePort(process.env.E2E_PORT, false);
 
 // The localhost guard and the network check run here, at config load, before
 // the web server builds the app. Playwright loads this file again in every

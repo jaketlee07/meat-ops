@@ -94,3 +94,23 @@ export function resolveStackEnv(): StackEnv {
 
   return { apiUrl, anonKey, serviceRoleKey, dbUrl };
 }
+
+// The browser suite's port. It goes into the web server's shell command, so only
+// canonical digits pass. Playwright takes any app that answers its port during the
+// build as its own, so a folder on its own stack must name its port.
+export function e2ePort(value: string | undefined, ownStack: boolean): number {
+  if (value === undefined) {
+    if (ownStack) {
+      throw new Error(
+        "This folder's supabase/.env names its own Supabase stack, so set E2E_PORT to that stack's browser port (3200 for stack B). Refusing to run.",
+      );
+    }
+    return 3100;
+  }
+  if (!/^[1-9][0-9]{0,4}$/.test(value) || Number(value) > 65535) {
+    throw new Error(
+      "E2E_PORT must be a whole number from 1 to 65535 with no leading zero, or unset for port 3100. Refusing to run.",
+    );
+  }
+  return Number(value);
+}
