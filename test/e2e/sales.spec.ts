@@ -475,12 +475,18 @@ test.describe("the form", () => {
     await expect(factValue(f.result, "Product")).toHaveText("503 Smoked Turkey Necks");
   });
 
-  test("AC-0033 and AC-0034: while the page's list reloads for a new code, Save sale is pending", async ({ page }) => {
+  test("AC-0033 and AC-0034: while the page's list reloads for a new code, Save sale is pending and shows no old field error", async ({
+    page,
+  }) => {
     await fixtureWithPrice();
     const f = await openForm(page);
     const finishedId = await addFinished("503", "Smoked Turkey Necks", RAW_TOM_ID, { listPrice: 9.99 });
     const outcome = await callAsOperator(produceCall(finishedId, 100, null, "2026-10-08"));
     expect(outcome.ok, outcome.error).toBe(true);
+    // A refused form first, so there are field errors the wait must not keep showing.
+    await fillSale(f, { lbs: "" });
+    await f.save.click();
+    await expect(f.lbs).toHaveAttribute("aria-invalid", "true");
     await fillSale(f, { code: "503", price: "5.25", lbs: "10" });
     // Hold the render the form waits for, so the wait can be seen.
     let release: () => void = () => undefined;
@@ -497,6 +503,8 @@ test.describe("the form", () => {
     await f.save.click();
     await expect(f.save).toHaveAttribute("aria-disabled", "true");
     await expect(f.saving).toHaveText("Saving…");
+    await expect(page.locator("form [aria-invalid]")).toHaveCount(0);
+    await expect(page.locator("form [id$='-error']")).toHaveCount(0);
     expect(await saleCount()).toBe(0);
     release();
     await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toBeVisible();
@@ -1179,7 +1187,7 @@ test.describe("voiding", () => {
     expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...listControls([{ number, voidable: true }])]);
   });
 
-  test("AC-0089: while a void is pending the pressed button keeps focus, both buttons are disabled, and Escape does not close it", async ({
+  test("AC-0034 (the plan's loading row): while a void is pending the pressed button keeps focus, both buttons are disabled, and neither a second confirm, Cancel, nor Escape acts", async ({
     page,
   }) => {
     await fixtureWithPrice();
@@ -1196,6 +1204,8 @@ test.describe("voiding", () => {
     await expect(confirm).toBeFocused();
     await expect(confirm).toHaveAttribute("aria-disabled", "true");
     await expect(cancel).toHaveAttribute("aria-disabled", "true");
+    await confirm.click({ force: true });
+    await page.keyboard.press("Enter");
     await cancel.click({ force: true });
     await page.keyboard.press("Escape");
     await expect(dialog).toBeVisible();
@@ -1205,6 +1215,7 @@ test.describe("voiding", () => {
     await expect(recentItem(page, number).getByText("Void: keyed twice", { exact: true })).toBeVisible();
     await expect(dialog).toBeHidden();
     expect(await saleState(id)).toEqual({ voided: true, reason: "keyed twice" });
+    expect(hold.held).toBe(1);
   });
 
   test("AC-0085, AC-0089, and AC-0159: with the session cookies gone, the void is refused and the sale unchanged", async ({

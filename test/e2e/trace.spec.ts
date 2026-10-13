@@ -719,6 +719,14 @@ test.describe("keyboard and focus", () => {
     await expect(saleResult(page, "S-5000").getByRole("heading", { level: 3 })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "S-5000" })).toBeFocused();
 
+    // Back and Forward move to a new lookup too, so focus follows them.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/trace\?lot=/);
+    await expect(page.getByRole("heading", { level: 2, name: fx.lotANumber })).toBeFocused();
+    await page.goForward();
+    await expect(page).toHaveURL(/\/trace\?sale=S-5000$/);
+    await expect(page.getByRole("heading", { level: 2, name: "S-5000" })).toBeFocused();
+
     await open(page);
     await tabTo(page, f.code);
     await page.keyboard.type(RAW_CODE);

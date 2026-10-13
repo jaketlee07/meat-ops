@@ -145,6 +145,8 @@ export function SaleForm({ products, customers }: Props) {
     const fields: SaleFields = { productCode, lbs, pricePerLb, customerId, saleDate, today: date };
     const code = productCode.trim();
     if (code !== "" && !known.has(code)) {
+      // The rules run again once the list is back, so old field errors do not sit beside "Saving…".
+      setState((current) => (current.status === "invalid" ? IDLE : current));
       setAwaiting(fields);
       startList(() => {
         router.replace(`/sales?product=${encodeURIComponent(code)}`, { scroll: false });

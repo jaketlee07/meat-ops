@@ -286,7 +286,7 @@ it("AC-0085: an ended session refuses a void and writes nothing", async () => {
   expect(calls).toEqual([]);
 });
 
-it("AC-0005: a void by a non-operator is refused and writes nothing", async () => {
+it("AC-0006: a void by a non-operator is refused and writes nothing", async () => {
   const { calls, deps } = spyVoid(async () => ({ status: "not-operator" }));
   expect(await decideSaleVoid("s1", "Wrong customer", deps)).toEqual({
     status: "refused",

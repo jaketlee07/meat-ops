@@ -137,3 +137,15 @@ Reviewed `git diff 0d02e07..db4e36b` in five layers. Raw and adjudication artifa
 - Docs: `docs/costing.md` says no test asserts "Not available" and names the one case that shows it.
 - Mutation checks, each restored: the pending wait, the field-error reset, the customer-message focus, the void's `aria-disabled` and Cancel guard, the followed-link focus, the void capture's abort, and the distinct-key rule each turned their test red.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 247 s, Vitest 497 passed (29 files), Playwright 363 passed.
+
+## Post-gates review, round 2, and fix round 2 (2026-10-13)
+
+Round 2 reviewed the repairs only (`git show 1415f08` and the rebuilt commits). Artifacts: `.context/reviews/fded6817-67d3-46ba-b606-da18a066f61d/2-post-gates-*`.
+
+- adversarial-reviewer: 2 Nits sustained (the pending-void test named AC-0089, which covers refusals; a decision test named AC-0005 checks the AC-0006 non-operator text).
+- frontend-reviewer: 1 Nit sustained (old field errors stayed beside "Saving…" while the list reloaded) and 1 refuted (a pending button's dimmed focus ring: a pending, inactive control is outside WCAG 1.4.11, AC-0163 reads the computed outline colour, and the dimming matches every other page's pending button).
+- quality-engineer: 3 Nits sustained (the pending-void test pressed confirm only once; the same AC-0089 title; Back and Forward focus was claimed but untested).
+- `findings-remain` (seq 27) and `review record` round 2 with 6 fingerprints.
+- Fix round 2 (controller): pressing Save sale with a code missing from the page's list drops an invalid state before the list reloads; the list-reload test starts from a refused form and asserts no `aria-invalid` and no field message while "Saving…" shows; the pending-void test presses confirm again (a forced click and Enter) and still sees one request, and is titled for the plan's loading row; the decision test is titled AC-0006; the trace keyboard test goes Back and Forward and asserts focus on each result's heading.
+- Mutation checks, each restored: without the new state reset the list-reload test fails; without both confirm guards the pending-void test sees 3 requests instead of 1.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 275 s, Vitest 497 passed (29 files), Playwright 363 passed.
