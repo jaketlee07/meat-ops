@@ -1,6 +1,6 @@
 # Spec: invoice-entry
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (the AI never computes a cost; extracted data is a draft the human confirms), §4 (`import_drafts`, `import_draft_lines`), §5 (receive raw), §7 "Input assistance", §10 (invoice-photo entry), §11 (boundaries), §12 (AI features degrade safely), §13 item 8; the access model, the write path, the `supabase/migrations/` change guidance, the change guidance for `src/proxy.ts`, `src/privileged-env.ts`, and `next.config.ts` (changes go with the security review that guards the app), and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md); the receiving form rules in [`../receiving/spec.md`](../receiving/spec.md) AC-0010
