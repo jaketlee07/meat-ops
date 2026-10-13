@@ -1,5 +1,5 @@
-import { formatCostPerLb, formatPricePerLb, formatWeight } from "../../lib/format";
-import type { FinishedPrice, ProductStock } from "../../lib/receiving";
+import { formatCostPerLb, formatPricePerLb, formatWeight } from "../lib/format";
+import type { FinishedPrice, ProductStock } from "../lib/receiving";
 
 // What the screen shows for a product's stock and prices. Every number is the
 // one the database returned; the only choice made here is which rows have

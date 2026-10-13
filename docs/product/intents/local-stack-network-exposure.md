@@ -1,6 +1,6 @@
 # Local stack reachable from the network
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
@@ -19,12 +19,12 @@ Only this machine can reach the local Supabase stack's API, database, Studio, an
 
 ## Unresolved questions
 
-- Can the Supabase CLI publish its ports on 127.0.0.1 only, or does this need a Docker or macOS firewall setting?
-- Does the local stack hold real business data today?
+- Can the Supabase CLI publish its ports on 127.0.0.1 only, or does this need a Docker or macOS firewall setting? A macOS firewall setting: neither the CLI nor Docker Desktop has a setting that limits the ports.
+- Does the local stack hold real business data today? No. It was rebuilt from its migrations and seed on 2026-10-12, with no data kept.
 
 ## Projection
 
-- A small change through work-loop, or a recorded risk acceptance, once scheduled.
+- Fulfilled by local-ports (PR #11, merged 2026-10-12). The firewall block and the test-time check are in [Keep the local stack on this Mac](../../architecture/overview.md#keep-the-local-stack-on-this-mac).
 
 
 ## Source
