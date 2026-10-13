@@ -71,7 +71,14 @@ Execution observations, newest last. Each entry names the task, the command, and
 - The owner kept the check's own unit tests behind the shared global setup; the overview says how to run them while the check refuses.
 - `test/network.ts`: the program lookup now refuses unless its output is exactly the requested pid's line followed by `ftxt` and absolute-path pairs; the non-macOS message names the check once.
 - `test/network.test.ts`: six new cases (a second permitted program on one port, a program missing from the firewall's list, the database port used to find the stack, a pid line without its prefix, an unpublished entry other than `<port>/tcp`, and a program lookup for another pid or with an extra line); labels now name the criterion or rule each case checks. 36 cases.
-- Mutation proof: each of seven rule breaks in `test/network.ts` (first pid only, no `<port>/tcp` check, no pid-line check, a fixed database port, an ignored pid line, ignored extra lookup lines, a missing automatic-allow read treated as a pass) turned `npx vitest run test/network.test.ts` red; the file was restored byte for byte.
+- Mutation proof: each of seven rule breaks in `test/network.ts` (first pid only, no `<port>/tcp` check, no pid-line check, a fixed database port, an ignored pid line, ignored extra lookup lines, a missing automatic-allow read treated as a pass) turned `npx vitest run test/network.test.ts` red; the file was restored byte for byte. No other-worktree process check ran right before that loop; the last one ran a few minutes earlier, before the preceding unit-test run.
 - `--getappblocked` for a program not in the firewall's list prints `Incoming connection to <path> is permitted.` (recorded with `/usr/bin/true`), so a lost Docker entry gives the refusal that names the program and port.
 - The overview lists every refusal kind with its next step.
 - Gates: `npm run typecheck` exit 0; `npm test` exit 0 in 97 s, Vitest 390 passed (22 files), Playwright 220 passed; no test process from another worktree was running.
+
+## Review fixes, round 2 (2026-10-12)
+
+- `test/network.test.ts`: three new cases: the real 17-pair program lookup recorded from `com.docker.backend` passes; a lookup pair labelled other than `ftxt` refuses; a lookup with only the pid line refuses with the overview pointer instead of throwing. 39 cases.
+- Mutation proof, run with the network-only config the overview now documents (no global setup, so no shared-stack writes): dropping the `ftxt` label check, dropping the minimum length, and tightening the lookup to exactly one pair each turned the file red; `test/network.ts` was restored byte for byte and is unchanged in this round.
+- The overview's "Could not read something" step now gives the command that runs only `test/network.test.ts` with a config written outside the repository, and says never to run another suite without the check. Running it left nothing to commit.
+- Gates: no other-worktree test process was running; `npm run typecheck` exit 0; `npm test` exit 0 in 111 s, Vitest 393 passed (22 files), Playwright 220 passed.

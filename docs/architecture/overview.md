@@ -169,7 +169,14 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
   - **Automatic allow is on:** run the last setup command.
   - **Not a Mac:** the check knows only the macOS firewall.
   - **No published port, or no program serving one:** start the stack with `supabase start`, or let a restart finish.
-  - **Could not read something:** a tool failed, timed out, or printed new wording, often after a macOS or Docker update. The commands and their exact expected output are in `test/network.ts`; run the one the message names by hand and compare. If only the wording changed, update `test/network.ts` and its tests. Those tests run behind the same check, so while it refuses, run them with a throwaway Vitest config that has no global setup.
+  - **Could not read something:** a tool failed, timed out, or printed new wording, often after a macOS or Docker update. The commands and their exact expected output are in `test/network.ts`; run the one the message names by hand and compare. If only the wording changed, update `test/network.ts` and `test/network.test.ts`. That test file runs behind the same check, so while the check refuses, run only that file, with a config outside the repository that has no global setup:
+
+    ```bash
+    printf 'export default { test: { include: ["test/network.test.ts"] } };\n' > "${TMPDIR:-/tmp}/network-only.vitest.config.mjs"
+    npx vitest run --root . --config "${TMPDIR:-/tmp}/network-only.vitest.config.mjs"
+    ```
+
+    It reaches no stack. Never run another suite without the check.
 - The check runs only when tests run, so a firewall turned off between test runs is caught at the next run. The owner accepted that gap.
 - The block leaves loopback open by design, so a web page open in this Mac's browser could still reach Studio and the API through `127.0.0.1`. That path stays open until [its follow-on intent](../product/intents/local-stack-loopback-web-pages.md) closes.
 

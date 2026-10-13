@@ -29,6 +29,29 @@ const ALLOW_OFF = "Automatically allow built-in signed software ENABLED.\nAutoma
 const ALLOW_ON = "Automatically allow built-in signed software ENABLED.\nAutomatically allow downloaded signed software ENABLED.\n";
 const PORTS_LINE = "0.0.0.0:54322->5432/tcp, [::]:54322->5432/tcp\n";
 
+// The real program lookup for com.docker.backend, recorded 2026-10-12: the pid
+// line, then 17 ftxt pairs; the first path is the program itself.
+const REAL_TXT_PATHS = [
+  "/Applications/Docker.app/Contents/MacOS/com.docker.backend",
+  "/usr/lib/dyld",
+  "/Library/Preferences/Logging/.plist-cache.LltvSCt4",
+  "/private/var/db/mds/messages/501/se_SecurityMessages",
+  "/usr/share/icu/icudt78l.dat",
+  "/System/Library/CoreServices/SystemVersion.bundle/English.lproj/SystemVersion.strings",
+  "/private/var/db/timezone/tz/2026c.1.0/icutz/icutz44l.dat",
+  "/System/Library/Keyboard Layouts/AppleKeyboardLayouts.bundle/Contents/Resources/AppleKeyboardLayouts-L.dat",
+  "/System/Library/Caches/com.apple.IntlDataCache.le.kbdx",
+  "/System/Library/Input Methods/KoreanIM.app/Contents/PlugIns/KIM_Extension.appex/Contents/Resources/InfoPlist.loctable",
+  "/System/Library/Keyboard Layouts/AppleKeyboardLayouts.bundle/Contents/Resources/InfoPlist.loctable",
+  "/usr/lib/libobjc-trampolines.dylib",
+  "/private/var/db/analyticsd/events.allowlist",
+  "/System/Library/CoreServices/SystemAppearance.bundle/Contents/Resources/SystemAppearance.car",
+  "/System/Library/CoreServices/SystemAppearance.bundle/Contents/Resources/DarkAqua.car",
+  "/System/Library/CoreServices/SystemAppearance.bundle/Contents/Resources/FauxVibrantDark.car",
+  "/System/Library/CoreServices/SystemAppearance.bundle/Contents/Resources/VibrantDark.car",
+];
+const REAL_TXT = `p48398\n${REAL_TXT_PATHS.map((path) => `ftxt\nn${path}`).join("\n")}\n`;
+
 // A stack with one published port (54322) served by a blocked executable.
 function baseline(): Record<string, string> {
   return {
@@ -186,6 +209,21 @@ describe("Local stack network check, more states", () => {
   it("AC-0005: refuses an unpublished entry that is not <port>/tcp", () => {
     const message = check({ ...baseline(), [PORTS_CMD]: `8080/udp\n${PORTS_LINE}` });
     expect(message).toMatch(/^Could not read the local Supabase stack's published ports, /);
+  });
+
+  it("passes the real 17-pair program lookup recorded from com.docker.backend", () => {
+    expect(REAL_TXT_PATHS[0]).toBe(API);
+    expect(check({ ...baseline(), [lsofTxt(48398)]: REAL_TXT })).toBeNull();
+  });
+
+  it("AC-0005: refuses a program lookup pair whose label is not ftxt", () => {
+    expect(check({ ...baseline(), [lsofTxt(48398)]: `p48398\nfmem\nn${API}\n` })).toMatch(/^Could not read the program serving port 54322, /);
+  });
+
+  it("AC-0005: refuses a program lookup that prints only the pid line", () => {
+    const message = check({ ...baseline(), [lsofTxt(48398)]: "p48398\n" });
+    expect(message).toMatch(/^Could not read the program serving port 54322, /);
+    expect(message?.endsWith(TAIL)).toBe(true);
   });
 
   it("AC-0005: refuses a program lookup for another pid or with an unrecognized line", () => {
