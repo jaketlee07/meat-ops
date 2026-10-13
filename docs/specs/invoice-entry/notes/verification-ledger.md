@@ -173,3 +173,27 @@ All stopped containers were started again and healthy, and no started process wa
 - Judgement (the controller read each capture with its five fields): no reader-visible failure in any capture. One column at both widths; nothing clipped, covered, or off-screen; the nav, the read forms, the drafts list (capture date, Photo or Text, line count, first words), each line's fieldset with its checkbox, pickers, and fields, and the saved result (two lots; RAW-TOM on hand 0 lbs to 8,000 lbs and average "None yet" to $1.7250/lb) all read cleanly.
 - Result state and verdict: completed / pass.
 - Two things the captures could not show, carried to the live run: the seeded photo was a few pixels, so the review's photo showed as a dot (the image is `max-w-full h-auto`, so a real photo scales down to the column); and the bottom of the 1,680 px review, where Save receipts and Discard draft sit, is below every required capture.
+
+### Goal-based checks (2026-10-13, commit ed405dd)
+
+Run after `npm run db:reset:stack-b` (schema_migrations: 0001, 20261007181933, 20261007182816, 20261007183252, 20261008110703, 20261009070619, 20261013161422) and the folder check (only `meat-ops-sales`, stack A, listed).
+
+| Criterion | Command | Result |
+| --- | --- | --- |
+| AC-0150 | `npm run build` | exit 0 |
+| AC-0151 | `E2E_PORT=3200 npm test` | exit 0 in 142 s; Vitest 31 files, 520 tests; Playwright 331 tests |
+| AC-0152 | `npm run gen:types` right after the reset, then `git diff --exit-code src/lib/database.types.ts` | exit 0, no diff |
+| AC-0153 | `npm run typecheck` | exit 0 |
+| AC-0154 | `grep -rnE "\.(insert\|update\|upsert\|delete)\(" src/` | prints nothing |
+| AC-0155 | `grep -rnE "from ['\"][^'\"]*app/" src/lib/` | prints nothing |
+| AC-0156 | `npm audit --omit=dev --audit-level=high` (`npm run audit`) | exit 0, "found 0 vulnerabilities" |
+| AC-0157 | `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` | prints nothing |
+| AC-0158 | `package.json` | `"@anthropic-ai/sdk": "0.129.0"`, no range character |
+| AC-0159 | the three greps in the criterion | each prints nothing |
+| AC-0160 | the AC-0160 baseline query, compared with the baseline above | the same 13 base tables with the same columns, plus `import_draft_lines` and `import_drafts` |
+| AC-0161 | `grep -rnE "@anthropic-ai/sdk" src/ \| grep -v '^src/app/_server/model.ts:'` | prints nothing; `model.ts` line 1 is `import "server-only";` |
+| AC-0162 | `npm run test:costing` | exit 0; 3 files, 37 tests; `test/invoice-costing.test.ts` runs "AC-0040: saving the turkey reading's draft leaves RAW-TOM at 8,000 lbs and an average of exactly 1.725" (pass) |
+| AC-0163 | `grep -rnE "process\.env(\.\|\[)" src/ \| grep -vE '^src/app/_server/(model\|session)\.ts:'` | prints nothing |
+| AC-0164 | `npm view @anthropic-ai/sdk time` | 0.129.0 published 2026-09-28T18:10:46Z; added 2026-10-13, 15 days later |
+| AC-0165 | `package.json` compared with `origin/main:package.json` | the only new package is `@anthropic-ai/sdk` in `dependencies`; none in `devDependencies`; none removed |
+| AC-0166 | `git check-ignore` | `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test`, `.env.development.local`, `.env.production.local`, `.env.test.local` ignored; `.env.example` not ignored |
