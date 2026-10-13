@@ -149,3 +149,69 @@ Round 2 reviewed the repairs only (`git show 1415f08` and the rebuilt commits). 
 - Fix round 2 (controller): pressing Save sale with a code missing from the page's list drops an invalid state before the list reloads; the list-reload test starts from a refused form and asserts no `aria-invalid` and no field message while "Saving…" shows; the pending-void test presses confirm again (a forced click and Enter) and still sees one request, and is titled for the plan's loading row; the decision test is titled AC-0006; the trace keyboard test goes Back and Forward and asserts focus on each result's heading.
 - Mutation checks, each restored: without the new state reset the list-reload test fails; without both confirm guards the pending-void test sees 3 requests instead of 1.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 275 s, Vitest 497 passed (29 files), Playwright 363 passed.
+
+## Post-gates review, round 3, and close (2026-10-13)
+
+- Round 3 reviewed `git show d517f18` only. adversarial-reviewer, quality-engineer, and frontend-reviewer each returned the byte-exact clean sentinel (`.context/reviews/fded6817-67d3-46ba-b606-da18a066f61d/3-post-gates-*-raw.md`). security-reviewer was adjudicated clean in round 1, and no later repair changed a trust boundary.
+- Closing checks on the final tree (`d517f18`): AC-0172 `npm run gen:types` leaves `src/lib/database.types.ts` unchanged (sha256 compared before and after); AC-0174, AC-0175, AC-0177, the three AC-0178 greps, and AC-0179 each print nothing; AC-0176 `npm audit --omit=dev --audit-level=high` exit 0, "found 0 vulnerabilities". The last full gate run is fix round 2's.
+- Spec `Status: Shipped` with all 134 criteria checked; plan `Status: Done`; `lint-spec-status.py --root .` exit 0; `plan check-current` OK. `reviewers-clean` (seq 30) and `review record` round 3, direct clean. The engine waits at `CODE-HUMAN-GATE` for the merge decision.
+- Review shape: MIXED, about 7,000 reviewable lines, reviewed as five dependency-ordered layers (database, library, sales page, trace page, docs), each named by its commits.
+- Resolve-vs-surface record, closed: 21 sustained findings over two rounds, all resolved (2 Concerns, and 19 Nits, 6 of them promoted to Concern before their repair because each changed behaviour); 2 refuted (`SYSTEM-SPEC.md` readers of `v_sale_summary`; a pending button's dimmed focus ring); 1 indeterminate settled by the owner (the types commit). No deferral. `experience-reviewer` is a named skip (not installed).
+- project-knowledge: not captured; earlier specs record the store refusing captures (`staged_dual_writer`), and this run's lessons went to the agent's local memory instead.
+
+### Review verdict
+
+```json review-verdict.v1
+{
+  "schema_version": "review-verdict.v1",
+  "state": "READY_WITH_RESIDUAL_RISK",
+  "mode": "full",
+  "review_unit": "sales post-gates review, rounds 1 to 3, 0d02e07..d517f18",
+  "warranted_reviewers": [
+    {"role": "adversarial-reviewer", "mandatory": true, "outcome": "clean", "report_ref": ".context/reviews/fded6817-67d3-46ba-b606-da18a066f61d/3-post-gates-adversarial-reviewer-raw.md"},
+    {"role": "quality-engineer", "mandatory": true, "outcome": "clean", "report_ref": ".context/reviews/fded6817-67d3-46ba-b606-da18a066f61d/3-post-gates-quality-engineer-raw.md"},
+    {"role": "security-reviewer", "mandatory": true, "outcome": "clean", "report_ref": ".context/reviews/fded6817-67d3-46ba-b606-da18a066f61d/1-post-gates-security-reviewer-adjudication.md"},
+    {"role": "frontend-reviewer", "mandatory": false, "outcome": "clean", "report_ref": ".context/reviews/fded6817-67d3-46ba-b606-da18a066f61d/3-post-gates-frontend-reviewer-raw.md"},
+    {"role": "experience-reviewer", "mandatory": false, "outcome": "named_skip", "report_ref": "not installed"}
+  ],
+  "named_skips": [
+    {"code": "experience-reviewer-absent", "category": "reviewer-not-installed", "reason": "The experience-design pack is not installed; the rendered-page inspection and frontend-reviewer covered the pages as rendered.", "residual_eligible": true}
+  ],
+  "findings": [
+    {"id": "qe-r1-1", "source_role": "quality-engineer", "severity": "concern", "effective_severity": "concern", "citation": "test/e2e/sales-page.ts:195", "text": "A killed browser run left stack A without the operator's sale_items read.", "status": "resolved"},
+    {"id": "qe-r1-2", "source_role": "quality-engineer", "severity": "concern", "effective_severity": "concern", "citation": "test/e2e/sales.spec.ts:191", "text": "The replayed-void test could not fail on no void mark.", "status": "resolved"},
+    {"id": "qe-r1-3", "source_role": "quality-engineer", "severity": "nit", "effective_severity": "nit", "citation": "test/e2e/sales.spec.ts:72", "text": "A GRANT ran after every sales test.", "status": "resolved"},
+    {"id": "qe-r1-4", "source_role": "quality-engineer", "severity": "nit", "effective_severity": "nit", "citation": "test/save-sale.test.ts:313", "text": "Decision-test titles named the wrong criteria.", "status": "resolved"},
+    {"id": "qe-r1-5", "source_role": "quality-engineer", "severity": "nit", "effective_severity": "nit", "citation": "src/lib/trace.ts:214", "text": "The paging guard's distinct-key rule had no test.", "status": "resolved"},
+    {"id": "qe-r1-6", "source_role": "quality-engineer", "severity": "nit", "effective_severity": "nit", "citation": "docs/costing.md:277", "text": "Not available was claimed as browser-tested.", "status": "resolved"},
+    {"id": "fe-r1-1", "source_role": "frontend-reviewer", "severity": "nit", "effective_severity": "concern", "citation": "src/app/trace/find-forms.tsx:65", "text": "A followed trace link left focus on the page body.", "status": "resolved"},
+    {"id": "fe-r1-2", "source_role": "frontend-reviewer", "severity": "nit", "effective_severity": "concern", "citation": "src/app/sales/sale-form.tsx:140", "text": "Save sale showed no pending state while the list reloaded.", "status": "resolved"},
+    {"id": "fe-r1-3", "source_role": "frontend-reviewer", "severity": "nit", "effective_severity": "concern", "citation": "src/app/sales/void-dialog.tsx:176", "text": "A pending void used disabled and a button label instead of aria-disabled and a status.", "status": "resolved"},
+    {"id": "fe-r1-4", "source_role": "frontend-reviewer", "severity": "nit", "effective_severity": "concern", "citation": "src/app/sales/sale-form.tsx:87", "text": "Corrected fields stayed invalid during the save.", "status": "resolved"},
+    {"id": "adv-r1-1", "source_role": "adversarial-reviewer", "severity": "nit", "effective_severity": "nit", "citation": "docs/costing.md:277", "text": "Not available was claimed as tested.", "status": "resolved"},
+    {"id": "adv-r1-2", "source_role": "adversarial-reviewer", "severity": "nit", "effective_severity": "concern", "citation": "src/app/sales/sale-form.tsx:157", "text": "A server-returned customer refusal focused the field, not its message.", "status": "resolved"},
+    {"id": "adv-r1-3", "source_role": "adversarial-reviewer", "severity": "nit", "effective_severity": "nit", "citation": "test/save-sale.test.ts:313", "text": "Two void-decision tests carried each other's criterion IDs.", "status": "resolved"},
+    {"id": "adv-r1-4", "source_role": "adversarial-reviewer", "severity": "nit", "effective_severity": "nit", "citation": "test/e2e/trace-page.ts:96", "text": "A fixture comment named the wrong same-date receipts.", "status": "resolved"},
+    {"id": "adv-r1-5", "source_role": "adversarial-reviewer", "severity": "nit", "effective_severity": "nit", "citation": "src/lib/database.types.ts:734", "text": "The regenerated types sat in the docs commit ahead of the migration (sustained by the owner after an indeterminate adjudication).", "status": "resolved"},
+    {"id": "adv-r2-1", "source_role": "adversarial-reviewer", "severity": "nit", "effective_severity": "nit", "citation": "test/e2e/sales.spec.ts:1182", "text": "The pending-void test claimed AC-0089.", "status": "resolved"},
+    {"id": "adv-r2-2", "source_role": "adversarial-reviewer", "severity": "nit", "effective_severity": "nit", "citation": "test/save-sale.test.ts:289", "text": "A decision test named AC-0005 for the non-operator refusal.", "status": "resolved"},
+    {"id": "fe-r2-1", "source_role": "frontend-reviewer", "severity": "nit", "effective_severity": "concern", "citation": "src/app/sales/sale-form.tsx:148", "text": "Old field errors stayed beside Saving while the list reloaded.", "status": "resolved"},
+    {"id": "qe-r2-1", "source_role": "quality-engineer", "severity": "nit", "effective_severity": "nit", "citation": "test/e2e/sales.spec.ts:1202", "text": "The void-pending test could not fail on a second confirm press.", "status": "resolved"},
+    {"id": "qe-r2-2", "source_role": "quality-engineer", "severity": "nit", "effective_severity": "nit", "citation": "test/e2e/sales.spec.ts:1182", "text": "New test titles named criteria the tests did not exercise.", "status": "resolved"},
+    {"id": "qe-r2-3", "source_role": "quality-engineer", "severity": "nit", "effective_severity": "nit", "citation": "src/app/trace/find-forms.tsx:37", "text": "Back and Forward focus was claimed but untested.", "status": "resolved"}
+  ],
+  "required_gates": [
+    {"name": "npm run typecheck", "outcome": "passed", "evidence": "verification-ledger.md, fix round 2: exit 0"},
+    {"name": "npm run build", "outcome": "passed", "evidence": "verification-ledger.md, fix round 2: exit 0"},
+    {"name": "npm test", "outcome": "passed", "evidence": "verification-ledger.md, fix round 2: Vitest 497, Playwright 363, 275 s"},
+    {"name": "AC-0172 gen:types no diff, AC-0174 to AC-0179 greps and audit", "outcome": "passed", "evidence": "verification-ledger.md, closing checks at d517f18"},
+    {"name": "AC-0016 and AC-0017 catalog comparison", "outcome": "passed", "evidence": "verification-ledger.md, T7"},
+    {"name": "recorded run (AC-0053, AC-0054, AC-0057, AC-0087, AC-0088, AC-0140, AC-0141)", "outcome": "passed", "evidence": "verification-ledger.md, T7: 7 of 7 cases"},
+    {"name": "rendered-page inspection", "outcome": "passed", "evidence": "verification-ledger.md, T7: completed, pass after one crowding fix"}
+  ],
+  "deferrals": [],
+  "blind_spots": [],
+  "human_gate_status": "pending",
+  "non_authoritative_score": null
+}
+```

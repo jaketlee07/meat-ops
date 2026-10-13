@@ -1,6 +1,6 @@
 # Spec: sales
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §4 (customers, sales, sale_items, `v_sale_traceability`), §5 "Record a sale" and "Void a sale", §6 invariant 7, §10 (the selling narrative's trace and reverse trace), §11 (boundaries), §12 (verification), §13 item 5; [`docs/costing.md`](../../costing.md) (invariant 7, the `void_sale` rule, the Rounding note); the access model, the write path, the `supabase/migrations/` change guidance, and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md)
@@ -138,39 +138,39 @@ Definitions used by these criteria:
 
 Access and navigation
 
-- [ ] **AC-0001.** While signed out, a request for `/sales` or for `/trace` ends on `/sign-in`.
-- [ ] **AC-0002.** Signed in as a non-operator, `/sales` and `/trace` each show "This account isn't allowed to use Meat Ops." and a Sign out button, and show no form, sale, or lot.
-- [ ] **AC-0003.** A save or void action request replayed with no session, or with a non-operator's session, writes no sale and no void mark and changes no finished lot.
-- [ ] **AC-0004.** A save action request replayed with no session returns "You're signed out. Sign in again to save this sale."
-- [ ] **AC-0005.** A void action request replayed with no session returns "You're signed out. Sign in again to void this sale."
-- [ ] **AC-0006.** A save or void action request replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
-- [ ] **AC-0007.** `/receiving`, `/production`, `/menu`, `/pricing`, `/sales`, and `/trace` each show a navigation region named "Primary" that holds a link named "Receiving" to `/receiving`, "Production" to `/production`, "Menu" to `/menu`, "Pricing" to `/pricing`, "Sales" to `/sales`, and "Trace" to `/trace`, with these six in this order relative to each other. A link another feature adds elsewhere in that region does not break this criterion.
-- [ ] **AC-0008.** In the AC-0007 navigation, the only link with an `aria-current` attribute is the link to the page being shown, and its value is `page`.
-- [ ] **AC-0009.** The responses to page requests for `/sales` and `/trace`, signed in or not, each carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
+- [x] **AC-0001.** While signed out, a request for `/sales` or for `/trace` ends on `/sign-in`.
+- [x] **AC-0002.** Signed in as a non-operator, `/sales` and `/trace` each show "This account isn't allowed to use Meat Ops." and a Sign out button, and show no form, sale, or lot.
+- [x] **AC-0003.** A save or void action request replayed with no session, or with a non-operator's session, writes no sale and no void mark and changes no finished lot.
+- [x] **AC-0004.** A save action request replayed with no session returns "You're signed out. Sign in again to save this sale."
+- [x] **AC-0005.** A void action request replayed with no session returns "You're signed out. Sign in again to void this sale."
+- [x] **AC-0006.** A save or void action request replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
+- [x] **AC-0007.** `/receiving`, `/production`, `/menu`, `/pricing`, `/sales`, and `/trace` each show a navigation region named "Primary" that holds a link named "Receiving" to `/receiving`, "Production" to `/production`, "Menu" to `/menu`, "Pricing" to `/pricing`, "Sales" to `/sales`, and "Trace" to `/trace`, with these six in this order relative to each other. A link another feature adds elsewhere in that region does not break this criterion.
+- [x] **AC-0008.** In the AC-0007 navigation, the only link with an `aria-current` attribute is the link to the page being shown, and its value is `page`.
+- [x] **AC-0009.** The responses to page requests for `/sales` and `/trace`, signed in or not, each carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
 
 Sale views
 
-- [ ] **AC-0010.** After the 5,000-lb sale, the sale summary view gives that sale one row with lbs 5000.000, price per lb 3.2900, finished product code 502, and customer Fulton Market Deli.
-- [ ] **AC-0011.** After the 5,000-lb sale is voided with the reason "wrong customer", its sale summary row carries that reason and a void time, and still gives lbs 5000.000 and price per lb 3.2900.
-- [ ] **AC-0012.** The sale summary view has exactly one row per sale. The check fixture holds a sale with one line, the 5,000-lb sale with two lines, a sale with no customer, and a void sale.
-- [ ] **AC-0013.** A non-operator reads 0 rows from the sale summary view and from the trace view, in a fixture where an operator reads at least one row from each.
-- [ ] **AC-0014.** The `anon` role is refused a read of the sale summary view and of the trace view.
-- [ ] **AC-0015.** The `service_role` role reads at least one row from the sale summary view and from the trace view after the 5,000-lb sale.
-- [ ] **AC-0016.** Compared with the local database built from `main`'s migrations, every base table and view in `public` after this branch's migrations keeps every column it had, with the same name, type, and position.
-- [ ] **AC-0017.** Compared with the local database built from `main`'s migrations, the only relation in `public` that this branch adds is the view `v_sale_summary`, the only relation that gains columns is the view `v_sale_traceability`, and `public` has the same functions.
+- [x] **AC-0010.** After the 5,000-lb sale, the sale summary view gives that sale one row with lbs 5000.000, price per lb 3.2900, finished product code 502, and customer Fulton Market Deli.
+- [x] **AC-0011.** After the 5,000-lb sale is voided with the reason "wrong customer", its sale summary row carries that reason and a void time, and still gives lbs 5000.000 and price per lb 3.2900.
+- [x] **AC-0012.** The sale summary view has exactly one row per sale. The check fixture holds a sale with one line, the 5,000-lb sale with two lines, a sale with no customer, and a void sale.
+- [x] **AC-0013.** A non-operator reads 0 rows from the sale summary view and from the trace view, in a fixture where an operator reads at least one row from each.
+- [x] **AC-0014.** The `anon` role is refused a read of the sale summary view and of the trace view.
+- [x] **AC-0015.** The `service_role` role reads at least one row from the sale summary view and from the trace view after the 5,000-lb sale.
+- [x] **AC-0016.** Compared with the local database built from `main`'s migrations, every base table and view in `public` after this branch's migrations keeps every column it had, with the same name, type, and position.
+- [x] **AC-0017.** Compared with the local database built from `main`'s migrations, the only relation in `public` that this branch adds is the view `v_sale_summary`, the only relation that gains columns is the view `v_sale_traceability`, and `public` has the same functions.
 
 Sale form
 
-- [ ] **AC-0020.** Typing the code of a product in the page's product list shows its description, its list price or "No list price yet", and its finished lbs on hand. In the sale fixture with a 3.29 list price, typing 502 shows Smoked Turkey Drums Tom, list price $3.29/lb, and finished on hand 5,390 lbs.
-- [ ] **AC-0021.** Typing the code of a product in the page's product list that has a list price sets the price per lb field to that list price written with 2 decimals: 3.29 for a stored 3.29, and 3.50 for a stored 3.5.
-- [ ] **AC-0022.** Typing the code of a product in the page's product list that has no list price empties the price per lb field.
-- [ ] **AC-0023.** After the owner types a price per lb, changing the product code to a different product in the page's product list sets the price per lb field from that product's list price, per AC-0021 and AC-0022.
-- [ ] **AC-0024.** In the sale fixture with a 3.29 list price, typing 502, changing the price per lb to 3.10, and saving a sale of 100 lbs writes a sale whose lines all carry a price per lb of 3.10.
-- [ ] **AC-0025.** The customer field starts at "No customer" and lists "No customer" first, then every customer in the customer list by name, in alphabetical order ignoring case.
-- [ ] **AC-0026.** The sale date starts at today's date on the device.
-- [ ] **AC-0027.** When there is no active finished product, `/sales` says "No active finished products yet. Add one in Supabase Studio, then reload this page."
-- [ ] **AC-0028.** A save with "No customer" chosen writes a sale with no customer.
-- [ ] **AC-0029.** Each input in this table is refused with its message shown beside its field, and no sale is written. Within one field, the first matching row wins.
+- [x] **AC-0020.** Typing the code of a product in the page's product list shows its description, its list price or "No list price yet", and its finished lbs on hand. In the sale fixture with a 3.29 list price, typing 502 shows Smoked Turkey Drums Tom, list price $3.29/lb, and finished on hand 5,390 lbs.
+- [x] **AC-0021.** Typing the code of a product in the page's product list that has a list price sets the price per lb field to that list price written with 2 decimals: 3.29 for a stored 3.29, and 3.50 for a stored 3.5.
+- [x] **AC-0022.** Typing the code of a product in the page's product list that has no list price empties the price per lb field.
+- [x] **AC-0023.** After the owner types a price per lb, changing the product code to a different product in the page's product list sets the price per lb field from that product's list price, per AC-0021 and AC-0022.
+- [x] **AC-0024.** In the sale fixture with a 3.29 list price, typing 502, changing the price per lb to 3.10, and saving a sale of 100 lbs writes a sale whose lines all carry a price per lb of 3.10.
+- [x] **AC-0025.** The customer field starts at "No customer" and lists "No customer" first, then every customer in the customer list by name, in alphabetical order ignoring case.
+- [x] **AC-0026.** The sale date starts at today's date on the device.
+- [x] **AC-0027.** When there is no active finished product, `/sales` says "No active finished products yet. Add one in Supabase Studio, then reload this page."
+- [x] **AC-0028.** A save with "No customer" chosen writes a sale with no customer.
+- [x] **AC-0029.** Each input in this table is refused with its message shown beside its field, and no sale is written. Within one field, the first matching row wins.
 
   | Field | Input | Message |
   | --- | --- | --- |
@@ -185,90 +185,90 @@ Sale form
   | Sale date | blank, or not a calendar date written YYYY-MM-DD, such as 2026-02-30 | Enter the sale date. |
   | Sale date | a date after today on the device | The sale date can't be after today. |
 
-- [ ] **AC-0030.** A save action request replayed with a customer id that is not the id of a customer in the customer list writes no sale and returns "Choose a customer from the list." as the customer field's message.
-- [ ] **AC-0031.** A save action request replayed with a sale date or a `today` value that is not a calendar date written YYYY-MM-DD writes no sale.
-- [ ] **AC-0032.** In the sale fixture, a form with lbs 0.001, price per lb 0, and today's date saves one sale, and so does a form with lbs 1540 and price per lb 99999999.99.
-- [ ] **AC-0033.** Typing the code of an active finished product that is not in the page's product list, on a page whose list holds at least one product, typing a price per lb, and saving writes one sale of it without a reload.
-- [ ] **AC-0034.** While a save has not returned, pressing Save sale again writes no second sale.
+- [x] **AC-0030.** A save action request replayed with a customer id that is not the id of a customer in the customer list writes no sale and returns "Choose a customer from the list." as the customer field's message.
+- [x] **AC-0031.** A save action request replayed with a sale date or a `today` value that is not a calendar date written YYYY-MM-DD writes no sale.
+- [x] **AC-0032.** In the sale fixture, a form with lbs 0.001, price per lb 0, and today's date saves one sale, and so does a form with lbs 1540 and price per lb 99999999.99.
+- [x] **AC-0033.** Typing the code of an active finished product that is not in the page's product list, on a page whose list holds at least one product, typing a price per lb, and saving writes one sale of it without a reload.
+- [x] **AC-0034.** While a save has not returned, pressing Save sale again writes no second sale.
 
 Sale result
 
-- [ ] **AC-0040.** After a save, the screen shows a "Sale saved" heading with the sale number, product code and description, customer name or "No customer", and sale date of the sale the engine wrote, and also its lbs and price per lb unless the save is an AC-0047 save.
-- [ ] **AC-0041.** Entering the 5,000-lb sale on `/sales` with the price per lb as filled shows lbs 5,000 lbs, price per lb $3.29/lb, customer Fulton Market Deli, and sale date Oct 8, 2026, then the finished lots drawn: batch 1, made Oct 6, 2026, 4,620 lbs, and then batch 2, made Oct 7, 2026, 380 lbs.
-- [ ] **AC-0042.** Each finished lot drawn shows its batch number, its production date, and the lbs the sale drew from it.
-- [ ] **AC-0043.** The finished lots drawn are listed in draw order. The check fixture holds a batch dated 2026-10-07 entered first, then a batch dated 2026-10-06, then a second batch dated 2026-10-06; a sale that draws from all three lists the first 2026-10-06 batch, then the second, then the 2026-10-07 batch.
-- [ ] **AC-0044.** In the AC-0041 case, the result shows 502's finished lbs on hand before 5,390 lbs and after 390 lbs.
-- [ ] **AC-0045.** The result has a link named "Trace this sale" to `/trace?sale=<sale number>`.
-- [ ] **AC-0046.** After a save, the customer and sale date keep their values, and the product code, lbs, and price per lb are empty.
-- [ ] **AC-0047.** When a read that the save makes after the engine returns its sale fails, the result shows the "Sale saved" heading with the sale number and sale date the engine returned. Those reads are the sale's summary, its finished lots drawn, and the product's finished lbs on hand after.
-- [ ] **AC-0048.** In the AC-0047 case, the result shows no finished lots drawn and no before-and-after stock, and in their place says "The sale was saved, but its details couldn't be loaded. Reload this page to see them."
+- [x] **AC-0040.** After a save, the screen shows a "Sale saved" heading with the sale number, product code and description, customer name or "No customer", and sale date of the sale the engine wrote, and also its lbs and price per lb unless the save is an AC-0047 save.
+- [x] **AC-0041.** Entering the 5,000-lb sale on `/sales` with the price per lb as filled shows lbs 5,000 lbs, price per lb $3.29/lb, customer Fulton Market Deli, and sale date Oct 8, 2026, then the finished lots drawn: batch 1, made Oct 6, 2026, 4,620 lbs, and then batch 2, made Oct 7, 2026, 380 lbs.
+- [x] **AC-0042.** Each finished lot drawn shows its batch number, its production date, and the lbs the sale drew from it.
+- [x] **AC-0043.** The finished lots drawn are listed in draw order. The check fixture holds a batch dated 2026-10-07 entered first, then a batch dated 2026-10-06, then a second batch dated 2026-10-06; a sale that draws from all three lists the first 2026-10-06 batch, then the second, then the 2026-10-07 batch.
+- [x] **AC-0044.** In the AC-0041 case, the result shows 502's finished lbs on hand before 5,390 lbs and after 390 lbs.
+- [x] **AC-0045.** The result has a link named "Trace this sale" to `/trace?sale=<sale number>`.
+- [x] **AC-0046.** After a save, the customer and sale date keep their values, and the product code, lbs, and price per lb are empty.
+- [x] **AC-0047.** When a read that the save makes after the engine returns its sale fails, the result shows the "Sale saved" heading with the sale number and sale date the engine returned. Those reads are the sale's summary, its finished lots drawn, and the product's finished lbs on hand after.
+- [x] **AC-0048.** In the AC-0047 case, the result shows no finished lots drawn and no before-and-after stock, and in their place says "The sale was saved, but its details couldn't be loaded. Reload this page to see them."
 
 Refused and failed saves
 
-- [ ] **AC-0050.** In the sale fixture, a sale of 502 dated 2026-10-06 of 5,000 lbs is refused with "The sale wasn't saved. Only 4,620 lbs of finished stock made on or before Oct 6, 2026 is on hand, and this sale needs 5,000 lbs."
-- [ ] **AC-0051.** When a product in the page's product list is made inactive after the page loaded, saving a sale of it shows "The sale wasn't saved. This product is no longer active."
-- [ ] **AC-0052.** When the session has ended after the sales form loaded, saving shows "You're signed out. Sign in again to save this sale."
-- [ ] **AC-0053.** When a call that a save makes before its write call fails, the form shows "The sale wasn't saved. Try again in a moment." Those calls are the caller check's auth lookup, unless the auth server ends the session (AC-0052), the operator check, and the reads before the write.
-- [ ] **AC-0054.** When the save's write call gets no answer from the engine, the form shows "The sale may not have been saved. Reload this page and check Recent sales before saving again."
-- [ ] **AC-0055.** When the connection to the app drops while a save is in flight, the form shows the AC-0054 message.
-- [ ] **AC-0056.** When the engine refuses a save for a reason other than those of AC-0050, AC-0051, and AC-0057, the form shows "The sale wasn't saved." followed by the engine's reason, which is the refusal text after its `record_sale: ` prefix. Lbs typed as 400 nines, which pass the AC-0029 rules, show "The sale wasn't saved. invalid lbs, must be above 0".
-- [ ] **AC-0057.** When the engine refuses a save because the caller is not an operator, the form shows "The sale wasn't saved. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0058.** Every save refusal writes no sale and changes no finished lot.
-- [ ] **AC-0059.** After a save refusal or a save failure, every field keeps its value.
+- [x] **AC-0050.** In the sale fixture, a sale of 502 dated 2026-10-06 of 5,000 lbs is refused with "The sale wasn't saved. Only 4,620 lbs of finished stock made on or before Oct 6, 2026 is on hand, and this sale needs 5,000 lbs."
+- [x] **AC-0051.** When a product in the page's product list is made inactive after the page loaded, saving a sale of it shows "The sale wasn't saved. This product is no longer active."
+- [x] **AC-0052.** When the session has ended after the sales form loaded, saving shows "You're signed out. Sign in again to save this sale."
+- [x] **AC-0053.** When a call that a save makes before its write call fails, the form shows "The sale wasn't saved. Try again in a moment." Those calls are the caller check's auth lookup, unless the auth server ends the session (AC-0052), the operator check, and the reads before the write.
+- [x] **AC-0054.** When the save's write call gets no answer from the engine, the form shows "The sale may not have been saved. Reload this page and check Recent sales before saving again."
+- [x] **AC-0055.** When the connection to the app drops while a save is in flight, the form shows the AC-0054 message.
+- [x] **AC-0056.** When the engine refuses a save for a reason other than those of AC-0050, AC-0051, and AC-0057, the form shows "The sale wasn't saved." followed by the engine's reason, which is the refusal text after its `record_sale: ` prefix. Lbs typed as 400 nines, which pass the AC-0029 rules, show "The sale wasn't saved. invalid lbs, must be above 0".
+- [x] **AC-0057.** When the engine refuses a save because the caller is not an operator, the form shows "The sale wasn't saved. This account isn't allowed to use Meat Ops."
+- [x] **AC-0058.** Every save refusal writes no sale and changes no finished lot.
+- [x] **AC-0059.** After a save refusal or a save failure, every field keeps its value.
 
 Recent sales and void
 
-- [ ] **AC-0070.** `/sales` lists the 10 last-entered sales of every product, chosen by entry order and not by sale date, or all of them when there are 10 or fewer. The check fixture holds 12 sales, and the last one entered has an earlier sale date than every other sale.
-- [ ] **AC-0071.** The listed sales run last entered first. The check fixture holds sales whose sale dates are not in the order they were entered.
-- [ ] **AC-0072.** Each listed sale shows its sale number, sale date, customer name or "No customer", product code, lbs, and price per lb.
-- [ ] **AC-0073.** Each listed sale number is a link to `/trace?sale=<sale number>`.
-- [ ] **AC-0074.** When there are more than 10 sales, the list says "Showing the 10 most recent of N sales.", where N is the number of sales, void ones included.
-- [ ] **AC-0075.** When there is no sale, the list says "No sales yet."
-- [ ] **AC-0076.** After a save whose result shows its finished lots drawn, the saved sale is the first in the list.
-- [ ] **AC-0077.** In the list, every sale that is not void has a Void button, and every void sale shows "Void: " and its reason. The check fixture holds a void sale and a sale that is not void.
-- [ ] **AC-0078.** Void opens a confirmation that names the sale number, product code, lbs, and customer name or "No customer", and asks for a reason.
-- [ ] **AC-0079.** The void confirmation's accessible description contains the sale number, lbs, and customer it names.
-- [ ] **AC-0080.** Confirming with a blank or spaces-only reason shows "Enter a reason for the void." and changes nothing.
-- [ ] **AC-0081.** Cancel closes the confirmation and changes nothing.
-- [ ] **AC-0082.** In the AC-0041 case, voiding the sale with a reason shows it in the list as "Void: " and that reason, and typing 502 then shows finished lbs on hand of 5,390 lbs.
-- [ ] **AC-0083.** After the sale shown in the "Sale saved" panel is voided from this page's list, the panel says "This sale was voided." and no longer shows its before-and-after stock.
-- [ ] **AC-0084.** When the engine refuses a void, such as for a sale voided elsewhere after the list loaded, the list shows a message that starts "The sale wasn't voided." and the sale is unchanged.
-- [ ] **AC-0085.** When the session has ended after the list loaded, confirming a void shows "You're signed out. Sign in again to void this sale." and the sale is unchanged.
-- [ ] **AC-0086.** When the connection to the app drops while a void is in flight, the list stays on screen and shows "The sale may not have been voided. Reload this page to see whether it was."
-- [ ] **AC-0087.** When a call that a void makes before its write call fails, the list stays on screen and shows "The sale wasn't voided. Try again in a moment." Those calls are the caller check's auth lookup, unless the auth server ends the session (AC-0085), and the operator check.
-- [ ] **AC-0088.** When the void's write call gets no answer from the engine, the list stays on screen and shows the AC-0086 message.
-- [ ] **AC-0089.** Every void refusal changes no sale and no finished lot.
+- [x] **AC-0070.** `/sales` lists the 10 last-entered sales of every product, chosen by entry order and not by sale date, or all of them when there are 10 or fewer. The check fixture holds 12 sales, and the last one entered has an earlier sale date than every other sale.
+- [x] **AC-0071.** The listed sales run last entered first. The check fixture holds sales whose sale dates are not in the order they were entered.
+- [x] **AC-0072.** Each listed sale shows its sale number, sale date, customer name or "No customer", product code, lbs, and price per lb.
+- [x] **AC-0073.** Each listed sale number is a link to `/trace?sale=<sale number>`.
+- [x] **AC-0074.** When there are more than 10 sales, the list says "Showing the 10 most recent of N sales.", where N is the number of sales, void ones included.
+- [x] **AC-0075.** When there is no sale, the list says "No sales yet."
+- [x] **AC-0076.** After a save whose result shows its finished lots drawn, the saved sale is the first in the list.
+- [x] **AC-0077.** In the list, every sale that is not void has a Void button, and every void sale shows "Void: " and its reason. The check fixture holds a void sale and a sale that is not void.
+- [x] **AC-0078.** Void opens a confirmation that names the sale number, product code, lbs, and customer name or "No customer", and asks for a reason.
+- [x] **AC-0079.** The void confirmation's accessible description contains the sale number, lbs, and customer it names.
+- [x] **AC-0080.** Confirming with a blank or spaces-only reason shows "Enter a reason for the void." and changes nothing.
+- [x] **AC-0081.** Cancel closes the confirmation and changes nothing.
+- [x] **AC-0082.** In the AC-0041 case, voiding the sale with a reason shows it in the list as "Void: " and that reason, and typing 502 then shows finished lbs on hand of 5,390 lbs.
+- [x] **AC-0083.** After the sale shown in the "Sale saved" panel is voided from this page's list, the panel says "This sale was voided." and no longer shows its before-and-after stock.
+- [x] **AC-0084.** When the engine refuses a void, such as for a sale voided elsewhere after the list loaded, the list shows a message that starts "The sale wasn't voided." and the sale is unchanged.
+- [x] **AC-0085.** When the session has ended after the list loaded, confirming a void shows "You're signed out. Sign in again to void this sale." and the sale is unchanged.
+- [x] **AC-0086.** When the connection to the app drops while a void is in flight, the list stays on screen and shows "The sale may not have been voided. Reload this page to see whether it was."
+- [x] **AC-0087.** When a call that a void makes before its write call fails, the list stays on screen and shows "The sale wasn't voided. Try again in a moment." Those calls are the caller check's auth lookup, unless the auth server ends the session (AC-0085), and the operator check.
+- [x] **AC-0088.** When the void's write call gets no answer from the engine, the list stays on screen and shows the AC-0086 message.
+- [x] **AC-0089.** Every void refusal changes no sale and no finished lot.
 
 Find a sale
 
-- [ ] **AC-0090.** `/trace` shows a "Find a sale" section with a "Sale number" field and a "Show sale" button, and a "Find a raw lot" section with a "Raw product code" field, a "Received date" field, and a "Show lots" button.
-- [ ] **AC-0091.** Show sale with the number of a sale, typed with or without spaces before and after it, shows that sale's trace.
-- [ ] **AC-0092.** Show sale with a blank or spaces-only sale number shows "Enter a sale number." beside the field.
-- [ ] **AC-0093.** A trace requested for a number that is not the number of a sale says "No sale has number <number>.", with the number shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
+- [x] **AC-0090.** `/trace` shows a "Find a sale" section with a "Sale number" field and a "Show sale" button, and a "Find a raw lot" section with a "Raw product code" field, a "Received date" field, and a "Show lots" button.
+- [x] **AC-0091.** Show sale with the number of a sale, typed with or without spaces before and after it, shows that sale's trace.
+- [x] **AC-0092.** Show sale with a blank or spaces-only sale number shows "Enter a sale number." beside the field.
+- [x] **AC-0093.** A trace requested for a number that is not the number of a sale says "No sale has number <number>.", with the number shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
 
 A sale's trace
 
-- [ ] **AC-0095.** A sale's trace shows the sale number as its heading, then the sale date, the customer name or "No customer", the product code and description, the lbs, and the price per lb.
-- [ ] **AC-0096.** Under a "Where it came from" heading, each finished lot the sale drew from shows its batch number, its production date, and the lbs the sale drew from it.
-- [ ] **AC-0097.** Under each finished lot, each raw lot its batch drew from shows its lot number, raw product code and description, vendor, received date, the lbs the batch drew from it, and its cost per lb.
-- [ ] **AC-0098.** The trace of the 5,000-lb sale shows batch 1, made Oct 6, 2026, with 4,620 lbs sold, over lot A (RAW-TOM Turkey Drums TOM (raw), Reyes Meats, received Oct 1, 2026, 5,000 lbs drawn, $1.6800/lb) and then lot B (Valley Poultry, received Oct 5, 2026, 1,000 lbs drawn, $1.8000/lb); then batch 2, made Oct 7, 2026, with 380 lbs sold, over lot B (1,000 lbs drawn, $1.8000/lb).
-- [ ] **AC-0099.** The finished lots on a sale's trace are listed in draw order, in the AC-0043 fixture.
-- [ ] **AC-0100.** The raw lots under each finished lot are listed in draw order. The check fixture holds a lot received 2026-10-05 and entered first, and a lot received 2026-10-01 and entered second, and a sale from a batch that drew from both lists the 2026-10-01 lot first.
-- [ ] **AC-0101.** Each raw lot's lot number on a sale's trace is a link to `/trace?lot=<lot number>`.
-- [ ] **AC-0102.** A void sale's trace shows its AC-0095 heading and facts and "This sale was voided: <reason>.", and shows no finished lot and no raw lot.
+- [x] **AC-0095.** A sale's trace shows the sale number as its heading, then the sale date, the customer name or "No customer", the product code and description, the lbs, and the price per lb.
+- [x] **AC-0096.** Under a "Where it came from" heading, each finished lot the sale drew from shows its batch number, its production date, and the lbs the sale drew from it.
+- [x] **AC-0097.** Under each finished lot, each raw lot its batch drew from shows its lot number, raw product code and description, vendor, received date, the lbs the batch drew from it, and its cost per lb.
+- [x] **AC-0098.** The trace of the 5,000-lb sale shows batch 1, made Oct 6, 2026, with 4,620 lbs sold, over lot A (RAW-TOM Turkey Drums TOM (raw), Reyes Meats, received Oct 1, 2026, 5,000 lbs drawn, $1.6800/lb) and then lot B (Valley Poultry, received Oct 5, 2026, 1,000 lbs drawn, $1.8000/lb); then batch 2, made Oct 7, 2026, with 380 lbs sold, over lot B (1,000 lbs drawn, $1.8000/lb).
+- [x] **AC-0099.** The finished lots on a sale's trace are listed in draw order, in the AC-0043 fixture.
+- [x] **AC-0100.** The raw lots under each finished lot are listed in draw order. The check fixture holds a lot received 2026-10-05 and entered first, and a lot received 2026-10-01 and entered second, and a sale from a batch that drew from both lists the 2026-10-01 lot first.
+- [x] **AC-0101.** Each raw lot's lot number on a sale's trace is a link to `/trace?lot=<lot number>`.
+- [x] **AC-0102.** A void sale's trace shows its AC-0095 heading and facts and "This sale was voided: <reason>.", and shows no finished lot and no raw lot.
 
 Find a raw lot
 
-- [ ] **AC-0110.** Show lots with a raw product's code and a blank received date lists the first 10 of that product's non-void receipts in this order, or all of them when it has 10 or fewer: received date newest first, then last entered first. The check fixture holds 12 receipts whose received dates are not in the order they were entered, two of them received on the same date.
-- [ ] **AC-0111.** When the AC-0110 list leaves receipts out, it says "Showing the 10 most recent of N receipts.", where N is the product's number of non-void receipts.
-- [ ] **AC-0112.** Show lots with a raw product's code and a received date lists every non-void receipt of that product received on that date, last entered first.
-- [ ] **AC-0113.** Each listed receipt shows its lot number as a link to `/trace?lot=<lot number>`, its received date, its vendor, and its weight.
-- [ ] **AC-0114.** A void receipt is not listed, with or without a received date.
-- [ ] **AC-0115.** The receipts of an inactive raw product are listed as AC-0110 and AC-0112 describe.
-- [ ] **AC-0116.** Show lots with a code that is not the code of a raw product, including a finished product's code, says "No raw product has code <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
-- [ ] **AC-0117.** Show lots for a raw product with no non-void receipt and a blank received date says "No receipts of <code> yet."
-- [ ] **AC-0118.** Show lots with a received date on which the raw product has no non-void receipt says "No receipt of <code> was received on <date>.", with the date in the Rounding note's date format.
-- [ ] **AC-0119.** Each input in this table is refused with its message shown beside its field, and no receipt is listed. Within one field, the first matching row wins.
+- [x] **AC-0110.** Show lots with a raw product's code and a blank received date lists the first 10 of that product's non-void receipts in this order, or all of them when it has 10 or fewer: received date newest first, then last entered first. The check fixture holds 12 receipts whose received dates are not in the order they were entered, two of them received on the same date.
+- [x] **AC-0111.** When the AC-0110 list leaves receipts out, it says "Showing the 10 most recent of N receipts.", where N is the product's number of non-void receipts.
+- [x] **AC-0112.** Show lots with a raw product's code and a received date lists every non-void receipt of that product received on that date, last entered first.
+- [x] **AC-0113.** Each listed receipt shows its lot number as a link to `/trace?lot=<lot number>`, its received date, its vendor, and its weight.
+- [x] **AC-0114.** A void receipt is not listed, with or without a received date.
+- [x] **AC-0115.** The receipts of an inactive raw product are listed as AC-0110 and AC-0112 describe.
+- [x] **AC-0116.** Show lots with a code that is not the code of a raw product, including a finished product's code, says "No raw product has code <code>.", with the code shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
+- [x] **AC-0117.** Show lots for a raw product with no non-void receipt and a blank received date says "No receipts of <code> yet."
+- [x] **AC-0118.** Show lots with a received date on which the raw product has no non-void receipt says "No receipt of <code> was received on <date>.", with the date in the Rounding note's date format.
+- [x] **AC-0119.** Each input in this table is refused with its message shown beside its field, and no receipt is listed. Within one field, the first matching row wins.
 
   | Field | Input | Message |
   | --- | --- | --- |
@@ -277,59 +277,59 @@ Find a raw lot
 
 A lot's trace
 
-- [ ] **AC-0120.** A lot's trace shows the lot number as its heading, then the raw product code and description, the vendor, the received date, the weight received, the cost per lb, and the raw lbs still on hand from the lot.
-- [ ] **AC-0121.** After the 5,000-lb sale, lot B's trace shows RAW-TOM Turkey Drums TOM (raw), Valley Poultry, received Oct 5, 2026, weight 3,000 lbs, $1.8000/lb, and raw on hand 1,000 lbs.
-- [ ] **AC-0122.** Under a "Customers" heading, a lot's trace lists each customer with at least one of the lot's sales, once, by name in alphabetical order ignoring case, then "No customer" when any of the lot's sales has none. The check fixture holds two sales to one customer, one sale to a second customer, one sale with no customer, and a void sale to a third customer, who is not listed.
-- [ ] **AC-0123.** Under a "Sales from this lot" heading, each of the lot's sales shows its sale number as a link to `/trace?sale=<sale number>`, its sale date, its customer name or "No customer", its product code, the batch number of its finished lot, and the lbs it drew from that finished lot.
-- [ ] **AC-0124.** The lot's sales are listed by sale date newest first, then last entered first, and a sale's lines in draw order. The check fixture holds sales whose sale dates are not in the order they were entered, and the 5,000-lb sale.
-- [ ] **AC-0125.** After the 5,000-lb sale, lot B's trace lists that sale twice, with batch 1 and 4,620 lbs and then with batch 2 and 380 lbs, and lot A's trace lists it once, with batch 1 and 4,620 lbs.
-- [ ] **AC-0126.** A void sale's lines are not listed on a lot's trace.
-- [ ] **AC-0127.** When the lot has no sales, its trace says "No sale was made from this lot." in place of the "Customers" and "Sales from this lot" sections.
-- [ ] **AC-0128.** Under a "Finished stock on hand from this lot" heading, each finished lot in the lot's finished stock shows its batch number, product code and description, production date, and finished lbs on hand.
-- [ ] **AC-0129.** The lot's finished stock is listed in draw order. In the sale fixture with no sale, lot B's trace lists batch 1 with 4,620 lbs and then batch 2 with 770 lbs, and lot A's trace lists batch 1 only.
-- [ ] **AC-0130.** After the 5,000-lb sale, lot B's finished stock lists batch 2 with 390 lbs and no other finished lot.
-- [ ] **AC-0131.** When the lot has no finished stock, its trace says "No finished stock from this lot is on hand." After the 5,000-lb sale, lot A's trace says so.
-- [ ] **AC-0132.** A void receipt's trace shows its AC-0120 heading and facts and "This receipt was voided: <reason>."
-- [ ] **AC-0135.** A lot's trace lists every one of the lot's sales under "Sales from this lot" and every customer with one of them under "Customers", also when the lot has more sales than the API returns in one read (`max_rows` in `supabase/config.toml`). The check fixture holds one more sale line from one lot than that cap, each sale entered in its own transaction, and the first one entered is the only sale to its customer.
-- [ ] **AC-0134.** A trace requested for a lot number that is not the lot number of a receipt says "No receipt has lot number <number>.", with the number shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
+- [x] **AC-0120.** A lot's trace shows the lot number as its heading, then the raw product code and description, the vendor, the received date, the weight received, the cost per lb, and the raw lbs still on hand from the lot.
+- [x] **AC-0121.** After the 5,000-lb sale, lot B's trace shows RAW-TOM Turkey Drums TOM (raw), Valley Poultry, received Oct 5, 2026, weight 3,000 lbs, $1.8000/lb, and raw on hand 1,000 lbs.
+- [x] **AC-0122.** Under a "Customers" heading, a lot's trace lists each customer with at least one of the lot's sales, once, by name in alphabetical order ignoring case, then "No customer" when any of the lot's sales has none. The check fixture holds two sales to one customer, one sale to a second customer, one sale with no customer, and a void sale to a third customer, who is not listed.
+- [x] **AC-0123.** Under a "Sales from this lot" heading, each of the lot's sales shows its sale number as a link to `/trace?sale=<sale number>`, its sale date, its customer name or "No customer", its product code, the batch number of its finished lot, and the lbs it drew from that finished lot.
+- [x] **AC-0124.** The lot's sales are listed by sale date newest first, then last entered first, and a sale's lines in draw order. The check fixture holds sales whose sale dates are not in the order they were entered, and the 5,000-lb sale.
+- [x] **AC-0125.** After the 5,000-lb sale, lot B's trace lists that sale twice, with batch 1 and 4,620 lbs and then with batch 2 and 380 lbs, and lot A's trace lists it once, with batch 1 and 4,620 lbs.
+- [x] **AC-0126.** A void sale's lines are not listed on a lot's trace.
+- [x] **AC-0127.** When the lot has no sales, its trace says "No sale was made from this lot." in place of the "Customers" and "Sales from this lot" sections.
+- [x] **AC-0128.** Under a "Finished stock on hand from this lot" heading, each finished lot in the lot's finished stock shows its batch number, product code and description, production date, and finished lbs on hand.
+- [x] **AC-0129.** The lot's finished stock is listed in draw order. In the sale fixture with no sale, lot B's trace lists batch 1 with 4,620 lbs and then batch 2 with 770 lbs, and lot A's trace lists batch 1 only.
+- [x] **AC-0130.** After the 5,000-lb sale, lot B's finished stock lists batch 2 with 390 lbs and no other finished lot.
+- [x] **AC-0131.** When the lot has no finished stock, its trace says "No finished stock from this lot is on hand." After the 5,000-lb sale, lot A's trace says so.
+- [x] **AC-0132.** A void receipt's trace shows its AC-0120 heading and facts and "This receipt was voided: <reason>."
+- [x] **AC-0135.** A lot's trace lists every one of the lot's sales under "Sales from this lot" and every customer with one of them under "Customers", also when the lot has more sales than the API returns in one read (`max_rows` in `supabase/config.toml`). The check fixture holds one more sale line from one lot than that cap, each sale entered in its own transaction, and the first one entered is the only sale to its customer.
+- [x] **AC-0134.** A trace requested for a lot number that is not the lot number of a receipt says "No receipt has lot number <number>.", with the number shown as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
 
 Error pages
 
-- [ ] **AC-0140.** After a `/sales` or `/trace` load fails because the database is unreachable, pressing Try again once the database is reachable again shows that page without a browser reload.
-- [ ] **AC-0141.** When the `/sales` or `/trace` error page appears, keyboard focus is on its heading.
+- [x] **AC-0140.** After a `/sales` or `/trace` load fails because the database is unreachable, pressing Try again once the database is reachable again shows that page without a browser reload.
+- [x] **AC-0141.** When the `/sales` or `/trace` error page appears, keyboard focus is on its heading.
 
 Accessibility and phone width
 
-- [ ] **AC-0150.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
-- [ ] **AC-0151.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
-- [ ] **AC-0152.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
-- [ ] **AC-0153.** Each of these can be completed with the keyboard alone: saving a sale, voiding a sale, Show sale, Show lots, and following a lot or sale link on a trace.
-- [ ] **AC-0154.** After a save, keyboard focus is on the "Sale saved" heading.
-- [ ] **AC-0155.** After an AC-0029, AC-0092, or AC-0119 refusal, keyboard focus is on the first field with an error.
-- [ ] **AC-0156.** After an AC-0029, AC-0092, or AC-0119 refusal, the `aria-describedby` of every field with an error points to that field's message.
-- [ ] **AC-0157.** After a save refusal other than an AC-0029 refusal, or after a save failure, keyboard focus is on the message that states it.
-- [ ] **AC-0158.** After a void, keyboard focus is on the "Recent sales" heading.
-- [ ] **AC-0159.** After a void refusal or a void failure, keyboard focus is on the message that states it.
-- [ ] **AC-0160.** After Cancel in the void confirmation, keyboard focus is on the Void button that opened it.
-- [ ] **AC-0161.** The accessible name of the lbs field contains "lbs", and the accessible name of the price per lb field contains "per lb".
-- [ ] **AC-0162.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
-- [ ] **AC-0163.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
+- [x] **AC-0150.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
+- [x] **AC-0151.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
+- [x] **AC-0152.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
+- [x] **AC-0153.** Each of these can be completed with the keyboard alone: saving a sale, voiding a sale, Show sale, Show lots, and following a lot or sale link on a trace.
+- [x] **AC-0154.** After a save, keyboard focus is on the "Sale saved" heading.
+- [x] **AC-0155.** After an AC-0029, AC-0092, or AC-0119 refusal, keyboard focus is on the first field with an error.
+- [x] **AC-0156.** After an AC-0029, AC-0092, or AC-0119 refusal, the `aria-describedby` of every field with an error points to that field's message.
+- [x] **AC-0157.** After a save refusal other than an AC-0029 refusal, or after a save failure, keyboard focus is on the message that states it.
+- [x] **AC-0158.** After a void, keyboard focus is on the "Recent sales" heading.
+- [x] **AC-0159.** After a void refusal or a void failure, keyboard focus is on the message that states it.
+- [x] **AC-0160.** After Cancel in the void confirmation, keyboard focus is on the Void button that opened it.
+- [x] **AC-0161.** The accessible name of the lbs field contains "lbs", and the accessible name of the price per lb field contains "per lb".
+- [x] **AC-0162.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
+- [x] **AC-0163.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
 
 Build and repository checks
 
-- [ ] **AC-0170.** `npm run build` exits 0.
-- [ ] **AC-0171.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
-- [ ] **AC-0172.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
-- [ ] **AC-0173.** `npm run typecheck` exits 0.
-- [ ] **AC-0174.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
-- [ ] **AC-0175.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
-- [ ] **AC-0176.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
-- [ ] **AC-0177.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
-- [ ] **AC-0178.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
+- [x] **AC-0170.** `npm run build` exits 0.
+- [x] **AC-0171.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
+- [x] **AC-0172.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
+- [x] **AC-0173.** `npm run typecheck` exits 0.
+- [x] **AC-0174.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
+- [x] **AC-0175.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
+- [x] **AC-0176.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
+- [x] **AC-0177.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
+- [x] **AC-0178.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
   - `grep -rniE "env(\.|\[['\"])[a-z0-9_]*(service_role|secret|jwt|db_url|database_url|postgres)" src/ | grep -v '^src/privileged-env.ts:'`
   - `grep -rnE "\}\s*=\s*process\.env" src/`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`
-- [ ] **AC-0179.** `grep -rniE "anthropic|openai|@ai-sdk|langchain" package.json src/` prints nothing.
+- [x] **AC-0179.** `grep -rniE "anthropic|openai|@ai-sdk|langchain" package.json src/` prints nothing.
 
 ## Follow-ons
 
