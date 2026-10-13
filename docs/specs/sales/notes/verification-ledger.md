@@ -77,3 +77,10 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - Mutation checks, each a temporary edit to `src/app/sales/void-dialog.tsx` that was restored: skipping `markVoided` turned the AC-0083 test red; skipping the focus move to "Recent sales" turned three tests red (AC-0158, the keyboard-only AC-0153 and AC-0154 test, and the AC-0083 test); skipping `setRefusal` turned the AC-0084 test red.
 - Observed: after an AC-0047 save the page is not revalidated, so Recent sales still shows the list it loaded until a reload, as the design says and as the panel's "Reload this page to see them." asks.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 415 s, Vitest 496 passed (29 files), Playwright 305 passed.
+
+## T6, part 1 (2026-10-13)
+
+- Executed by the `implementer` subagent; controller reran every gate. Split like T5: part 1 builds every `/trace` file and the tests for access, find a sale, a sale's trace, and find a raw lot.
+- Built: `src/app/trace/page.tsx` (reads `?sale=`, `?lot=`, or `?raw=&received=`, in that order of precedence, and runs the same rules as the forms), `find-forms.tsx`, `sale-trace.tsx`, `lot-list.tsx`, `lot-trace.tsx`, and `error.tsx`; `test/e2e/trace-page.ts` and `test/e2e/trace.spec.ts` (25 tests: AC-0001, AC-0002, AC-0090 to AC-0093, AC-0095 to AC-0102, AC-0110 to AC-0119).
+- The implementer's `npm test` stopped at Vitest: `test/access.test.ts` "AC-0006, AC-0007, AC-0009: direct writes to ledger tables are refused for every role" timed out at 5 s, alone too. Read on stack A: `pg_class` held 355,294 dead rows, and the Realtime slot `cainophile_tjzdry5c` held `catalog_xmin` 45,478 transactions back (the local stack note in `docs/architecture/overview.md`). With the owner's approval (2026-10-13), the slot's backend was ended as `supabase_admin`; Realtime opened `cainophile_uyt9dfig` at once, and `vacuum pg_class` left 0 dead rows.
+- Controller gates after the fix: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 127 s (415 s before the fix), Vitest 496 passed (29 files), Playwright 330 passed.
