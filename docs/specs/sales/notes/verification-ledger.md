@@ -69,3 +69,11 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - Deviations: the lbs label reads "Weight sold (lbs)" and the price label "Price per lb ($)"; a stock figure the menu view has no row for shows "Not available"; a voided panel keeps its lots and drops only the before-and-after stock.
 - Controller fix: the void confirmation said "to No customer" for a sale with no customer; it now says "No customer".
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 1 in 351 s: Vitest 496 passed (29 files); Playwright 272 passed and 1 failed, `production.spec.ts` "AC-0010: code \"RAW-TOM\" is refused beside its field", whose `openForm` waited 5 s for the device date to fill. `meat-ops-invoice` was running its own browser suite on stack B at the same time. `npx playwright test test/e2e/production.spec.ts` then passed 69 of 69 in 1.0 min. The full suite runs again after part 2.
+
+## T5, part 2 (2026-10-13)
+
+- Executed by the `implementer` subagent; controller reran every gate.
+- `test/e2e/sales.spec.ts` grew to 87 tests: refusals and failures (AC-0050, AC-0051, AC-0052, AC-0055, AC-0056, each also checking AC-0058 through `pg`, AC-0059, and AC-0157), recent sales and void (AC-0070 to AC-0086, AC-0089), keyboard and focus (AC-0153 to AC-0161), and `checkPageState` with a Tab-order assertion in the 14 `/sales` page states other than the error page. No app code changed.
+- Mutation checks, each a temporary edit to `src/app/sales/void-dialog.tsx` that was restored: skipping `markVoided` turned the AC-0083 test red; skipping the focus move to "Recent sales" turned three tests red (AC-0158, the keyboard-only AC-0153 and AC-0154 test, and the AC-0083 test); skipping `setRefusal` turned the AC-0084 test red.
+- Observed: after an AC-0047 save the page is not revalidated, so Recent sales still shows the list it loaded until a reload, as the design says and as the panel's "Reload this page to see them." asks.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 415 s, Vitest 496 passed (29 files), Playwright 305 passed.

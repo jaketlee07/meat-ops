@@ -215,3 +215,50 @@ export async function voidThrough(page: Page, saleNumber: string, reason: string
   await dialog.getByLabel("Reason for the void").fill(reason);
   await dialog.getByRole("button", { name: "Void sale", exact: true }).click();
 }
+
+// Fills every field of a sale and returns what the form then holds, so a refusal
+// or failure that keeps them all is visible.
+export async function fillEverything(
+  f: Fields,
+  values: { lbs?: string; date?: string } = {},
+): Promise<Record<string, string>> {
+  const { lbs = "100", date = "2026-10-08" } = values;
+  await fillSale(f, { lbs, price: "3.10", customer: "Fulton Market Deli", date });
+  return readValues(f);
+}
+
+// What the database holds for one sale's void mark.
+export async function saleState(id: string) {
+  const [row] = await query<{ voided: boolean; reason: string | null }>(
+    "select voided_at is not null as voided, void_reason as reason from sales where id = $1",
+    [id],
+  );
+  return row;
+}
+
+// The sale numbers in entry order.
+export async function saleNumbers(): Promise<string[]> {
+  return (await saleRows()).map((row) => row.sale_number);
+}
+
+// Presses Tab until the control has focus.
+export async function tabTo(page: Page, target: Locator, limit = 30): Promise<void> {
+  for (let press = 0; press < limit; press++) {
+    await page.keyboard.press("Tab");
+    if (await target.evaluate((element) => element === document.activeElement)) return;
+  }
+  throw new Error("Tab did not reach the control");
+}
+
+// The Void button of one sale.
+export function voidButtonOf(page: Page, saleNumber: string): Locator {
+  return page.getByRole("button", { name: `Void sale ${saleNumber}`, exact: true });
+}
+
+// What Tab reaches after the form on a page whose recent list holds these sale
+// numbers, in order: each sale's link, then its Void button when it has one.
+export function listControls(sales: Array<{ number: string; voidable: boolean }>): string[] {
+  return sales.flatMap(({ number, voidable }) => [`a ${number}`, ...(voidable ? ["button Void"] : [])]);
+}
+
+export const DIALOG_CONTROLS = ["button Cancel", "textarea reason", "button Void sale"];
