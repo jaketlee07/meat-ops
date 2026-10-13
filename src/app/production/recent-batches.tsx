@@ -1,6 +1,6 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { RecentBatches as Batches } from "../../lib/production";
-import { Facts } from "../receiving/facts";
+import { Facts } from "../facts";
 
 const HEADING_ID = "recent-batches-heading";
 

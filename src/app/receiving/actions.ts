@@ -23,8 +23,8 @@ import {
 import { receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
 import type { TypedClient } from "../../lib/supabase";
 import { checkCaller } from "../_server/caller";
+import { priceView, stockView, type StockView } from "../stock-view";
 import { readFields, readRecheck } from "./form-fields";
-import { priceView, stockView, type StockView } from "./stock-view";
 
 export interface SavedLot {
   lotNumber: string;

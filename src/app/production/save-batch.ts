@@ -12,7 +12,7 @@ import {
 import type { FinishedLot, FinishedProduct, LotUsed } from "../../lib/production";
 import type { ProductStock } from "../../lib/receiving";
 import type { ProductionBatch } from "../../lib/rpc";
-import { stockView, type StockView } from "../receiving/stock-view";
+import { stockView, type StockView } from "../stock-view";
 
 export interface SavedBatch {
   batchNumber: string;

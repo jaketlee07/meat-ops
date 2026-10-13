@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import type { BatchInput } from "../../lib/batch-input";
 import { formatDate, formatShrink, formatWeight } from "../../lib/format";
-import { Facts } from "../receiving/facts";
+import { Facts } from "../facts";
 
 export interface CheckedProduct {
   code: string;
