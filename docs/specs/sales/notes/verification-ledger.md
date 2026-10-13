@@ -52,3 +52,12 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - Built: `src/lib/sales.ts` (`listSaleProducts`, `listCustomers`, `getFinishedOnHand`, `listRecentSales`, `getSaleSummary`) and `src/lib/trace.ts` (`getSaleTrace`, `listSaleLots`, `findLots`, `getLotTrace`, and the paging loop `readAllPages` with 500-row pages, half of `max_rows`).
 - Controller fix: the test file's added imports now sit in one ordered block and take `VALLEY_ID` from `test/db.ts`.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 192 s, Vitest 473 passed (28 files), Playwright 220 passed. `meat-ops-invoice` ran its own suite on stack B at the same time.
+
+## T4 (2026-10-13)
+
+- Executed by the `implementer` subagent; controller reran every gate.
+- Stub materialized byte-identical at `test/save-sale.test.ts` (sha256 0daf82fd…445dd4); observed red: `Cannot find module '../src/app/sales/save-sale.js'`. The file then grew to 23 cases.
+- Built: `src/app/sales/save-sale.ts` (`decideSaleSave`, `decideSaleVoid`, and their state types), `src/app/sales/form-fields.ts`, and `src/app/sales/actions.ts` (`saveSale`, `voidSale`).
+- Deviations: the saved sale's lbs and price per lb are present only when the reads after the write succeeded (AC-0040, AC-0047); the stock before and after stay the database's numbers (null where the menu view has no row), and the page formats them; `decideSaleVoid` takes only the caller check and the write; a missing summary row after the write counts as a failed read.
+- Controller fix: the test file's added imports now join the stub's import block.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 219 s, Vitest 496 passed (29 files), Playwright 220 passed.
