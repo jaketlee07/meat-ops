@@ -128,12 +128,13 @@ export function readOwnStackFile(): string | null {
   }
 }
 
-// KEY=value lines as the CLI's env loader reads them: an optional `export`, and
-// the last line for a name wins. Any other line is skipped.
+// Setting lines as the CLI's env loader reads them: leading spaces, an optional
+// `export`, `=` or `:` between name and value, and the last line for a name wins.
+// Any other line is skipped.
 function settingsOf(text: string): Map<string, string> {
   const settings = new Map<string, string>();
   for (const line of text.split(/\r?\n/)) {
-    const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_.]*)\s*[=:]\s*(.*)$/.exec(line);
     if (match) settings.set(match[1]!, match[2]!);
   }
   return settings;
@@ -166,7 +167,9 @@ export function ownStackRefusal(
     return "This folder's supabase/.env names its own Supabase stack but does not set SUPABASE_API_PORT and SUPABASE_DB_PORT as plain numbers, so the run cannot confirm which stack it reaches. Refusing to run.";
   }
   const runApiPort = new URL(env.apiUrl).port;
-  const runDbPort = new URL(env.dbUrl).port;
+  // pg connects to a `port` query parameter over the URL's own port; the last one wins.
+  const dbUrl = new URL(env.dbUrl);
+  const runDbPort = dbUrl.searchParams.getAll("port").at(-1) || dbUrl.port;
   if (runApiPort === apiPort && runDbPort === dbPort) return null;
   const source = fromEnvironment ? "the API_URL and DB_URL in the environment" : "supabase status";
   return `This folder's supabase/.env names a Supabase stack on API port ${apiPort} and Postgres port ${dbPort}, but this run would use API port ${runApiPort || "none"} and Postgres port ${runDbPort || "none"}, from ${source}, so it could reach another folder's stack. Refusing to run.`;

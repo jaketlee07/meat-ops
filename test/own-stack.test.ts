@@ -55,13 +55,26 @@ describe("Own-stack check, every form", () => {
     }
   });
 
-  it("AC-0015: reads the file as the CLI does: Windows line ends and an export prefix count, and the last line for a name wins", () => {
+  it("AC-0015: reads the file as the CLI does: Windows line ends, leading spaces, an export prefix, and a colon count, and the last line for a name wins", () => {
     expect(namesOwnStack("export SUPABASE_PROJECT_ID=meat-ops-b\n")).toBe(true);
+    expect(namesOwnStack("  SUPABASE_PROJECT_ID=meat-ops-b\n")).toBe(true);
+    expect(namesOwnStack("SUPABASE_PROJECT_ID: meat-ops-b\n")).toBe(true);
+    expect(namesOwnStack("SUPABASE_PROJECT_ID = meat-ops-b\n")).toBe(true);
+    const otherForms = "  SUPABASE_PROJECT_ID: meat-ops-b\nSUPABASE_API_PORT: 55321\n  SUPABASE_DB_PORT = 55322\n";
+    expect(ownStackRefusal(otherForms, STACK_B)).toBeNull();
+    expect(ownStackRefusal(otherForms, STACK_A)).toMatch(/supabase\/\.env/);
     const crlf = STACK_B_FILE.replaceAll("\n", "\r\n");
     expect(ownStackRefusal(crlf, STACK_B)).toBeNull();
     expect(ownStackRefusal(crlf, STACK_A)).toMatch(/supabase\/\.env/);
     const repointed = `${STACK_B_FILE}SUPABASE_API_PORT=54321\nSUPABASE_DB_PORT=54322\n`;
     expect(ownStackRefusal(repointed, STACK_A)).toBeNull();
     expect(ownStackRefusal(repointed, STACK_B)).toMatch(/supabase\/\.env/);
+  });
+
+  it("AC-0015: compares the Postgres port pg connects to, which a port query parameter overrides", () => {
+    const hidden = { apiUrl: STACK_B.apiUrl, dbUrl: `${STACK_B.dbUrl}?port=54322` };
+    expect(ownStackRefusal(STACK_B_FILE, hidden)).toMatch(/supabase\/\.env.*Postgres port 54322/);
+    const twice = { apiUrl: STACK_B.apiUrl, dbUrl: `${STACK_A.dbUrl}?port=54322&port=55322` };
+    expect(ownStackRefusal(STACK_B_FILE, twice)).toBeNull();
   });
 });
