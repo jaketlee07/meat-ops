@@ -140,7 +140,9 @@ Before a reset or a stop, list the folders running tests or the app:
 for pid in $(pgrep -f 'vitest|playwright|next-server|next (start|dev)'); do lsof -a -p "$pid" -d cwd -Fn | sed -n 's/^n//p'; done | sort -u
 ```
 
-A listed folder uses stack B if it has a `supabase/.env`, and stack A if not.
+A listed folder that `git worktree list` shows uses stack B if it has a
+`supabase/.env`, and stack A if not. Any other listed folder belongs to another
+project and uses neither stack.
 
 Set up a folder on stack A:
 

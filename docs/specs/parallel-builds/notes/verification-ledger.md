@@ -78,3 +78,28 @@ Worktree `wt-a`, detached at `f80666a`. No other command ran in it before the st
 - AC-0012: `docker ps --filter label=com.supabase.cli.project=meat-ops` listed the same 12 names before and after `supabase stop --project-id meat-ops-b --no-backup`, run from the `meat-ops` folder (exit 0).
 - AC-0011: afterwards, `docker ps -a` and `docker volume ls` filtered on `label=com.supabase.cli.project=meat-ops-b` each listed nothing.
 - Both scratch worktrees were removed with `git worktree remove`.
+
+## Post-build review, round 1 (2026-10-13)
+
+- Raw and adjudication artifacts: `1-post-gates-*` under the ignored `.context/reviews/bf4fca51-2642-4478-a3bb-9539c0a570e6/`.
+- Sustained and fixed in `b1f54d9` and `6ab6efa`: a `port` query parameter on `DB_URL`, which pg obeys, slipped past the own-stack check (security and adversarial); the stack choice text in `AGENTS.md` lacked a concrete check before a reset or stop, the shell-variable exception, the browser-suite scope of `E2E_PORT`, and the reset when a folder moves back to stack A; and the overview's settings row did not say how to restart stack B.
+- Undecided in two adjudications, settled by a read-only probe and the owner: the CLI 2.95.4 reads `  SUPABASE_PROJECT_ID=x`, `SUPABASE_PROJECT_ID: x`, and `SUPABASE_PROJECT_ID = x` (each made `supabase status` look for `supabase_db_x`). The owner chose to read lines as the CLI does. With either fix reverted, its new unit test failed; restored, all 8 own-stack tests passed.
+- Refuted by adjudication: an automated test for the reset script (AC-0016 and AC-0019 are manual QA by the Testing Strategy), a printed reason from the reset script, an action clause in the own-stack messages, and a narrower AC-0014 matcher.
+
+## T5 re-run at 6ab6efa (2026-10-13)
+
+Every T5 Test ran again at `6ab6efa`, in new worktrees `wt-b2` and `wt-a2`, following the revised `AGENTS.md` steps word for word, check command included. Times are UTC.
+
+- Start state at 05:26:18Z: no `meat-ops-b` container or volume; the check listed no folder.
+- Stack B steps 1 to 6, each exit 0. `supabase start` gave exactly the four containers on 55321 and 55322 (AC-0003, AC-0004); the step 4 check listed nothing; `db:reset:stack-b` applied 6 migrations; `.env` held 2 lines equal to `supabase status` with URL `http://127.0.0.1:55321` (AC-0018); `E2E_PORT=3200 npm test` exit 0 in 91 s, Vitest 25 files and 408 tests, Playwright 220 passed (AC-0009), with only `node 127.0.0.1:3200` seen listening on 3200, 14 polls (AC-0001).
+- AC-0006, stack B run: stack A's snapshot read `2026-10-13 05:24:27.815818+00 |` before and after; stack B's went from empty to `2026-10-13 05:28:26.626235+00 | 2026-10-13 05:27:23.16768+00`.
+- AC-0005: the logged network check ran `lsof` for 55322 and 55321 only and returned `null`. AC-0008: `git status --porcelain` empty after the run, after creating `supabase/.temp/new-file`, and after changing `cli-latest`. AC-0013: `com.docker.backend` listened on `*:55320` during `supabase db diff` ("No schema changes found"). AC-0017, stack B: steps 3 and 4 exit 0, probe table gone, migrations match.
+- AC-0014: exit 1 with the own-stack port message and no build output.
+- AC-0015, stack A's snapshot unchanged across all three cases, each refused before any test ("no tests") and with no build output: the CLI reporting stack A (message ends "from supabase status"); stack A's four values in the environment ("from the API_URL and DB_URL in the environment"); and stack B's values with `DB_URL` ending `?port=54322` ("would use API port 55321 and Postgres port 54322").
+- AC-0019: `SUPABASE_PROJECT_ID=meat-ops npm run db:reset:stack-b` exit 0; probe table gone from stack B, still on stack A.
+- Stack A steps 1 to 5, each exit 0. The step 3 check listed one folder, `/Users/jakelee/Documents/mobilizeNow/mobilize`, another project's `next dev`, which led to the `AGENTS.md` wording fix below; no `meat-ops` worktree was listed. The reset removed the probe table and the migrations match (AC-0017); `.env` matched with URL `http://127.0.0.1:54321` (AC-0018); `npm test` exit 0 in 114 s, Vitest 25 files and 408 tests, Playwright 220 passed (AC-0010).
+- AC-0006, stack A run: stack B's snapshot read empty before and after; stack A's went from empty to `2026-10-13 05:31:47.044394+00 | 2026-10-13 05:30:26.007777+00`.
+- AC-0016 in `wt-a2` with stack A running and the probe table on it: no `supabase/.env` gave exit 2, and the template plus `SUPABASE_PROJECT_ID=meat-ops` gave exit 1; the table survived both and was then dropped. AC-0002: `E2E_PORT=abc` exit 1 with the bad-port message and no build output.
+- AC-0007: B started 05:31:49Z and A 05:31:51Z; both listeners were up together on 13 polls, first at 05:32:15Z; B exit 0 in 87 s and A exit 0 in 104 s, each Vitest 408 tests and Playwright 220 passed.
+- Stop: the check listed no folder; `supabase stop --project-id meat-ops-b --no-backup` exit 0; stack A's 12 containers were the same before and after (AC-0012); no `meat-ops-b` container or volume remained (AC-0011). Both worktrees were removed.
+- After the re-run, `AGENTS.md` says a listed folder outside `git worktree list` belongs to another project. The change is to one explanatory sentence; no step's command changed.
