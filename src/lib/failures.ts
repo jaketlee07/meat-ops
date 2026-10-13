@@ -4,6 +4,7 @@
 // error itself (src/lib/rpc.ts RpcError), not by importing that class.
 
 import { formatDate, formatWeight } from "./format";
+import { readFailureMessage } from "./invoice-reading";
 
 export const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
 export const INACTIVE_PRODUCT = "This product is no longer active.";
@@ -105,14 +106,35 @@ export function changeFailureMessage(error: unknown, stage: FailureStage): strin
   return `${NOT_SAVED_CHANGE} ${refusalReason(error, code)}`;
 }
 
-// Every server action whose failures are logged: the receiving actions, saveBatch, and the three pricing change actions.
+// Invoice reading (invoice-entry AC-0016, AC-0022, AC-0023, AC-0117, AC-0185, AC-0190).
+// The model failures' texts live in invoice-reading.ts; "Try again" is read from there.
+export const NOT_READ = "The invoice wasn't read.";
+export const READ_TRY_AGAIN = readFailureMessage("service-error");
+// AC-0022: the session ended after the page loaded.
+export const READ_SIGNED_OUT = "You're signed out. Sign in again to read this invoice.";
+// AC-0016: the reading held no line.
+export const NO_RECEIPT_LINES = "No receipt lines were found. Try a clearer photo, or type the receipt.";
+export const NOT_DRAFT_SAVED = "The draft wasn't saved.";
+// AC-0117: the draft write got no answer from the engine, so the draft may exist.
+export const DRAFT_UNKNOWN =
+  "The draft may have been saved. Reload this page and check Drafts to confirm before reading again.";
+
+// AC-0117, AC-0185: no answer reads as unknown; a refusal gives the engine's text without its prefix.
+export function draftWriteFailureMessage(error: unknown): string {
+  const code = codeOf(error);
+  if (code === "") return DRAFT_UNKNOWN;
+  return `${NOT_DRAFT_SAVED} ${code === "42501" ? NOT_ALLOWED : engineText(error)}`;
+}
+
+// Every server action whose failures are logged: the receiving actions, saveBatch, the three pricing change actions, and readInvoice.
 export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
   | "saveBatch"
   | "saveTargetMargin"
   | "removeTargetMargin"
-  | "saveListPrice";
+  | "saveListPrice"
+  | "readInvoice";
 
 const LOG_MESSAGE_LIMIT = 200;
 

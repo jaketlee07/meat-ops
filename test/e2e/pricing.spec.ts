@@ -269,7 +269,7 @@ test.describe("the list", () => {
     // The pricing list with all three groups.
     const controls = await checkPageState(page);
     expect(controls.filter((label) => label.startsWith("button ")).length).toBe(1 + 4 + 1);
-    expect(controls.slice(0, 5)).toEqual(NAV_CONTROLS);
+    expect(controls.slice(0, NAV_CONTROLS.length)).toEqual(NAV_CONTROLS);
   });
 
   test("AC-0065: the advice for each of the four cases, and the button's name", async ({ page }) => {

@@ -13,6 +13,9 @@ if (leaked.length > 0) {
 const nextConfig: NextConfig = {
   // `next dev` otherwise writes a managed block into AGENTS.md when an agent runs it.
   agentRules: false,
+  // A read sends the photo in a server action. The default 1 MB cannot hold a
+  // 4 MB photo, and the 5 MB ceiling is what AC-0012's 4 MB row relies on.
+  experimental: { serverActions: { bodySizeLimit: "5mb" } },
   // No page may load inside another page's frame: one press changes a price.
   async headers() {
     return [
