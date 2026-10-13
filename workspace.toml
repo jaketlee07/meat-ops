@@ -32,5 +32,6 @@ open = [
   { path = "docs/product/intents/price-change-history.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/menu-pricing/spec.md", revision = "1f93cdf" }, summary = "Price-stale alerts need the date and cost of each list-price change, which nothing stores yet", needs = [] },
   { path = "docs/product/intents/local-stack-loopback-web-pages.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/local-ports/spec.md", revision = "e7c181d" }, summary = "A web page in the owner's browser could reach Studio and the API through 127.0.0.1", needs = [] },
   { path = "docs/product/intents/local-ports-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/local-ports/notes/verification-ledger.md", revision = "1258b07" }, summary = "A program lookup broken after its first file entry must turn a network-check test red", needs = [] },
+  { path = "docs/product/intents/parallel-builds-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/parallel-builds/notes/verification-ledger.md", revision = "376db3a" }, summary = "Stack choice must hold for hand-made env forms and for other projects on stack A's ports", needs = [] },
 ]
 closed = []
