@@ -64,6 +64,8 @@ export function SaleForm({ products, customers }: Props) {
   const [saving, setSaving] = useState(false);
   // Set at once on press, because state updates land a render later.
   const savingRef = useRef(false);
+  // Whether the latest invalid state came back from the save action, not the browser's rules.
+  const fromServerRef = useRef(false);
 
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
@@ -81,9 +83,12 @@ export function SaleForm({ products, customers }: Props) {
   function evaluate(fields: SaleFields, list: Map<string, SaleProduct>) {
     const parsed = parseSaleForm(fields, new Set(list.keys()), new Set(customers.map((customer) => customer.id)));
     if (!parsed.ok) {
+      fromServerRef.current = false;
       setState({ status: "invalid", fieldErrors: parsed.errors });
       return;
     }
+    // The form passes, so its field errors no longer apply. The banner is its own state.
+    setState((current) => (current.status === "invalid" ? IDLE : current));
     void save(fields);
   }
 
@@ -113,6 +118,7 @@ export function SaleForm({ products, customers }: Props) {
       setPricePerLb("");
       setFilledFrom(null);
     }
+    fromServerRef.current = next.status === "invalid";
     setState(next);
   }
 
@@ -126,12 +132,14 @@ export function SaleForm({ products, customers }: Props) {
   }, [awaiting, listPending]);
 
   const blocked = products.length === 0;
+  // A wait for the page's list to reload counts as a pending save.
+  const pending = saving || awaiting !== null;
 
   // The device date is read here, when Save is pressed, so a form left open past
   // midnight checks the new day. The date field's `max` takes it too.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (blocked || saving || awaiting) return;
+    if (blocked || pending) return;
     const date = deviceToday();
     setToday(date);
     const fields: SaleFields = { productCode, lbs, pricePerLb, customerId, saleDate, today: date };
@@ -155,6 +163,11 @@ export function SaleForm({ products, customers }: Props) {
     } else if (state.status === "refused") {
       messageRef.current?.focus();
     } else if (state.status === "invalid") {
+      // A customer refusal from the save action is a save refusal other than AC-0029: focus its message.
+      if (fromServerRef.current && state.fieldErrors.customerId) {
+        document.getElementById(`${FIELD_IDS.customerId}-error`)?.focus();
+        return;
+      }
       const first = FIELD_ORDER.find((field) => state.fieldErrors[field]);
       if (first) document.getElementById(FIELD_IDS[first])?.focus();
     }
@@ -179,7 +192,7 @@ export function SaleForm({ products, customers }: Props) {
   function fieldError(field: SaleField): ReactNode {
     const message = errors[field];
     return message ? (
-      <p id={`${FIELD_IDS[field]}-error`} className="mt-1 break-words text-base font-medium text-error">
+      <p id={`${FIELD_IDS[field]}-error`} tabIndex={-1} className="mt-1 break-words text-base font-medium text-error">
         {message}
       </p>
     ) : null;
@@ -320,15 +333,15 @@ export function SaleForm({ products, customers }: Props) {
           {banner}
         </div>
         <div id="sale-saving" role="status" className="text-base text-ink-secondary">
-          {saving ? "Saving…" : null}
+          {pending ? "Saving…" : null}
         </div>
 
         <button
           type="submit"
-          aria-disabled={blocked || saving ? true : undefined}
+          aria-disabled={blocked || pending ? true : undefined}
           aria-describedby={blocked ? "setup-notice" : undefined}
           onClick={(event) => {
-            if (blocked || saving) event.preventDefault();
+            if (blocked || pending) event.preventDefault();
           }}
           className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
         >

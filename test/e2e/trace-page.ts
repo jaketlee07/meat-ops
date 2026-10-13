@@ -93,7 +93,7 @@ export async function receiveIds(dates: string[]): Promise<string[]> {
   return ids;
 }
 
-// 12 receipts whose received dates are not in entry order, the 5th and 12th on one date.
+// 12 receipts whose received dates are not in entry order, the 3rd and 12th on one date.
 export const TWELVE_DATES = [
   "2026-09-10",
   "2026-09-03",

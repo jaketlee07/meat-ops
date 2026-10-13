@@ -1,5 +1,6 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page, type Request } from "@playwright/test";
 import { callAsOperator, idOf, PROD_502_ID, query, saleFixture, type SaleFixture } from "../db";
+import type { SentAction } from "./pricing-page";
 
 // What the sales specs share: how to find the form's parts, fill it, and read
 // raw tables through pg. Helpers that need nothing sales-specific (captureAction,
@@ -171,6 +172,27 @@ export async function dropActionRequests(page: Page): Promise<{ readonly count: 
   return dropped;
 }
 
+// Captures the first server action request /sales sends after `press` and aborts
+// it before the server sees it, so a void it carries has not happened and can be replayed.
+export async function captureAndAbortAction(page: Page, press: () => Promise<void>): Promise<SentAction> {
+  let seen: Request | undefined;
+  await page.route("**/sales**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) {
+      seen = request;
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  });
+  await press();
+  await expect.poll(() => seen).toBeDefined();
+  if (!seen) throw new Error("no action request was captured");
+  const headers = await seen.allHeaders();
+  for (const name of ["cookie", "content-length", "host"]) delete headers[name];
+  return { url: seen.url(), headers, body: seen.postDataBuffer() ?? Buffer.alloc(0) };
+}
+
 // Holds every server action request /sales sends until `release` is called.
 // `held` counts the requests that reached the hold.
 export async function holdActionRequests(page: Page) {
@@ -196,8 +218,12 @@ export async function revokeSaleItemsRead(): Promise<void> {
   await query("revoke select on public.sale_items from authenticated");
 }
 
+// Grants only when the read is missing: a GRANT makes PostgREST reload its schema cache.
 export async function restoreSaleItemsRead(): Promise<void> {
-  await query("grant select on public.sale_items to authenticated");
+  const [row] = await query<{ granted: boolean }>(
+    "select has_table_privilege('authenticated', 'public.sale_items', 'select') as granted",
+  );
+  if (!row?.granted) await query("grant select on public.sale_items to authenticated");
 }
 
 export function recentItem(page: Page, saleNumber: string): Locator {

@@ -5,7 +5,7 @@ This is the source of truth for the costing math. The tests in
 `test/pricing.test.ts` encode every costing number below. The display formats in the Rounding note are
 asserted by `test/format.test.ts`, `test/production-rules.test.ts`, and
 `test/pricing-rules.test.ts`, and its
-missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, and `test/e2e/trace.spec.ts`. If a change turns any of these red, the change is
+missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, and `test/e2e/trace.spec.ts`, except "Not available" below, which no test asserts. If a change turns any of these red, the change is
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
@@ -275,7 +275,8 @@ Where the database has nothing to show, the screen uses text:
 - The list price of a finished product with none shows "No list price yet".
 - A sale with no customer shows "No customer", on the sales page and on a trace.
 - A finished product's lbs on hand in the "Sale saved" panel shows "Not available"
-  when the menu has no row for it, as for a product made inactive after the page loaded.
+  only when the menu view has no row for the product in the read after the write,
+  as for a product made inactive between the write and that read.
 - The target margin of a finished product with none shows "No target".
 - The raw average cost, cost after shrink, and cost per lb of a finished
   product whose raw product has no non-void receipt show "None yet", whatever

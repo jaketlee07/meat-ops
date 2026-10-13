@@ -710,13 +710,14 @@ test.describe("keyboard and focus", () => {
     await tabTo(page, lotLink);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/trace\?lot=/);
-    await expect(page.getByRole("heading", { level: 2, name: fx.lotANumber })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: fx.lotANumber })).toBeFocused();
 
     const saleLink = lotResult(page, fx.lotANumber).getByRole("link", { name: "S-5000", exact: true });
     await tabTo(page, saleLink, 40);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/trace\?sale=S-5000$/);
     await expect(saleResult(page, "S-5000").getByRole("heading", { level: 3 })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "S-5000" })).toBeFocused();
 
     await open(page);
     await tabTo(page, f.code);

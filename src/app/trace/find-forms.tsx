@@ -33,19 +33,32 @@ function describe(id: string, message?: string) {
 // to /trace?sale=<number> or /trace?raw=<code>&received=<date>, and the server
 // renders the result. Each form re-reads its own part of the URL after Back or
 // Forward, so a lookup in one does not clear what was typed in the other.
+// Any move to a new lookup after the page has loaded (a followed link, Show sale,
+// Show lots, Back, Forward) puts focus on the new result; a page loaded from a
+// typed or reloaded URL moves none.
 export function FindForms({
   sale,
+  lot,
   saleError,
   rawCode,
   received,
   lotErrors,
 }: {
   sale: string;
+  lot?: string;
   saleError?: string;
   rawCode: string;
   received: string;
   lotErrors: LotErrors;
 }) {
+  const lookup = JSON.stringify([sale, lot, rawCode, received]);
+  const seen = useRef(lookup);
+  useEffect(() => {
+    if (seen.current === lookup) return;
+    seen.current = lookup;
+    focusResult();
+  }, [lookup]);
+
   return (
     <div className="space-y-8">
       <FindSale sale={sale} urlError={saleError} />
@@ -58,16 +71,6 @@ function FindSale({ sale, urlError }: { sale: string; urlError?: string }) {
   const router = useRouter();
   const [text, setText] = useState(sale);
   const [error, setError] = useState(urlError);
-
-  // The sale number a Show sale press asked for. Focus moves to the result only
-  // once the page's own sale value is that number, so a stale render cannot take it.
-  const asked = useRef<string | null>(null);
-  useEffect(() => {
-    if (asked.current !== null && asked.current === sale) {
-      asked.current = null;
-      focusResult();
-    }
-  }, [sale]);
 
   const urlKey = JSON.stringify([sale, urlError]);
   const [seenKey, setSeenKey] = useState(urlKey);
@@ -90,7 +93,6 @@ function FindSale({ sale, urlError }: { sale: string; urlError?: string }) {
       focusResult();
       return;
     }
-    asked.current = parsed.value;
     router.push(`/trace?${new URLSearchParams({ sale: parsed.value }).toString()}`, { scroll: false });
   }
 
@@ -130,15 +132,7 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
   const [dateText, setDateText] = useState(received);
   const [errors, setErrors] = useState<LotErrors>(urlErrors);
 
-  // The lookup a Show lots press asked for, compared with the page's own values.
-  const asked = useRef<string | null>(null);
   const shown = JSON.stringify([rawCode, received]);
-  useEffect(() => {
-    if (asked.current !== null && asked.current === shown) {
-      asked.current = null;
-      focusResult();
-    }
-  }, [shown]);
 
   const urlKey = JSON.stringify([rawCode, received, urlErrors]);
   const [seenKey, setSeenKey] = useState(urlKey);
@@ -164,7 +158,6 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
       focusResult();
       return;
     }
-    asked.current = key;
     const params = new URLSearchParams({ raw: parsed.value.rawCode });
     if (parsed.value.received !== undefined) params.set("received", parsed.value.received);
     router.push(`/trace?${params.toString()}`, { scroll: false });

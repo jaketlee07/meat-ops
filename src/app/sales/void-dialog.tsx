@@ -140,9 +140,11 @@ export function VoidDialog({ saleId, saleNumber, productCode, lbs, customer, voi
             </h2>
             <button
               type="button"
-              disabled={pending}
-              onClick={() => dialogRef.current?.close()}
-              className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
+              aria-disabled={pending ? true : undefined}
+              onClick={() => {
+                if (!pending) dialogRef.current?.close();
+              }}
+              className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:opacity-60"
             >
               Cancel
             </button>
@@ -171,12 +173,20 @@ export function VoidDialog({ saleId, saleNumber, productCode, lbs, customer, voi
             )}
           </div>
 
+          {/* The live region is in the dialog before the void starts, so it is announced. */}
+          <div role="status" className="text-base text-ink-secondary">
+            {pending ? "Voiding…" : null}
+          </div>
+
           <button
             type="submit"
-            disabled={pending}
-            className="w-full rounded-md bg-error px-4 text-base font-medium text-on-primary disabled:opacity-60"
+            aria-disabled={pending ? true : undefined}
+            onClick={(event) => {
+              if (pending) event.preventDefault();
+            }}
+            className="w-full rounded-md bg-error px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
           >
-            {pending ? "Voiding…" : "Void sale"}
+            Void sale
           </button>
         </form>
       </dialog>

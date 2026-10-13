@@ -195,10 +195,10 @@ it("AC-0050: a shortfall names the stock on hand and the stock needed", async ()
 });
 
 it("AC-0056: another engine refusal shows the engine's reason", async () => {
-  const state = await refusedByWrite(new RpcError("recordSale failed: record_sale: product is inactive", "P0001"));
-  expect(state.status).toBe("refused");
-  expect(state).toMatchObject({ message: expect.stringMatching(/^The sale wasn't saved\. /) });
-  expect(state).not.toMatchObject({ message: expect.stringContaining("recordSale failed") });
+  const state = await refusedByWrite(
+    new RpcError("recordSale failed: record_sale: invalid lbs, must be above 0", "P0001"),
+  );
+  expect(state).toEqual({ status: "refused", message: "The sale wasn't saved. invalid lbs, must be above 0" });
 });
 
 it("AC-0047: a failed read after the write is still a save, with details null", async () => {
@@ -220,7 +220,7 @@ it("AC-0047: a failed read after the write is still a save, with details null", 
   });
 });
 
-it("AC-0048: the failed read after the write logs one line with only the error's message", async () => {
+it("the failed read after the write logs one line with only the error's message (the log line; AC-0048's screen text is in the browser suite)", async () => {
   const { deps } = spyDeps(operator);
   deps.readAfter = async () => {
     throw new Error("getSaleSummary failed: fetch failed");
@@ -310,7 +310,7 @@ it.each(["", "   "])("AC-0080: a blank void reason %j is invalid, with no write"
   expect(calls).toEqual([]);
 });
 
-it("AC-0084: a void write with no answer says the sale may not have been voided", async () => {
+it("AC-0088: a void write with no answer says the sale may not have been voided", async () => {
   const { deps } = spyVoid(operator);
   deps.write = async () => {
     throw new RpcError("voidSale failed: fetch failed", "");
@@ -321,7 +321,7 @@ it("AC-0084: a void write with no answer says the sale may not have been voided"
   });
 });
 
-it("AC-0088: an engine refusal of a void shows the engine's reason", async () => {
+it("AC-0084: an engine refusal of a void shows the engine's reason", async () => {
   const { deps } = spyVoid(operator);
   deps.write = async () => {
     throw new RpcError("voidSale failed: void_sale: sale is already void", "P0001");

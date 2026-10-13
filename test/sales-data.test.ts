@@ -299,6 +299,19 @@ it("AC-0135: a count that changes between pages is read once more, then throws",
   expect(PAGE_SIZE).toBeLessThan(600);
 });
 
+it("AC-0135: a repeated sale line key at a stable count is read once more, then throws", async () => {
+  let calls = 0;
+  const read = async (from: number, to: number) => {
+    calls++;
+    const rows = Array.from({ length: Math.max(0, Math.min(to + 1, 600) - from) }, (_, k) => ({
+      sale_item_id: `item-${(from + k) % 5}`,
+    }));
+    return { rows, count: 600 };
+  };
+  await expect(readAllPages(read)).rejects.toThrow("the sale lines changed while they were being read");
+  expect(calls).toBe(2 * Math.ceil(600 / PAGE_SIZE));
+});
+
 it("AC-0135: a repeat with a stable count returns its set", async () => {
   const pages = fakePages((call) => (call === 1 ? 601 : 600));
   const rows = await readAllPages(pages.read);

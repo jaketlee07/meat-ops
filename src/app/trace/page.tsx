@@ -63,12 +63,13 @@ export default async function TracePage({
       <PageHeader title="Trace" current="trace" />
       <FindForms
         sale={sale ?? ""}
+        lot={lot}
         saleError={saleError}
         rawCode={raw ?? ""}
         received={received ?? ""}
         lotErrors={lotErrors}
       />
-      {/* No live region: a trace can list over 1,000 sales. Show sale and Show lots move focus to the result's heading instead. */}
+      {/* No live region: a trace can list over 1,000 sales. A move to a new lookup focuses the result's heading instead. */}
       <div className="mt-8">{result}</div>
     </main>
   );

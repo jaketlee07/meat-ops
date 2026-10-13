@@ -20,6 +20,7 @@ import { captureAction, replayText } from "./pricing-page";
 import { deviceDate, factValue, beforeAfter, NOT_ALLOWED, sendsActionRequest } from "./receiving-page";
 import {
   batchNumbersInDrawOrder,
+  captureAndAbortAction,
   CODE,
   DETAILS_MISSING,
   DIALOG_CONTROLS,
@@ -188,16 +189,21 @@ test.describe("replayed save and void requests", () => {
     await seedSale(100);
     await page.goto("/sales");
     const [sale] = await saleRows();
-    const sent = await captureAction(page, () => voidThrough(page, sale?.sale_number ?? "", "wrong customer"));
-    await expect.poll(voidMarks).toBe(1);
+    // The captured void is stopped before the server sees it, so the sale is still open for the replays.
+    const sent = await captureAndAbortAction(page, () => voidThrough(page, sale?.sale_number ?? "", "wrong customer"));
+    expect(await voidMarks(), "void marks after the captured request was stopped").toBe(0);
     const lots = await finishedSnapshot();
     for (const { who, storageState } of replays) {
       const text = await replayText(playwright, baseURL, sent, storageState);
       if (storageState) expect(text, `response for ${who}`).toContain(NOT_ALLOWED);
       else expect(text, `response for ${who}`).toContain(VOID_SIGNED_OUT);
-      expect(await voidMarks(), `void marks after ${who}`).toBe(1);
+      expect(await voidMarks(), `void marks after ${who}`).toBe(0);
       expect(await finishedSnapshot(), `finished lots after ${who}`).toEqual(lots);
     }
+    // Control: the same request from the operator's session does void the sale, so the
+    // refusals above came from who sent it, not from a bad copy.
+    await replayText(playwright, baseURL, sent, OPERATOR_STATE);
+    expect(await voidMarks(), "void marks after the operator's own copy").toBe(1);
   });
 
   // The multipart body carries each field's value after its name and a blank line.
@@ -467,6 +473,65 @@ test.describe("the form", () => {
     expect(rows).toHaveLength(1);
     expect([rows[0]?.lbs, rows[0]?.prices]).toEqual([[10], [5.25]]);
     await expect(factValue(f.result, "Product")).toHaveText("503 Smoked Turkey Necks");
+  });
+
+  test("AC-0033 and AC-0034: while the page's list reloads for a new code, Save sale is pending", async ({ page }) => {
+    await fixtureWithPrice();
+    const f = await openForm(page);
+    const finishedId = await addFinished("503", "Smoked Turkey Necks", RAW_TOM_ID, { listPrice: 9.99 });
+    const outcome = await callAsOperator(produceCall(finishedId, 100, null, "2026-10-08"));
+    expect(outcome.ok, outcome.error).toBe(true);
+    await fillSale(f, { code: "503", price: "5.25", lbs: "10" });
+    // Hold the render the form waits for, so the wait can be seen.
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(
+      (url) => url.pathname === "/sales" && url.searchParams.has("product"),
+      async (route) => {
+        await gate;
+        await route.continue();
+      },
+    );
+    await f.save.click();
+    await expect(f.save).toHaveAttribute("aria-disabled", "true");
+    await expect(f.saving).toHaveText("Saving…");
+    expect(await saleCount()).toBe(0);
+    release();
+    await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toBeVisible();
+    expect(await saleCount()).toBe(1);
+  });
+
+  test("AC-0029 and AC-0034: once corrected, no field shows as invalid while the save is pending", async ({ page }) => {
+    await fixtureWithPrice();
+    const f = await openForm(page);
+    await fillSale(f, { lbs: "" });
+    await f.save.click();
+    await expect(page.locator("#lbs-error")).toBeVisible();
+    await f.lbs.fill("100");
+    const hold = await holdActionRequests(page);
+    await f.save.click();
+    await expect(f.saving).toHaveText("Saving…");
+    await expect(page.locator("form [aria-invalid]")).toHaveCount(0);
+    await expect(page.locator("form [id$='-error']")).toHaveCount(0);
+    hold.release();
+    await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toBeVisible();
+  });
+
+  test("AC-0030 and AC-0157: a customer deleted after the page loaded is refused beside Customer, with focus on the message", async ({
+    page,
+  }) => {
+    await fixtureWithPrice();
+    const [gone] = await query<{ id: string }>("insert into customers(name) values ('Gone Co') returning id");
+    const f = await openForm(page);
+    await fillSale(f, { lbs: "100", customer: "Gone Co" });
+    await query("delete from customers where id = $1", [gone?.id]);
+    await f.save.click();
+    const message = page.locator("#customer-error");
+    await expect(message).toHaveText("Choose a customer from the list.");
+    await expect(message).toBeFocused();
+    expect(await saleCount()).toBe(0);
   });
 
   test("AC-0034: pressing Save sale again while a save is pending writes no second sale", async ({ page }) => {
@@ -1112,6 +1177,34 @@ test.describe("voiding", () => {
     await expect(item.getByText("Void: second void")).toHaveCount(0);
     // The list after an AC-0084 refusal: still showing the sale with its Void button.
     expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...listControls([{ number, voidable: true }])]);
+  });
+
+  test("AC-0089: while a void is pending the pressed button keeps focus, both buttons are disabled, and Escape does not close it", async ({
+    page,
+  }) => {
+    await fixtureWithPrice();
+    const id = await seedSale(100);
+    const [number = ""] = await saleNumbers();
+    await openForm(page);
+    const hold = await holdActionRequests(page);
+    await voidThrough(page, number, "keyed twice");
+
+    const dialog = voidDialog(page);
+    const confirm = dialog.getByRole("button", { name: "Void sale", exact: true });
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+    await expect(dialog.getByRole("status")).toHaveText("Voiding…");
+    await expect(confirm).toBeFocused();
+    await expect(confirm).toHaveAttribute("aria-disabled", "true");
+    await expect(cancel).toHaveAttribute("aria-disabled", "true");
+    await cancel.click({ force: true });
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeVisible();
+    expect(hold.held).toBe(1);
+
+    hold.release();
+    await expect(recentItem(page, number).getByText("Void: keyed twice", { exact: true })).toBeVisible();
+    await expect(dialog).toBeHidden();
+    expect(await saleState(id)).toEqual({ voided: true, reason: "keyed twice" });
   });
 
   test("AC-0085, AC-0089, and AC-0159: with the session cookies gone, the void is refused and the sale unchanged", async ({
