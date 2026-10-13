@@ -5,7 +5,7 @@ This is the source of truth for the costing math. The tests in
 `test/pricing.test.ts` encode every costing number below. The display formats in the Rounding note are
 asserted by `test/format.test.ts`, `test/production-rules.test.ts`, and
 `test/pricing-rules.test.ts`, and its
-missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, and `test/e2e/pricing.spec.ts`. If a change turns any of these red, the change is
+missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, and `test/e2e/trace.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
@@ -258,7 +258,7 @@ through the same formats:
 | --- | --- | --- |
 | Weight | thousands separators, 0 to 3 decimals with trailing zeros dropped, then " lbs" | 5000 → 5,000 lbs; 32.5 → 32.5 lbs; 1234.5678 → 1,234.568 lbs |
 | Cost per lb (lot cost, average, a batch's cost per finished lb, a finished lot's cost per lb, cost after shrink, a finished product's cost per lb) | "$", 4 decimals, "/lb" | 1.725 → $1.7250/lb; 1.68 → $1.6800/lb; 2.6318 → $2.6318/lb |
-| Suggested price per lb, list price per lb | "$", 2 decimals, "/lb" | 2.6818 → $2.68/lb; 2.685 → $2.69/lb; 1.005 → $1.01/lb |
+| Suggested price per lb, list price per lb, a sale's price per lb | "$", 2 decimals, "/lb" | 2.6818 → $2.68/lb; 2.685 → $2.69/lb; 1.005 → $1.01/lb |
 | Fee per lb (a margin fee) | "$", 4 decimals, "/lb" | 0.05 → $0.0500/lb |
 | Date | month abbreviation, day, year, in any time zone | 2026-10-07 → Oct 7, 2026 |
 | Shrink | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.23 → 23%; 0.235 → 23.5%; 0.2345 → 23.45%; 0 → 0% |
@@ -273,6 +273,9 @@ Where the database has nothing to show, the screen uses text:
 - The suggested price of a finished product whose raw product has no non-void
   receipt shows "No price yet".
 - The list price of a finished product with none shows "No list price yet".
+- A sale with no customer shows "No customer", on the sales page and on a trace.
+- A finished product's lbs on hand in the "Sale saved" panel shows "Not available"
+  when the menu has no row for it, as for a product made inactive after the page loaded.
 - The target margin of a finished product with none shows "No target".
 - The raw average cost, cost after shrink, and cost per lb of a finished
   product whose raw product has no non-void receipt show "None yet", whatever
