@@ -82,3 +82,10 @@ Execution observations, newest last. Each entry names the task, the command, and
 - Mutation proof, run with the network-only config the overview now documents (no global setup, so no shared-stack writes): dropping the `ftxt` label check, dropping the minimum length, and tightening the lookup to exactly one pair each turned the file red; `test/network.ts` was restored byte for byte and is unchanged in this round.
 - The overview's "Could not read something" step now gives the command that runs only `test/network.test.ts` with a config written outside the repository, and says never to run another suite without the check. Running it left nothing to commit.
 - Gates: no other-worktree test process was running; `npm run typecheck` exit 0; `npm test` exit 0 in 111 s, Vitest 393 passed (22 files), Playwright 220 passed.
+
+## Closeout (2026-10-12)
+
+- Post-gates review: adversarial-reviewer raised 0, 1, and 0 Blocker or Concern-level sustained findings over rounds 1 to 3 (round 3 Clean); security-reviewer 1, 1, then Clean (adjudicated, with a Not checked footer); quality-engineer 2 Concerns and 2 Nits in round 1, 1 Concern and 1 Nit in round 2, and 1 Nit in round 3, deferred below. Raw and adjudication artifacts are under the ignored `.context/reviews/b255718d-6ae7-44cb-a90c-c0d659d0b99d/`.
+- Deferred Nit, quality-engineer round 3 (`test/network.test.ts:219-236`): every malformed program-lookup fixture breaks the first pair, so a parser that checked only the first pair would stay green. The executable comes from the first pair either way, so the firewall decision does not change.
+- Spec `Status: Shipped` with all 15 criteria checked; plan `Status: Done`; `lint-spec-status.py` clean; `loop-engine` at `CODE-HUMAN-GATE`.
+- project-knowledge capture was not attempted; the store refused captures in earlier sessions (`staged_dual_writer`). Reusable lessons went to the session memory.

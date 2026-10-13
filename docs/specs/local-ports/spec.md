@@ -1,6 +1,6 @@
 # Spec: local-ports
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`docs/product/intents/local-stack-network-exposure.md`](../../product/intents/local-stack-network-exposure.md) (the outcome, and the overview sentences that must match it); the access model and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md); the test harness's localhost guard (`resolveStackEnv` in `test/env.ts`, from [foundation-hardening](../foundation-hardening/spec.md)), which this check sits beside and does not weaken
@@ -108,21 +108,21 @@ Definitions used by these criteria:
 - **An opening**: any period, for this work, that starts when Docker is unblocked or the firewall is turned off, and ends when the owner has put the block back and the agent has read it back on.
 - **A failed block**: any phone load that succeeds while the block is on (AC-0007, AC-0011, or the cellular attempt made with the block on), or a restore whose read-back is not the block.
 
-- [ ] **AC-0001.** With the macOS firewall off, both commands refuse, and the message says the firewall is off.
-- [ ] **AC-0002.** With the firewall on and a program that serves a published stack port not blocked, both commands refuse, and the message names that program's path and the port.
-- [ ] **AC-0003.** The check refuses when any published stack port, not only the API port, is served by a program the firewall does not block.
-- [ ] **AC-0004.** The check refuses on any platform other than macOS, saying the network check supports only macOS.
-- [ ] **AC-0005.** The check refuses, rather than passing, when any command it runs is missing, exits non-zero, or prints output it cannot parse exactly, including a port entry or a firewall line it does not recognize.
-- [ ] **AC-0006.** With the block on, `npm test` passes.
-- [ ] **AC-0007.** With the block on, a browser on another device on the same Wi-Fi cannot load `http://<the Mac's IPv4 network address>:54323`.
-- [ ] **AC-0008.** The check refuses when it finds no published stack port, or a published stack port with no program it can name serving it.
-- [ ] **AC-0009.** With the block on, a TCP connection from this Mac to `127.0.0.1` succeeds on every published stack port.
-- [ ] **AC-0010.** In the same session as AC-0007 and AC-0011, with Docker not blocked, the same browser on the same device and Wi-Fi loads Studio at the Mac's IPv4 network address and at a global IPv6 address of the Mac.
-- [ ] **AC-0011.** With the block on, a browser on another device on the same Wi-Fi cannot load Studio at a global IPv6 address of the Mac.
-- [ ] **AC-0012.** After the last opening ends, once AC-0010 has recorded both loads, AC-0007 and AC-0011 have each recorded a failed load, and no phone load succeeded while the block was on, and with `socketfilterfw` read just before `supabase start` showing the firewall on, `/Applications/Docker.app/Contents/MacOS/com.docker.backend` blocked, and automatic allow of downloaded signed software off, the local stack is rebuilt from the `meat-ops` worktree with no data kept: `docker volume ls --filter label=com.supabase.cli.project=meat-ops` lists `supabase_db_meat-ops`, and every volume it lists was created after the rebuild started.
-- [ ] **AC-0013.** The check refuses when the firewall automatically allows downloaded signed software.
-- [ ] **AC-0014.** After the rebuild, no worktree that `git worktree list` shows has a file in its `supabase/snippets/`.
-- [ ] **AC-0015.** After the rebuild, `supabase_migrations.schema_migrations` lists exactly the migration files in the `meat-ops` worktree's `supabase/migrations/`.
+- [x] **AC-0001.** With the macOS firewall off, both commands refuse, and the message says the firewall is off.
+- [x] **AC-0002.** With the firewall on and a program that serves a published stack port not blocked, both commands refuse, and the message names that program's path and the port.
+- [x] **AC-0003.** The check refuses when any published stack port, not only the API port, is served by a program the firewall does not block.
+- [x] **AC-0004.** The check refuses on any platform other than macOS, saying the network check supports only macOS.
+- [x] **AC-0005.** The check refuses, rather than passing, when any command it runs is missing, exits non-zero, or prints output it cannot parse exactly, including a port entry or a firewall line it does not recognize.
+- [x] **AC-0006.** With the block on, `npm test` passes.
+- [x] **AC-0007.** With the block on, a browser on another device on the same Wi-Fi cannot load `http://<the Mac's IPv4 network address>:54323`.
+- [x] **AC-0008.** The check refuses when it finds no published stack port, or a published stack port with no program it can name serving it.
+- [x] **AC-0009.** With the block on, a TCP connection from this Mac to `127.0.0.1` succeeds on every published stack port.
+- [x] **AC-0010.** In the same session as AC-0007 and AC-0011, with Docker not blocked, the same browser on the same device and Wi-Fi loads Studio at the Mac's IPv4 network address and at a global IPv6 address of the Mac.
+- [x] **AC-0011.** With the block on, a browser on another device on the same Wi-Fi cannot load Studio at a global IPv6 address of the Mac.
+- [x] **AC-0012.** After the last opening ends, once AC-0010 has recorded both loads, AC-0007 and AC-0011 have each recorded a failed load, and no phone load succeeded while the block was on, and with `socketfilterfw` read just before `supabase start` showing the firewall on, `/Applications/Docker.app/Contents/MacOS/com.docker.backend` blocked, and automatic allow of downloaded signed software off, the local stack is rebuilt from the `meat-ops` worktree with no data kept: `docker volume ls --filter label=com.supabase.cli.project=meat-ops` lists `supabase_db_meat-ops`, and every volume it lists was created after the rebuild started.
+- [x] **AC-0013.** The check refuses when the firewall automatically allows downloaded signed software.
+- [x] **AC-0014.** After the rebuild, no worktree that `git worktree list` shows has a file in its `supabase/snippets/`.
+- [x] **AC-0015.** After the rebuild, `supabase_migrations.schema_migrations` lists exactly the migration files in the `meat-ops` worktree's `supabase/migrations/`.
 
 ## Follow-ons
 
