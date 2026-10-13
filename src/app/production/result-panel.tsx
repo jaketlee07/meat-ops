@@ -1,6 +1,6 @@
 import type { Ref } from "react";
-import { Facts } from "../receiving/facts";
-import { BeforeAfter } from "../receiving/result-panel";
+import { BeforeAfter } from "../before-after";
+import { Facts } from "../facts";
 import { resultView } from "./result-view";
 import type { SaveState } from "./save-batch";
 

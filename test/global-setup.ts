@@ -1,17 +1,27 @@
 import { Client } from "pg";
 import { createTypedClient } from "../src/lib/supabase.js";
-import { resolveStackEnv } from "./env.js";
+import { ownStackRefusal, readOwnStackFile, resolveStackEnv, stackEnvIsSet } from "./env.js";
+import { localStackRefusal, realRunner } from "./network.js";
 import { NON_OPERATOR_EMAIL, OPERATOR_EMAIL, PASSWORD_OPERATOR_EMAIL, TEST_PASSWORD } from "./users.js";
 
 // Runs once before the suites. The localhost guard in resolveStackEnv runs
-// first, before anything below writes. Then it creates an operator, a
-// non-operator user, and a second operator (for the password test) through the
-// admin API (service-role key, setup only), and puts both operators on the
-// allowlist through pg. Every step can be repeated: an existing user is found
+// first, then the own-stack check and the network check, before anything below
+// writes. Then it creates an operator, a non-operator user, and a second
+// operator (for the password test) through the admin API (service-role key,
+// setup only), and puts both operators on the allowlist through pg. Every step can be repeated: an existing user is found
 // and its password reset, and the allowlist insert skips rows already there.
 // (`supabase db reset` wipes auth users, so the next run creates them again.)
 export default async function setup(): Promise<void> {
+  const fromEnvironment = stackEnvIsSet();
   const env = resolveStackEnv();
+  const wrongStack = ownStackRefusal(readOwnStackFile(), env, fromEnvironment);
+  if (wrongStack) throw new Error(wrongStack);
+  const refusal = localStackRefusal({
+    platform: process.platform,
+    dbPort: Number(new URL(env.dbUrl).port),
+    run: realRunner,
+  });
+  if (refusal) throw new Error(refusal);
   process.env.API_URL = env.apiUrl;
   process.env.ANON_KEY = env.anonKey;
   process.env.SERVICE_ROLE_KEY = env.serviceRoleKey;

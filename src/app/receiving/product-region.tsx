@@ -1,7 +1,7 @@
 import type { FinishedPrice, ProductStock, RecentReceipts as Receipts } from "../../lib/receiving";
-import { Facts } from "./facts";
+import { Facts } from "../facts";
+import { NO_FINISHED, priceView, showAverage, showOnHand, showPrice, stockView } from "../stock-view";
 import { RecentReceipts } from "./recent-receipts";
-import { NO_FINISHED, priceView, showAverage, showOnHand, showPrice, stockView } from "./stock-view";
 
 // The chosen product's stock, the current suggested price of each finished
 // product made from it, and its recent receipts, as the database holds them
