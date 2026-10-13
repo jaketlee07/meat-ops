@@ -9,9 +9,9 @@ missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.t
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
-`record_sale`, `void_receipt`, `void_sale`, and `adjust_lot`, the view
-`v_product_pricing`, and the function `price_what_if`. Nothing in TypeScript
-computes a cost, an average, or a price.
+`record_sale`, `void_receipt`, `void_sale`, and `adjust_lot`, the views
+`v_product_pricing` and `v_sale_summary`, and the function `price_what_if`.
+Nothing in TypeScript computes a cost, an average, or a price.
 
 ## Cost build-up per finished lb
 
