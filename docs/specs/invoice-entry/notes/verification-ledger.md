@@ -129,3 +129,17 @@ Every value the package can write for the operating system's name (`X-Stainless-
 - The fake model's run log is `test-results/fake-model-requests.jsonl`, with `x-api-key` stored only as `x-api-key-sha256`. Playwright empties `test-results/` when a run starts, so the log covers one run.
 - `?draft=<id>` renders only a "Draft review" heading until T4.
 - Gates: `npm run typecheck` exit 0; the six boundary greps (AC-0154, AC-0155, AC-0157, AC-0161, AC-0163, and AC-0159's destructuring check) print nothing, and `model.ts` starts with `import "server-only";`; `E2E_PORT=3200 npm test` exit 0 in 125 s (Vitest 29 files, 465 tests; Playwright 279 tests); `npm run audit` exit 0.
+
+## T4
+
+- 2026-10-13: the review (`?draft=<id>`), Save receipts, Discard draft, the saved result, and the photo address `/invoices/photo/[draftId]` landed.
+- The draft read asks Postgres for `weight_lbs::text` and `unit_cost::text` and only trims trailing zeros after the point, so a field starts on `5000` for a stored 5000.000 and on `1.68` for 1.6800, and no JavaScript number carries a weight or a cost on the way to the form (plan "Numbers stay text"; AGENTS.md hard rule 3). The saved result's figures still show through `src/lib/format.ts`.
+- One saved line says "Saved 1 receipt."; two or more say "Saved N receipts." (AC-0082 fixes the text for 2).
+- A product or vendor value that is not a uuid reads as unchosen and gets "Choose a product." or "Choose a vendor.", so a malformed id never reaches the database.
+- "Enter this from the invoice." shows beside a field that was blank at load while it is still blank.
+- Fields are named `lineId` (one per line) plus `save.<i>`, `product.<i>`, `vendor.<i>`, `weight.<i>`, `cost.<i>`, and `date.<i>` by line position; an unticked line sends only its `lineId` (AC-0090). Element ids are `line-N-save` and `line-N-<field>`.
+- A save revalidates `/invoices` only when the totals after the write loaded; a discard revalidates on success, since nothing is read after it.
+- The photo address answers 404 with an empty body and `Cache-Control: private, no-store` for a non-operator, a malformed or unknown id, an id with no photo, and a failed read. A signed-out request gets the proxy's 307 to `/sign-in`.
+- Harness note: `playwright.request.newContext({ baseURL })` inherits the file's `test.use` storage state, so a signed-out request needs `storageState: { cookies: [], origins: [] }`.
+- AC-0097 (a failed caller check or stock read) and the decision side of AC-0116 and AC-0188 are covered in `test/save-draft.test.ts`; the database no-answer states are T5's recorded run.
+- Gates: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 147 s (Vitest 31 files, 520 tests; Playwright 331 tests); `npm run test:costing` exit 0 (37 tests); the three boundary greps print nothing.

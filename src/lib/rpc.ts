@@ -222,3 +222,42 @@ export async function createImportDraft(client: TypedClient, input: NewDraft): P
   if (error) throw rpcError("createImportDraft", error);
   return data as Pick<ImportDraft, "id">;
 }
+
+// One ticked line as confirm_import_draft takes it. Weight and cost go as the
+// text the owner typed; the function casts them to numeric.
+export interface ConfirmLine {
+  lineId: string;
+  productId: string;
+  vendorId: string;
+  weightLbs: string;
+  unitCost: string;
+  receivedDate: string;
+}
+
+// The new lots, in line order.
+export async function confirmImportDraft(
+  client: TypedClient,
+  draftId: string,
+  lines: readonly ConfirmLine[],
+): Promise<Lot[]> {
+  const { data, error } = await client.rpc("confirm_import_draft", {
+    p_draft_id: draftId,
+    p_lines: lines.map((line) => ({
+      line_id: line.lineId,
+      product_id: line.productId,
+      vendor_id: line.vendorId,
+      weight_lbs: line.weightLbs,
+      unit_cost: line.unitCost,
+      received_date: line.receivedDate,
+    })),
+  });
+  if (error) throw rpcError("confirmImportDraft", error);
+  return data as Lot[];
+}
+
+// Only the id comes back: the full row carries the photo column.
+export async function discardImportDraft(client: TypedClient, draftId: string): Promise<Pick<ImportDraft, "id">> {
+  const { data, error } = await client.rpc("discard_import_draft", { p_draft_id: draftId }).select("id");
+  if (error) throw rpcError("discardImportDraft", error);
+  return data as Pick<ImportDraft, "id">;
+}

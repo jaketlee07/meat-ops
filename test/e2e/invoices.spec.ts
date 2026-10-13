@@ -1,23 +1,28 @@
 import { readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { receiveLot } from "../../src/lib/rpc";
-import { query, RAW_TOM_ID, VENDOR_ID } from "../db";
+import { callAsOperator, query, RAW_CHK_ID, RAW_TOM_ID, VENDOR_ID } from "../db";
 import { resolveStackEnv } from "../env";
 import { OPERATOR_EMAIL, signInOperator } from "../users";
 import { checkPageState } from "./a11y";
 import {
   ADDRESS_REFUSED,
+  allFingerprints,
   ANTHROPIC_TEST_AUTH_TOKEN,
   ANTHROPIC_TEST_KEY,
   canvasJpeg,
   captureAction,
   DECLINED,
+  DISCARD_SIGNED_OUT,
+  DISCARD_UNKNOWN,
   draftCount,
   draftIdFromUrl,
   draftLineCount,
   draftRows,
+  draftStatus,
+  ENTER_FROM_INVOICE,
   type FakeAnswer,
   FakeModel,
   fakeModel,
@@ -30,10 +35,17 @@ import {
   ledgerFingerprints,
   lineRows,
   lotCount,
+  lotRows,
   NO_LINES,
+  NOT_ALLOWED_DISCARD,
   NOT_ALLOWED_READ,
+  NOT_ALLOWED_SAVE,
+  NOT_DISCARDED,
+  NOT_SAVED,
   NOT_SET_UP,
   openInvoices,
+  openReview,
+  parseParts,
   type Parts,
   PHOTO_NONE,
   PHOTO_TOO_LARGE,
@@ -46,8 +58,15 @@ import {
   readText,
   RECEIPT_TEXT,
   replayWith,
+  review,
+  reviewControls,
+  reviewValues,
+  SAVE_SIGNED_OUT,
+  SAVE_UNKNOWN,
   seedDraft,
   seedFixture,
+  seedLines,
+  type SeedLine,
   sentImage,
   startSpare,
   storedImage,
@@ -58,8 +77,9 @@ import {
   TURKEY,
   TURKEY_LINES,
   withLocation,
+  ZERO_ID,
 } from "./invoices-page";
-import { deviceDate, NOT_ALLOWED, sendsActionRequest } from "./receiving-page";
+import { beforeAfter, deviceDate, factValue, NOT_ALLOWED, sendsActionRequest } from "./receiving-page";
 import { readSession } from "./session";
 import { NON_OPERATOR_STATE, OPERATOR_STATE } from "./states";
 
@@ -805,5 +825,807 @@ test.describe("an app started without a usable key or address", () => {
       await context.close();
       await spare.stop();
     }
+  });
+});
+
+// ---- Reviewing, saving, and discarding a draft ----
+
+const TOM_LABEL = "RAW-TOM Turkey Drums TOM (raw)";
+const NAV_CONTROLS = FORM_CONTROLS.slice(0, 6);
+
+// The turkey reading's two lines as a waiting draft holds them.
+const TURKEY_SEED: SeedLine[] = [
+  { words: "TKY DRUMS 40#" },
+  { words: "TKY DRUMS 40#", weight_lbs: "3000", unit_cost: "1.80", received_date: "2026-10-05" },
+];
+
+const TURKEY_VALUES = [
+  { ticked: true, product: TOM_LABEL, vendor: "Reyes Meats", weight: "5000", cost: "1.68", date: "2026-10-01" },
+  { ticked: true, product: TOM_LABEL, vendor: "Reyes Meats", weight: "3000", cost: "1.8", date: "2026-10-05" },
+];
+
+async function lineIds(draftId: string): Promise<string[]> {
+  const rows = await query<{ id: string }>(
+    "select id from import_draft_lines where import_draft_id = $1 order by line_no",
+    [draftId],
+  );
+  return rows.map((row) => row.id);
+}
+
+// Saves some of a draft's lines at the engine, as another session would.
+async function confirmAtEngine(draftId: string, count: number): Promise<void> {
+  const ids = (await lineIds(draftId)).slice(0, count);
+  const outcome = await callAsOperator({
+    fn: "confirm_import_draft",
+    args: {
+      p_draft_id: draftId,
+      p_lines: JSON.stringify(
+        ids.map((id) => ({
+          line_id: id,
+          product_id: RAW_TOM_ID,
+          vendor_id: VENDOR_ID,
+          weight_lbs: "5000",
+          unit_cost: "1.68",
+          received_date: "2026-10-01",
+        })),
+      ),
+    },
+  });
+  expect(outcome.ok, outcome.error).toBe(true);
+}
+
+async function discardAtEngine(draftId: string): Promise<void> {
+  const outcome = await callAsOperator({ fn: "discard_import_draft", args: { p_draft_id: draftId } });
+  expect(outcome.ok, outcome.error).toBe(true);
+}
+
+// Stops every server action request the page sends from now on, as a dropped connection would.
+async function dropActions(page: Page): Promise<void> {
+  await page.route("**/invoices**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) await route.abort();
+    else await route.continue();
+  });
+}
+
+test.describe("the draft review", () => {
+  test("AC-0011 and AC-0079: a photo read opens a review with both lines filled and the stored photo", async ({
+    page,
+  }) => {
+    await model.answer(TURKEY);
+    const p = await openInvoices(page);
+    await p.photo.setInputFiles(pngFile(600, 400));
+    await p.readPhoto.click();
+    const id = await draftIdFromUrl(page);
+    const r = review(page);
+    await expect(r.heading).toBeVisible();
+    await expect(r.line(1).words).toHaveText("Invoice says: TKY DRUMS 40#");
+    await expect(r.line(2).words).toHaveText("Invoice says: TKY DRUMS 40#");
+    await expect(r.groups).toHaveCount(2);
+    expect(await reviewValues(r, 2)).toEqual(TURKEY_VALUES);
+    await expect(r.photo).toBeVisible();
+    await expect(r.photo).toHaveAttribute("src", `/invoices/photo/${id}`);
+    await expect
+      .poll(() => r.photo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0))
+      .toBe(true);
+    await expect(r.typed).toHaveCount(0);
+    expect(await lotCount()).toBe(0);
+  });
+
+  test("AC-0015 and AC-0079: a text read opens a review that shows the typed text as written", async ({ page }) => {
+    await model.answer({ reading: [TURKEY_LINES[0]!] });
+    const p = await openInvoices(page);
+    await readText(p);
+    await draftIdFromUrl(page);
+    const r = review(page);
+    await expect(r.typed).toBeVisible();
+    await expect(page.getByText(RECEIPT_TEXT, { exact: true })).toBeVisible();
+    await expect(r.photo).toHaveCount(0);
+    await expect(r.groups).toHaveCount(1);
+    expect(await reviewValues(r, 1)).toEqual([TURKEY_VALUES[0]]);
+  });
+
+  test("AC-0076: each line is a group with its words, a ticked checkbox, and its five fields", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await expect(r.groups).toHaveCount(2);
+    for (const n of [1, 2]) {
+      const line = r.line(n);
+      await expect(line.group.locator("legend")).toHaveText(`Line ${n}`);
+      await expect(line.words).toBeVisible();
+      await expect(line.tick).toBeChecked();
+      for (const control of [line.product, line.vendor, line.weight, line.cost, line.date]) {
+        await expect(control).toBeVisible();
+      }
+    }
+    await expect(r.save).toBeVisible();
+    await expect(r.discard).toBeVisible();
+    await expect(r.line(1).date).toHaveAttribute("type", "date");
+  });
+
+  test("AC-0077 and AC-0078: the pickers list the active products and the vendors in order, and a blank drafted field asks for entry", async ({
+    page,
+  }) => {
+    await query(
+      `insert into products(code, description, kind) values ('100', 'Hundred (raw)', 'raw'), ('20', 'Twenty (raw)', 'raw');
+       insert into vendors(name) values ('acme foods')`,
+    );
+    const id = await seedLines([
+      { words: "FILLED" },
+      { words: "BLANK", product_id: null, vendor_id: null, weight_lbs: null, unit_cost: null, received_date: null },
+    ]);
+    const r = await openReview(page, id);
+    const products = [
+      "Choose a product",
+      "100 Hundred (raw)",
+      "20 Twenty (raw)",
+      "RAW-CHK Chicken Thighs (raw)",
+      TOM_LABEL,
+    ];
+    const vendors = ["Choose a vendor", "acme foods", "Belmont Poultry", "Reyes Meats"];
+    for (const n of [1, 2]) {
+      expect(await r.line(n).product.locator("option").allInnerTexts()).toEqual(products);
+      expect(await r.line(n).vendor.locator("option").allInnerTexts()).toEqual(vendors);
+    }
+    expect(await reviewValues(r, 2)).toEqual([
+      TURKEY_VALUES[0],
+      { ticked: true, product: "Choose a product", vendor: "Choose a vendor", weight: "", cost: "", date: "" },
+    ]);
+    await expect(r.line(1).hints).toHaveCount(0);
+    await expect(r.line(2).hints).toHaveCount(5);
+    // The note is beside the field it names, and the field points at it.
+    await expect(r.line(2).weight).toHaveAttribute("aria-describedby", "line-2-weight-hint");
+    await expect(page.locator("#line-2-weight-hint")).toHaveText(ENTER_FROM_INVOICE);
+    await r.line(2).weight.fill("12");
+    await expect(r.line(2).hints).toHaveCount(4);
+  });
+
+  test("AC-0077: a drafted product that is no longer active starts on Choose a product", async ({ page }) => {
+    const id = await seedLines([{ words: "OLD", product_id: RAW_CHK_ID }]);
+    await query("update products set active = false where code = 'RAW-CHK'");
+    const r = await openReview(page, id);
+    expect((await reviewValues(r, 1))[0]?.product).toBe("Choose a product");
+    await expect(r.line(1).hints).toHaveCount(1);
+  });
+
+  test("AC-0080: invoice words show as literal text and add no element", async ({ page }) => {
+    const id = await seedLines([{ words: "<b>9</b>" }]);
+    const r = await openReview(page, id);
+    await expect(r.line(1).words).toHaveText("Invoice says: <b>9</b>");
+    await expect(page.locator("main b")).toHaveCount(0);
+  });
+
+  test("AC-0079: typed text shows as literal text under You typed", async ({ page }) => {
+    const id = await seedLines([{ words: "A" }], { text: "5 lbs <i>x</i>\nsecond line" });
+    const r = await openReview(page, id);
+    await expect(r.typed).toBeVisible();
+    await expect(page.locator("main i")).toHaveCount(0);
+    await expect(page.getByText("5 lbs <i>x</i>")).toBeVisible();
+  });
+
+  test("AC-0093: the review of a saved draft says so, lists its lot numbers, and has no field or button", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    await confirmAtEngine(id, 2);
+    const numbers = (await lotRows()).map((lot) => lot.lot_number);
+    expect(numbers).toHaveLength(2);
+    await page.goto(`/invoices?draft=${id}`);
+    const r = review(page);
+    await expect(page.getByText("This draft was saved.", { exact: true })).toBeVisible();
+    for (const number of numbers) await expect(page.getByText(number, { exact: true })).toBeVisible();
+    await expect(r.section.locator("input, select, textarea, button")).toHaveCount(0);
+    await expect(r.photo).toHaveCount(0);
+    await expect(page.getByText("TKY DRUMS 40#")).toHaveCount(0);
+    expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+  });
+
+  test("AC-0105: the review of a discarded draft says so and shows no photo, text, words, field, or button", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED, { source: "photo" });
+    await discardAtEngine(id);
+    await page.goto(`/invoices?draft=${id}`);
+    const r = review(page);
+    await expect(page.getByText("This draft was discarded.", { exact: true })).toBeVisible();
+    await expect(r.section.locator("input, select, textarea, button, img")).toHaveCount(0);
+    await expect(page.getByText("TKY DRUMS 40#")).toHaveCount(0);
+    await expect(r.typed).toHaveCount(0);
+    await expect(r.groups).toHaveCount(0);
+    expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+  });
+
+  test("AC-0094: an id that names no draft says so and shows the id as literal text", async ({ page }) => {
+    for (const id of [ZERO_ID, "<b>not an id</b>", "x".repeat(300)]) {
+      await page.goto(`/invoices?draft=${encodeURIComponent(id)}`);
+      await expect(page.getByText("No draft has this id.", { exact: true })).toBeVisible();
+      await expect(page.getByText(id, { exact: true })).toBeVisible();
+      await expect(page.locator("main b")).toHaveCount(0);
+      expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+    }
+  });
+
+  test("a waiting draft's review meets the page-state checks, for a photo and for a text", async ({ page }) => {
+    const photo = await seedLines(TURKEY_SEED, { source: "photo" });
+    const r = await openReview(page, photo);
+    await expect.poll(() => r.photo.evaluate((img: HTMLImageElement) => img.complete)).toBe(true);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+    const text = await seedLines(TURKEY_SEED);
+    await openReview(page, text);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0138: the Weight and Cost fields are named for lbs and per lb, inside their line's group", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await expect(page.getByRole("textbox", { name: /lbs/ })).toHaveCount(2);
+    await expect(page.getByRole("textbox", { name: /per lb/ })).toHaveCount(2);
+    for (const n of [1, 2]) {
+      const group = r.line(n).group;
+      await expect(group.getByRole("textbox", { name: /lbs/ })).toHaveCount(1);
+      await expect(group.getByRole("textbox", { name: /per lb/ })).toHaveCount(1);
+      await expect(group.getByRole("checkbox", { name: "Save this line" })).toHaveCount(1);
+      await expect(group.getByRole("combobox")).toHaveCount(2);
+    }
+  });
+});
+
+test.describe("the photo address", () => {
+  test("AC-0081: an operator gets the stored bytes with their type, nosniff, and no caching", async ({
+    page,
+    request,
+  }) => {
+    await model.answer(TURKEY);
+    const p = await openInvoices(page);
+    await p.photo.setInputFiles(pngFile(600, 400));
+    await p.readPhoto.click();
+    const id = await draftIdFromUrl(page);
+    const response = await request.get(`/invoices/photo/${id}`);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("image/jpeg");
+    expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers()["cache-control"]).toBe("private, no-store");
+    expect((await response.body()).equals(await storedImage(id))).toBe(true);
+  });
+
+  test("AC-0081: a PNG draft is served as a PNG", async ({ request }) => {
+    const id = await seedLines(TURKEY_SEED, { source: "photo" });
+    const response = await request.get(`/invoices/photo/${id}`);
+    expect(response.headers()["content-type"]).toBe("image/png");
+    expect((await response.body()).equals(png(4, 4))).toBe(true);
+  });
+
+  test("AC-0099: a signed-out visitor gets no image bytes", async ({ playwright, baseURL }) => {
+    const id = await seedLines(TURKEY_SEED, { source: "photo" });
+    const visitor = await playwright.request.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+    try {
+      for (const maxRedirects of [0, 5]) {
+        const response = await visitor.get(`/invoices/photo/${id}`, { maxRedirects });
+        expect(response.headers()["content-type"] ?? "").not.toMatch(/^image\//);
+        expect((await response.body()).includes(png(4, 4))).toBe(false);
+      }
+      expect((await visitor.get(`/invoices/photo/${id}`, { maxRedirects: 0 })).status()).toBe(307);
+    } finally {
+      await visitor.dispose();
+    }
+  });
+
+  test("AC-0099: a non-operator, an unknown id, a malformed id, a text draft, and a discarded draft get a bare 404", async ({
+    playwright,
+    baseURL,
+    request,
+  }) => {
+    const photo = await seedLines(TURKEY_SEED, { source: "photo" });
+    const text = await seedLines(TURKEY_SEED);
+    const gone = await seedLines(TURKEY_SEED, { source: "photo" });
+    await discardAtEngine(gone);
+    const outsider = await playwright.request.newContext({ baseURL, storageState: NON_OPERATOR_STATE });
+    try {
+      const cases: Array<[string, typeof request, string]> = [
+        ["a non-operator", outsider, photo],
+        ["an unknown id", request, ZERO_ID],
+        ["a malformed id", request, "<b>nope</b>"],
+        ["a text draft", request, text],
+        ["a discarded draft", request, gone],
+      ];
+      for (const [which, client, id] of cases) {
+        const response = await client.get(`/invoices/photo/${encodeURIComponent(id)}`);
+        expect(response.status(), which).toBe(404);
+        expect(await response.body(), which).toHaveLength(0);
+        expect(response.headers()["content-type"] ?? "", which).not.toMatch(/^image\//);
+      }
+    } finally {
+      await outsider.dispose();
+    }
+  });
+});
+
+test.describe("saving a draft", () => {
+  test("AC-0082, AC-0107, AC-0100, AC-0098, AC-0134, AC-0104: saving both lines shows the lots and the stock, and the draft leaves the list", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.save.click();
+    const heading = r.result.getByRole("heading", { name: "Saved 2 receipts." });
+    await expect(heading).toBeVisible();
+    await expect(heading).toBeFocused();
+    expect(await draftStatus(id)).toBe("confirmed");
+
+    const lots = await lotRows();
+    expect(lots).toEqual([
+      {
+        lot_number: expect.any(String),
+        product: "RAW-TOM",
+        vendor: "Reyes Meats",
+        weight: "5000.000",
+        cost: "1.6800",
+        received: "2026-10-01",
+      },
+      {
+        lot_number: expect.any(String),
+        product: "RAW-TOM",
+        vendor: "Reyes Meats",
+        weight: "3000.000",
+        cost: "1.8000",
+        received: "2026-10-05",
+      },
+    ]);
+    const items = r.result.getByRole("listitem");
+    await expect(items).toHaveCount(2);
+    const shown = [
+      { weight: "5,000 lbs", cost: "$1.6800/lb", received: "Oct 1, 2026" },
+      { weight: "3,000 lbs", cost: "$1.8000/lb", received: "Oct 5, 2026" },
+    ];
+    for (const [i, expected] of shown.entries()) {
+      const item = items.nth(i);
+      await expect(factValue(item, "Lot number")).toHaveText(lots[i]!.lot_number);
+      await expect(factValue(item, "Product")).toHaveText(TOM_LABEL);
+      await expect(factValue(item, "Vendor")).toHaveText("Reyes Meats");
+      await expect(factValue(item, "Weight")).toHaveText(expected.weight);
+      await expect(factValue(item, "Cost per lb")).toHaveText(expected.cost);
+      await expect(factValue(item, "Received")).toHaveText(expected.received);
+    }
+    await expect(beforeAfter(r.result, /^On hand/)).toHaveText(["0 lbs", "8,000 lbs"]);
+    await expect(beforeAfter(r.result, /^Average cost/)).toHaveText(["None yet", "$1.7250/lb"]);
+    await expect(r.result.getByRole("columnheader", { name: TOM_LABEL })).toBeVisible();
+    // The fields and buttons give way to the result.
+    await expect(r.save).toHaveCount(0);
+    await expect(r.groups).toHaveCount(0);
+    expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+
+    // AC-0104: the list no longer holds it.
+    const p = await openInvoices(page);
+    await expect(p.draftLinks).toHaveCount(0);
+    await expect(p.draftsSection).toContainText("No drafts waiting.");
+  });
+
+  test("AC-0082: saving one line says Saved 1 receipt.", async ({ page }) => {
+    const id = await seedLines([{ words: "ONE" }]);
+    const r = await openReview(page, id);
+    await r.save.click();
+    await expect(r.result.getByRole("heading", { name: "Saved 1 receipt." })).toBeFocused();
+    expect(await lotCount()).toBe(1);
+  });
+
+  test("AC-0100: two products show their own stock before and after", async ({ page }) => {
+    const id = await seedLines([
+      { words: "TOM" },
+      { words: "CHK", product_id: RAW_CHK_ID, weight_lbs: "250", unit_cost: "3.5" },
+    ]);
+    const r = await openReview(page, id);
+    await r.save.click();
+    await expect(r.result.getByRole("heading", { name: "Saved 2 receipts." })).toBeFocused();
+    const tables = r.result.getByRole("table");
+    await expect(tables).toHaveCount(2);
+    const chk = tables.filter({ hasText: "RAW-CHK Chicken Thighs (raw)" });
+    await expect(chk.getByRole("row", { name: /^On hand/ }).getByRole("cell")).toHaveText(["0 lbs", "250 lbs"]);
+    const tom = tables.filter({ hasText: TOM_LABEL });
+    await expect(tom.getByRole("row", { name: /^Average cost/ }).getByRole("cell")).toHaveText([
+      "None yet",
+      "$1.6800/lb",
+    ]);
+    expect((await lotRows()).map((lot) => lot.product)).toEqual(["RAW-TOM", "RAW-CHK"]);
+  });
+
+  test("AC-0091: a saved lot carries the values in the fields when Save was pressed", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    const line = r.line(1);
+    await line.product.selectOption({ label: "RAW-CHK Chicken Thighs (raw)" });
+    await line.vendor.selectOption({ label: "Belmont Poultry" });
+    await line.weight.fill("4000.125");
+    await line.cost.fill("1.6855");
+    await line.date.fill("2026-10-02");
+    await r.save.click();
+    await expect(r.result.getByRole("heading", { name: "Saved 2 receipts." })).toBeFocused();
+    // The engine enters lots by product id, then line number; the result lists them by line.
+    expect(await lotRows()).toEqual([
+      {
+        lot_number: expect.any(String),
+        product: "RAW-TOM",
+        vendor: "Reyes Meats",
+        weight: "3000.000",
+        cost: "1.8000",
+        received: "2026-10-05",
+      },
+      {
+        lot_number: expect.any(String),
+        product: "RAW-CHK",
+        vendor: "Belmont Poultry",
+        weight: "4000.125",
+        cost: "1.6855",
+        received: "2026-10-02",
+      },
+    ]);
+    const first = r.result.getByRole("listitem").first();
+    await expect(factValue(first, "Weight")).toHaveText("4,000.125 lbs");
+    await expect(factValue(first, "Cost per lb")).toHaveText("$1.6855/lb");
+  });
+
+  test("AC-0090: an unticked line with a blank weight is not checked, not sent, and not saved", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.line(2).tick.uncheck();
+    await r.line(2).weight.fill("");
+    const sent = await captureAction(page, () => r.save.click());
+    const names = parseParts(sent).map((part) => part.name);
+    // The unticked line (position 1) sends its id and nothing else.
+    expect(names.filter((name) => /^_1_(save|product|vendor|weight|cost|date)\.1$/.test(name))).toEqual([]);
+    expect(names.filter((name) => name === "_1_lineId")).toHaveLength(2);
+    expect(names).toContain("_1_weight.0");
+
+    // The captured request was stopped; save for real.
+    await page.reload();
+    const again = review(page);
+    await again.line(2).tick.uncheck();
+    await again.line(2).weight.fill("");
+    await again.save.click();
+    await expect(again.result.getByRole("heading", { name: "Saved 1 receipt." })).toBeFocused();
+    expect(await lotRows()).toEqual([
+      {
+        lot_number: expect.any(String),
+        product: "RAW-TOM",
+        vendor: "Reyes Meats",
+        weight: "5000.000",
+        cost: "1.6800",
+        received: "2026-10-01",
+      },
+    ]);
+    expect((await lineRows(id)).map((line) => line.status)).toEqual(["saved", "skipped"]);
+  });
+
+  // The AC-0083 table: each input Receiving's AC-0010 refuses, on a ticked line.
+  const WEIGHT_FORMAT = "Enter the weight in lbs, like 5000 or 32.5.";
+  const WEIGHT_PLACES = "Use at most 3 decimal places for weight.";
+  const COST_FORMAT = "Enter the cost per lb, like 1.68.";
+  type Field = "product" | "vendor" | "weight" | "cost" | "date";
+  const RULES: Array<[Field, string, string]> = [
+    ["product", "", "Choose a product."],
+    ["vendor", "", "Choose a vendor."],
+    ["weight", "", WEIGHT_FORMAT],
+    ["weight", "5,000", WEIGHT_FORMAT],
+    ["weight", "-5", WEIGHT_FORMAT],
+    ["weight", "1.2345", WEIGHT_PLACES],
+    ["weight", "0.0000", WEIGHT_PLACES],
+    ["weight", "0", "Weight must be above 0."],
+    ["weight", "0.0", "Weight must be above 0."],
+    ["weight", "000", "Weight must be above 0."],
+    ["cost", "", COST_FORMAT],
+    ["cost", "-1", COST_FORMAT],
+    ["cost", "1.68555", "Use at most 4 decimal places for cost."],
+    ["date", "", "Enter the received date."],
+    ["date", "TOMORROW", "The received date can't be after today."],
+  ];
+
+  for (const [field, input, message] of RULES) {
+    test(`AC-0083, AC-0089, AC-0135, AC-0136: ${field} ${JSON.stringify(input)} on a ticked line is refused beside its field`, async ({
+      page,
+    }) => {
+      const id = await seedLines(TURKEY_SEED);
+      const r = await openReview(page, id);
+      const control = r.line(2)[field];
+      if (field === "product") await control.selectOption({ label: "Choose a product" });
+      else if (field === "vendor") await control.selectOption({ label: "Choose a vendor" });
+      else if (field === "date") await control.fill(input === "TOMORROW" ? await deviceDate(page, 1) : input);
+      else await control.fill(input);
+      const typed = await reviewValues(r, 2);
+      await r.save.click();
+
+      const errorId = `line-2-${field}-error`;
+      await expect(page.locator(`#${errorId}`)).toHaveText(message);
+      await expect(control).toHaveAttribute("aria-describedby", errorId);
+      await expect(control).toHaveAttribute("aria-invalid", "true");
+      await expect(control).toBeFocused();
+      await expect(page.locator("[aria-invalid=true]")).toHaveCount(1);
+      expect(await reviewValues(r, 2)).toEqual(typed);
+      expect(await lotCount()).toBe(0);
+      expect(await draftStatus(id)).toBe("pending");
+    });
+  }
+
+  test("AC-0083, AC-0135, AC-0136: with several errors, focus is on the first field and each points to its message", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.line(2).weight.fill("");
+    await r.line(2).cost.fill("x");
+    await r.line(1).vendor.selectOption({ label: "Choose a vendor" });
+    await r.save.click();
+    const expected: Array<[Locator, string, string]> = [
+      [r.line(1).vendor, "line-1-vendor", "Choose a vendor."],
+      [r.line(2).weight, "line-2-weight", WEIGHT_FORMAT],
+      [r.line(2).cost, "line-2-cost", COST_FORMAT],
+    ];
+    for (const [control, fieldId, message] of expected) {
+      await expect(control).toHaveAttribute("aria-describedby", `${fieldId}-error`);
+      await expect(page.locator(`#${fieldId}-error`)).toHaveText(message);
+    }
+    await expect(r.line(1).vendor).toBeFocused();
+    await expect(page.locator("[aria-invalid=true]")).toHaveCount(3);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0083: an unticked line's bad values are not refused", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.line(2).tick.uncheck();
+    await r.line(2).product.selectOption({ label: "Choose a product" });
+    await r.line(2).weight.fill("abc");
+    await r.save.click();
+    await expect(r.result.getByRole("heading", { name: "Saved 1 receipt." })).toBeFocused();
+  });
+
+  test("AC-0084, AC-0089, AC-0137: no ticked line says to tick one, saves nothing, and keeps the fields", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.line(1).tick.uncheck();
+    await r.line(2).tick.uncheck();
+    const typed = await reviewValues(r, 2);
+    await r.save.click();
+    await expect(r.message).toHaveText("Tick at least one line to save.");
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await lotCount()).toBe(0);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0085, AC-0089, AC-0137: a product made inactive after the review loaded names its line and saves nothing", async ({
+    page,
+  }) => {
+    const id = await seedLines([{ words: "CHK", product_id: RAW_CHK_ID }, { words: "TOM" }]);
+    const r = await openReview(page, id);
+    await query("update products set active = false where code = 'RAW-TOM'");
+    const typed = await reviewValues(r, 2);
+    await r.save.click();
+    await expect(r.message).toHaveText(`${NOT_SAVED} Line 2: This product is no longer active.`);
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await lotCount()).toBe(0);
+    expect(await draftStatus(id)).toBe("pending");
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0086, AC-0089, AC-0137: a draft discarded after the review loaded says so", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await discardAtEngine(id);
+    const typed = await reviewValues(r, 2);
+    await r.save.click();
+    await expect(r.message).toHaveText(`${NOT_SAVED} This draft was already saved or discarded.`);
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await lotCount()).toBe(0);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0086: a draft saved after the review loaded says so, and is saved once", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await confirmAtEngine(id, 1);
+    await r.save.click();
+    await expect(r.message).toHaveText(`${NOT_SAVED} This draft was already saved or discarded.`);
+    expect(await lotCount()).toBe(1);
+  });
+
+  test("AC-0088, AC-0089, AC-0137: an ended session says to sign in again, saves nothing, and keeps the fields", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.line(2).weight.fill("2999");
+    await page.context().clearCookies();
+    const typed = await reviewValues(r, 2);
+    await r.save.click();
+    await expect(r.message).toHaveText(SAVE_SIGNED_OUT);
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await lotCount()).toBe(0);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0116 path: a save whose request is dropped keeps the fields and says the receipts may have been saved", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.line(1).weight.fill("4999");
+    await dropActions(page);
+    const typed = await reviewValues(r, 2);
+    await r.save.click();
+    await expect(r.message).toHaveText(SAVE_UNKNOWN);
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await lotCount()).toBe(0);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0003, AC-0059, AC-0087, AC-0088: a save replayed with no session or a non-operator's changes nothing; a bad line id shows the engine's text", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    const sent = await captureAction(page, () => r.save.click());
+    const before = await allFingerprints();
+    const message = (text: string) => `"message":"${text}"`;
+
+    const replays = [
+      { who: "no session", storageState: undefined, message: SAVE_SIGNED_OUT },
+      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: NOT_ALLOWED_SAVE },
+    ];
+    for (const { who, storageState, message: expected } of replays) {
+      expect(await replayWith(playwright, baseURL, sent, storageState), `response for ${who}`).toContain(
+        message(expected),
+      );
+      expect(await allFingerprints(), `tables after ${who}`).toEqual(before);
+    }
+
+    // AC-0059: the operator's session, a line id that names no line of the draft.
+    const bad = await replayWith(playwright, baseURL, sent, OPERATOR_STATE, { lineId: ZERO_ID });
+    expect(bad).toContain(message(`${NOT_SAVED} line ${ZERO_ID} is not in this draft`));
+    expect(await allFingerprints()).toEqual(before);
+
+    // The browser's rules run again on the server: a blank weight is refused there too.
+    const blank = await replayWith(playwright, baseURL, sent, OPERATOR_STATE, { "weight.0": "" });
+    expect(blank).toContain('"status":"invalid"');
+    expect(blank).toContain("Enter the weight in lbs, like 5000 or 32.5.");
+    expect(await allFingerprints()).toEqual(before);
+  });
+
+  test("AC-0133: a line checkbox, Save receipts, and Discard draft work by keyboard alone", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.line(1).tick.focus();
+    await page.keyboard.press("Space");
+    await expect(r.line(1).tick).not.toBeChecked();
+    await page.keyboard.press("Space");
+    await expect(r.line(1).tick).toBeChecked();
+    await r.save.focus();
+    await page.keyboard.press("Enter");
+    await expect(r.result.getByRole("heading", { name: "Saved 2 receipts." })).toBeFocused();
+
+    const other = await seedLines(TURKEY_SEED);
+    const second = await openReview(page, other);
+    await second.discard.focus();
+    await page.keyboard.press("Space");
+    await expect(second.result.getByText("Draft discarded.", { exact: true })).toBeFocused();
+    expect(await draftStatus(other)).toBe("discarded");
+  });
+
+  test("a second press of Save while the first is pending writes the lots once", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await r.save.click();
+    await r.save.click({ force: true, timeout: 1000 }).catch(() => undefined);
+    await expect(r.result.getByRole("heading", { name: "Saved 2 receipts." })).toBeFocused();
+    expect(await lotCount()).toBe(2);
+  });
+});
+
+test.describe("discarding a draft", () => {
+  test("AC-0092, AC-0134, AC-0104, AC-0105: Discard draft says so, clears the draft, and removes it from the list", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED, { source: "photo" });
+    const r = await openReview(page, id);
+    await r.discard.click();
+    const done = r.result.getByText("Draft discarded.", { exact: true });
+    await expect(done).toBeVisible();
+    await expect(done).toBeFocused();
+    expect(await draftStatus(id)).toBe("discarded");
+    const [row] = await query<{ capture_image: unknown; capture_image_type: unknown }>(
+      "select capture_image, capture_image_type from import_drafts where id = $1",
+      [id],
+    );
+    expect(row).toEqual({ capture_image: null, capture_image_type: null });
+    expect(await lotCount()).toBe(0);
+    await expect(r.save).toHaveCount(0);
+    await expect(r.groups).toHaveCount(0);
+    expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+
+    const p = await openInvoices(page);
+    await expect(p.draftLinks).toHaveCount(0);
+    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    await page.goto(`/invoices?draft=${id}`);
+    await expect(page.getByText("This draft was discarded.", { exact: true })).toBeVisible();
+  });
+
+  test("AC-0095, AC-0137: a draft saved or discarded after the review loaded says so", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await discardAtEngine(id);
+    const typed = await reviewValues(r, 2);
+    await r.discard.click();
+    await expect(r.message).toHaveText(`${NOT_DISCARDED} It was already saved or discarded.`);
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+
+    const saved = await seedLines(TURKEY_SEED);
+    const second = await openReview(page, saved);
+    await confirmAtEngine(saved, 1);
+    await second.discard.click();
+    await expect(second.message).toHaveText(`${NOT_DISCARDED} It was already saved or discarded.`);
+    expect(await draftStatus(saved)).toBe("confirmed");
+  });
+
+  test("AC-0096, AC-0089, AC-0137: an ended session says to sign in again and keeps the fields", async ({ page }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await page.context().clearCookies();
+    const typed = await reviewValues(r, 2);
+    await r.discard.click();
+    await expect(r.message).toHaveText(DISCARD_SIGNED_OUT);
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await draftStatus(id)).toBe("pending");
+    expect(await checkPageState(page)).toEqual(reviewControls(2));
+  });
+
+  test("AC-0188 path: a discard whose request is dropped says the draft may have been discarded and keeps the fields", async ({
+    page,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    await dropActions(page);
+    const typed = await reviewValues(r, 2);
+    await r.discard.click();
+    await expect(r.message).toHaveText(DISCARD_UNKNOWN);
+    await expect(r.message).toBeFocused();
+    expect(await reviewValues(r, 2)).toEqual(typed);
+    expect(await draftStatus(id)).toBe("pending");
+  });
+
+  test("AC-0003, AC-0187, AC-0189: a discard replayed with no session or a non-operator's changes nothing; an unknown id shows the engine's text", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    const id = await seedLines(TURKEY_SEED);
+    const r = await openReview(page, id);
+    const sent = await captureAction(page, () => r.discard.click());
+    const before = await allFingerprints();
+    const message = (text: string) => `"message":"${text}"`;
+
+    const replays = [
+      { who: "no session", storageState: undefined, message: DISCARD_SIGNED_OUT },
+      { who: "a non-operator's session", storageState: NON_OPERATOR_STATE, message: NOT_ALLOWED_DISCARD },
+    ];
+    for (const { who, storageState, message: expected } of replays) {
+      expect(await replayWith(playwright, baseURL, sent, storageState), `response for ${who}`).toContain(
+        message(expected),
+      );
+      expect(await allFingerprints(), `tables after ${who}`).toEqual(before);
+    }
+    const unknown = await replayWith(playwright, baseURL, sent, OPERATOR_STATE, { draftId: ZERO_ID });
+    expect(unknown).toContain(message(`${NOT_DISCARDED} draft ${ZERO_ID} not found`));
+    expect(await allFingerprints()).toEqual(before);
   });
 });

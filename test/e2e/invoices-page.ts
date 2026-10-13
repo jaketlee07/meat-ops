@@ -3,6 +3,7 @@ import { crc32, deflateSync } from "node:zlib";
 import { expect, type Locator, type Page, type PlaywrightWorkerArgs } from "@playwright/test";
 import { privilegedVariableNames } from "../../src/privileged-env";
 import { callAsOperator, query, RAW_TOM_ID, resetTestData, seedInvoiceFixture, tableFingerprints, VENDOR_ID } from "../db";
+import { deviceDate } from "./receiving-page";
 import { resolveStackEnv } from "../env";
 
 // What the invoice specs share: finding the read forms' parts, the fake model's
@@ -303,6 +304,155 @@ export async function seedDraft(options: {
   expect(outcome.ok, outcome.error).toBe(true);
   return String(outcome.rows?.[0]?.id);
 }
+
+// ---- The review ----
+
+export const SAVE_SIGNED_OUT = "You're signed out. Sign in again to save these receipts.";
+export const DISCARD_SIGNED_OUT = "You're signed out. Sign in again to discard this draft.";
+export const NOT_SAVED = "The receipts weren't saved.";
+export const NOT_DISCARDED = "The draft wasn't discarded.";
+export const NOT_ALLOWED_SAVE = `${NOT_SAVED} This account isn't allowed to use Meat Ops.`;
+export const NOT_ALLOWED_DISCARD = `${NOT_DISCARDED} This account isn't allowed to use Meat Ops.`;
+export const SAVE_UNKNOWN =
+  "The receipts may have been saved. Reload this page to check the draft before saving again.";
+export const DISCARD_UNKNOWN = "The draft may have been discarded. Reload this page to check it.";
+export const ENTER_FROM_INVOICE = "Enter this from the invoice.";
+
+// What Tab reaches in a waiting draft's review, after the Primary navigation and
+// Sign out: every line's checkbox and five fields in order, then the two buttons.
+export function reviewControls(lineCount: number): string[] {
+  const lines = Array.from({ length: lineCount }, (_, i) =>
+    ["input #line-N-save", "select #line-N-product", "select #line-N-vendor", "input #line-N-weight", "input #line-N-cost", "input #line-N-date"].map(
+      (label) => label.replace("N", String(i + 1)),
+    ),
+  );
+  return [...FORM_CONTROLS.slice(0, 6), ...lines.flat(), "button Save receipts", "button Discard draft"];
+}
+
+// The lines of a draft's review, one group each.
+export function review(page: Page) {
+  const group = (n: number) => page.getByRole("group", { name: `Line ${n}`, exact: true });
+  const line = (n: number) => ({
+    group: group(n),
+    words: group(n).getByText(/^Invoice says: /),
+    tick: group(n).getByLabel("Save this line"),
+    product: group(n).getByLabel("Product", { exact: true }),
+    vendor: group(n).getByLabel("Vendor", { exact: true }),
+    weight: group(n).getByLabel("Weight (lbs)", { exact: true }),
+    cost: group(n).getByLabel("Cost per lb", { exact: true }),
+    date: group(n).getByLabel("Received date", { exact: true }),
+    hints: group(n).getByText(ENTER_FROM_INVOICE),
+  });
+  return {
+    section: page.getByRole("region", { name: "Draft review" }),
+    heading: page.getByRole("heading", { level: 2, name: "Draft review" }),
+    photo: page.getByAltText("Invoice photo"),
+    typed: page.getByRole("heading", { level: 3, name: "You typed" }),
+    groups: page.getByRole("group"),
+    line,
+    save: page.getByRole("button", { name: "Save receipts" }),
+    discard: page.getByRole("button", { name: "Discard draft" }),
+    message: page.locator("#draft-message"),
+    result: page.getByRole("status", { name: "Draft result" }),
+  };
+}
+
+export type Review = ReturnType<typeof review>;
+
+// Opens a draft's review and waits for it to settle.
+export async function openReview(page: Page, id: string): Promise<Review> {
+  await page.goto(`/invoices?draft=${id}`);
+  const r = review(page);
+  await expect(r.heading).toBeVisible();
+  return r;
+}
+
+// Every line's checkbox and field values as the page holds them (a picker as its shown text).
+export async function reviewValues(r: Review, lineCount: number) {
+  const values = [];
+  for (let n = 1; n <= lineCount; n++) {
+    const line = r.line(n);
+    values.push({
+      ticked: await line.tick.isChecked(),
+      product: await line.product.locator("option:checked").innerText(),
+      vendor: await line.vendor.locator("option:checked").innerText(),
+      weight: await line.weight.inputValue(),
+      cost: await line.cost.inputValue(),
+      date: await line.date.inputValue(),
+    });
+  }
+  return values;
+}
+
+export interface SeedLine {
+  words: string;
+  product_id?: string | null;
+  vendor_id?: string | null;
+  weight_lbs?: string | null;
+  unit_cost?: string | null;
+  received_date?: string | null;
+}
+
+// A waiting draft with the given lines (the turkey reading's values unless a line gives its own).
+export async function seedLines(
+  lines: SeedLine[],
+  options: { source?: "text" | "photo"; text?: string } = {},
+): Promise<string> {
+  const { source = "text", text = "typed receipt" } = options;
+  const outcome = await callAsOperator({
+    fn: "create_import_draft",
+    args: {
+      p_source: source,
+      p_captured_on: "2026-10-09",
+      p_model: "claude-opus-5-5",
+      p_lines: JSON.stringify(
+        lines.map((line) => ({
+          product_id: RAW_TOM_ID,
+          vendor_id: VENDOR_ID,
+          weight_lbs: "5000",
+          unit_cost: "1.68",
+          received_date: "2026-10-01",
+          unsure: [],
+          ...line,
+        })),
+      ),
+      p_capture_text: source === "text" ? text : null,
+      p_capture_image: source === "photo" ? `\\x${png(4, 4).toString("hex")}` : null,
+      p_capture_image_type: source === "photo" ? "image/png" : null,
+    },
+  });
+  expect(outcome.ok, outcome.error).toBe(true);
+  return String(outcome.rows?.[0]?.id);
+}
+
+export async function draftStatus(id: string): Promise<string> {
+  const [row] = await query<{ status: string }>("select status from import_drafts where id = $1", [id]);
+  return row?.status ?? "none";
+}
+
+export async function lotRows() {
+  return query<{
+    lot_number: string;
+    product: string;
+    vendor: string;
+    weight: string;
+    cost: string;
+    received: string;
+  }>(
+    `select l.lot_number, p.code as product, v.name as vendor, l.weight_lbs::text as weight,
+            l.unit_cost::text as cost, l.received_date::text as received
+     from lots l join products p on p.id = l.product_id join vendors v on v.id = l.vendor_id
+     order by l.receipt_seq`,
+  );
+}
+
+// Every table's fingerprint, the two import tables included: a refused save or discard changes none.
+export async function allFingerprints(): Promise<Record<string, string>> {
+  return tableFingerprints();
+}
+
+// The device's date, a day after it, for the "after today" row.
+export { deviceDate };
 
 // ---- Image fixtures ----
 

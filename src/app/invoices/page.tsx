@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
-import { listWaitingDrafts } from "../../lib/invoices";
+import { NO_DRAFT } from "../../lib/failures";
+import { getDraft, isUuid, listWaitingDrafts, readCatalog } from "../../lib/invoices";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
 import { PageHeader } from "../page-header";
+import { DraftReview } from "./draft-review";
 import { DraftsList } from "./drafts-list";
 import { ReadForms } from "./read-forms";
 
@@ -24,10 +26,27 @@ export default async function InvoicesPage({
 
   const query = await searchParams;
   if (typeof query.draft === "string") {
+    // A malformed id is never sent to the database.
+    const draft = isUuid(query.draft) ? await getDraft(supabase, query.draft) : null;
+    // Only a waiting draft's pickers are shown, so only it reads the catalog.
+    const catalog = draft?.status === "pending" ? await readCatalog(supabase) : { products: [], vendors: [] };
     return (
       <main className="mx-auto w-full max-w-xl p-4">
         <PageHeader title="Invoices" current="invoices" />
-        <h2 className="text-xl font-semibold">Draft review</h2>
+        <section aria-labelledby="review-heading" className="space-y-4">
+          <h2 id="review-heading" className="text-xl font-semibold">
+            Draft review
+          </h2>
+          {draft ? (
+            <DraftReview key={draft.id} draft={draft} products={catalog.products} vendors={catalog.vendors} />
+          ) : (
+            <>
+              <p className="text-base">{NO_DRAFT}</p>
+              {/* The id came from the address bar: literal text, however it is shaped. */}
+              <p className="break-words text-base text-ink-secondary">{query.draft}</p>
+            </>
+          )}
+        </section>
       </main>
     );
   }
