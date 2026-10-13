@@ -80,7 +80,7 @@ npm run dev                       # development only; see below
 npm test                          # Vitest suites, then the Playwright browser suite
 npm run test:e2e                  # the browser suite only
 E2E_PORT=3200 npm test            # npm test in a stack B folder; see below
-npm run test:costing              # the golden costing and pricing suites only
+npm run test:costing              # the golden costing, pricing, and invoice-save suites only
 npm run typecheck                 # tsc --noEmit
 npm run gen:types                 # regenerate src/lib/database.types.ts from the local stack
 npm run audit                     # audit shipped dependencies; run before merge

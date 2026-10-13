@@ -141,6 +141,133 @@ export type Database = {
           },
         ]
       }
+      import_draft_lines: {
+        Row: {
+          id: string
+          import_draft_id: string
+          line_no: number
+          lot_id: string | null
+          product_id: string | null
+          received_date: string | null
+          status: string
+          unit_cost: number | null
+          unsure_fields: string[]
+          vendor_id: string | null
+          weight_lbs: number | null
+          words: string | null
+        }
+        Insert: {
+          id?: string
+          import_draft_id: string
+          line_no: number
+          lot_id?: string | null
+          product_id?: string | null
+          received_date?: string | null
+          status?: string
+          unit_cost?: number | null
+          unsure_fields?: string[]
+          vendor_id?: string | null
+          weight_lbs?: number | null
+          words?: string | null
+        }
+        Update: {
+          id?: string
+          import_draft_id?: string
+          line_no?: number
+          lot_id?: string | null
+          product_id?: string | null
+          received_date?: string | null
+          status?: string
+          unit_cost?: number | null
+          unsure_fields?: string[]
+          vendor_id?: string | null
+          weight_lbs?: number | null
+          words?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_draft_lines_import_draft_id_fkey"
+            columns: ["import_draft_id"]
+            isOneToOne: false
+            referencedRelation: "import_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_draft_lines_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: true
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_draft_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_draft_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_current_menu"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "import_draft_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_pricing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "import_draft_lines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_drafts: {
+        Row: {
+          capture_image: string | null
+          capture_image_type: string | null
+          capture_text: string | null
+          captured_at: string
+          captured_on: string
+          id: string
+          model: string
+          settled_at: string | null
+          source: string
+          status: string
+        }
+        Insert: {
+          capture_image?: string | null
+          capture_image_type?: string | null
+          capture_text?: string | null
+          captured_at?: string
+          captured_on: string
+          id?: string
+          model: string
+          settled_at?: string | null
+          source: string
+          status?: string
+        }
+        Update: {
+          capture_image?: string | null
+          capture_image_type?: string | null
+          capture_text?: string | null
+          captured_at?: string
+          captured_on?: string
+          id?: string
+          model?: string
+          settled_at?: string | null
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       inventory_balances: {
         Row: {
           moving_avg_cost: number
@@ -729,6 +856,81 @@ export type Database = {
         }
       }
       check_operator: { Args: never; Returns: undefined }
+      confirm_import_draft: {
+        Args: { p_draft_id: string; p_lines: Json }
+        Returns: {
+          created_at: string
+          id: string
+          lot_number: string
+          notes: string | null
+          prior_avg_cost: number | null
+          product_id: string
+          receipt_seq: number
+          received_date: string
+          remaining_lbs: number
+          unit_cost: number
+          vendor_id: string
+          void_reason: string | null
+          voided_at: string | null
+          weight_lbs: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "lots"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      create_import_draft: {
+        Args: {
+          p_capture_image?: string
+          p_capture_image_type?: string
+          p_capture_text?: string
+          p_captured_on: string
+          p_lines: Json
+          p_model: string
+          p_source: string
+        }
+        Returns: {
+          capture_image: string | null
+          capture_image_type: string | null
+          capture_text: string | null
+          captured_at: string
+          captured_on: string
+          id: string
+          model: string
+          settled_at: string | null
+          source: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_drafts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      discard_import_draft: {
+        Args: { p_draft_id: string }
+        Returns: {
+          capture_image: string | null
+          capture_image_type: string | null
+          capture_text: string | null
+          captured_at: string
+          captured_on: string
+          id: string
+          model: string
+          settled_at: string | null
+          source: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_drafts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       price_what_if: {
         Args: { p_raw_cost_per_lb: number; p_raw_product_id: string }
         Returns: {

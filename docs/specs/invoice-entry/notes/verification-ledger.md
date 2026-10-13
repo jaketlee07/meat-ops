@@ -104,3 +104,14 @@ Every value the package can write for the operating system's name (`X-Stainless-
 - The fixed instructions say to give a received date only when the receipt states one. Without that rule a sample with no date could be drafted with today, which AC-0170 and AC-0179 count as wrong.
 - Sample set: 8 HTML invoices (per-lb, per-case, kg, total-only, handwritten, direction, 30-line, 45-line) and 6 text samples (relative date, no numbers, per-case, kg, line total, direction), with `expected.json`.
 - Gates: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 82 s (Vitest 26 files, 429 tests; Playwright 220 tests; the Playwright web server ran `npm run build`).
+
+## T2
+
+- 2026-10-13: `test/invoice-costing.test.ts` stub extracted from plan.md T2; `shasum -a 256` gives `d107d8d94769c8cff0af92c955b26c9409d349d4c880ea779316a9d8b905ec99`, matching the plan. Before the migration it failed with `function public.create_import_draft(p_source => text, p_capture_text => text, p_captured_on => date, p_model => text, p_lines => jsonb) does not exist`.
+- Migration `supabase/migrations/20261013161422_invoice_entry.sql`, applied with `supabase migration up` and then `npm run db:reset:stack-b` (the reset rebuilt stack B from the final file).
+- `confirm_import_draft` re-raises a `receive_lot` refusal as `line <n>: <receive_lot message>` with no function prefix, as AC-0033 states; its other refusals start with `confirm_import_draft: `. The save message mapping in T4 reads both forms.
+- `create_import_draft` also refuses, with its own prefix, a malformed id, number, or date, a number too large for its column, a non-list `unsure`, and a missing capture date or model name.
+- A blank text or blank words is any text matching `^\s*$`, so a newline-only text counts as blank.
+- `test/db.ts` exports `seedInvoiceFixture()` (RAW-CHK, RAW-OLD inactive, Belmont Poultry) for the later suites.
+- New tables' columns: `import_drafts: id, source, capture_text, capture_image, capture_image_type, captured_on, captured_at, model, status, settled_at`; `import_draft_lines: id, import_draft_id, line_no, words, product_id, vendor_id, weight_lbs, unit_cost, received_date, unsure_fields, status, lot_id`.
+- Gates: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 86 s (Vitest 28 files, 450 tests; Playwright 220 tests); `npm run test:costing` exit 0 (3 files, 37 tests, AC-0040 included); `npm run gen:types` exit 0, and two regenerations give the same sha256 (`1414e5fb...a937`).
