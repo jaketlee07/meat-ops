@@ -47,3 +47,11 @@ npm 11.4.2), in the `meat-ops` folder on stack A.
 
 - macOS firewall on (`socketfilterfw --getglobalstate`: enabled); the run's own network check passed before any test.
 - `npm run typecheck` exit 0; `npm test` exit 0 in 201 s at `e4a727b`: Vitest 5.0.3, 25 files and 410 tests passed; Playwright 220 passed. This run is AC-0008's observation.
+
+## Post-gates review
+
+- Artifacts are under `.context/reviews/b99cbaf0-c982-49cb-8025-b10212f9bcbf/`, `*-post-gates-*`.
+- adversarial-reviewer: 2 Nits (the `vitest.config.ts` comment's pool owner, and the ledger's unexercised paths); the adjudicator refuted both (`closePool()` in `test/db.ts` ends the pool; no authority asks the ledger to list paths it did not run). Adjudicated clean.
+- security-reviewer: clean. Its first report's `## Not checked` footer used nested bullets and the classifier refused it; the same agent restated it in the flat layout (round-2 artifact), and the adjudicator returned clean.
+- quality-engineer: 3 Concerns. The adjudicator refuted two: the `isolate: false` speed hint never appeared in either real `npm test` run (both summaries end without it), and the `.npmrc` behaviour for a package that needs an install script is the owner's settled choice. It sustained one, as advisory: only the plan's Rollout line says `meat-ops-invoice` and `meat-ops-sales` must run `npm ci` after they merge this change, and without it they keep Vitest 2.1.9 with every test still green.
+- Owner decision on that finding (2026-10-13): the owner runs `npm ci` in both folders after each merges `main`, as the PR and the handoff state; a small intent to add a lasting `AGENTS.md` line about running `npm ci` after a lockfile change is queued at closeout.

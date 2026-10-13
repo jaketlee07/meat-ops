@@ -1,7 +1,7 @@
 # Plan: vitest-upgrade
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** `AGENTS.md` "Build and test commands" and "Run two folders' tests at once"; the runner config `vitest.config.ts`; the run gates in `test/global-setup.ts`, which the runner must still stop on; the module-level pg pool in `test/db.ts`, which each test file ends after its last test and which is why files cannot share a process. Deviation: none; the change is to a manifest, its lockfile, `vitest.config.ts`, and a new repository `.npmrc`.
 
 > **Plan contract:** this is the implementation strategy. It may change

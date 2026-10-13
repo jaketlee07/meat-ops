@@ -1,6 +1,6 @@
 # Spec: vitest-upgrade
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`docs/product/intents/vitest-advisory-upgrade.md`](../../product/intents/vitest-advisory-upgrade.md) (the outcome and its boundary); the test harness's run gates in `test/global-setup.ts`, which run the localhost guard from [foundation-hardening](../foundation-hardening/spec.md), the own-stack check from [parallel-builds](../parallel-builds/spec.md), and the network check from [local-ports](../local-ports/spec.md) before any test; `AGENTS.md` "Build and test commands" (stop the app before a test run or a build) and "Run two folders' tests at once" (one folder per stack runs tests at a time)
@@ -112,17 +112,17 @@ Definitions used by these criteria:
 - **Stack A**: as `AGENTS.md` defines it, the local stack of project `meat-ops`.
 - **CSS digests** of a lockfile: the set of sha256 digests of the `.css` files under `.next/static/` in a fresh copy of the files under verification (`git archive HEAD`) with that lockfile and its `package.json` in place and no `.next` folder, after `npm ci` and an `npm run build` that exits 0. The base's lockfile and `package.json` are the ones at the base.
 
-- [ ] **AC-0001.** `npm audit --package-lock-only --json`, with dev dependencies included, completes with a report whose `metadata.vulnerabilities.total` is 0.
-- [ ] **AC-0002.** The only difference between the base's `package.json` and the one under verification is the value of `devDependencies.vitest`, which reads `^5.0.3`.
-- [ ] **AC-0003.** Every new lockfile entry has a version whose publish time in `npm view <name> time` is before 2026-10-06T00:00:00Z.
-- [ ] **AC-0004.** `npm ls --package-lock-only --omit=dev --all` prints the same lines below its first line at the base and under verification.
-- [ ] **AC-0006.** `npm run typecheck` exits 0.
-- [ ] **AC-0007.** On stack A, Vitest's JSON report under verification and the base's JSON report from a stack A run list the same test files, keyed by path from the repository root, each with the same number of passed tests.
-- [ ] **AC-0008.** On stack A, with the block that `docs/architecture/overview.md` `Keep the local stack on this Mac` describes on, `npm test` exits 0.
-- [ ] **AC-0009.** With `API_URL=http://10.255.255.1:54321` in its environment, `npx vitest run` stops at the guard's `API_URL host is not local` refusal with a non-zero exit, before any test runs.
-- [ ] **AC-0010.** The network-only command in `docs/architecture/overview.md` (`Keep the local stack on this Mac`, the `Could not read something` bullet), run as written from the repository root, exits 0 after running only `test/network.test.ts`.
-- [ ] **AC-0011.** The `.npmrc` at the repository root has exactly one line that is neither blank nor a comment (starting with `#` or `;`), and that line is `ignore-scripts=true`.
-- [ ] **AC-0012.** The CSS digests of the lockfile under verification equal the CSS digests of the base's lockfile.
+- [x] **AC-0001.** `npm audit --package-lock-only --json`, with dev dependencies included, completes with a report whose `metadata.vulnerabilities.total` is 0.
+- [x] **AC-0002.** The only difference between the base's `package.json` and the one under verification is the value of `devDependencies.vitest`, which reads `^5.0.3`.
+- [x] **AC-0003.** Every new lockfile entry has a version whose publish time in `npm view <name> time` is before 2026-10-06T00:00:00Z.
+- [x] **AC-0004.** `npm ls --package-lock-only --omit=dev --all` prints the same lines below its first line at the base and under verification.
+- [x] **AC-0006.** `npm run typecheck` exits 0.
+- [x] **AC-0007.** On stack A, Vitest's JSON report under verification and the base's JSON report from a stack A run list the same test files, keyed by path from the repository root, each with the same number of passed tests.
+- [x] **AC-0008.** On stack A, with the block that `docs/architecture/overview.md` `Keep the local stack on this Mac` describes on, `npm test` exits 0.
+- [x] **AC-0009.** With `API_URL=http://10.255.255.1:54321` in its environment, `npx vitest run` stops at the guard's `API_URL host is not local` refusal with a non-zero exit, before any test runs.
+- [x] **AC-0010.** The network-only command in `docs/architecture/overview.md` (`Keep the local stack on this Mac`, the `Could not read something` bullet), run as written from the repository root, exits 0 after running only `test/network.test.ts`.
+- [x] **AC-0011.** The `.npmrc` at the repository root has exactly one line that is neither blank nor a comment (starting with `#` or `;`), and that line is `ignore-scripts=true`.
+- [x] **AC-0012.** The CSS digests of the lockfile under verification equal the CSS digests of the base's lockfile.
 
 ## Retired identifiers
 
