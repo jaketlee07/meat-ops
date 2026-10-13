@@ -16,7 +16,7 @@ golden numbers are in [`docs/costing.md`](../costing.md).
 | `src/lib/` | Typed wrappers over the operations (`rpc.ts`), typed reads (`views.ts`, which holds the `getMenu` read, `receiving.ts`, the production reads in `production.ts`, and the pricing list, detail, and what-if reads in `pricing.ts`), the client (`supabase.ts`), display formats (`format.ts`), the receiving, batch, and price form rules (`receipt-input.ts`, `batch-input.ts`, `price-input.ts`) with their shared number-text rules (`number-text.ts`), the pricing advice sentences and button names (`price-advice.ts`), and the failure messages and request limit (`failures.ts`). `database.types.ts` is generated. | No cost, price, shrink, average, or margin math here. Nothing here imports from `src/app/`. Run `npm run gen:types` after a migration change. |
 | `src/app/` | The Next.js 16 App Router app: `/sign-in`; `/receiving` with its form, before-and-after result, recent receipts, and void; `/production` with its form, check step, batch result, and recent batches; `/menu` with its "Sellable only" switch; and `/pricing` with its list, one-press repricing, what-if, and per-product detail. All four pages share the header with the Primary navigation (`page-header.tsx`), the not-allowed view (`not-allowed.tsx`), and the error view (`page-error.tsx`). Server actions live beside each page; `/pricing` has `saveTargetMargin`, `removeTargetMargin`, and `saveListPrice`. `_server/session.ts` builds the per-request Supabase client, and `_server/caller.ts` settles the caller for `saveReceipt`, `voidReceipt`, `saveBatch`, and the three pricing actions. `saveBatch`'s decisions live in `production/save-batch.ts`: its branches take every database call as an argument, so the Vitest suite can fail any one of them. The pricing actions' decisions live in `pricing/save-change.ts` the same way, with the caller check and the database call as arguments. `production/actions.ts` wires the real calls, and also runs the form rules and the product lookup inside its `readBefore` call. | Every stock, cost, price, shrink, and batch figure comes from the database and shows through `src/lib/format.ts`. The only exception is the production check step's repeat of the owner's own entries. `saveReceipt`, `voidReceipt`, `saveBatch`, and the pricing actions settle the caller through `_server/caller.ts` (`getClaims`, then `isOperator`) before anything else; `signIn` and `signOut` keep their own cookie-writing client. Import `src/lib/` without file extensions; Turbopack does not map `.js` to `.ts`. Keep the screens' look: a light surface, high contrast, tabular figures, no gradients or illustration (tokens in `globals.css`). On the floor screens, hard to mistype comes first, fast on a phone second, and numbers easy to trust third. |
 | `src/proxy.ts`, `src/privileged-env.ts`, `next.config.ts` | The Host check, session refresh, the signed-out redirect, the privileged-variable guard, and the framing headers (`Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY` on every page, set in `next.config.ts`). See the app trust boundary below. | Change with the security review that guards the app. |
-| `test/` | The Vitest suites run against the local stack: `costing.test.ts` (golden numbers), `engine.test.ts`, `corrections.test.ts`, `access.test.ts`, `env.test.ts`, the receiving suites (`operator-check`, `format`, `receipt-input`, `receiving-data`, `failures`), the production suites (`production-rules`, `production-data`, `save-batch`), and the pricing suites (`pricing.test.ts` for the golden pricing numbers, `pricing-rules.test.ts`, `pricing-data.test.ts`, and `save-change.test.ts`). `db.ts`, `users.ts`, `env.ts`, and `global-setup.ts` are the harness. | Run `npm test`. A red costing test stops the work. |
+| `test/` | The Vitest suites run against the local stack: `costing.test.ts` (golden numbers), `engine.test.ts`, `corrections.test.ts`, `access.test.ts`, `env.test.ts`, `network.test.ts`, the receiving suites (`operator-check`, `format`, `receipt-input`, `receiving-data`, `failures`), the production suites (`production-rules`, `production-data`, `save-batch`), and the pricing suites (`pricing.test.ts` for the golden pricing numbers, `pricing-rules.test.ts`, `pricing-data.test.ts`, and `save-change.test.ts`). `db.ts`, `users.ts`, `env.ts`, `network.ts`, and `global-setup.ts` are the harness. | Run `npm test`. A red costing test stops the work. |
 | `test/e2e/` | The Playwright browser suite, run by `npm test` after Vitest: `receiving.spec.ts`, `production.spec.ts`, `menu.spec.ts`, `pricing.spec.ts`, and `auth.spec.ts`, with page helpers beside them. A setup project saves each role's session under the gitignored `.auth/`. `a11y.ts` checks each page state for axe violations, 320 px width, 44 px targets, and focus outlines. `checks/` holds the scripts for the guard, loopback, and env-reload criteria. | Run it through `npm run test:e2e`, which sets the module loader Playwright needs on Node 22. Tests run one at a time because they share one database. |
 | `tools/hooks/` | Hook scripts from the agent bundle: a session-start knowledge print, a pre-pull-request check, and a per-prompt work-loop reminder. | Change only when the workflow changes. |
 | `docs/specs/` | One folder per feature, each with a spec and a plan. | Follow the spec; update it when the work changes the contract. |
@@ -36,7 +36,9 @@ again.
 
 The operator allowlist is the table `private.operators`. It holds one row per
 allowed user id. The `private` schema is not exposed through the Data API, so
-no client can read or change the list.
+no Data API client can read or change the list. Postgres itself answers only
+this Mac under the firewall block, apart from the loopback path noted in
+[Keep the local stack on this Mac](#keep-the-local-stack-on-this-mac).
 
 | Role | Reads | Writes | Operations |
 | --- | --- | --- | --- |
@@ -93,7 +95,7 @@ which set a finished product's target margin and list price and nothing else.
 - **Framing.** Every page response carries `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`, set for all paths in `next.config.ts`, so no page loads inside another page's frame. The proxy's redirect for a signed-out request carries them too.
 - **Cookies.** The Supabase auth cookies are `HttpOnly` and `SameSite=Lax`, set from one constant in `src/app/_server/session.ts`. There is no browser client. They carry no `Secure` flag on plain-http localhost; the [app HTTPS hosting intent](../product/intents/app-https-hosting.md) owns that.
 - **Sessions.** A session ends after 12 hours without activity or 168 hours after sign-in. Sign-out ends this device's session on the auth server. An access token already issued stays valid at the database for up to 3600 seconds, an accepted residual.
-- **Network.** `npm run dev` and `npm run start` listen on `127.0.0.1` only, and `next.config.ts` widens no server-action or dev origin. The auth server's limit of 30 sign-ins per 5 minutes is charged to the app's address, accepted while only this machine reaches sign-in.
+- **Network.** `npm run dev` and `npm run start` listen on `127.0.0.1` only, and `next.config.ts` widens no server-action or dev origin. The auth server's limit of 30 sign-ins per 5 minutes is charged to the app's address, accepted while only this machine reaches sign-in, which the firewall block in [Keep the local stack on this Mac](#keep-the-local-stack-on-this-mac) provides.
 - **Host check.** `src/proxy.ts` runs on every path and answers 421 to a request whose `Host` is missing or names anything other than `127.0.0.1` or `localhost`, so a web page that rebinds its DNS name to this machine cannot drive sign-in. Node itself answers 400 to an HTTP/1.1 request with no `Host`. Under `npm run dev`, Next.js answers its own dev-tool addresses before the proxy runs; the owner accepted that exposure, and `npm run start` is the command for daily use.
 - **Failures.** Every server-side Supabase client, the proxy's included, gives up on a request whose response headers have not arrived 10 seconds after sending it, and postgrest-js does not resend an aborted request. postgrest-js does resend a read up to three times after a refused connection or a 503 or 520 answer, each time with a new 10 seconds. auth-js retries a failed token refresh for up to about 30 seconds, and the proxy and the page or action each run that retry, so with the auth server unreachable and the access token within 90 seconds of expiry, a page load, a Save, or a Sign out can wait about a minute. A Sign out that the auth server does not confirm still removes this browser's auth cookies. A page render that fails right after a save whose totals loaded can still show the error page in place of "Receipt saved"; the receipt is saved, and the owner accepted that narrow window. For a batch, which cannot be undone, the production error page says a batch may have been saved and to check Recent batches before saving it again. A save or void that fails before its write call says the receipt or batch wasn't saved or the receipt wasn't voided; a write call with no answer says it may not have been. The caller check tells an ended session from an auth lookup that got no answer. A failed sign-in other than bad credentials logs only the auth error's code and status.
 - **Apart from the Host check, the proxy authorizes nothing.** It refreshes the session and sends a signed-out page load to `/sign-in`. On a POST it leaves an ended session's cookies alone, so the server action answers "signed out" with the form intact. Every page and every server action settles the caller itself.
@@ -137,6 +139,54 @@ query covers lots only.
   test truncates leave. With the owner's approval, end the slot's backend as
   `supabase_admin` (Realtime makes a new slot at once), then run
   `vacuum pg_class`.
+
+## Keep the local stack on this Mac
+
+The Supabase CLI publishes the local stack's ports on every network interface,
+IPv4 and IPv6: 54321 (API and auth), 54322 (Postgres, with the well-known local
+password), 54323 (Studio, with no login), 54324 (mail), and 54327 (analytics).
+Neither the CLI nor Docker Desktop has a setting that limits them. So the macOS
+firewall blocks incoming connections to Docker's port forwarder,
+`com.docker.backend`. Connections from this Mac to `127.0.0.1` or `localhost`
+are not filtered, so the app, the tests, and Studio in this Mac's browser keep
+working.
+
+Set it up once, in your own Terminal. The first `sudo` asks for the Mac's
+password.
+
+```bash
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /Applications/Docker.app/Contents/MacOS/com.docker.backend
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --blockapp /Applications/Docker.app/Contents/MacOS/com.docker.backend
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp off
+```
+
+- The block covers every port Docker publishes on this Mac, other projects' containers included.
+- The last command makes the Mac ask before any downloaded app accepts outside connections. If it asks about Docker, after an update for example, answer **Deny**. Loopback, the app, and the tests keep working.
+- `npm test` and `npm run test:e2e` check the block before any test runs. Each refusal says what is wrong:
+  - **The firewall is off:** run the first setup command.
+  - **Other devices can reach a program** (the message names it and the port): run `--add` and `--blockapp` with the path it names. A Docker update that drops the block entry shows up this way, because the firewall reports a program missing from its list as permitted.
+  - **Automatic allow is on:** run the last setup command.
+  - **Not a Mac:** the check knows only the macOS firewall.
+  - **No published port, or no program serving one:** start the stack with `supabase start`, or let a restart finish.
+  - **Could not read something:** a tool failed, timed out, or printed new wording, often after a macOS or Docker update. The commands and their exact expected output are in `test/network.ts`; run the one the message names by hand and compare. If only the wording changed, update `test/network.ts` and `test/network.test.ts`. That test file runs behind the same check, so while the check refuses, run only that file, with a config outside the repository that has no global setup:
+
+    ```bash
+    printf 'export default { test: { include: ["test/network.test.ts"] } };\n' > "${TMPDIR:-/tmp}/network-only.vitest.config.mjs"
+    npx vitest run --root . --config "${TMPDIR:-/tmp}/network-only.vitest.config.mjs"
+    ```
+
+    It reaches no stack. Never run another suite without the check.
+- The check runs only when tests run, so a firewall turned off between test runs is caught at the next run. The owner accepted that gap.
+- The block leaves loopback open by design, so a web page open in this Mac's browser could still reach Studio and the API through `127.0.0.1`. That path stays open until [its follow-on intent](../product/intents/local-stack-loopback-web-pages.md) closes.
+
+To undo the block:
+
+```bash
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblockapp /Applications/Docker.app/Contents/MacOS/com.docker.backend
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setallowsignedapp on
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+```
 
 ## Create the owner account
 
