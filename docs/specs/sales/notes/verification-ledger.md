@@ -44,3 +44,11 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - Built: `src/lib/sale-input.ts` (`parseSaleForm`, `parseSaleNumber`, `parseLotFinder`), the sale texts and `saleSaveFailureMessage` and `saleVoidFailureMessage` in `src/lib/failures.ts`, and `isCalendarDate` exported from `src/lib/batch-input.ts`.
 - Deviation: a refused sale void reads "The sale wasn't voided." and the engine's reason with a closing period, with no "Reload to see the latest stock." tail, because a sale void gives stock back. AC-0084 asks only for the lead sentence.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 139 s, Vitest 460 passed (27 files), Playwright 220 passed.
+
+## T3 (2026-10-13)
+
+- Executed by the `implementer` subagent; controller reran every gate.
+- Stub materialized byte-identical at `test/sales-data.test.ts` (sha256 670c2cd7…366d52); observed red: `Cannot find module '../src/lib/trace.js'`. The file then grew to 13 cases, the AC-0135 case writing 1,001 one-pound sales in about 5 s.
+- Built: `src/lib/sales.ts` (`listSaleProducts`, `listCustomers`, `getFinishedOnHand`, `listRecentSales`, `getSaleSummary`) and `src/lib/trace.ts` (`getSaleTrace`, `listSaleLots`, `findLots`, `getLotTrace`, and the paging loop `readAllPages` with 500-row pages, half of `max_rows`).
+- Controller fix: the test file's added imports now sit in one ordered block and take `VALLEY_ID` from `test/db.ts`.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `npm test` exit 0 in 192 s, Vitest 473 passed (28 files), Playwright 220 passed. `meat-ops-invoice` ran its own suite on stack B at the same time.
