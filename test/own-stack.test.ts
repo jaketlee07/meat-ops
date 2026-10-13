@@ -77,4 +77,25 @@ describe("Own-stack check, every form", () => {
     const twice = { apiUrl: STACK_B.apiUrl, dbUrl: `${STACK_A.dbUrl}?port=54322&port=55322` };
     expect(ownStackRefusal(STACK_B_FILE, twice)).toBeNull();
   });
+
+  it("AC-0015: counts any non-comment line where SUPABASE_PROJECT_ID meets = or :, as the CLI reads them", () => {
+    expect(namesOwnStack('OPENAI_API_KEY="k" SUPABASE_PROJECT_ID=meat-ops-b\n')).toBe(true);
+    expect(namesOwnStack("OPENAI_API_KEY=k\rSUPABASE_PROJECT_ID=meat-ops-b\r")).toBe(true);
+    expect(namesOwnStack("# SUPABASE_PROJECT_ID=meat-ops-b\nOPENAI_API_KEY=k\n")).toBe(false);
+    expect(namesOwnStack("XSUPABASE_PROJECT_ID=meat-ops-b\n")).toBe(false);
+    const afterQuote = 'OPENAI_API_KEY="k" SUPABASE_PROJECT_ID=meat-ops-b\n';
+    expect(ownStackRefusal(afterQuote, STACK_B)).toMatch(/supabase\/\.env.*plain numbers/);
+    const bareCr = STACK_B_FILE.replaceAll("\n", "\r");
+    expect(ownStackRefusal(bareCr, STACK_B)).toBeNull();
+    expect(ownStackRefusal(bareCr, STACK_A)).toMatch(/supabase\/\.env/);
+  });
+
+  it("AC-0015: refuses a DB_URL that Postgres re-reads before connecting", () => {
+    const encoded = { apiUrl: STACK_B.apiUrl, dbUrl: `${STACK_A.dbUrl}?p%6Frt=55322&x=%zz` };
+    expect(ownStackRefusal(STACK_B_FILE, encoded)).toMatch(/supabase\/\.env.*DB_URL has a space or a stray %/);
+    const spaced = { apiUrl: STACK_B.apiUrl, dbUrl: `${STACK_B.dbUrl}?application_name=a b` };
+    expect(ownStackRefusal(STACK_B_FILE, spaced)).toMatch(/supabase\/\.env/);
+    const escaped = { apiUrl: STACK_B.apiUrl, dbUrl: `${STACK_B.dbUrl}?application_name=a%20b` };
+    expect(ownStackRefusal(STACK_B_FILE, escaped)).toBeNull();
+  });
 });

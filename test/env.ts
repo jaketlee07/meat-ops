@@ -128,12 +128,17 @@ export function readOwnStackFile(): string | null {
   }
 }
 
+// Lines end at LF, CRLF, or a bare CR, as in the CLI's env loader.
+function linesOf(text: string): string[] {
+  return text.split(/\r\n|\r|\n/);
+}
+
 // Setting lines as the CLI's env loader reads them: leading spaces, an optional
 // `export`, `=` or `:` between name and value, and the last line for a name wins.
 // Any other line is skipped.
 function settingsOf(text: string): Map<string, string> {
   const settings = new Map<string, string>();
-  for (const line of text.split(/\r?\n/)) {
+  for (const line of linesOf(text)) {
     const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_.]*)\s*[=:]\s*(.*)$/.exec(line);
     if (match) settings.set(match[1]!, match[2]!);
   }
@@ -141,9 +146,12 @@ function settingsOf(text: string): Map<string, string> {
 }
 
 // A folder names its own stack when its supabase/.env sets SUPABASE_PROJECT_ID.
-// A file with other names only, such as Studio's OPENAI_API_KEY, does not.
+// A file with other names only, such as Studio's OPENAI_API_KEY, does not. The CLI
+// also reads a setting after a quoted value on the same line, so any non-comment
+// line where the name meets `=` or `:` counts, erring toward the refusals below.
 export function namesOwnStack(text: string | null): boolean {
-  return text !== null && settingsOf(text).has("SUPABASE_PROJECT_ID");
+  if (text === null) return false;
+  return linesOf(text).some((line) => !/^\s*#/.test(line) && /(?:^|[^A-Za-z0-9_])SUPABASE_PROJECT_ID\s*[=:]/.test(line));
 }
 
 // True when resolveStackEnv() will take the stack from the environment, not from
@@ -160,6 +168,11 @@ export function ownStackRefusal(
   fromEnvironment = false,
 ): string | null {
   if (text === null || !namesOwnStack(text)) return null;
+  // pg re-encodes a URL with a space or a stray `%` before reading it, so its port
+  // can differ from the one read here.
+  if (/ |%[^a-f0-9]|%[a-f0-9][^a-f0-9]/i.test(env.dbUrl)) {
+    return "This folder's supabase/.env names its own Supabase stack, but this run's DB_URL has a space or a stray % that Postgres reads differently, so the run cannot confirm which stack it reaches. Refusing to run.";
+  }
   const settings = settingsOf(text);
   const apiPort = settings.get("SUPABASE_API_PORT");
   const dbPort = settings.get("SUPABASE_DB_PORT");
