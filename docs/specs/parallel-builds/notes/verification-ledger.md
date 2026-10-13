@@ -103,3 +103,24 @@ Every T5 Test ran again at `6ab6efa`, in new worktrees `wt-b2` and `wt-a2`, foll
 - AC-0007: B started 05:31:49Z and A 05:31:51Z; both listeners were up together on 13 polls, first at 05:32:15Z; B exit 0 in 87 s and A exit 0 in 104 s, each Vitest 408 tests and Playwright 220 passed.
 - Stop: the check listed no folder; `supabase stop --project-id meat-ops-b --no-backup` exit 0; stack A's 12 containers were the same before and after (AC-0012); no `meat-ops-b` container or volume remained (AC-0011). Both worktrees were removed.
 - After the re-run, `AGENTS.md` says a listed folder outside `git worktree list` belongs to another project. The change is to one explanatory sentence; no step's command changed.
+
+## Post-build review, round 2 (2026-10-13)
+
+- Artifacts: `2-post-gates-*` under the same ignored review folder.
+- Sustained and fixed in `5504512` and `5db4963`: the check's folder rule counted any worktree with a `supabase/.env` as stack B, though a stack A folder may keep one for Studio's key (all three reviewers); the check was not named before test runs; and AC-0010 needed a word-for-word run at the shipped `AGENTS.md` text.
+- Settled by read-only probes and the owner's choice to fail closed: the CLI 2.95.4 also reads a setting after a quoted value on the same line (`OPENAI_API_KEY="k" SUPABASE_PROJECT_ID=x`) and bare-CR line ends (each made `supabase status` look for `supabase_db_x`); and pg reads `...:54322/postgres?p%6Frt=55322&x=%zz` as port 54322 while WHATWG `URL` reads the parameter as 55322. The own-stack check now counts any non-comment line where `SUPABASE_PROJECT_ID` meets `=` or `:`, splits lines at a bare CR, and refuses a `DB_URL` that pg would re-encode. With these fixes reverted, the 2 new tests failed; restored, all 10 own-stack tests passed.
+
+## T5 run at 5db4963 (2026-10-13)
+
+Every T5 Test ran again at `5db4963` in new worktrees `wt-b3` and `wt-a3`, following the shipped `AGENTS.md` steps word for word, check included. Times are UTC. The check listed only folders under `/Users/jakelee/mobilize-wt/`, another project's worktrees, which the steps say use neither stack; no `meat-ops` worktree was ever listed.
+
+- Start, 05:59:11Z: no `meat-ops-b` container or volume.
+- Stack B steps 1 to 6, each exit 0: the four containers on 55321 and 55322 (AC-0003, AC-0004); `db:reset:stack-b` applied 6 migrations; `.env` matched `supabase status` with URL `http://127.0.0.1:55321` (AC-0018); `E2E_PORT=3200 npm test` exit 0 in 90 s, Vitest 25 files and 410 tests, Playwright 220 passed (AC-0009); only `node 127.0.0.1:3200` listened on 3200, 14 polls (AC-0001).
+- AC-0006, stack B run: stack A's snapshot `2026-10-13 05:58:42.308933+00 |` before and after; stack B's from empty to `2026-10-13 06:01:18.92531+00 | 2026-10-13 06:00:16.318214+00`.
+- AC-0005: `lsof` for 55322 and 55321 only, result `null`. AC-0008: `git status --porcelain` empty after the run, a created file, and a changed file under `supabase/.temp/`. AC-0013: `com.docker.backend` on `*:55320` during `supabase db diff`. AC-0017, stack B: steps 3 and 4 exit 0, probe gone, migrations match. AC-0014: exit 1 with the own-stack port message, no build output.
+- AC-0015, stack A's snapshot unchanged across four cases, each refused before any test and with no build output: the CLI reporting stack A ("from supabase status"); stack A's four values in the environment ("from the API_URL and DB_URL in the environment"); stack B's values with `?port=54322` ("would use API port 55321 and Postgres port 54322"); and stack B's values with `?p%6Frt=54322&x=%zz` ("DB_URL has a space or a stray %").
+- AC-0019: exit 0; probe gone from stack B, still on stack A.
+- Stack A steps 1 to 5, each exit 0: the reset removed the probe and the migrations match (AC-0017); `.env` matched with URL `http://127.0.0.1:54321` (AC-0018); `npm test` exit 0 in 92 s, Vitest 410 tests, Playwright 220 passed (AC-0010). AC-0006, stack A run: stack B's snapshot empty before and after; stack A's from empty to `2026-10-13 06:04:12.984673+00 | 2026-10-13 06:03:06.300124+00`.
+- AC-0016 with stack A running and the probe on it: exit 2 with no `supabase/.env`, exit 1 with the template plus `SUPABASE_PROJECT_ID=meat-ops`; the probe survived both. AC-0002: exit 1 with the bad-port message, no build output.
+- AC-0007: B started 06:04:15Z and A 06:04:17Z; both listeners up together on 13 polls, first at 06:04:41Z; B exit 0 in 89 s, A exit 0 in 111 s, each Vitest 410 tests and Playwright 220 passed.
+- Stop: `supabase stop --project-id meat-ops-b --no-backup` exit 0; stack A's 12 containers unchanged (AC-0012); no `meat-ops-b` container or volume left (AC-0011). Both worktrees removed.
