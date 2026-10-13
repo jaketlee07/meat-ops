@@ -1,7 +1,7 @@
 # Plan: parallel-builds
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** `AGENTS.md` "Build and test commands" (the `.env` command, the stop-before-test rule) and `docs/architecture/overview.md` `Keep the local stack on this Mac`; the harness pieces this change extends, `resolveStackEnv` in `test/env.ts` with its tests in `test/env.test.ts`, and the two run gates that call it before any test, `playwright.config.ts` at config load and `test/global-setup.ts` for both runners; `localStackRefusal` in `test/network.ts`, which keys on the resolved database port and is unchanged. Deviation: none; the new port reader and own-stack check sit beside `resolveStackEnv` and run at those two gates, as `localStackRefusal` does.
 
 > **Plan contract:** this is the implementation strategy. It may change

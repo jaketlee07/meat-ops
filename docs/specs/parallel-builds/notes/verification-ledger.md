@@ -124,3 +124,9 @@ Every T5 Test ran again at `5db4963` in new worktrees `wt-b3` and `wt-a3`, follo
 - AC-0016 with stack A running and the probe on it: exit 2 with no `supabase/.env`, exit 1 with the template plus `SUPABASE_PROJECT_ID=meat-ops`; the probe survived both. AC-0002: exit 1 with the bad-port message, no build output.
 - AC-0007: B started 06:04:15Z and A 06:04:17Z; both listeners up together on 13 polls, first at 06:04:41Z; B exit 0 in 89 s, A exit 0 in 111 s, each Vitest 410 tests and Playwright 220 passed.
 - Stop: `supabase stop --project-id meat-ops-b --no-backup` exit 0; stack A's 12 containers unchanged (AC-0012); no `meat-ops-b` container or volume left (AC-0011). Both worktrees removed.
+
+## Post-build review, round 3 (2026-10-13)
+
+- Artifacts: `3-post-gates-*` under the same ignored review folder. quality-engineer returned Clean. security-reviewer and adversarial-reviewer each returned one Nit; the owner chose to record both as known gaps rather than change code again, so neither was dispatched for adjudication.
+- Deferred Nit, security (`test/env.ts:154`): hand-made `supabase/.env` content still steers the CLI past the own-stack check. Read-only probes on 2026-10-13 showed the CLI 2.95.4 setting the project from a carriage return inside the name (`SUPABASE_PROJECT_ID\r=x`), from a setting after a quoted value that closes on a line starting with `#`, and from `supabase/.env.local`, none of which the check reads. The `AGENTS.md` steps create none of them.
+- Deferred Nit, adversarial (`AGENTS.md:144`): the check treats a listed folder from another project as using neither stack, but the `mobilize` worktrees' `supabase/config.toml` sets stack A's ports, 54321 and 54322. At 06:16Z no process other than Docker held a connection to either port, and `mobilize` had no Supabase containers.

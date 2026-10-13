@@ -1,6 +1,6 @@
 # Spec: parallel-builds
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the firewall block and the network check from [local-ports](../local-ports/spec.md), which every stack relies on unchanged; the test harness's localhost guard (`assertLocalUrl` and `resolveStackEnv` in `test/env.ts`, from [foundation-hardening](../foundation-hardening/spec.md)); `AGENTS.md` "Build and test commands" (the `.env` command, and stopping the app before a test run) and its hard rule that nothing writes to the hosted project without the owner's approval
@@ -116,25 +116,25 @@ Definitions used by these criteria:
 - **Auth snapshot** of a stack: the pair `max(updated_at)` over `auth.users` and `max(created_at)` over `auth.sessions`, read from that stack's database.
 - **The stack B reset step**: `npm run db:reset:stack-b`, the `AGENTS.md` stack B step that resets stack B.
 
-- [ ] **AC-0001.** When no other program listens on the port it would use, the browser suite's app listens on `127.0.0.1`: at the port `E2E_PORT` names when it holds a whole number from 1 to 65535 written in digits with no leading zero, and at 3100 when `E2E_PORT` is unset in a stack A folder.
-- [ ] **AC-0002.** If `E2E_PORT` is set to any other value, the empty string included, `npm run test:e2e` exits non-zero before the app builds, with a message that names `E2E_PORT` and the values it accepts.
-- [ ] **AC-0003.** While stack B runs, having been started from a stack B folder, and no `supabase db diff` runs, the containers labelled `com.supabase.cli.project=meat-ops-b` are exactly `supabase_db_meat-ops-b`, `supabase_auth_meat-ops-b`, `supabase_rest_meat-ops-b`, and `supabase_kong_meat-ops-b`.
-- [ ] **AC-0004.** While stack B runs and no `supabase db diff` runs, the host ports its containers publish are exactly 55321 and 55322.
-- [ ] **AC-0005.** With the block on, stack B running, and no `supabase db diff` running, the network check for a stack B folder examines exactly ports 55321 and 55322 and passes.
-- [ ] **AC-0006.** A full `npm test` run in a folder on one stack changes that stack's auth snapshot and leaves the other stack's auth snapshot unchanged, both for a stack B folder run (with `E2E_PORT=3200`) and for a stack A folder run.
-- [ ] **AC-0007.** When `E2E_PORT=3200 npm test` in a stack B folder and `npm test` in a stack A folder run so that at one moment `lsof -nP -iTCP -sTCP:LISTEN` lists both `127.0.0.1:3100` and `127.0.0.1:3200`, both pass with the block on.
-- [ ] **AC-0008.** In a stack B folder that has run the `AGENTS.md` stack B steps and a full `E2E_PORT=3200 npm test`, `git status --porcelain` prints nothing, both as the run leaves it and after a file under `supabase/.temp/` is created or changed.
-- [ ] **AC-0009.** Running the `AGENTS.md` stack B steps in order, word for word, in a new git worktree of this repository at the commit under verification, with no stack B container or volume present, ends with `E2E_PORT=3200 npm test` passing, and no other command runs in that folder first.
-- [ ] **AC-0010.** Running the `AGENTS.md` stack A steps in order, word for word, in a new git worktree of this repository at the commit under verification, with stack A running, ends with `npm test` passing, and no other command runs in that folder first.
-- [ ] **AC-0011.** After the `AGENTS.md` step that stops stack B, `docker ps -a` and `docker volume ls` list nothing labelled `com.supabase.cli.project=meat-ops-b`.
-- [ ] **AC-0012.** With stack A running, every stack A container that runs before the `AGENTS.md` step that stops stack B still runs after it.
-- [ ] **AC-0013.** In a stack B folder, while `supabase db diff` runs, its shadow database listens on port 55320.
-- [ ] **AC-0014.** In a folder that names its own stack, with `E2E_PORT` unset, `npm run test:e2e` exits non-zero before the app builds, with a message that names `E2E_PORT`.
-- [ ] **AC-0015.** In a folder that names its own stack, if its `supabase/.env` does not set both `SUPABASE_API_PORT` and `SUPABASE_DB_PORT` as plain digits, or the port of the `API_URL` or `DB_URL` the run uses differs from those, whether the run takes them from `supabase status` or from its environment, `npm test` and `npm run test:e2e` each exit non-zero before any test runs, before global setup writes, and before the app builds, with a message that names `supabase/.env`.
-- [ ] **AC-0016.** With stack A running, in a folder that is not a stack B folder, the stack B reset step exits non-zero and leaves stack A's tables as they were.
-- [ ] **AC-0017.** When a folder's stack runs and holds a table that no migration in the folder creates, that folder's `AGENTS.md` steps up to and including its reset leave no such table, and `supabase_migrations.schema_migrations` then lists exactly the folder's `supabase/migrations/` files; this holds for a stack A folder and for a stack B folder.
-- [ ] **AC-0018.** After a folder's `AGENTS.md` steps, its `.env` holds exactly two lines, `SUPABASE_URL` and `SUPABASE_ANON_KEY`, whose values equal `API_URL` and `ANON_KEY` from `supabase status -o env` in that folder.
-- [ ] **AC-0019.** While stack A and stack B both run, in a stack B folder whose environment sets `SUPABASE_PROJECT_ID=meat-ops`, the stack B reset step resets stack B and leaves stack A's tables as they were.
+- [x] **AC-0001.** When no other program listens on the port it would use, the browser suite's app listens on `127.0.0.1`: at the port `E2E_PORT` names when it holds a whole number from 1 to 65535 written in digits with no leading zero, and at 3100 when `E2E_PORT` is unset in a stack A folder.
+- [x] **AC-0002.** If `E2E_PORT` is set to any other value, the empty string included, `npm run test:e2e` exits non-zero before the app builds, with a message that names `E2E_PORT` and the values it accepts.
+- [x] **AC-0003.** While stack B runs, having been started from a stack B folder, and no `supabase db diff` runs, the containers labelled `com.supabase.cli.project=meat-ops-b` are exactly `supabase_db_meat-ops-b`, `supabase_auth_meat-ops-b`, `supabase_rest_meat-ops-b`, and `supabase_kong_meat-ops-b`.
+- [x] **AC-0004.** While stack B runs and no `supabase db diff` runs, the host ports its containers publish are exactly 55321 and 55322.
+- [x] **AC-0005.** With the block on, stack B running, and no `supabase db diff` running, the network check for a stack B folder examines exactly ports 55321 and 55322 and passes.
+- [x] **AC-0006.** A full `npm test` run in a folder on one stack changes that stack's auth snapshot and leaves the other stack's auth snapshot unchanged, both for a stack B folder run (with `E2E_PORT=3200`) and for a stack A folder run.
+- [x] **AC-0007.** When `E2E_PORT=3200 npm test` in a stack B folder and `npm test` in a stack A folder run so that at one moment `lsof -nP -iTCP -sTCP:LISTEN` lists both `127.0.0.1:3100` and `127.0.0.1:3200`, both pass with the block on.
+- [x] **AC-0008.** In a stack B folder that has run the `AGENTS.md` stack B steps and a full `E2E_PORT=3200 npm test`, `git status --porcelain` prints nothing, both as the run leaves it and after a file under `supabase/.temp/` is created or changed.
+- [x] **AC-0009.** Running the `AGENTS.md` stack B steps in order, word for word, in a new git worktree of this repository at the commit under verification, with no stack B container or volume present, ends with `E2E_PORT=3200 npm test` passing, and no other command runs in that folder first.
+- [x] **AC-0010.** Running the `AGENTS.md` stack A steps in order, word for word, in a new git worktree of this repository at the commit under verification, with stack A running, ends with `npm test` passing, and no other command runs in that folder first.
+- [x] **AC-0011.** After the `AGENTS.md` step that stops stack B, `docker ps -a` and `docker volume ls` list nothing labelled `com.supabase.cli.project=meat-ops-b`.
+- [x] **AC-0012.** With stack A running, every stack A container that runs before the `AGENTS.md` step that stops stack B still runs after it.
+- [x] **AC-0013.** In a stack B folder, while `supabase db diff` runs, its shadow database listens on port 55320.
+- [x] **AC-0014.** In a folder that names its own stack, with `E2E_PORT` unset, `npm run test:e2e` exits non-zero before the app builds, with a message that names `E2E_PORT`.
+- [x] **AC-0015.** In a folder that names its own stack, if its `supabase/.env` does not set both `SUPABASE_API_PORT` and `SUPABASE_DB_PORT` as plain digits, or the port of the `API_URL` or `DB_URL` the run uses differs from those, whether the run takes them from `supabase status` or from its environment, `npm test` and `npm run test:e2e` each exit non-zero before any test runs, before global setup writes, and before the app builds, with a message that names `supabase/.env`.
+- [x] **AC-0016.** With stack A running, in a folder that is not a stack B folder, the stack B reset step exits non-zero and leaves stack A's tables as they were.
+- [x] **AC-0017.** When a folder's stack runs and holds a table that no migration in the folder creates, that folder's `AGENTS.md` steps up to and including its reset leave no such table, and `supabase_migrations.schema_migrations` then lists exactly the folder's `supabase/migrations/` files; this holds for a stack A folder and for a stack B folder.
+- [x] **AC-0018.** After a folder's `AGENTS.md` steps, its `.env` holds exactly two lines, `SUPABASE_URL` and `SUPABASE_ANON_KEY`, whose values equal `API_URL` and `ANON_KEY` from `supabase status -o env` in that folder.
+- [x] **AC-0019.** While stack A and stack B both run, in a stack B folder whose environment sets `SUPABASE_PROJECT_ID=meat-ops`, the stack B reset step resets stack B and leaves stack A's tables as they were.
 
 ## Follow-ons
 
