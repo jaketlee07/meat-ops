@@ -1,4 +1,6 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // Resolves the local Supabase connection details from `supabase status -o env`.
 // Nothing is hardcoded: URLs and keys come straight from the running stack.
@@ -113,4 +115,59 @@ export function e2ePort(value: string | undefined, ownStack: boolean): number {
     );
   }
   return Number(value);
+}
+
+// A folder's own Supabase stack settings: <cwd>/supabase/.env, the file the
+// Supabase CLI reads in the same folder. Null when the folder has none.
+export function readOwnStackFile(): string | null {
+  try {
+    return readFileSync(join(process.cwd(), "supabase", ".env"), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+// KEY=value lines as the CLI's env loader reads them: an optional `export`, and
+// the last line for a name wins. Any other line is skipped.
+function settingsOf(text: string): Map<string, string> {
+  const settings = new Map<string, string>();
+  for (const line of text.split(/\r?\n/)) {
+    const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    if (match) settings.set(match[1]!, match[2]!);
+  }
+  return settings;
+}
+
+// A folder names its own stack when its supabase/.env sets SUPABASE_PROJECT_ID.
+// A file with other names only, such as Studio's OPENAI_API_KEY, does not.
+export function namesOwnStack(text: string | null): boolean {
+  return text !== null && settingsOf(text).has("SUPABASE_PROJECT_ID");
+}
+
+// True when resolveStackEnv() will take the stack from the environment, not from
+// `supabase status`. Read it before calling resolveStackEnv(), which caches there.
+export function stackEnvIsSet(): boolean {
+  return ["API_URL", "ANON_KEY", "SERVICE_ROLE_KEY", "DB_URL"].every((name) => Boolean(process.env[name]));
+}
+
+// Refuses a run whose stack is not the one the folder's supabase/.env names, so a
+// folder meant for its own stack never writes to another folder's.
+export function ownStackRefusal(
+  text: string | null,
+  env: { apiUrl: string; dbUrl: string },
+  fromEnvironment = false,
+): string | null {
+  if (text === null || !namesOwnStack(text)) return null;
+  const settings = settingsOf(text);
+  const apiPort = settings.get("SUPABASE_API_PORT");
+  const dbPort = settings.get("SUPABASE_DB_PORT");
+  if (!apiPort || !dbPort || !/^[1-9][0-9]*$/.test(apiPort) || !/^[1-9][0-9]*$/.test(dbPort)) {
+    return "This folder's supabase/.env names its own Supabase stack but does not set SUPABASE_API_PORT and SUPABASE_DB_PORT as plain numbers, so the run cannot confirm which stack it reaches. Refusing to run.";
+  }
+  const runApiPort = new URL(env.apiUrl).port;
+  const runDbPort = new URL(env.dbUrl).port;
+  if (runApiPort === apiPort && runDbPort === dbPort) return null;
+  const source = fromEnvironment ? "the API_URL and DB_URL in the environment" : "supabase status";
+  return `This folder's supabase/.env names a Supabase stack on API port ${apiPort} and Postgres port ${dbPort}, but this run would use API port ${runApiPort || "none"} and Postgres port ${runDbPort || "none"}, from ${source}, so it could reach another folder's stack. Refusing to run.`;
 }
