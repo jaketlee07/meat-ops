@@ -32,5 +32,5 @@ A web page open in the owner's browser cannot read or change the local Supabase 
 
 - Mode: repo-origin
 - Locator: docs/specs/local-ports/spec.md
-- Revision: 36fde54
+- Revision: e7c181d
 - Authority: repo-origin
