@@ -31,7 +31,7 @@ const MAX_NOTES_LENGTH = 500;
 const DATE_TEXT = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 // A real calendar date written YYYY-MM-DD: 2026-02-30 is refused.
-function isCalendarDate(text: string): boolean {
+export function isCalendarDate(text: string): boolean {
   const match = DATE_TEXT.exec(text);
   if (!match) return false;
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];

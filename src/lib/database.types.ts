@@ -139,6 +139,13 @@ export type Database = {
             referencedRelation: "v_product_pricing"
             referencedColumns: ["product_id"]
           },
+          {
+            foreignKeyName: "finished_goods_finished_product_id_fkey"
+            columns: ["finished_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
+          },
         ]
       }
       inventory_balances: {
@@ -181,6 +188,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_product_pricing"
             referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "inventory_balances_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
           },
         ]
       }
@@ -294,6 +308,13 @@ export type Database = {
             referencedColumns: ["product_id"]
           },
           {
+            foreignKeyName: "lots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
+          },
+          {
             foreignKeyName: "lots_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
@@ -346,6 +367,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_product_pricing"
             referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_fees_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
           },
         ]
       }
@@ -450,6 +478,13 @@ export type Database = {
             referencedRelation: "v_product_pricing"
             referencedColumns: ["product_id"]
           },
+          {
+            foreignKeyName: "production_batches_finished_product_id_fkey"
+            columns: ["finished_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
+          },
         ]
       }
       products: {
@@ -523,6 +558,13 @@ export type Database = {
             referencedRelation: "v_product_pricing"
             referencedColumns: ["product_id"]
           },
+          {
+            foreignKeyName: "products_raw_product_id_fkey"
+            columns: ["raw_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
+          },
         ]
       }
       sale_items: {
@@ -564,6 +606,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sales"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["sale_id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_traceability"
+            referencedColumns: ["sale_id"]
           },
         ]
       }
@@ -675,26 +731,66 @@ export type Database = {
         }
         Relationships: []
       }
+      v_sale_summary: {
+        Row: {
+          created_at: string | null
+          customer: string | null
+          customer_id: string | null
+          finished_code: string | null
+          finished_product: string | null
+          finished_product_id: string | null
+          lbs_sold: number | null
+          price_per_lb: number | null
+          sale_date: string | null
+          sale_id: string | null
+          sale_number: string | null
+          void_reason: string | null
+          voided_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_sale_traceability: {
         Row: {
           batch_number: string | null
           customer: string | null
+          customer_id: string | null
           finished_code: string | null
           finished_product: string | null
           lbs_sold: number | null
           price_per_lb: number | null
+          produced_seq: number | null
           production_date: string | null
+          raw_code: string | null
           raw_lbs_from_lot: number | null
           raw_lot: string | null
           raw_lot_cost_per_lb: number | null
           raw_product: string | null
+          receipt_seq: number | null
           received_date: string | null
+          sale_created_at: string | null
           sale_date: string | null
+          sale_id: string | null
           sale_item_id: string | null
           sale_number: string | null
           vendor: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
