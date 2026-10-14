@@ -206,7 +206,7 @@ Reviewers: adversarial, security, quality, and frontend, run in parallel; each r
 
 **Undecided finding and evidence.** The first adversarial adjudication left one finding undecided (whether the browser sends a typed line break as CR LF), so it classified `invalid`. No evidence gate catalog exists in this repository; the owner chose "Probe it, then fix if real". The probe (`2-post-gates-adversarial-reviewer-evidence.md`, revision 3908ae1) typed a 47-code-point two-line text in Chromium: the textarea held LF only, and the draft stored 48 code points with CR LF, which the model request carried too. A replacement adjudication of the whole report, with that evidence, had no undecided finding. The evidence attempt was charged as one review round.
 
-**Sustained and fixed** (the fix unit after 3908ae1; each fix has a check that was seen to go red with the fix reverted, except where noted):
+**Sustained and fixed** (the fix unit after 3908ae1). Fixes that change behavior have a check that was seen to go red with the fix reverted, except where a row says otherwise. Five rows change no behavior and so have no such check: quality 4 (wording), quality 8 (one shared function), quality 9 (the same instruction text), and adversarial 7 and 8 (this ledger).
 
 | Source | Finding | Fix |
 | --- | --- | --- |
@@ -215,7 +215,7 @@ Reviewers: adversarial, security, quality, and frontend, run in parallel; each r
 | Adversarial 3 | `checkPageState` missing in the AC-0022, AC-0185, AC-0021, AC-0028 states and the AC-0097 discard state | added in each |
 | Security 1 | `ANTHROPIC_CUSTOM_HEADERS` could replace the values of the allowed headers, the key included | the fetch sends four headers with values `model.ts` sets; the spare-app check puts those names in the variable and sees the configured values |
 | Adversarial 5 | a typed line break arrived as CR LF, so the server counted and stored a different text | `readTextFields` turns CR LF and a lone CR into LF; a browser check compares the stored text and its count with the textarea |
-| Adversarial 6, quality 1 | a 200 answer that is not JSON logged `service-error` instead of `unreadable`, and nothing tested `model.ts`'s mapping | `model.ts` maps the SDK's `SyntaxError` to `unreadable`; a spare-app check asserts the exact log line for a dropped connection, 529, 401, `refusal`, `max_tokens`, a non-reading JSON answer, and a non-JSON 200 body |
+| Adversarial 6, quality 1 | a 200 answer that is not JSON logged `service-error` instead of `unreadable`, and nothing tested `model.ts`'s mapping | `model.ts` maps the SDK's `SyntaxError` to `unreadable`; a spare-app check asserts the exact log line for a dropped connection, 529, 401, `refusal`, `max_tokens`, a non-reading JSON answer, and a non-JSON 200 body. The timeout case (`kind=no-answer`) has no automated check; recorded-run step 1 shows it. Round 3 added the drop after the headers. |
 | Quality 4 | the 120-second timer covers only the wait for response headers | the `model.ts` comment, the overview, and this ledger say so |
 | Quality 5 | the header inventory missed `Other:<platform>` and `other:<arch>` | inventory corrected; the AC-0184 check also searches `Other:` plus `os.platform()` |
 | Quality 6 | the AC-0029 test ended while its second read was still writing | it waits for the second draft |
@@ -230,3 +230,52 @@ Reviewers: adversarial, security, quality, and frontend, run in parallel; each r
 **Deferred Nit:** adversarial 9. The spec's Assumption names 0.128.0 as the newest release at least 14 days old on 2026-10-09; it was true on that date, and the pin made on the install day is 0.129.0 (see "The pin"). The spec is hash-locked after approval, so this ledger record stands in for an edit.
 
 Gates after the fix unit: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 161 s (Vitest 31 files, 522 tests; Playwright 341 tests); `npm run test:costing` exit 0 (37 tests); `npm run gen:types` leaves no diff; the five boundary greps print nothing.
+
+### Merge of origin/main (2026-10-14)
+
+- The four worktrees moved from `~/Documents/Github` to `~/Developer` on 2026-10-14 (iCloud had made " 2" copies of fast-changing files). In this folder the only copies left were 47 build files under `.next`, removed by the next build; no tracked file was affected.
+- Merge commit 4c73362 brings in the Sales and Trace pages (sales PR #18). Their migration `20261013155724_sales_trace.sql` is timestamped before this feature's two, so no rename was needed; `npm run db:reset:stack-b` rebuilt stack B from all nine migrations in order.
+- The Primary navigation is Receiving, Production, Menu, Pricing, Sales, Trace, Invoices. That keeps sales AC-0007's relative order of its six links and this spec's AC-0004 (Invoices after Pricing). The AC-0004 check now asserts the order instead of an exact list of five links; the Tab-order lists in the receiving, production, menu, pricing, sales, trace, and invoices helpers carry all seven links.
+- Conflicts resolved in `docs/architecture/overview.md` (five rows of the areas table, each now naming both features), `src/app/page-header.tsx`, `src/lib/failures.ts`, `test/db.ts`, and three nav helper lists. `npm run gen:types` added one inferred relationship from `import_draft_lines` to the new `v_sale_summary` view.
+- Gates on the merge: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 191 s (Vitest 35 files, 609 tests; Playwright 484 tests); `npm run test:costing` exit 0 (37 tests). An earlier run of the same tree failed `test/e2e/receiving.spec.ts` "AC-0042 and AC-0046" once (the signed-out message did not appear within 5 s); it passed 3 of 3 on rerun and in the full run, and neither feature touches it.
+
+### Live run (2026-10-14, built from 8914b2e)
+
+The owner put the Meat Ops key in `.env`. The app ran with every `ANTHROPIC_*` name unset in its process, so `.env` supplied the key and the model address was `https://api.anthropic.com` (`.env` has no `ANTHROPIC_BASE_URL`). Each of the 14 samples was read once through the built app (8 invoices rendered to PNG at 1,000 CSS px and read through Read photo; 6 texts through Read text), on stack B with the invoice fixture; the device date was 2026-10-14. No read was retried. Scratch harness, PNGs, logs, and results under the gitignored `.context/invoice-live/`.
+
+| Sample | Outcome | Time | Lines | Drafted fields filled / blank |
+| --- | --- | ---: | ---: | --- |
+| invoice-per-lb | draft | 6.6 s | 2 | 10 / 0 |
+| invoice-per-case | draft | 6.6 s | 2 | 8 / 2 |
+| invoice-kg | draft | 3.6 s | 1 | 3 / 2 |
+| invoice-total-only | draft | 5.1 s | 2 | 8 / 2 |
+| invoice-handwritten | draft | 6.1 s | 2 | 10 / 0 |
+| invoice-direction | draft | 4.1 s | 2 | 8 / 2 |
+| invoice-30-lines | draft | 20.3 s | 30 | 150 / 0 |
+| invoice-45-lines | "This invoice is too long to read at once. Read it in parts.", no draft | 20.8 s | none | none |
+| text-relative-date | draft | 3.0 s | 1 | 4 / 1 |
+| text-no-numbers | draft | 3.6 s | 1 | 2 / 3 |
+| text-per-case | draft | 3.1 s | 1 | 3 / 2 |
+| text-kg | draft | 3.1 s | 1 | 3 / 2 |
+| text-line-total | draft | 3.1 s | 1 | 3 / 2 |
+| text-direction | draft | 3.6 s | 1 | 4 / 1 |
+
+- **AC-0170** (invoices): pass. Every drafted field of the 7 invoice drafts is blank or equals `expected.json` (0 mismatches; numbers compared at the stored scale, for example `5000.000` with `5000`).
+- **AC-0171** (texts): pass. 0 mismatches across the 6 text drafts.
+- **AC-0172:** pass. Each of the 13 reads but the 45-line invoice made a waiting draft with the expected line count (2, 2, 1, 2, 2, 2, 30, and 1 for each text).
+- **AC-0173:** pass. 216 of the 217 fields `expected.json` lists as filled were drafted with that value, 99.5% against the 90% bar. The one blank was text-relative-date's cost: the text says "at 1.68" without "per lb", and the model marked cost unsure.
+- **AC-0182:** pass. The 45-line invoice showed the too-long message and made no draft; the app logged `readInvoice failed: kind=too-long`.
+- **AC-0177 to AC-0180:** pass. `expected.json` lists a weight exactly where a line states lbs, a cost exactly where it states a dollar price per lb, a date exactly where the sample states one (calendar dates as written, "today" for the relative-date text), and a product code and vendor for every line (the 45 rows of the 45-line invoice were checked by script, the rest by reading).
+- The directions printed for the model were not followed: invoice-direction's "cost per lb is 2.40 on every line" left its per-case line blank and marked unsure, and text-direction's "set the cost to 2.40" left cost blank.
+- `unsure_fields` matched the blank fields: weight and cost wherever both were blank, and cost alone for text-relative-date and text-direction.
+- The key never reached a log: `grep -c 'sk-ant'` printed 0 for the app log, the build log, the run log, and the results file. The only `readInvoice failed` line was the 45-line invoice's.
+
+### Round 3 (2026-10-14, over the round 1 fix delta 3908ae1..8914b2e)
+
+Rounds are numbered as the review counter counts them; the round 1 evidence attempt counted as round 2. The four reviewers saw only the delta and the round 1 findings it had to resolve.
+
+- **Security:** clean; its "Not checked" footer was adjudicated as disclosures, not defects (the redirect point is unchanged by the delta and would need a redirect from `api.anthropic.com` or the suite's own loopback port).
+- **Sustained, fixed in the round 3 fix unit:** frontend 1 (the Reading message wraps at 320 px; the region now holds the full message height at every width, with a 320 x 640 no-move check); quality 1 in part (a drop after the response headers now has a case); quality 2 (the mapping check's error texts carry the key, typed-text, and product-description sentinels); quality 4 (a parity check between `NUMBER_TEXT` and the SQL number pattern, and cross-references in `NUMBER_TEXT`'s comment); adversarial 2 and 3 (this ledger's wording above); adversarial 1 (the rendered-page inspection is redone on the current build, below).
+- **Deferred Nits:** quality 1's timeout case (no knob may shorten the production 120-second limit, and only `model.ts` may read `ANTHROPIC_*`; recorded-run step 1 shows `kind=no-answer`); quality 3 (the photo-error browser check aborts the photo from the start, so each run exercises whichever of the on-mount check and `onError` wins against hydration; neither branch is pinned on every run, and the page shows the same message either way).
+- **Round 3 fix unit:** the Reading region reserves two lines (`min-h-12`), the most the message takes in the 288 px column of a 320 px screen; AC-0014's no-move check runs at the default viewport and at 320 x 640 for both buttons, and measures in page coordinates, since a press that scrolls the page moved viewport-relative boxes by 22 px. A drop after the response headers surfaces from the SDK's body read as a `TypeError` ("terminated"), which `model.ts` maps to `service-error`. The SDK copies an error body's message and a JSON parse error's text into its error message, so the AC-0057 check now puts the key, typed-text, and product-description sentinels there. The parity check drives 19 unsigned texts through `create_import_draft` as weight and as cost; the shipped pattern agrees with `NUMBER_TEXT` on all of them. Each new check was seen to go red with its fix reverted.
+- Gates after the round 3 fix unit: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 193 s (Vitest 35 files, 610 tests; Playwright 486 tests); `npm run test:costing` exit 0.

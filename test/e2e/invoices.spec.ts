@@ -297,16 +297,34 @@ test.describe("the read forms", () => {
     expect((await p.photo.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   });
 
-  for (const source of ["text", "photo"] as const) {
-    test(`AC-0014: while a ${source} read is in flight the message sits by that Read button, nothing moves, and both buttons are disabled`, async ({
+  // Boxes in page coordinates, so a scroll the press causes does not count as a move.
+  const documentBoxes = (locators: Locator[]) =>
+    Promise.all(
+      locators.map((locator) =>
+        locator.evaluate((element) => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return { x: x + scrollX, y: y + scrollY, width, height };
+        }),
+      ),
+    );
+
+  // 320 px is the narrowest screen: the message wraps to two lines there.
+  for (const [source, viewport] of [
+    ["text", null],
+    ["photo", null],
+    ["text", { width: 320, height: 640 }],
+    ["photo", { width: 320, height: 640 }],
+  ] as const) {
+    test(`AC-0014: while a ${source} read is in flight${viewport ? " at 320 px" : ""} the message sits by that Read button, nothing moves, and both buttons are disabled`, async ({
       page,
     }) => {
+      if (viewport) await page.setViewportSize(viewport);
       await model.answer({ hold: true, then: TURKEY });
       const p = await openInvoices(page);
       const [here, other] = source === "text" ? [p.textStatus, p.photoStatus] : [p.photoStatus, p.textStatus];
       await expect(here).toHaveText("");
       await expect(other).toHaveText("");
-      const before = [await p.readPhoto.boundingBox(), await p.readText.boundingBox(), await p.text.boundingBox(), await p.draftsSection.boundingBox()];
+      const before = await documentBoxes([p.readPhoto, p.readText, p.text, p.draftsSection]);
       if (source === "text") {
         await readText(p);
       } else {
@@ -319,7 +337,7 @@ test.describe("the read forms", () => {
       await expect(p.readPhoto).toBeDisabled();
       await expect(p.readText).toBeDisabled();
       // The line was reserved, so neither form moved when the text appeared.
-      expect([await p.readPhoto.boundingBox(), await p.readText.boundingBox(), await p.text.boundingBox(), await p.draftsSection.boundingBox()]).toEqual(before);
+      expect(await documentBoxes([p.readPhoto, p.readText, p.text, p.draftsSection])).toEqual(before);
       expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
 
       await model.release();
@@ -882,14 +900,18 @@ test.describe("an app started without a usable key or address", () => {
     });
     const context = await browser.newContext({ baseURL: spare.url, storageState: OPERATOR_STATE });
     const typed = "kind mapping sentinel 5521";
+    // The SDK copies an error body's message, and a JSON parse error's text, into its error message.
+    const secrets = [ANTHROPIC_TEST_KEY, typed, "Turkey Drums TOM (raw)"];
+    const errorBody = { type: "error", error: { type: "api_error", message: secrets.join(" ") } };
     const cases: Array<{ answer: FakeAnswer; line: string }> = [
       { answer: { drop: true }, line: "readInvoice failed: kind=service-error" },
-      { answer: { status: 529 }, line: "readInvoice failed: kind=service-error status=529" },
-      { answer: { status: 401 }, line: "readInvoice failed: kind=key-refused status=401" },
+      { answer: { dropAfterHeaders: true }, line: "readInvoice failed: kind=service-error" },
+      { answer: { status: 529, body: errorBody }, line: "readInvoice failed: kind=service-error status=529" },
+      { answer: { status: 401, body: errorBody }, line: "readInvoice failed: kind=key-refused status=401" },
       { answer: { reading: [], stop_reason: "refusal" }, line: "readInvoice failed: kind=declined" },
       { answer: { reading: lines(2), stop_reason: "max_tokens" }, line: "readInvoice failed: kind=too-long" },
       { answer: { text: JSON.stringify({ lines: [], extra: 1 }) }, line: "readInvoice failed: kind=unreadable" },
-      { answer: { rawBody: "this is not JSON", status: 200, contentType: "application/json" }, line: "readInvoice failed: kind=unreadable" },
+      { answer: { rawBody: `${secrets.join(" ")} this is not JSON`, status: 200, contentType: "application/json" }, line: "readInvoice failed: kind=unreadable" },
     ];
     try {
       const page = await context.newPage();

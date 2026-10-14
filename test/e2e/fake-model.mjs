@@ -15,6 +15,7 @@
 //   { status, body? }                       an error status with an Anthropic-style error body
 //   { rawBody, status?, contentType? }      this body as written, which may not be a message
 //   { drop: true }                          the connection is closed with no answer
+//   { dropAfterHeaders: true }              a 200 JSON status and headers, then the connection is cut mid-body
 //   { hold: true, then: answer }            waits for /__fake/release, then gives `then`
 // An empty queue answers 500, so a second request from one read shows up as a count.
 //
@@ -75,6 +76,12 @@ function message({ text, stop_reason = "end_turn" }) {
 function answer(res, given) {
   if (given.drop) {
     res.socket.destroy();
+    return;
+  }
+  if (given.dropAfterHeaders) {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.write('{"id":"msg_fake_cut","type":"mess');
+    setTimeout(() => res.socket.destroy(), 50);
     return;
   }
   if (given.rawBody !== undefined) {

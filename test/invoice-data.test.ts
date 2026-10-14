@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { NUMBER_TEXT } from "../src/lib/number-text.js";
 import { listRecentReceipts } from "../src/lib/receiving.js";
 import { createTypedClient, type TypedClient } from "../src/lib/supabase.js";
 import {
@@ -160,6 +161,22 @@ async function refused(call: OpCall, pattern: RegExp): Promise<void> {
 
 const LEDGER_TABLES = ["lots", "inventory_balances", "lot_adjustments", "production_batches", "production_batch_lots", "finished_goods", "sales", "sale_items"];
 const ledgerOnly = (all: Record<string, string>) => Object.fromEntries(LEDGER_TABLES.map((t) => [t, all[t]]));
+
+// The form rule and the engine's c_number pattern are two copies of one rule; they
+// must agree on every unsigned text (the engine also takes a leading minus).
+describe("number text parity", () => {
+  const TEXTS = ["0", "5", "5.", ".5", "5.5", "05", "5000.000", "1.2.3", ".", "", "5,000", "$1", "1e3", " 5", "5 ", "5\n", "+5", "0x1", "\u0665"];
+
+  it("create_import_draft calls a weight or a cost a non-number exactly when NUMBER_TEXT does", async () => {
+    for (const text of TEXTS) {
+      for (const [field, name] of [["weight_lbs", "weight"], ["unit_cost", "cost"]] as const) {
+        const outcome = await callAsOperator(createCall([draftLine({ [field]: text })]));
+        const calledNonNumber = new RegExp(`^create_import_draft: line 1 ${name} is not a number`).test(outcome.error ?? "");
+        expect(calledNonNumber, `${field} ${JSON.stringify(text)}`).toBe(!NUMBER_TEXT.test(text));
+      }
+    }
+  });
+});
 
 describe("create_import_draft", () => {
   it("AC-0030: stores one waiting draft with its capture and its lines in the given order", async () => {

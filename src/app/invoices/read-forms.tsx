@@ -121,10 +121,11 @@ export function ReadForms() {
     state.status === "invalid" && state.source === source ? state.message : null;
   const failure = (source: "photo" | "text") =>
     state.status === "refused" && state.source === source ? state.message : null;
-  // The line is reserved, so neither form moves when the text appears. The
-  // regions are in the page before they have text, so the change is announced.
+  // Two lines are reserved, the most the message takes in the 288 px column of a
+  // 320 px screen, so neither form moves when the text appears. The regions are in
+  // the page before they have text, so the change is announced.
   const reading = (source: "photo" | "text") => (
-    <div role="status" className="min-h-6 text-base">
+    <div role="status" className="min-h-12 text-base">
       {busy && pressed === source ? READING : null}
     </div>
   );

@@ -86,6 +86,7 @@ export type FakeAnswer =
   | { status: number; body?: unknown }
   | { rawBody: string; status?: number; contentType?: string }
   | { drop: true }
+  | { dropAfterHeaders: true }
   | { hold: true; then: FakeAnswer };
 
 export interface RecordedRequest {
