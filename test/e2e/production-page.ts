@@ -21,6 +21,8 @@ export const FORM_CONTROLS = [
   "a Production",
   "a Menu",
   "a Pricing",
+  "a Sales",
+  "a Trace",
   "a Invoices",
   "button Sign out",
   "input #product-code",

@@ -92,6 +92,39 @@ export function batchSaveFailureMessage(error: unknown, stage: FailureStage): st
   return `${NOT_SAVED_BATCH} ${refusalReason(error, code)}`;
 }
 
+// Sales (AC-0050 to AC-0057, AC-0084 to AC-0088).
+export const NOT_SAVED_SALE = "The sale wasn't saved.";
+export const SALE_SAVE_UNKNOWN =
+  "The sale may not have been saved. Reload this page and check Recent sales before saving again.";
+export const NOT_VOIDED_SALE = "The sale wasn't voided.";
+export const SALE_VOID_UNKNOWN = "The sale may not have been voided. Reload this page to see whether it was.";
+const SALE_SHORTFALL =
+  /^shortfall, only (\d+(?:\.\d+)?) lbs finished available on or before (\d{4}-\d{2}-\d{2}), need (\d+(?:\.\d+)?)$/;
+
+export function saleSaveFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_SAVED_SALE} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return SALE_SAVE_UNKNOWN;
+  if (code === "42501") return `${NOT_SAVED_SALE} ${NOT_ALLOWED}`;
+  const shortfall = SALE_SHORTFALL.exec(engineText(error));
+  if (shortfall) {
+    const [, available, onOrBefore, needed] = shortfall;
+    return `${NOT_SAVED_SALE} Only ${formatWeight(Number(available))} of finished stock made on or before ${formatDate(onOrBefore ?? "")} is on hand, and this sale needs ${formatWeight(Number(needed))}.`;
+  }
+  return `${NOT_SAVED_SALE} ${refusalReason(error, code)}`;
+}
+
+// Unlike a receipt void, a sale void gives stock back, so the message has no
+// stock-reload tail; the engine's reason is the whole refusal.
+export function saleVoidFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_VOIDED_SALE} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return SALE_VOID_UNKNOWN;
+  if (code === "42501") return `${NOT_VOIDED_SALE} ${NOT_ALLOWED}`;
+  const reason = refusalReason(error, code);
+  return `${NOT_VOIDED_SALE} ${/[.!?]$/.test(reason) ? reason : `${reason}.`}`;
+}
+
 // Pricing change actions (menu-pricing AC-0110, AC-0113 to AC-0118).
 export const NOT_SAVED_CHANGE = "The change wasn't saved.";
 // AC-0114: the write call got no answer from the engine, so the change may have happened.
@@ -178,11 +211,13 @@ export function draftDiscardFailureMessage(error: unknown, stage: FailureStage):
   return `${NOT_DISCARDED} ${text}`;
 }
 
-// Every server action whose failures are logged: the receiving actions, saveBatch, the three pricing change actions, readInvoice, saveDraft, and discardDraft.
+// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, readInvoice, saveDraft, and discardDraft.
 export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
   | "saveBatch"
+  | "saveSale"
+  | "voidSale"
   | "saveTargetMargin"
   | "removeTargetMargin"
   | "saveListPrice"

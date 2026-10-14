@@ -45,6 +45,8 @@ export const FORM_CONTROLS = [
   "a Production",
   "a Menu",
   "a Pricing",
+  "a Sales",
+  "a Trace",
   "a Invoices",
   "button Sign out",
   "input #invoice-photo",
@@ -58,7 +60,7 @@ export const BACK_LINK = "a Back to invoices";
 
 // What Tab reaches on a draft's address with nothing to edit: the navigation,
 // Sign out, and the way back.
-export const NAV_CONTROLS = [...FORM_CONTROLS.slice(0, 6), BACK_LINK];
+export const NAV_CONTROLS = [...FORM_CONTROLS.slice(0, FORM_CONTROLS.indexOf("button Sign out") + 1), BACK_LINK];
 
 // The app's port and the three beside it: the fake model, and the spare app.
 export function ports(baseURL: string | undefined): { app: number; model: number; spare: number; forwarder: number } {

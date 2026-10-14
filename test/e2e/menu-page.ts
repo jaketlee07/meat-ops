@@ -9,7 +9,16 @@ export const NO_PRODUCTS = "No active finished products yet. Add one in Supabase
 export const NOTHING_SELLABLE = "No product can be sold right now.";
 
 // What Tab reaches on the menu page, in order.
-export const MENU_CONTROLS = ["a Receiving", "a Production", "a Menu", "a Pricing", "a Invoices", "button Sign out"];
+export const MENU_CONTROLS = [
+  "a Receiving",
+  "a Production",
+  "a Menu",
+  "a Pricing",
+  "a Sales",
+  "a Trace",
+  "a Invoices",
+  "button Sign out",
+];
 
 export function sellableSwitch(page: Page): Locator {
   return page.getByLabel("Sellable only");

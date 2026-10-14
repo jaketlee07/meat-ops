@@ -148,8 +148,11 @@ test.describe("access and navigation", () => {
     test(`AC-0004: ${path} links Invoices after Pricing in the Primary navigation`, async ({ page }) => {
       await page.goto(path);
       const nav = page.getByRole("navigation", { name: "Primary" });
-      await expect(nav.getByRole("link")).toHaveText(["Receiving", "Production", "Menu", "Pricing", "Invoices"]);
       await expect(nav.getByRole("link", { name: "Invoices" })).toHaveAttribute("href", "/invoices");
+      // Other features add their own links; the criterion fixes only that Invoices comes after Pricing.
+      const names = (await nav.getByRole("link").allTextContents()).map((name) => name.trim());
+      expect(names.indexOf("Invoices")).toBeGreaterThan(names.indexOf("Pricing"));
+      expect(names.indexOf("Pricing")).toBeGreaterThanOrEqual(0);
     });
   }
 
