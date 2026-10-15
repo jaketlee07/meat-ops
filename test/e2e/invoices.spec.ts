@@ -900,7 +900,9 @@ test.describe("an app started without a usable key or address", () => {
     });
     const context = await browser.newContext({ baseURL: spare.url, storageState: OPERATOR_STATE });
     const typed = "kind mapping sentinel 5521";
-    // The SDK copies an error body's message, and a JSON parse error's text, into its error message.
+    // An error status's message carries the error body's message, so the 529 and 401 bodies hold all
+    // three. A non-JSON body's parse error quotes only the body's first 10 characters (Node 22), so that
+    // body starts with the key and the scan below also looks for the key's first 10 characters.
     const secrets = [ANTHROPIC_TEST_KEY, typed, "Turkey Drums TOM (raw)"];
     const errorBody = { type: "error", error: { type: "api_error", message: secrets.join(" ") } };
     const cases: Array<{ answer: FakeAnswer; line: string }> = [
@@ -927,7 +929,7 @@ test.describe("an app started without a usable key or address", () => {
       }
       expect(logged()).toEqual(cases.map(({ line }) => line));
       const output = spare.output();
-      for (const secret of [ANTHROPIC_TEST_KEY, typed, "Turkey Drums TOM (raw)", "Chicken Thighs (raw)"]) {
+      for (const secret of [ANTHROPIC_TEST_KEY.slice(0, 10), typed, "Turkey Drums TOM (raw)", "Chicken Thighs (raw)"]) {
         expect(output, secret).not.toContain(secret);
       }
     } finally {

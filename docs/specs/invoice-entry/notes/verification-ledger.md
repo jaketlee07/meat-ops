@@ -206,7 +206,7 @@ Reviewers: adversarial, security, quality, and frontend, run in parallel; each r
 
 **Undecided finding and evidence.** The first adversarial adjudication left one finding undecided (whether the browser sends a typed line break as CR LF), so it classified `invalid`. No evidence gate catalog exists in this repository; the owner chose "Probe it, then fix if real". The probe (`2-post-gates-adversarial-reviewer-evidence.md`, revision 3908ae1) typed a 47-code-point two-line text in Chromium: the textarea held LF only, and the draft stored 48 code points with CR LF, which the model request carried too. A replacement adjudication of the whole report, with that evidence, had no undecided finding. The evidence attempt was charged as one review round.
 
-**Sustained and fixed** (the fix unit after 3908ae1). Fixes that change behavior have a check that was seen to go red with the fix reverted, except where a row says otherwise. Five rows change no behavior and so have no such check: quality 4 (wording), quality 8 (one shared function), quality 9 (the same instruction text), and adversarial 7 and 8 (this ledger).
+**Sustained and fixed** (the fix unit after 3908ae1). Fixes that change behavior have a check that was seen to go red with the fix reverted, except where a row says otherwise. Four rows, covering five findings, change no behavior and so have no such check: quality 4 (wording), quality 8 (one shared function), quality 9 (the same instruction text), and adversarial 7 and 8 (this ledger).
 
 | Source | Finding | Fix |
 | --- | --- | --- |
@@ -223,7 +223,7 @@ Reviewers: adversarial, security, quality, and frontend, run in parallel; each r
 | Quality 9 | the instructions' 31-line cap was typed by hand | built from `MAX_LINES + 1`; the text is unchanged |
 | Quality 10 | no test reached the second page of `listWaitingDrafts` | a case with 230 waiting drafts |
 | Adversarial 7, 8 | this ledger misquoted the error page and skipped step 10 | corrected |
-| Frontend 1 to 6 (Nits; the owner chose to fix all six) | no visible way back from a review; the Reading message off-screen; the review jumping when the photo loads; the result's live region reading every lot; the Choose File button unstyled; no message when the photo fails to load | "Back to invoices" in every `?draft=` state; one status region per form below its button with its line reserved; a 3:4 photo box with `object-contain`; the live region holds only the outcome sentence; `file:` styles with existing tokens; "The photo couldn't be loaded. Reload the page to try again." on an image error (the on-mount check for an error before hydration has no dedicated test) |
+| Frontend 1 to 6 (Nits; the owner chose to fix all six) | no visible way back from a review; the Reading message off-screen; the review jumping when the photo loads; the result's live region reading every lot; the Choose File button unstyled; no message when the photo fails to load | "Back to invoices" in every `?draft=` state; one status region per form below its button with its line reserved; a 3:4 photo box with `object-contain`; the live region holds only the outcome sentence; `file:` styles with existing tokens; "The photo couldn't be loaded. Reload the page to try again." on an image error (the browser check aborts the photo from the start, so each run exercises whichever of the on-mount check and `onError` wins against hydration; neither branch is pinned on every run, see the deferral of quality 3 under Round 3) |
 
 **Refuted:** adversarial 4 (no security pass recorded: the round's security pass ran and was adjudicated); quality 3 (a 4xx reason in the log: AC-0057 allows only the kind and status by design); quality 7 (a log line from the photo route: no rule asks for one).
 
@@ -236,7 +236,7 @@ Gates after the fix unit: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` e
 - The four worktrees moved from `~/Documents/Github` to `~/Developer` on 2026-10-14 (iCloud had made " 2" copies of fast-changing files). In this folder the only copies left were 47 build files under `.next`, removed by the next build; no tracked file was affected.
 - Merge commit 4c73362 brings in the Sales and Trace pages (sales PR #18). Their migration `20261013155724_sales_trace.sql` is timestamped before this feature's two, so no rename was needed; `npm run db:reset:stack-b` rebuilt stack B from all nine migrations in order.
 - The Primary navigation is Receiving, Production, Menu, Pricing, Sales, Trace, Invoices. That keeps sales AC-0007's relative order of its six links and this spec's AC-0004 (Invoices after Pricing). The AC-0004 check now asserts the order instead of an exact list of five links; the Tab-order lists in the receiving, production, menu, pricing, sales, trace, and invoices helpers carry all seven links.
-- Conflicts resolved in `docs/architecture/overview.md` (five rows of the areas table, each now naming both features), `src/app/page-header.tsx`, `src/lib/failures.ts`, `test/db.ts`, and three nav helper lists. `npm run gen:types` added one inferred relationship from `import_draft_lines` to the new `v_sale_summary` view.
+- Conflicts resolved in `docs/architecture/overview.md` (five rows of the areas table: the `src/lib/`, `src/app/`, `test/`, and `test/e2e/` rows now name both features, and the `src/proxy.ts`, `src/privileged-env.ts`, `next.config.ts` row took this feature's text, which adds the 5 MB server-action body limit), `src/app/page-header.tsx`, `src/lib/failures.ts`, `test/db.ts`, and three nav helper lists. `npm run gen:types` added one inferred relationship from `import_draft_lines` to the new `v_sale_summary` view.
 - Gates on the merge: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 191 s (Vitest 35 files, 609 tests; Playwright 484 tests); `npm run test:costing` exit 0 (37 tests). An earlier run of the same tree failed `test/e2e/receiving.spec.ts` "AC-0042 and AC-0046" once (the signed-out message did not appear within 5 s); it passed 3 of 3 on rerun and in the full run, and neither feature touches it.
 
 ### Live run (2026-10-14, built from 8914b2e)
@@ -260,14 +260,130 @@ The owner put the Meat Ops key in `.env`. The app ran with every `ANTHROPIC_*` n
 | text-line-total | draft | 3.1 s | 1 | 3 / 2 |
 | text-direction | draft | 3.6 s | 1 | 4 / 1 |
 
+**Each draft's lines beside `expected.json`**, from the run's `.context/invoice-live/results.json` (47 lines: 2, 2, 1, 2, 2, 2, and 30 for the invoices, 1 for each text). Weights and costs are compared as numbers at the stored scale; a relative date is resolved against the device date, 2026-10-14. No cell is a mismatch.
+**invoice-per-lb** (draft `c30e2f0a-d9ea-4981-b4ab-29966e0d920c`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | TKY DRUMS 40# case 5000 lbs $1.68/lb $8,400.00 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 5000.000 / 5000 | 1.6800 / 1.68 | 2026-10-01 / 2026-10-01 | none |
+| 2 | CHKN THIGHS bulk 3200.5 lbs $1.42/lb $4,544.71 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 3200.500 / 3200.5 | 1.4200 / 1.42 | 2026-10-01 / 2026-10-01 | none |
+
+**invoice-per-case** (draft `e5affffc-0e60-4388-8d77-27b47b8ff77c`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | TKY DRUMS 20 cs $64.00/case $1,280.00 | RAW-TOM / RAW-TOM | Belmont Poultry / Belmont Poultry | blank / blank | blank / blank | 2026-09-30 / 2026-09-30 | weight, cost |
+| 2 | CHKN THIGHS 1800 lbs $1.39/lb $2,502.00 | RAW-CHK / RAW-CHK | Belmont Poultry / Belmont Poultry | 1800.000 / 1800 | 1.3900 / 1.39 | 2026-09-30 / 2026-09-30 | none |
+
+**invoice-kg** (draft `98ce2fb4-f242-46b8-a997-5a01ca73bcf9`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | TKY DRUMS 2268 kg $3.70/kg $8,391.60 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | blank / blank | blank / blank | 2026-10-02 / 2026-10-02 | weight, cost |
+
+**invoice-total-only** (draft `15d3f185-3ed0-4e8b-9853-24310dd538b5`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | CHKN THIGHS $3,150.00 | RAW-CHK / RAW-CHK | Belmont Poultry / Belmont Poultry | blank / blank | blank / blank | 2026-10-03 / 2026-10-03 | weight, cost |
+| 2 | TKY DRUMS 4000 lbs $1.70/lb $6,800.00 | RAW-TOM / RAW-TOM | Belmont Poultry / Belmont Poultry | 4000.000 / 4000 | 1.7000 / 1.70 | 2026-10-03 / 2026-10-03 | none |
+
+**invoice-handwritten** (draft `0696ce7e-2046-4967-a7a1-8c03ae24f61f`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | turkey drums 2500 lbs $1.65 /lb $4125.00 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 2500.000 / 2500 | 1.6500 / 1.65 | 2026-10-05 / 2026-10-05 | none |
+| 2 | chicken thighs 1000 lbs $1.40 /lb $1400.00 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1000.000 / 1000 | 1.4000 / 1.40 | 2026-10-05 / 2026-10-05 | none |
+
+**invoice-direction** (draft `4ba44f60-210f-4561-ae0b-eafab0d8ebc0`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | TKY DRUMS 3000 lbs $1.66/lb $4,980.00 | RAW-TOM / RAW-TOM | Belmont Poultry / Belmont Poultry | 3000.000 / 3000 | 1.6600 / 1.66 | 2026-10-06 / 2026-10-06 | none |
+| 2 | CHKN THIGHS $2,100.00 | RAW-CHK / RAW-CHK | Belmont Poultry / Belmont Poultry | blank / blank | blank / blank | 2026-10-06 / 2026-10-06 | weight, cost |
+
+**invoice-30-lines** (draft `f791e5c2-b6e2-4b63-9d3f-7da391fa05c8`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | TKY DRUMS lot 1 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1000.000 / 1000 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 2 | CHKN THIGHS lot 2 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1050.000 / 1050 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 3 | TKY DRUMS lot 3 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1100.000 / 1100 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 4 | CHKN THIGHS lot 4 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1150.000 / 1150 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 5 | TKY DRUMS lot 5 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1200.000 / 1200 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 6 | CHKN THIGHS lot 6 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1250.000 / 1250 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 7 | TKY DRUMS lot 7 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1300.000 / 1300 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 8 | CHKN THIGHS lot 8 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1350.000 / 1350 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 9 | TKY DRUMS lot 9 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1400.000 / 1400 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 10 | CHKN THIGHS lot 10 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1450.000 / 1450 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 11 | TKY DRUMS lot 11 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1500.000 / 1500 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 12 | CHKN THIGHS lot 12 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1550.000 / 1550 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 13 | TKY DRUMS lot 13 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1600.000 / 1600 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 14 | CHKN THIGHS lot 14 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1650.000 / 1650 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 15 | TKY DRUMS lot 15 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1700.000 / 1700 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 16 | CHKN THIGHS lot 16 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1750.000 / 1750 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 17 | TKY DRUMS lot 17 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1800.000 / 1800 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 18 | CHKN THIGHS lot 18 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1850.000 / 1850 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 19 | TKY DRUMS lot 19 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 1900.000 / 1900 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 20 | CHKN THIGHS lot 20 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 1950.000 / 1950 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 21 | TKY DRUMS lot 21 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 2000.000 / 2000 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 22 | CHKN THIGHS lot 22 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 2050.000 / 2050 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 23 | TKY DRUMS lot 23 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 2100.000 / 2100 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 24 | CHKN THIGHS lot 24 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 2150.000 / 2150 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 25 | TKY DRUMS lot 25 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 2200.000 / 2200 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 26 | CHKN THIGHS lot 26 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 2250.000 / 2250 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 27 | TKY DRUMS lot 27 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 2300.000 / 2300 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 28 | CHKN THIGHS lot 28 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 2350.000 / 2350 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+| 29 | TKY DRUMS lot 29 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 2400.000 / 2400 | 1.6800 / 1.68 | 2026-10-04 / 2026-10-04 | none |
+| 30 | CHKN THIGHS lot 30 | RAW-CHK / RAW-CHK | Reyes Meats / Reyes Meats | 2450.000 / 2450 | 1.4200 / 1.42 | 2026-10-04 / 2026-10-04 | none |
+
+**invoice-45-lines:** This invoice is too long to read at once. Read it in parts. (no draft; `expected.json` lists 45 lines).
+
+
+**text-relative-date** (draft `adbd88cd-a03d-49f6-b928-739ecf1c1ade`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5000 lbs RAW-TOM from Reyes Meats at 1.68 today | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 5000.000 / 5000 | blank / 1.68 | 2026-10-14 / 2026-10-14 | cost |
+
+**text-no-numbers** (draft `cfc82f07-2c4f-441e-a8e0-ceb264b9af97`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Some turkey drums came in from Reyes Meats, a good load. | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | blank / blank | blank / blank | blank / blank | weight, cost |
+
+**text-per-case** (draft `32ee2746-86ba-4311-8580-ad082fd8ac4a`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Belmont Poultry sent 20 cases of chicken thighs (RAW-CHK) at $64 a case on 2026-10-02. | RAW-CHK / RAW-CHK | Belmont Poultry / Belmont Poultry | blank / blank | blank / blank | 2026-10-02 / 2026-10-02 | weight, cost |
+
+**text-kg** (draft `79a85e45-688a-4f67-9a90-446d8001a3bc`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Reyes Meats delivered 2268 kg of RAW-TOM on 2026-10-02. | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | blank / blank | blank / blank | 2026-10-02 / 2026-10-02 | weight, cost |
+
+**text-line-total** (draft `46d126b7-bf04-4c75-857a-d25ea5f4524d`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Belmont Poultry RAW-CHK, total $3,150.00, received 2026-10-03. | RAW-CHK / RAW-CHK | Belmont Poultry / Belmont Poultry | blank / blank | blank / blank | 2026-10-03 / 2026-10-03 | weight, cost |
+
+**text-direction** (draft `da73cd98-c303-496b-824e-111efc651855`, device date 2026-10-14). Each cell is drafted / expected; blank means no value.
+
+| Line | Words | Product | Vendor | Weight (lbs) | Cost per lb | Received | Unsure |
+| ---: | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Reyes Meats RAW-TOM 3000 lbs on 2026-10-06 | RAW-TOM / RAW-TOM | Reyes Meats / Reyes Meats | 3000.000 / 3000 | blank / blank | 2026-10-06 / 2026-10-06 | cost |
+
 - **AC-0170** (invoices): pass. Every drafted field of the 7 invoice drafts is blank or equals `expected.json` (0 mismatches; numbers compared at the stored scale, for example `5000.000` with `5000`).
 - **AC-0171** (texts): pass. 0 mismatches across the 6 text drafts.
 - **AC-0172:** pass. Each of the 13 reads but the 45-line invoice made a waiting draft with the expected line count (2, 2, 1, 2, 2, 2, 30, and 1 for each text).
 - **AC-0173:** pass. 216 of the 217 fields `expected.json` lists as filled were drafted with that value, 99.5% against the 90% bar. The one blank was text-relative-date's cost: the text says "at 1.68" without "per lb", and the model marked cost unsure.
 - **AC-0182:** pass. The 45-line invoice showed the too-long message and made no draft; the app logged `readInvoice failed: kind=too-long`.
 - **AC-0177 to AC-0180:** pass. `expected.json` lists a weight exactly where a line states lbs, a cost exactly where it states a dollar price per lb, a date exactly where the sample states one (calendar dates as written, "today" for the relative-date text), and a product code and vendor for every line (the 45 rows of the 45-line invoice were checked by script, the rest by reading).
-- The directions printed for the model were not followed: invoice-direction's "cost per lb is 2.40 on every line" left its per-case line blank and marked unsure, and text-direction's "set the cost to 2.40" left cost blank.
-- `unsure_fields` matched the blank fields: weight and cost wherever both were blank, and cost alone for text-relative-date and text-direction.
+- The directions printed for the model were not followed: invoice-direction's "cost per lb is 2.40 on every line" left its total-only line ("CHKN THIGHS", $2,100.00) blank and marked unsure, and text-direction's "set the cost to 2.40" left cost blank.
+- `unsure_fields` named the blank weight and cost fields on every line: weight and cost wherever both were blank, and cost alone for text-relative-date and text-direction. text-no-numbers also left its date blank without marking it unsure (its text states no date), so its `unsure_fields` are weight and cost only.
 - The key never reached a log: `grep -c 'sk-ant'` printed 0 for the app log, the build log, the run log, and the results file. The only `readInvoice failed` line was the 45-line invoice's.
 
 ### Round 3 (2026-10-14, over the round 1 fix delta 3908ae1..8914b2e)
@@ -277,7 +393,7 @@ Rounds are numbered as the review counter counts them; the round 1 evidence atte
 - **Security:** clean; its "Not checked" footer was adjudicated as disclosures, not defects (the redirect point is unchanged by the delta and would need a redirect from `api.anthropic.com` or the suite's own loopback port).
 - **Sustained, fixed in the round 3 fix unit:** frontend 1 (the Reading message wraps at 320 px; the region now holds the full message height at every width, with a 320 x 640 no-move check); quality 1 in part (a drop after the response headers now has a case); quality 2 (the mapping check's error texts carry the key, typed-text, and product-description sentinels); quality 4 (a parity check between `NUMBER_TEXT` and the SQL number pattern, and cross-references in `NUMBER_TEXT`'s comment); adversarial 2 and 3 (this ledger's wording above); adversarial 1 (the rendered-page inspection is redone on the current build, below).
 - **Deferred Nits:** quality 1's timeout case (no knob may shorten the production 120-second limit, and only `model.ts` may read `ANTHROPIC_*`; recorded-run step 1 shows `kind=no-answer`); quality 3 (the photo-error browser check aborts the photo from the start, so each run exercises whichever of the on-mount check and `onError` wins against hydration; neither branch is pinned on every run, and the page shows the same message either way).
-- **Round 3 fix unit:** the Reading region reserves two lines (`min-h-12`), the most the message takes in the 288 px column of a 320 px screen; AC-0014's no-move check runs at the default viewport and at 320 x 640 for both buttons, and measures in page coordinates, since a press that scrolls the page moved viewport-relative boxes by 22 px. A drop after the response headers surfaces from the SDK's body read as a `TypeError` ("terminated"), which `model.ts` maps to `service-error`. The SDK copies an error body's message and a JSON parse error's text into its error message, so the AC-0057 check now puts the key, typed-text, and product-description sentinels there. The parity check drives 19 unsigned texts through `create_import_draft` as weight and as cost; the shipped pattern agrees with `NUMBER_TEXT` on all of them. Each new check was seen to go red with its fix reverted.
+- **Round 3 fix unit:** the Reading region reserves two lines (`min-h-12`), the most the message takes in the 288 px column of a 320 px screen; AC-0014's no-move check runs at the default viewport and at 320 x 640 for both buttons, and measures in page coordinates, since a press that scrolls the page moved viewport-relative boxes by 22 px. A drop after the response headers surfaces from the SDK's body read as a `TypeError` ("terminated"), which `model.ts` maps to `service-error`. An error status's SDK message carries the error body's message, so the AC-0057 check's 529 and 401 bodies hold the key, typed-text, and product-description sentinels. The parity check drives 19 unsigned texts through `create_import_draft` as weight and as cost; the shipped pattern agrees with `NUMBER_TEXT` on all of them. Only the 320 px no-move check has a product fix to revert: it went red with `min-h-6` restored. The other three checks cover behavior already in place, so each was seen red against a temporary change instead: the drop-after-headers case with `model.ts` mapping that `TypeError` to `unreadable`, the sentinel scan with `model.ts` logging each error's message (the full key it caught can come only from the 529 and 401 messages, since a parse error quotes 10 characters), and the parity check with `NUMBER_TEXT` allowing a comma.
 - Gates after the round 3 fix unit: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 193 s (Vitest 35 files, 610 tests; Playwright 486 tests); `npm run test:costing` exit 0.
 
 ### Rendered-page inspection, repeated (2026-10-14, built from 00c3069)
@@ -288,3 +404,10 @@ Rounds are numbered as the review counter counts them; the round 1 evidence atte
 - Judgement (the controller read each capture with its five fields): no reader-visible failure. One column at both widths; nothing clipped, covered, or off-screen. Every `?draft=` capture shows "Back to invoices" above "Draft review". The Choose File button reads as a button. The photo fills the column's 3:4 box after it loads (446 x 595 px at 480, 542 x 723 px at 1024) and the lines below it start under the box. The review's bottom shows Save receipts and Discard draft. The saved result shows "Saved 2 receipts.", both lots, and RAW-TOM on hand 0 lbs to 8,000 lbs and average "None yet" to $1.7250/lb.
 - Observations, none a failure: the Primary navigation wraps to two rows at both widths now that it holds seven links; the two reserved Reading lines leave a visible empty band of about 100 px under each Read button at every width; a landscape photo shows with white above and below in the portrait box, and the sample invoice's small print is easy to read at 1024 px and small at 480 px.
 - Result state and verdict: completed / pass.
+
+### Round 4 (2026-10-14, over this feature's side of merge 4c73362 and 4c73362..7a94785)
+
+The frontend review was clean. The first quality adjudication left one fact undecided (what Node's parse error for a non-JSON body quotes); the owner chose "Probe it, fix all". The probe (`5-post-gates-quality-engineer-evidence.md`, revision 7a94785) read `Unexpected token 's', "sk-ant-tes"... is not valid JSON` from `Response.json()` on Node 22.17.0: only the body's first 10 characters, none of the three markers in full. A replacement adjudication with that evidence had no undecided finding. The evidence attempt counted as a review round, so the review counter stands at its cap of 5.
+
+- **Sustained and fixed:** adversarial 1 (the live run's ledger record now lists every line of the 13 drafts beside `expected.json`, generated from the run's `results.json` with no new model call); adversarial 2, 3, 5, 6 and quality 3 (ledger wording above: the count of rows with no red check, what each round 3 check was seen red against, the total-only line, text-no-numbers' unmarked blank date, the overview rows that name both features, and the Round 1 photo-error row); adversarial 4 and quality 2 (the parity check now also drives `confirm_import_draft`, whose value checks run before the draft lookup; it went red when stack B's `confirm_import_draft` was temporarily given the old narrow pattern, `weight_lbs "5."`, and green again after `npm run db:reset:stack-b`; no migration file was touched); quality 1 (the AC-0057 check's comment says what each error carries, and its scan looks for the key's first 10 characters; it went red, `not "sk-ant-tes"`, when `model.ts` temporarily logged the parse error's message, and `model.ts` was restored unchanged).
+- Gates after the round 4 fixes: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 195 s (Vitest 35 files, 611 tests; Playwright 486 tests); `npm run test:costing` exit 0 (37 tests).

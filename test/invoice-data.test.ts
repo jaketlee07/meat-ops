@@ -176,6 +176,17 @@ describe("number text parity", () => {
       }
     }
   });
+
+  it("confirm_import_draft calls a weight or a cost a non-number exactly when NUMBER_TEXT does", async () => {
+    // The value checks run before the draft is looked up, so an unknown draft id is enough.
+    for (const text of TEXTS) {
+      for (const field of ["weight_lbs", "unit_cost"] as const) {
+        const outcome = await callAsOperator(confirmCall(ZERO_ID, [given(ZERO_ID, { [field]: text })]));
+        const calledNonNumber = new RegExp(`^confirm_import_draft: line 1 ${field} is not a number`).test(outcome.error ?? "");
+        expect(calledNonNumber, `${field} ${JSON.stringify(text)}`).toBe(!NUMBER_TEXT.test(text));
+      }
+    }
+  });
 });
 
 describe("create_import_draft", () => {
