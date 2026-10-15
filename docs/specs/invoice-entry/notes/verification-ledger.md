@@ -411,3 +411,18 @@ The frontend review was clean. The first quality adjudication left one fact unde
 
 - **Sustained and fixed:** adversarial 1 (the live run's ledger record now lists every line of the 13 drafts beside `expected.json`, generated from the run's `results.json` with no new model call); adversarial 2, 3, 5, 6 and quality 3 (ledger wording above: the count of rows with no red check, what each round 3 check was seen red against, the total-only line, text-no-numbers' unmarked blank date, the overview rows that name both features, and the Round 1 photo-error row); adversarial 4 and quality 2 (the parity check now also drives `confirm_import_draft`, whose value checks run before the draft lookup; it went red when stack B's `confirm_import_draft` was temporarily given the old narrow pattern, `weight_lbs "5."`, and green again after `npm run db:reset:stack-b`; no migration file was touched); quality 1 (the AC-0057 check's comment says what each error carries, and its scan looks for the key's first 10 characters; it went red, `not "sk-ant-tes"`, when `model.ts` temporarily logged the parse error's message, and `model.ts` was restored unchanged).
 - Gates after the round 4 fixes: `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 195 s (Vitest 35 files, 611 tests; Playwright 486 tests); `npm run test:costing` exit 0 (37 tests).
+
+### Round 6 (2026-10-14, over 7a94785..881465a)
+
+The adversarial and quality reviewers saw only the round 4 fix delta. The frontend reviewer was clean in round 4 and the delta changes no page, and the security reviewer was clean in round 3 and the delta crosses no trust boundary, so neither ran again.
+
+- **Quality:** clean.
+- **Adversarial:** one Nit, deferred without a fix: in the live run's per-line record the lead-in runs into invoice-per-lb's heading for want of a blank line, and the too-long message in the 45-line row is not quoted as the outcome table quotes it. It changes no fact the record states. The review counter was at its cap of 5, so no further findings round could be recorded.
+
+## Closing
+
+- **Deferred Nits** (each with its citation in the review verdict): round 1 adversarial 9 (the spec's Assumption names 0.128.0; see "The pin" for 0.129.0), round 3 quality 1's timeout case (recorded-run step 1 shows `kind=no-answer`), round 3 quality 3 (the photo-error check's hydration race), and round 6 adversarial 1 (the per-line record's formatting).
+- **Branch:** merge commit 63e76f0 brought in two docs-only main commits (`docs/lifecycle/sales.json`); the branch is current with origin/main.
+- **Closing checks (2026-10-14, final code at 881465a, after `npm run db:reset:stack-b` with all nine migrations):** AC-0152 `npm run gen:types` leaves no diff; AC-0160 the same 13 base tables with the same columns plus `import_draft_lines` and `import_drafts`; AC-0156 `npm run audit` exit 0, 0 vulnerabilities; AC-0154, AC-0155, AC-0157, AC-0159 (all three), AC-0161, and AC-0163 print nothing, and `model.ts` starts with `import "server-only";`; AC-0158 `"@anthropic-ai/sdk": "0.129.0"`; AC-0165 the only new package against origin/main is `@anthropic-ai/sdk`; AC-0166 all eight `.env` files ignored and `.env.example` not.
+- Every acceptance criterion is checked: each is named in a test or in this ledger's recorded evidence (the live run's AC-0177 to AC-0180 line covers AC-0178).
+- **Final run on the closing tree:** `npm run typecheck` exit 0; `E2E_PORT=3200 npm test` exit 0 in 193 s (Vitest 35 files, 611 tests; Playwright 486 tests); `npm run test:costing` exit 0 (37 tests); `lint-spec-status.py` clean.

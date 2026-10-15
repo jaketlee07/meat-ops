@@ -1,6 +1,6 @@
 # Spec: invoice-entry
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (the AI never computes a cost; extracted data is a draft the human confirms), §4 (`import_drafts`, `import_draft_lines`), §5 (receive raw), §7 "Input assistance", §10 (invoice-photo entry), §11 (boundaries), §12 (AI features degrade safely), §13 item 8; the access model, the write path, the `supabase/migrations/` change guidance, the change guidance for `src/proxy.ts`, `src/privileged-env.ts`, and `next.config.ts` (changes go with the security review that guards the app), and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md); the receiving form rules in [`../receiving/spec.md`](../receiving/spec.md) AC-0010
@@ -152,20 +152,20 @@ Definitions used by these criteria:
 
 Access and navigation
 
-- [ ] **AC-0001.** While signed out, a request for `/invoices` ends on `/sign-in`.
-- [ ] **AC-0002.** Signed in as a non-operator, `/invoices` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no draft.
-- [ ] **AC-0003.** A read, save, or discard request replayed with no session, or with a non-operator's session, changes no `import_drafts`, `import_draft_lines`, or `lots` row.
-- [ ] **AC-0007.** A read request replayed with no session, or with a non-operator's session, sends no request to the model service.
-- [ ] **AC-0190.** A read request replayed with a non-operator's session returns "The invoice wasn't read. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0004.** `/receiving`, `/production`, `/menu`, `/pricing`, and `/invoices` each show, in the navigation region named "Primary", a link named "Invoices" to `/invoices` placed after the link named "Pricing".
-- [ ] **AC-0005.** On `/invoices`, the only link in the Primary navigation with an `aria-current` attribute is the Invoices link, and its value is `page`.
-- [ ] **AC-0006.** The responses to page requests for `/invoices`, signed in or not, carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
+- [x] **AC-0001.** While signed out, a request for `/invoices` ends on `/sign-in`.
+- [x] **AC-0002.** Signed in as a non-operator, `/invoices` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no draft.
+- [x] **AC-0003.** A read, save, or discard request replayed with no session, or with a non-operator's session, changes no `import_drafts`, `import_draft_lines`, or `lots` row.
+- [x] **AC-0007.** A read request replayed with no session, or with a non-operator's session, sends no request to the model service.
+- [x] **AC-0190.** A read request replayed with a non-operator's session returns "The invoice wasn't read. This account isn't allowed to use Meat Ops."
+- [x] **AC-0004.** `/receiving`, `/production`, `/menu`, `/pricing`, and `/invoices` each show, in the navigation region named "Primary", a link named "Invoices" to `/invoices` placed after the link named "Pricing".
+- [x] **AC-0005.** On `/invoices`, the only link in the Primary navigation with an `aria-current` attribute is the Invoices link, and its value is `page`.
+- [x] **AC-0006.** The responses to page requests for `/invoices`, signed in or not, carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
 
 Reading
 
-- [ ] **AC-0010.** `/invoices` has a section headed "Read an invoice" with an "Invoice photo" file field whose `accept` attribute is `image/*` and a "Read photo" button, and a section headed "Type a receipt" with a "Receipt text" field and a "Read text" button.
-- [ ] **AC-0011.** In the invoice fixture, reading a photo while the fake model answers with the turkey reading creates one waiting draft and opens its review, which shows both lines with their drafted fields filled.
-- [ ] **AC-0012.** Each read input in this table is refused with its message beside its field, no request reaches the model service, and no draft is created. Within one field, the first matching row wins.
+- [x] **AC-0010.** `/invoices` has a section headed "Read an invoice" with an "Invoice photo" file field whose `accept` attribute is `image/*` and a "Read photo" button, and a section headed "Type a receipt" with a "Receipt text" field and a "Read text" button.
+- [x] **AC-0011.** In the invoice fixture, reading a photo while the fake model answers with the turkey reading creates one waiting draft and opens its review, which shows both lines with their drafted fields filled.
+- [x] **AC-0012.** Each read input in this table is refused with its message beside its field, no request reaches the model service, and no draft is created. Within one field, the first matching row wins.
 
   | Field | Input | Message |
   | --- | --- | --- |
@@ -176,54 +176,54 @@ Reading
   | Receipt text | more than 2,000 characters (Unicode code points) | Keep the text to 2,000 characters or fewer. |
 
   The 4 MB row fires for a replayed request whose photo is over 4 MB and whose whole request is at most 5 MB, the server action's request limit; Next.js refuses a larger request before the action runs. A photo chosen in the browser is shrunk first (AC-0013), so it reaches this row only when the shrunk JPEG is still over 4 MB.
-- [ ] **AC-0013.** A photo chosen in the browser reaches the model service as a JPEG whose long edge is the smaller of 2,576 px and the chosen photo's long edge. The check fixture uses a 4,000 × 3,000 px PNG and an 800 × 600 px PNG.
-- [ ] **AC-0014.** While a read is in flight, the page shows "Reading. This can take up to two minutes." in a status region, and Read photo and Read text are disabled.
-- [ ] **AC-0015.** In the invoice fixture, reading the text "5000 lbs RAW-TOM from Reyes Meats at 1.68 today" while the fake model answers with line 1 of the turkey reading creates one waiting draft whose review shows the typed text as written.
-- [ ] **AC-0016.** When the reading has no line, the page says "No receipt lines were found. Try a clearer photo, or type the receipt." and no draft is created.
-- [ ] **AC-0017.** When the reading has more than 30 lines, or the model service ends its answer at its output limit (stop reason `max_tokens`), the page says "This invoice is too long to read at once. Read it in parts." and no draft is created.
-- [ ] **AC-0018.** When the model service declines the read (stop reason `refusal`), the page says "The invoice wasn't read. The model declined it. Type the receipt instead." and no draft is created.
-- [ ] **AC-0019.** When the model service drops the connection, answers with an error status (400 or above) other than 401 and 403, or answers with something that is not a reading, the page says "The invoice wasn't read. Try again in a moment." and no draft is created.
-- [ ] **AC-0020.** When the model service answers with status 401 or 403, the page says "Invoice reading isn't working. The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file." and no draft is created.
-- [ ] **AC-0021.** When `ANTHROPIC_API_KEY` is empty in the app's environment, a read says "Invoice reading isn't set up. Set ANTHROPIC_API_KEY in the app's .env file, then restart the app.", sends no request, and creates no draft.
-- [ ] **AC-0183.** When `ANTHROPIC_API_KEY` is set neither in the app's process nor in its `.env`, a read gives the AC-0021 outcome.
-- [ ] **AC-0028.** When `ANTHROPIC_API_KEY` is set and not empty and there is no model address, a read says "Invoice reading isn't set up. ANTHROPIC_BASE_URL must be unset, or a loopback address for tests. Fix it, then restart the app.", sends no request, and creates no draft.
-- [ ] **AC-0022.** When the session has ended after the page loaded, a read says "You're signed out. Sign in again to read this invoice.", sends no request to the model service, and creates no draft.
-- [ ] **AC-0023.** When a read's caller check gets no answer from the database, the read says "The invoice wasn't read. Try again in a moment." and sends no request to the model service.
-- [ ] **AC-0009.** When a read's catalog read fails, the read returns "The invoice wasn't read. Try again in a moment." and sends no request to the model service.
-- [ ] **AC-0186.** When a read's caller check is answered with an error other than a `42501` refusal (an auth lookup answered with status 5xx or 429, or an operator check answered with a code other than `42501`), the read returns "The invoice wasn't read. Try again in a moment." and sends no request to the model service.
-- [ ] **AC-0024.** After a read refusal or read failure, the Receipt text field keeps its value.
-- [ ] **AC-0025.** `/invoices` has a section headed "Drafts to confirm" that lists each waiting draft once, newest capture time first, as a link to its review showing its capture date, "Photo" or "Text", its line count, and its first line's invoice words. With no waiting draft it says "No drafts waiting."
-- [ ] **AC-0026.** A read, whatever its outcome, changes no row in any ledger table that the access model in `docs/architecture/overview.md` names.
-- [ ] **AC-0027.** A read that reaches the model service sends it exactly one request, also when the service answers with status 429, 500, or 529 or drops the connection.
-- [ ] **AC-0008.** A photo chosen in the browser reaches the model service with no EXIF or XMP block, and so does the photo stored with its draft. The check fixture is a 1,000 × 750 px JPEG with a GPS position in its EXIF block.
+- [x] **AC-0013.** A photo chosen in the browser reaches the model service as a JPEG whose long edge is the smaller of 2,576 px and the chosen photo's long edge. The check fixture uses a 4,000 × 3,000 px PNG and an 800 × 600 px PNG.
+- [x] **AC-0014.** While a read is in flight, the page shows "Reading. This can take up to two minutes." in a status region, and Read photo and Read text are disabled.
+- [x] **AC-0015.** In the invoice fixture, reading the text "5000 lbs RAW-TOM from Reyes Meats at 1.68 today" while the fake model answers with line 1 of the turkey reading creates one waiting draft whose review shows the typed text as written.
+- [x] **AC-0016.** When the reading has no line, the page says "No receipt lines were found. Try a clearer photo, or type the receipt." and no draft is created.
+- [x] **AC-0017.** When the reading has more than 30 lines, or the model service ends its answer at its output limit (stop reason `max_tokens`), the page says "This invoice is too long to read at once. Read it in parts." and no draft is created.
+- [x] **AC-0018.** When the model service declines the read (stop reason `refusal`), the page says "The invoice wasn't read. The model declined it. Type the receipt instead." and no draft is created.
+- [x] **AC-0019.** When the model service drops the connection, answers with an error status (400 or above) other than 401 and 403, or answers with something that is not a reading, the page says "The invoice wasn't read. Try again in a moment." and no draft is created.
+- [x] **AC-0020.** When the model service answers with status 401 or 403, the page says "Invoice reading isn't working. The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file." and no draft is created.
+- [x] **AC-0021.** When `ANTHROPIC_API_KEY` is empty in the app's environment, a read says "Invoice reading isn't set up. Set ANTHROPIC_API_KEY in the app's .env file, then restart the app.", sends no request, and creates no draft.
+- [x] **AC-0183.** When `ANTHROPIC_API_KEY` is set neither in the app's process nor in its `.env`, a read gives the AC-0021 outcome.
+- [x] **AC-0028.** When `ANTHROPIC_API_KEY` is set and not empty and there is no model address, a read says "Invoice reading isn't set up. ANTHROPIC_BASE_URL must be unset, or a loopback address for tests. Fix it, then restart the app.", sends no request, and creates no draft.
+- [x] **AC-0022.** When the session has ended after the page loaded, a read says "You're signed out. Sign in again to read this invoice.", sends no request to the model service, and creates no draft.
+- [x] **AC-0023.** When a read's caller check gets no answer from the database, the read says "The invoice wasn't read. Try again in a moment." and sends no request to the model service.
+- [x] **AC-0009.** When a read's catalog read fails, the read returns "The invoice wasn't read. Try again in a moment." and sends no request to the model service.
+- [x] **AC-0186.** When a read's caller check is answered with an error other than a `42501` refusal (an auth lookup answered with status 5xx or 429, or an operator check answered with a code other than `42501`), the read returns "The invoice wasn't read. Try again in a moment." and sends no request to the model service.
+- [x] **AC-0024.** After a read refusal or read failure, the Receipt text field keeps its value.
+- [x] **AC-0025.** `/invoices` has a section headed "Drafts to confirm" that lists each waiting draft once, newest capture time first, as a link to its review showing its capture date, "Photo" or "Text", its line count, and its first line's invoice words. With no waiting draft it says "No drafts waiting."
+- [x] **AC-0026.** A read, whatever its outcome, changes no row in any ledger table that the access model in `docs/architecture/overview.md` names.
+- [x] **AC-0027.** A read that reaches the model service sends it exactly one request, also when the service answers with status 429, 500, or 529 or drops the connection.
+- [x] **AC-0008.** A photo chosen in the browser reaches the model service with no EXIF or XMP block, and so does the photo stored with its draft. The check fixture is a 1,000 × 750 px JPEG with a GPS position in its EXIF block.
 
 What the model receives
 
-- [ ] **AC-0070.** A photo read's request to the model service holds the photo's bytes exactly as the server action received them, with the media type their content shows. The check replays a read with a 600 × 400 px PNG.
-- [ ] **AC-0071.** In the invoice fixture, a text read's request holds every active raw product's code and description, every vendor's name, and the device's today, and holds neither "RAW-OLD" nor "Smoked Turkey Drums Tom".
-- [ ] **AC-0072.** In the invoice fixture with these values stored, a text read's request contains none of them: Reyes Meats' contact name "Sentinel Contact", phone "555-0199", email "sentinel@example.test", and notes "sentinel vendor note"; RAW-TOM's brand "Sentinel Brand"; a RAW-TOM lot with lot number "L-SENTINEL", a cost of 9.8765 per lb, and notes "sentinel lot note"; a customer named "Sentinel Customer"; the operator's email; the browser's Supabase auth cookie value; and the Supabase anon key.
-- [ ] **AC-0073.** A read's request body has exactly the top-level fields `model`, `max_tokens`, `system`, `messages`, and `output_config`, with `model` `claude-opus-5-5`, `max_tokens` 16000, and `output_config` holding exactly `effort` `medium` and a `format` of type `json_schema`; and the request carries no `anthropic-beta` header.
-- [ ] **AC-0029.** A read's `system` field holds only the fixed instructions: it is the same text for a photo read and a text read made with different catalogs, and it contains none of the typed text.
-- [ ] **AC-0074.** A read's request carries the configured key in its `x-api-key` header and carries no `authorization` header, also when `ANTHROPIC_AUTH_TOKEN` is set in the app's environment.
-- [ ] **AC-0184.** Ignoring case and spaces, no header value in a read's request contains this machine's host name; its operating system's name as Node.js reports it (`os.type()` or `os.platform()`), as its product name (macOS, Windows, or Linux), or as the header inventory lists it; its CPU architecture (`os.arch()`); or its Node.js version with or without its leading `v`.
-- [ ] **AC-0075.** With a sentinel value as `ANTHROPIC_API_KEY`, no response the browser receives in any page state contains it, and no file under `.next/static` contains it after `npm run build`.
+- [x] **AC-0070.** A photo read's request to the model service holds the photo's bytes exactly as the server action received them, with the media type their content shows. The check replays a read with a 600 × 400 px PNG.
+- [x] **AC-0071.** In the invoice fixture, a text read's request holds every active raw product's code and description, every vendor's name, and the device's today, and holds neither "RAW-OLD" nor "Smoked Turkey Drums Tom".
+- [x] **AC-0072.** In the invoice fixture with these values stored, a text read's request contains none of them: Reyes Meats' contact name "Sentinel Contact", phone "555-0199", email "sentinel@example.test", and notes "sentinel vendor note"; RAW-TOM's brand "Sentinel Brand"; a RAW-TOM lot with lot number "L-SENTINEL", a cost of 9.8765 per lb, and notes "sentinel lot note"; a customer named "Sentinel Customer"; the operator's email; the browser's Supabase auth cookie value; and the Supabase anon key.
+- [x] **AC-0073.** A read's request body has exactly the top-level fields `model`, `max_tokens`, `system`, `messages`, and `output_config`, with `model` `claude-opus-5-5`, `max_tokens` 16000, and `output_config` holding exactly `effort` `medium` and a `format` of type `json_schema`; and the request carries no `anthropic-beta` header.
+- [x] **AC-0029.** A read's `system` field holds only the fixed instructions: it is the same text for a photo read and a text read made with different catalogs, and it contains none of the typed text.
+- [x] **AC-0074.** A read's request carries the configured key in its `x-api-key` header and carries no `authorization` header, also when `ANTHROPIC_AUTH_TOKEN` is set in the app's environment.
+- [x] **AC-0184.** Ignoring case and spaces, no header value in a read's request contains this machine's host name; its operating system's name as Node.js reports it (`os.type()` or `os.platform()`), as its product name (macOS, Windows, or Linux), or as the header inventory lists it; its CPU architecture (`os.arch()`); or its Node.js version with or without its leading `v`.
+- [x] **AC-0075.** With a sentinel value as `ANTHROPIC_API_KEY`, no response the browser receives in any page state contains it, and no file under `.next/static` contains it after `npm run build`.
 
 Reviewing a draft
 
-- [ ] **AC-0076.** A draft's review shows, for each line in reading order, a group named "Line N" with the line's invoice words as "Invoice says: <words>", a "Save this line" checkbox that starts ticked, a Product picker, a Vendor picker, a "Weight (lbs)" field, a "Cost per lb" field, and a "Received date" field.
-- [ ] **AC-0077.** The Product picker lists each active raw product as its code and description in code order, and the Vendor picker lists each vendor by name in vendor order. Each starts on the line's drafted value, or on "Choose a product" or "Choose a vendor" when the drafted value is blank.
-- [ ] **AC-0078.** Each drafted field that is blank when the review loads shows "Enter this from the invoice." beside it.
-- [ ] **AC-0079.** A photo draft's review shows the stored photo with the text alternative "Invoice photo"; a text draft's review shows the typed text under "You typed".
-- [ ] **AC-0080.** A line's invoice words show as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
-- [ ] **AC-0081.** Fetching a draft's photo address as an operator returns the stored photo's bytes with its stored media type, `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`.
-- [ ] **AC-0099.** Fetching a draft's photo address as a signed-out visitor, as a non-operator, or for an id with no photo returns no image bytes.
+- [x] **AC-0076.** A draft's review shows, for each line in reading order, a group named "Line N" with the line's invoice words as "Invoice says: <words>", a "Save this line" checkbox that starts ticked, a Product picker, a Vendor picker, a "Weight (lbs)" field, a "Cost per lb" field, and a "Received date" field.
+- [x] **AC-0077.** The Product picker lists each active raw product as its code and description in code order, and the Vendor picker lists each vendor by name in vendor order. Each starts on the line's drafted value, or on "Choose a product" or "Choose a vendor" when the drafted value is blank.
+- [x] **AC-0078.** Each drafted field that is blank when the review loads shows "Enter this from the invoice." beside it.
+- [x] **AC-0079.** A photo draft's review shows the stored photo with the text alternative "Invoice photo"; a text draft's review shows the typed text under "You typed".
+- [x] **AC-0080.** A line's invoice words show as literal text: `<b>9</b>` shows as those eight characters and adds no element to the page.
+- [x] **AC-0081.** Fetching a draft's photo address as an operator returns the stored photo's bytes with its stored media type, `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`.
+- [x] **AC-0099.** Fetching a draft's photo address as a signed-out visitor, as a non-operator, or for an id with no photo returns no image bytes.
 
 Saving and discarding
 
-- [ ] **AC-0082.** In the invoice fixture, saving the turkey reading's draft with both lines ticked shows "Saved 2 receipts."
-- [ ] **AC-0107.** After the AC-0082 save, the page lists each new lot's lot number, product code and description, vendor, weight, cost per lb, and received date.
-- [ ] **AC-0100.** After the AC-0082 save, the page shows RAW-TOM with on hand 8,000 lbs and average cost $1.7250/lb.
-- [ ] **AC-0083.** Each input in this table, on a ticked line, is refused with its message beside its field, and nothing is saved. Within one field, the first matching row wins.
+- [x] **AC-0082.** In the invoice fixture, saving the turkey reading's draft with both lines ticked shows "Saved 2 receipts."
+- [x] **AC-0107.** After the AC-0082 save, the page lists each new lot's lot number, product code and description, vendor, weight, cost per lb, and received date.
+- [x] **AC-0100.** After the AC-0082 save, the page shows RAW-TOM with on hand 8,000 lbs and average cost $1.7250/lb.
+- [x] **AC-0083.** Each input in this table, on a ticked line, is refused with its message beside its field, and nothing is saved. Within one field, the first matching row wins.
 
   | Field | Input | Message |
   | --- | --- | --- |
@@ -232,130 +232,130 @@ Saving and discarding
   | Weight (lbs) | each input receiving AC-0010 refuses for weight | that criterion's weight message |
   | Cost per lb | each input receiving AC-0010 refuses for cost | that criterion's cost message |
   | Received date | each input receiving AC-0010 refuses for the received date | that criterion's date message |
-- [ ] **AC-0084.** Pressing Save receipts with no line ticked says "Tick at least one line to save." and saves nothing.
-- [ ] **AC-0085.** When a ticked line's product was made inactive after the review loaded, the save says "The receipts weren't saved. Line N: This product is no longer active.", where N is that line's number, and saves no line.
-- [ ] **AC-0086.** When the draft was saved or discarded after the review loaded, a save says "The receipts weren't saved. This draft was already saved or discarded."
-- [ ] **AC-0087.** A save request replayed with a non-operator's session returns "The receipts weren't saved. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0088.** When the session has ended after the review loaded, a save says "You're signed out. Sign in again to save these receipts."
-- [ ] **AC-0089.** After a save outcome, every field and checkbox keeps its value.
-- [ ] **AC-0090.** Saving a draft with line 1 ticked and line 2 unticked with its weight blank saves one lot, from line 1.
-- [ ] **AC-0104.** After a save or a discard, the draft no longer appears under "Drafts to confirm".
-- [ ] **AC-0091.** A saved lot carries the values in its line's fields when Save receipts was pressed, including a value the owner changed from the drafted one.
-- [ ] **AC-0092.** Pressing "Discard draft" says "Draft discarded."
-- [ ] **AC-0093.** The review of a saved draft says "This draft was saved." and lists its lot numbers, and shows no field or button.
-- [ ] **AC-0105.** The review of a discarded draft says "This draft was discarded." and shows no photo, typed text, line words, field, or button.
-- [ ] **AC-0094.** A review requested for an id that names no draft, including a malformed id, says "No draft has this id.", with the id shown as literal text.
-- [ ] **AC-0095.** A discard of a draft that was saved or discarded after the review loaded says "The draft wasn't discarded. It was already saved or discarded."
-- [ ] **AC-0187.** A discard request replayed with a non-operator's session returns "The draft wasn't discarded. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0189.** When a discard's write call is refused for a reason other than AC-0095's, the action returns "The draft wasn't discarded." followed by the refusal text after its `discard_import_draft: ` prefix. A replayed discard whose draft id is `00000000-0000-0000-0000-000000000000` returns "The draft wasn't discarded. draft 00000000-0000-0000-0000-000000000000 not found".
+- [x] **AC-0084.** Pressing Save receipts with no line ticked says "Tick at least one line to save." and saves nothing.
+- [x] **AC-0085.** When a ticked line's product was made inactive after the review loaded, the save says "The receipts weren't saved. Line N: This product is no longer active.", where N is that line's number, and saves no line.
+- [x] **AC-0086.** When the draft was saved or discarded after the review loaded, a save says "The receipts weren't saved. This draft was already saved or discarded."
+- [x] **AC-0087.** A save request replayed with a non-operator's session returns "The receipts weren't saved. This account isn't allowed to use Meat Ops."
+- [x] **AC-0088.** When the session has ended after the review loaded, a save says "You're signed out. Sign in again to save these receipts."
+- [x] **AC-0089.** After a save outcome, every field and checkbox keeps its value.
+- [x] **AC-0090.** Saving a draft with line 1 ticked and line 2 unticked with its weight blank saves one lot, from line 1.
+- [x] **AC-0104.** After a save or a discard, the draft no longer appears under "Drafts to confirm".
+- [x] **AC-0091.** A saved lot carries the values in its line's fields when Save receipts was pressed, including a value the owner changed from the drafted one.
+- [x] **AC-0092.** Pressing "Discard draft" says "Draft discarded."
+- [x] **AC-0093.** The review of a saved draft says "This draft was saved." and lists its lot numbers, and shows no field or button.
+- [x] **AC-0105.** The review of a discarded draft says "This draft was discarded." and shows no photo, typed text, line words, field, or button.
+- [x] **AC-0094.** A review requested for an id that names no draft, including a malformed id, says "No draft has this id.", with the id shown as literal text.
+- [x] **AC-0095.** A discard of a draft that was saved or discarded after the review loaded says "The draft wasn't discarded. It was already saved or discarded."
+- [x] **AC-0187.** A discard request replayed with a non-operator's session returns "The draft wasn't discarded. This account isn't allowed to use Meat Ops."
+- [x] **AC-0189.** When a discard's write call is refused for a reason other than AC-0095's, the action returns "The draft wasn't discarded." followed by the refusal text after its `discard_import_draft: ` prefix. A replayed discard whose draft id is `00000000-0000-0000-0000-000000000000` returns "The draft wasn't discarded. draft 00000000-0000-0000-0000-000000000000 not found".
 
 Refused and failed requests
 
-- [ ] **AC-0096.** When the session has ended after the review loaded, a discard says "You're signed out. Sign in again to discard this draft."
-- [ ] **AC-0097.** When a save's or discard's caller check, or a save's stock read before its write call, gets no answer or is answered with an error other than the caller check's `42501` refusal, the action says "The receipts weren't saved. Try again in a moment." for a save or "The draft wasn't discarded. Try again in a moment." for a discard.
-- [ ] **AC-0059.** When a save's write call is refused for a reason other than those of AC-0085, AC-0086, and AC-0087, the action returns "The receipts weren't saved." followed by the refusal text after its `confirm_import_draft: ` prefix. A replayed save whose line id is `00000000-0000-0000-0000-000000000000` returns "The receipts weren't saved. line 00000000-0000-0000-0000-000000000000 is not in this draft".
-- [ ] **AC-0115.** When a read gets no answer from the model service within 120 seconds, the page says "The invoice wasn't read. Try again in a moment." and no draft is created.
-- [ ] **AC-0116.** When a save's write call gets no answer from the database, the page says "The receipts may have been saved. Reload this page to check the draft before saving again."
-- [ ] **AC-0188.** When a discard's write call gets no answer from the database, the page says "The draft may have been discarded. Reload this page to check it."
-- [ ] **AC-0117.** When a read's draft write gets no answer from the database, the page says "The draft may have been saved. Reload this page and check Drafts to confirm before reading again."
-- [ ] **AC-0185.** When a read's draft write is refused, the page says "The draft wasn't saved." followed by the refusal text after its `create_import_draft: ` prefix, and no draft is created. The check makes RAW-TOM inactive while the fake model holds the turkey reading.
-- [ ] **AC-0118.** When a save's caller check gets no answer from the auth service, the page shows the AC-0097 save message.
+- [x] **AC-0096.** When the session has ended after the review loaded, a discard says "You're signed out. Sign in again to discard this draft."
+- [x] **AC-0097.** When a save's or discard's caller check, or a save's stock read before its write call, gets no answer or is answered with an error other than the caller check's `42501` refusal, the action says "The receipts weren't saved. Try again in a moment." for a save or "The draft wasn't discarded. Try again in a moment." for a discard.
+- [x] **AC-0059.** When a save's write call is refused for a reason other than those of AC-0085, AC-0086, and AC-0087, the action returns "The receipts weren't saved." followed by the refusal text after its `confirm_import_draft: ` prefix. A replayed save whose line id is `00000000-0000-0000-0000-000000000000` returns "The receipts weren't saved. line 00000000-0000-0000-0000-000000000000 is not in this draft".
+- [x] **AC-0115.** When a read gets no answer from the model service within 120 seconds, the page says "The invoice wasn't read. Try again in a moment." and no draft is created.
+- [x] **AC-0116.** When a save's write call gets no answer from the database, the page says "The receipts may have been saved. Reload this page to check the draft before saving again."
+- [x] **AC-0188.** When a discard's write call gets no answer from the database, the page says "The draft may have been discarded. Reload this page to check it."
+- [x] **AC-0117.** When a read's draft write gets no answer from the database, the page says "The draft may have been saved. Reload this page and check Drafts to confirm before reading again."
+- [x] **AC-0185.** When a read's draft write is refused, the page says "The draft wasn't saved." followed by the refusal text after its `create_import_draft: ` prefix, and no draft is created. The check makes RAW-TOM inactive while the fake model holds the turkey reading.
+- [x] **AC-0118.** When a save's caller check gets no answer from the auth service, the page shows the AC-0097 save message.
 
 Display
 
-- [ ] **AC-0098.** Weights on `/invoices` show through the Receiving weight format, costs per lb through the cost format, and dates through the date format of the `docs/costing.md` Rounding note: 5000 → 5,000 lbs, 1.68 → $1.6800/lb, 2026-10-01 → Oct 1, 2026.
+- [x] **AC-0098.** Weights on `/invoices` show through the Receiving weight format, costs per lb through the cost format, and dates through the date format of the `docs/costing.md` Rounding note: 5000 → 5,000 lbs, 1.68 → $1.6800/lb, 2026-10-01 → Oct 1, 2026.
 
 Database rules
 
-- [ ] **AC-0030.** An operator's `create_import_draft` call with a photo or a text and 1 to 30 lines stores one waiting draft holding the photo and its media type or the text, the model name, the capture date, and the capture time, and one line per given line in the given order with its words, drafted fields, and unsure fields.
-- [ ] **AC-0031.** `create_import_draft` is refused, and changes no table, for each of: a source other than photo or text; a photo source with no image, an image over 4,194,304 bytes, or a media type other than `image/jpeg`, `image/png`, or `image/webp`; a text source with no text, blank text, or text over 2,000 characters; no line; more than 30 lines; a line whose words are blank or over 200 characters; a line whose product is not an active raw product; a line whose vendor names no vendor; a line weight of 0 or below or with more than 3 decimal places; a line cost below 0 or with more than 4 decimal places; an unsure field name other than product, vendor, weight, cost, or date; and a non-operator caller, the last with SQLSTATE `42501`.
-- [ ] **AC-0032.** An operator's `confirm_import_draft` call saves each given line as one lot through `receive_lot` with the given product, vendor, weight, cost, and date, marks each given line saved with its lot, marks every other line of the draft skipped, and marks the draft confirmed with its settle time.
-- [ ] **AC-0033.** When `receive_lot` refuses any given line, `confirm_import_draft` is refused with a message that starts with `line N: ` for that line's number, and no lot, line, draft, or balance changes.
-- [ ] **AC-0034.** `confirm_import_draft` is refused, and changes no table, for each of: a draft that is confirmed or discarded; an id that names no draft; a line that belongs to another draft; a line given twice; no line; a value missing from a given line; and a non-operator caller, the last with SQLSTATE `42501`.
-- [ ] **AC-0035.** An operator's `discard_import_draft` call marks a waiting draft discarded with its settle time, marks its lines skipped, and changes no ledger row.
-- [ ] **AC-0101.** `discard_import_draft` is refused, and changes no table, for a draft that is not waiting, an id that names no draft, and a non-operator caller, the last with SQLSTATE `42501`.
-- [ ] **AC-0102.** After `discard_import_draft`, the draft holds no photo, no photo media type, and no typed text, and none of its lines holds words.
-- [ ] **AC-0106.** After `confirm_import_draft`, the draft still holds its photo and its media type, or its typed text, and every line still holds its words.
-- [ ] **AC-0036.** Two `confirm_import_draft` calls for one draft at the same time save its lines once: one call succeeds and the other is refused as AC-0034's confirmed case.
-- [ ] **AC-0037.** A non-operator reads 0 rows from `import_drafts` and from `import_draft_lines`, in a fixture where an operator reads at least one row from each.
-- [ ] **AC-0038.** The `service_role` role reads at least one row from each of the two tables in that fixture.
-- [ ] **AC-0039.** An insert, update, or delete on either table is refused for the `anon`, `authenticated`, and `service_role` roles.
-- [ ] **AC-0040.** In the invoice fixture, `confirm_import_draft` on the turkey reading's draft with both lines leaves RAW-TOM with 8,000 lbs on hand and a moving average of exactly 1.725, two lots at 1.68 and 1.80, and every ledger invariant in `test/db.ts` holding.
-- [ ] **AC-0041.** The `anon` and `service_role` roles cannot execute `create_import_draft`, `confirm_import_draft`, or `discard_import_draft`.
-- [ ] **AC-0042.** Every function the migration adds sets `search_path` to an empty value.
-- [ ] **AC-0043.** Run as `postgres`, an update that marks a line saved with no lot, gives a waiting draft a settle time, or marks a draft confirmed or discarded with no settle time is refused.
-- [ ] **AC-0044.** A lot saved from a draft line appears in Receiving's Recent receipts read like a receipt saved on `/receiving`.
-- [ ] **AC-0103.** An operator's `void_receipt` call voids a lot saved from a draft line that nothing has touched.
-- [ ] **AC-0046.** A confirmed draft's lots enter in line order within each raw product, so their `receipt_seq` values increase with line number.
-- [ ] **AC-0047.** An operator's `create_import_draft` call stores a line whose drafted fields are all empty.
+- [x] **AC-0030.** An operator's `create_import_draft` call with a photo or a text and 1 to 30 lines stores one waiting draft holding the photo and its media type or the text, the model name, the capture date, and the capture time, and one line per given line in the given order with its words, drafted fields, and unsure fields.
+- [x] **AC-0031.** `create_import_draft` is refused, and changes no table, for each of: a source other than photo or text; a photo source with no image, an image over 4,194,304 bytes, or a media type other than `image/jpeg`, `image/png`, or `image/webp`; a text source with no text, blank text, or text over 2,000 characters; no line; more than 30 lines; a line whose words are blank or over 200 characters; a line whose product is not an active raw product; a line whose vendor names no vendor; a line weight of 0 or below or with more than 3 decimal places; a line cost below 0 or with more than 4 decimal places; an unsure field name other than product, vendor, weight, cost, or date; and a non-operator caller, the last with SQLSTATE `42501`.
+- [x] **AC-0032.** An operator's `confirm_import_draft` call saves each given line as one lot through `receive_lot` with the given product, vendor, weight, cost, and date, marks each given line saved with its lot, marks every other line of the draft skipped, and marks the draft confirmed with its settle time.
+- [x] **AC-0033.** When `receive_lot` refuses any given line, `confirm_import_draft` is refused with a message that starts with `line N: ` for that line's number, and no lot, line, draft, or balance changes.
+- [x] **AC-0034.** `confirm_import_draft` is refused, and changes no table, for each of: a draft that is confirmed or discarded; an id that names no draft; a line that belongs to another draft; a line given twice; no line; a value missing from a given line; and a non-operator caller, the last with SQLSTATE `42501`.
+- [x] **AC-0035.** An operator's `discard_import_draft` call marks a waiting draft discarded with its settle time, marks its lines skipped, and changes no ledger row.
+- [x] **AC-0101.** `discard_import_draft` is refused, and changes no table, for a draft that is not waiting, an id that names no draft, and a non-operator caller, the last with SQLSTATE `42501`.
+- [x] **AC-0102.** After `discard_import_draft`, the draft holds no photo, no photo media type, and no typed text, and none of its lines holds words.
+- [x] **AC-0106.** After `confirm_import_draft`, the draft still holds its photo and its media type, or its typed text, and every line still holds its words.
+- [x] **AC-0036.** Two `confirm_import_draft` calls for one draft at the same time save its lines once: one call succeeds and the other is refused as AC-0034's confirmed case.
+- [x] **AC-0037.** A non-operator reads 0 rows from `import_drafts` and from `import_draft_lines`, in a fixture where an operator reads at least one row from each.
+- [x] **AC-0038.** The `service_role` role reads at least one row from each of the two tables in that fixture.
+- [x] **AC-0039.** An insert, update, or delete on either table is refused for the `anon`, `authenticated`, and `service_role` roles.
+- [x] **AC-0040.** In the invoice fixture, `confirm_import_draft` on the turkey reading's draft with both lines leaves RAW-TOM with 8,000 lbs on hand and a moving average of exactly 1.725, two lots at 1.68 and 1.80, and every ledger invariant in `test/db.ts` holding.
+- [x] **AC-0041.** The `anon` and `service_role` roles cannot execute `create_import_draft`, `confirm_import_draft`, or `discard_import_draft`.
+- [x] **AC-0042.** Every function the migration adds sets `search_path` to an empty value.
+- [x] **AC-0043.** Run as `postgres`, an update that marks a line saved with no lot, gives a waiting draft a settle time, or marks a draft confirmed or discarded with no settle time is refused.
+- [x] **AC-0044.** A lot saved from a draft line appears in Receiving's Recent receipts read like a receipt saved on `/receiving`.
+- [x] **AC-0103.** An operator's `void_receipt` call voids a lot saved from a draft line that nothing has touched.
+- [x] **AC-0046.** A confirmed draft's lots enter in line order within each raw product, so their `receipt_seq` values increase with line number.
+- [x] **AC-0047.** An operator's `create_import_draft` call stores a line whose drafted fields are all empty.
 
 Reading rules
 
-- [ ] **AC-0050.** A reading value that is not a usable value leaves its drafted field blank: product codes RAW-OLD, 502, and RAW-NONE; vendor names "reyes meats", " Reyes Meats", and "Reyes"; weights "0", "5,000", "5000 lbs", "12.3456", and "-5"; costs "$1.68", "1.68/lb", "1.68456", and "1,68"; dates "2026-13-01", "10/01/2026", "2026-02-30", and the day after the device's today.
-- [ ] **AC-0051.** A reading value that the reading lists as unsure leaves its drafted field blank, and the line records that field as unsure.
-- [ ] **AC-0052.** Usable values in a reading fill their drafted fields as written: product RAW-TOM, vendor Reyes Meats, weight "5000", "32.5", and ".5", cost "1.68", "0", and "1.6800", date the device's today.
-- [ ] **AC-0053.** A line's invoice words over 200 characters are cut to their first 200 characters, and blank words read as "(no words read)".
-- [ ] **AC-0054.** A reading line with every drafted field blank is kept as a line.
-- [ ] **AC-0055.** The photo rule accepts bytes that start like a JPEG (`FF D8 FF`), a PNG (`89 50 4E 47 0D 0A 1A 0A`), or a WebP (`RIFF`, four bytes, `WEBP`), and names the media type from those bytes, whatever type or file name the request claims.
-- [ ] **AC-0056.** The model address rule gives `https://api.anthropic.com` for an unset or empty `ANTHROPIC_BASE_URL`, gives the value for `http://127.0.0.1:4010`, `http://localhost:4010`, and `http://127.0.0.1:4010/`, and gives no model address for `https://example.com`, `http://127.0.0.1`, `http://127.0.0.1:4010/v1`, `http://user@127.0.0.1:4010`, `https://api.anthropic.com.example.com`, and `http://10.0.0.5:4010`.
-- [ ] **AC-0057.** Each read failure listed here leaves one server log line holding the read action's name, the kind named here, and the model service's status when there is one, and no other text: AC-0021 and AC-0183, not-set-up; AC-0028, address-refused; AC-0020, key-refused; AC-0018, declined; AC-0017, too-long; AC-0115, no-answer; AC-0019's answer that is not a reading, unreadable; AC-0019's other cases, service-error. The check fails a read whose error message carries the key, the typed text, and a product description.
-- [ ] **AC-0062.** A reading text the server cannot parse as the reading schema is an unreadable failure (AC-0019), also when it parses as JSON.
+- [x] **AC-0050.** A reading value that is not a usable value leaves its drafted field blank: product codes RAW-OLD, 502, and RAW-NONE; vendor names "reyes meats", " Reyes Meats", and "Reyes"; weights "0", "5,000", "5000 lbs", "12.3456", and "-5"; costs "$1.68", "1.68/lb", "1.68456", and "1,68"; dates "2026-13-01", "10/01/2026", "2026-02-30", and the day after the device's today.
+- [x] **AC-0051.** A reading value that the reading lists as unsure leaves its drafted field blank, and the line records that field as unsure.
+- [x] **AC-0052.** Usable values in a reading fill their drafted fields as written: product RAW-TOM, vendor Reyes Meats, weight "5000", "32.5", and ".5", cost "1.68", "0", and "1.6800", date the device's today.
+- [x] **AC-0053.** A line's invoice words over 200 characters are cut to their first 200 characters, and blank words read as "(no words read)".
+- [x] **AC-0054.** A reading line with every drafted field blank is kept as a line.
+- [x] **AC-0055.** The photo rule accepts bytes that start like a JPEG (`FF D8 FF`), a PNG (`89 50 4E 47 0D 0A 1A 0A`), or a WebP (`RIFF`, four bytes, `WEBP`), and names the media type from those bytes, whatever type or file name the request claims.
+- [x] **AC-0056.** The model address rule gives `https://api.anthropic.com` for an unset or empty `ANTHROPIC_BASE_URL`, gives the value for `http://127.0.0.1:4010`, `http://localhost:4010`, and `http://127.0.0.1:4010/`, and gives no model address for `https://example.com`, `http://127.0.0.1`, `http://127.0.0.1:4010/v1`, `http://user@127.0.0.1:4010`, `https://api.anthropic.com.example.com`, and `http://10.0.0.5:4010`.
+- [x] **AC-0057.** Each read failure listed here leaves one server log line holding the read action's name, the kind named here, and the model service's status when there is one, and no other text: AC-0021 and AC-0183, not-set-up; AC-0028, address-refused; AC-0020, key-refused; AC-0018, declined; AC-0017, too-long; AC-0115, no-answer; AC-0019's answer that is not a reading, unreadable; AC-0019's other cases, service-error. The check fails a read whose error message carries the key, the typed text, and a product description.
+- [x] **AC-0062.** A reading text the server cannot parse as the reading schema is an unreadable failure (AC-0019), also when it parses as JSON.
 
 Error page
 
-- [ ] **AC-0123.** After a `/invoices` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the page without a browser reload.
-- [ ] **AC-0124.** When the `/invoices` error page appears, keyboard focus is on its heading.
+- [x] **AC-0123.** After a `/invoices` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the page without a browser reload.
+- [x] **AC-0124.** When the `/invoices` error page appears, keyboard focus is on its heading.
 
 Accessibility and phone width
 
-- [ ] **AC-0130.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
-- [ ] **AC-0131.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
-- [ ] **AC-0132.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
-- [ ] **AC-0133.** Each of these can be completed with the keyboard alone: Read photo with a chosen file, Read text, a draft link, Save receipts, Discard draft, and a "Save this line" checkbox.
-- [ ] **AC-0134.** After a save or a discard, keyboard focus is on the message that states it.
-- [ ] **AC-0135.** After an AC-0012 or AC-0083 refusal, keyboard focus is on the first field with an error.
-- [ ] **AC-0136.** After an AC-0012 or AC-0083 refusal, the `aria-describedby` of every field with an error points to that field's message.
-- [ ] **AC-0137.** After a read failure, a save outcome other than AC-0083, or a discard outcome, keyboard focus is on the message that states it.
-- [ ] **AC-0138.** The accessible names of the Weight field and the Cost field contain "lbs" and "per lb", respectively, and each line's fields carry their line number in their group's name.
-- [ ] **AC-0139.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
-- [ ] **AC-0141.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
+- [x] **AC-0130.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
+- [x] **AC-0131.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
+- [x] **AC-0132.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
+- [x] **AC-0133.** Each of these can be completed with the keyboard alone: Read photo with a chosen file, Read text, a draft link, Save receipts, Discard draft, and a "Save this line" checkbox.
+- [x] **AC-0134.** After a save or a discard, keyboard focus is on the message that states it.
+- [x] **AC-0135.** After an AC-0012 or AC-0083 refusal, keyboard focus is on the first field with an error.
+- [x] **AC-0136.** After an AC-0012 or AC-0083 refusal, the `aria-describedby` of every field with an error points to that field's message.
+- [x] **AC-0137.** After a read failure, a save outcome other than AC-0083, or a discard outcome, keyboard focus is on the message that states it.
+- [x] **AC-0138.** The accessible names of the Weight field and the Cost field contain "lbs" and "per lb", respectively, and each line's fields carry their line number in their group's name.
+- [x] **AC-0139.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
+- [x] **AC-0141.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
 
 Live reading
 
-- [ ] **AC-0170.** In the recorded run, every drafted field of every sample invoice's draft is blank or equals that field's value in `expected.json`, where line N of a draft is compared with line N of that sample in `expected.json`.
-- [ ] **AC-0177.** `expected.json` lists a weight for a sample line exactly when the line states its own weight in lbs.
-- [ ] **AC-0178.** `expected.json` lists a cost for a sample line exactly when the line states a price per lb in dollars.
-- [ ] **AC-0179.** `expected.json` lists a received date for a sample line exactly when the sample states a date: written `YYYY-MM-DD` for a calendar date, or as the sample's own words (such as "today") for a relative date.
-- [ ] **AC-0180.** `expected.json` lists a product code and a vendor name for every sample line.
-- [ ] **AC-0182.** In the recorded run, reading the 45-line invoice shows the AC-0017 message.
-- [ ] **AC-0171.** In the recorded run, every drafted field of every sample text's draft is blank or equals that field's value in `expected.json`, line N with line N.
-- [ ] **AC-0172.** In the recorded run, every sample read except the 45-line invoice's creates a waiting draft with as many lines as `expected.json` lists for that sample.
-- [ ] **AC-0173.** In the recorded run, over every sample but the 45-line invoice, at least 90% of the drafted fields that `expected.json` lists as filled are drafted with that value.
-- [ ] **AC-0175.** With `ANTHROPIC_LOG=debug` in the app's environment, a read's server output contains none of the typed text, the catalog's product descriptions, or the key.
-- [ ] **AC-0176.** With `.env` holding `ANTHROPIC_API_KEY=sk-ant-env-sentinel` and `ANTHROPIC_BASE_URL=https://api.anthropic.com`, `npm run test:e2e` run under a sandbox that refuses outbound connections to every address but loopback exits 0, and no request the fake model receives during the run carries `sk-ant-env-sentinel`.
+- [x] **AC-0170.** In the recorded run, every drafted field of every sample invoice's draft is blank or equals that field's value in `expected.json`, where line N of a draft is compared with line N of that sample in `expected.json`.
+- [x] **AC-0177.** `expected.json` lists a weight for a sample line exactly when the line states its own weight in lbs.
+- [x] **AC-0178.** `expected.json` lists a cost for a sample line exactly when the line states a price per lb in dollars.
+- [x] **AC-0179.** `expected.json` lists a received date for a sample line exactly when the sample states a date: written `YYYY-MM-DD` for a calendar date, or as the sample's own words (such as "today") for a relative date.
+- [x] **AC-0180.** `expected.json` lists a product code and a vendor name for every sample line.
+- [x] **AC-0182.** In the recorded run, reading the 45-line invoice shows the AC-0017 message.
+- [x] **AC-0171.** In the recorded run, every drafted field of every sample text's draft is blank or equals that field's value in `expected.json`, line N with line N.
+- [x] **AC-0172.** In the recorded run, every sample read except the 45-line invoice's creates a waiting draft with as many lines as `expected.json` lists for that sample.
+- [x] **AC-0173.** In the recorded run, over every sample but the 45-line invoice, at least 90% of the drafted fields that `expected.json` lists as filled are drafted with that value.
+- [x] **AC-0175.** With `ANTHROPIC_LOG=debug` in the app's environment, a read's server output contains none of the typed text, the catalog's product descriptions, or the key.
+- [x] **AC-0176.** With `.env` holding `ANTHROPIC_API_KEY=sk-ant-env-sentinel` and `ANTHROPIC_BASE_URL=https://api.anthropic.com`, `npm run test:e2e` run under a sandbox that refuses outbound connections to every address but loopback exits 0, and no request the fake model receives during the run carries `sk-ant-env-sentinel`.
 
 Build and repository checks
 
-- [ ] **AC-0150.** `npm run build` exits 0.
-- [ ] **AC-0151.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
-- [ ] **AC-0152.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
-- [ ] **AC-0153.** `npm run typecheck` exits 0.
-- [ ] **AC-0154.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
-- [ ] **AC-0155.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
-- [ ] **AC-0156.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
-- [ ] **AC-0157.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
-- [ ] **AC-0158.** `package.json` lists `@anthropic-ai/sdk` at an exact version with no range character.
-- [ ] **AC-0164.** The pinned `@anthropic-ai/sdk` version was published at least 14 days before the day it was added, by `npm view @anthropic-ai/sdk time`.
-- [ ] **AC-0165.** Compared with `main`'s `package.json`, the only new package in `dependencies` or `devDependencies` is `@anthropic-ai/sdk`.
-- [ ] **AC-0166.** `git check-ignore` reports `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test`, `.env.development.local`, `.env.production.local`, and `.env.test.local` as ignored, and reports `.env.example` as not ignored.
-- [ ] **AC-0159.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
+- [x] **AC-0150.** `npm run build` exits 0.
+- [x] **AC-0151.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
+- [x] **AC-0152.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
+- [x] **AC-0153.** `npm run typecheck` exits 0.
+- [x] **AC-0154.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
+- [x] **AC-0155.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
+- [x] **AC-0156.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
+- [x] **AC-0157.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
+- [x] **AC-0158.** `package.json` lists `@anthropic-ai/sdk` at an exact version with no range character.
+- [x] **AC-0164.** The pinned `@anthropic-ai/sdk` version was published at least 14 days before the day it was added, by `npm view @anthropic-ai/sdk time`.
+- [x] **AC-0165.** Compared with `main`'s `package.json`, the only new package in `dependencies` or `devDependencies` is `@anthropic-ai/sdk`.
+- [x] **AC-0166.** `git check-ignore` reports `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test`, `.env.development.local`, `.env.production.local`, and `.env.test.local` as ignored, and reports `.env.example` as not ignored.
+- [x] **AC-0159.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
   - `grep -rniE "env(\.|\[['\"])[a-z0-9_]*(service_role|secret|jwt|db_url|database_url|postgres)" src/ | grep -v '^src/privileged-env.ts:'`
   - `grep -rnE "\}\s*=\s*process\.env" src/`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`
-- [ ] **AC-0160.** Compared with the local database built from `main`'s migrations, the database after this branch's migrations has the same base tables in `public` with the same columns, plus `import_drafts` and `import_draft_lines`.
-- [ ] **AC-0161.** `grep -rnE "@anthropic-ai/sdk" src/ | grep -v '^src/app/_server/model.ts:'` prints nothing, and `src/app/_server/model.ts` starts with `import "server-only";`.
-- [ ] **AC-0162.** `npm run test:costing` runs the AC-0040 case and exits 0.
-- [ ] **AC-0163.** Only `src/app/_server/model.ts` and `src/app/_server/session.ts` read a value from `process.env`: `grep -rnE "process\.env(\.|\[)" src/ | grep -vE '^src/app/_server/(model|session)\.ts:'` prints nothing.
+- [x] **AC-0160.** Compared with the local database built from `main`'s migrations, the database after this branch's migrations has the same base tables in `public` with the same columns, plus `import_drafts` and `import_draft_lines`.
+- [x] **AC-0161.** `grep -rnE "@anthropic-ai/sdk" src/ | grep -v '^src/app/_server/model.ts:'` prints nothing, and `src/app/_server/model.ts` starts with `import "server-only";`.
+- [x] **AC-0162.** `npm run test:costing` runs the AC-0040 case and exits 0.
+- [x] **AC-0163.** Only `src/app/_server/model.ts` and `src/app/_server/session.ts` read a value from `process.env`: `grep -rnE "process\.env(\.|\[)" src/ | grep -vE '^src/app/_server/(model|session)\.ts:'` prints nothing.
 
 ## Follow-ons
 

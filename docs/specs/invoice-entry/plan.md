@@ -1,7 +1,7 @@
 # Plan: invoice-entry
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md`.
   - **Analogous implementations:** the production page, `src/app/production/` (`page.tsx`, `actions.ts`, `save-batch.ts`, `error.tsx`), and the pricing page, `src/app/pricing/` (`actions.ts`, `save-change.ts`), over `src/lib/receiving.ts`, `src/lib/receipt-input.ts`, `src/lib/failures.ts`, `src/lib/format.ts`, and `src/lib/rpc.ts`; for database functions, `receive_lot` and `private.assert_caller` in `supabase/migrations/20261007181933_engine_hardening.sql`, and `set_list_price` with its revoke-then-grant lines in `supabase/migrations/20261009070619_menu_pricing.sql`; for table policies, `supabase/migrations/20261007182816_access_lockdown.sql`.
