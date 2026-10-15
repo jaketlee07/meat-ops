@@ -33,5 +33,6 @@ open = [
   { path = "docs/product/intents/local-ports-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/local-ports/notes/verification-ledger.md", revision = "1258b07" }, summary = "A program lookup broken after its first file entry must turn a network-check test red", needs = [] },
   { path = "docs/product/intents/lockfile-npm-ci-guidance.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/vitest-upgrade/notes/verification-ledger.md", revision = "079586f" }, summary = "Worktrees that take a lockfile change must run npm ci before their next tests", needs = [] },
   { path = "docs/product/intents/parallel-builds-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/parallel-builds/notes/verification-ledger.md", revision = "376db3a" }, summary = "Stack choice must hold for hand-made env forms and for other projects on stack A's ports", needs = [] },
+  { path = "docs/product/intents/invoice-entry-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/invoice-entry/notes/verification-ledger.md", revision = "00c3069" }, summary = "Pin the invoice timeout and photo-load-failure paths that only a recorded run or a race covers", needs = [] },
 ]
 closed = []
