@@ -175,3 +175,89 @@ export async function setListPrice(
   if (error) throw rpcError("setListPrice", error);
   return data as Product;
 }
+
+export type ImportDraft = Functions["create_import_draft"]["Returns"];
+
+// One drafted line as create_import_draft takes it. Weight and cost stay text:
+// the function casts them to numeric, so no JavaScript number carries either.
+export interface NewDraftLine {
+  words: string;
+  productId: string | null;
+  vendorId: string | null;
+  weightLbs: string | null;
+  unitCost: string | null;
+  receivedDate: string | null;
+  unsure: readonly string[];
+}
+
+export type NewDraft = {
+  capturedOn: string;
+  model: string;
+  lines: readonly NewDraftLine[];
+} & (
+  | { source: "text"; text: string }
+  // The photo goes to the engine as the bytes the model was shown, in hex.
+  | { source: "photo"; image: Uint8Array; imageType: string }
+);
+
+// Only the new draft's id comes back: the full row would carry the photo again.
+export async function createImportDraft(client: TypedClient, input: NewDraft): Promise<Pick<ImportDraft, "id">> {
+  const { data, error } = await client.rpc("create_import_draft", {
+    p_source: input.source,
+    p_captured_on: input.capturedOn,
+    p_model: input.model,
+    p_lines: input.lines.map((line) => ({
+      words: line.words,
+      product_id: line.productId,
+      vendor_id: line.vendorId,
+      weight_lbs: line.weightLbs,
+      unit_cost: line.unitCost,
+      received_date: line.receivedDate,
+      unsure: [...line.unsure],
+    })),
+    p_capture_text: input.source === "text" ? input.text : undefined,
+    p_capture_image: input.source === "photo" ? `\\x${Buffer.from(input.image).toString("hex")}` : undefined,
+    p_capture_image_type: input.source === "photo" ? input.imageType : undefined,
+  }).select("id");
+  if (error) throw rpcError("createImportDraft", error);
+  return data as Pick<ImportDraft, "id">;
+}
+
+// One ticked line as confirm_import_draft takes it. Weight and cost go as the
+// text the owner typed; the function casts them to numeric.
+export interface ConfirmLine {
+  lineId: string;
+  productId: string;
+  vendorId: string;
+  weightLbs: string;
+  unitCost: string;
+  receivedDate: string;
+}
+
+// The new lots, in line order.
+export async function confirmImportDraft(
+  client: TypedClient,
+  draftId: string,
+  lines: readonly ConfirmLine[],
+): Promise<Lot[]> {
+  const { data, error } = await client.rpc("confirm_import_draft", {
+    p_draft_id: draftId,
+    p_lines: lines.map((line) => ({
+      line_id: line.lineId,
+      product_id: line.productId,
+      vendor_id: line.vendorId,
+      weight_lbs: line.weightLbs,
+      unit_cost: line.unitCost,
+      received_date: line.receivedDate,
+    })),
+  });
+  if (error) throw rpcError("confirmImportDraft", error);
+  return data as Lot[];
+}
+
+// Only the id comes back: the full row carries the photo column.
+export async function discardImportDraft(client: TypedClient, draftId: string): Promise<Pick<ImportDraft, "id">> {
+  const { data, error } = await client.rpc("discard_import_draft", { p_draft_id: draftId }).select("id");
+  if (error) throw rpcError("discardImportDraft", error);
+  return data as Pick<ImportDraft, "id">;
+}

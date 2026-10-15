@@ -4,6 +4,7 @@
 // error itself (src/lib/rpc.ts RpcError), not by importing that class.
 
 import { formatDate, formatWeight } from "./format";
+import { readFailureMessage } from "./invoice-reading";
 
 export const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
 export const INACTIVE_PRODUCT = "This product is no longer active.";
@@ -138,7 +139,79 @@ export function changeFailureMessage(error: unknown, stage: FailureStage): strin
   return `${NOT_SAVED_CHANGE} ${refusalReason(error, code)}`;
 }
 
-// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, and the three pricing change actions.
+// Invoice reading (invoice-entry AC-0016, AC-0022, AC-0023, AC-0117, AC-0185, AC-0190).
+// The model failures' texts live in invoice-reading.ts; "Try again" is read from there.
+export const NOT_READ = "The invoice wasn't read.";
+export const READ_TRY_AGAIN = readFailureMessage("service-error");
+// AC-0022: the session ended after the page loaded.
+export const READ_SIGNED_OUT = "You're signed out. Sign in again to read this invoice.";
+// AC-0016: the reading held no line.
+export const NO_RECEIPT_LINES = "No receipt lines were found. Try a clearer photo, or type the receipt.";
+export const NOT_DRAFT_SAVED = "The draft wasn't saved.";
+// AC-0117: the draft write got no answer from the engine, so the draft may exist.
+export const DRAFT_UNKNOWN =
+  "The draft may have been saved. Reload this page and check Drafts to confirm before reading again.";
+
+// AC-0117, AC-0185: no answer reads as unknown; a refusal gives the engine's text without its prefix.
+export function draftWriteFailureMessage(error: unknown): string {
+  const code = codeOf(error);
+  if (code === "") return DRAFT_UNKNOWN;
+  return `${NOT_DRAFT_SAVED} ${code === "42501" ? NOT_ALLOWED : engineText(error)}`;
+}
+
+// Saving and discarding a draft (invoice-entry AC-0083 to AC-0097, AC-0116, AC-0187 to AC-0189).
+export const NOT_SAVED_RECEIPTS = "The receipts weren't saved.";
+export const NOT_DISCARDED = "The draft wasn't discarded.";
+// AC-0088, AC-0096: the session ended after the review loaded.
+export const RECEIPTS_SIGNED_OUT = "You're signed out. Sign in again to save these receipts.";
+export const DISCARD_SIGNED_OUT = "You're signed out. Sign in again to discard this draft.";
+// AC-0116: the write call got no answer from the database, so the receipts may exist.
+export const RECEIPTS_UNKNOWN = "The receipts may have been saved. Reload this page to check the draft before saving again.";
+// AC-0188: the same for a discard.
+export const DISCARD_UNKNOWN = "The draft may have been discarded. Reload this page to check it.";
+export const NO_LINE_TICKED = "Tick at least one line to save.";
+export const CHOOSE_PRODUCT = "Choose a product.";
+export const CHOOSE_VENDOR = "Choose a vendor.";
+// AC-0078: a drafted field that was blank when the review loaded.
+export const ENTER_FROM_INVOICE = "Enter this from the invoice.";
+export const DRAFT_DISCARDED_NOW = "Draft discarded.";
+export const DRAFT_SAVED = "This draft was saved.";
+export const DRAFT_WAS_DISCARDED = "This draft was discarded.";
+export const NO_DRAFT = "No draft has this id.";
+export const PHOTO_NOT_LOADED = "The photo couldn't be loaded. Reload the page to try again.";
+export const BACK_TO_INVOICES = "Back to invoices";
+
+const ALREADY_SETTLED = /^draft .+ is already saved or discarded$/;
+// confirm_import_draft re-raises a receive_lot refusal as "line N: receive_lot: <text>", with no function prefix.
+const LINE_INACTIVE = /^line (\d+): receive_lot: product .+ is inactive$/;
+
+// AC-0059, AC-0085, AC-0086, AC-0087, AC-0097, AC-0116. A refusal is checked from the
+// most to the least specific form: not allowed, a line's inactive product, a draft
+// that is already settled, then the engine's own text.
+export function draftSaveFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_SAVED_RECEIPTS} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return RECEIPTS_UNKNOWN;
+  if (code === "42501") return `${NOT_SAVED_RECEIPTS} ${NOT_ALLOWED}`;
+  const text = engineText(error);
+  const inactive = LINE_INACTIVE.exec(text);
+  if (inactive) return `${NOT_SAVED_RECEIPTS} Line ${inactive[1]}: ${INACTIVE_PRODUCT}`;
+  if (ALREADY_SETTLED.test(text)) return `${NOT_SAVED_RECEIPTS} This draft was already saved or discarded.`;
+  return `${NOT_SAVED_RECEIPTS} ${text}`;
+}
+
+// AC-0095, AC-0097, AC-0187 to AC-0189.
+export function draftDiscardFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_DISCARDED} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return DISCARD_UNKNOWN;
+  if (code === "42501") return `${NOT_DISCARDED} ${NOT_ALLOWED}`;
+  const text = engineText(error);
+  if (ALREADY_SETTLED.test(text)) return `${NOT_DISCARDED} It was already saved or discarded.`;
+  return `${NOT_DISCARDED} ${text}`;
+}
+
+// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, readInvoice, saveDraft, and discardDraft.
 export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
@@ -147,7 +220,10 @@ export type LoggedAction =
   | "voidSale"
   | "saveTargetMargin"
   | "removeTargetMargin"
-  | "saveListPrice";
+  | "saveListPrice"
+  | "readInvoice"
+  | "saveDraft"
+  | "discardDraft";
 
 const LOG_MESSAGE_LIMIT = 200;
 

@@ -95,8 +95,8 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 ### AI-support state (new for this scope)
 
 - alerts: id, type (one of: margin_below_target, low_stock, cost_anomaly, yield_anomaly, price_stale), severity (low, medium, high), subject (a reference to the product, lot, or batch it concerns), message (plain language), suggested_action (what to do, for example a reprice value), status (open, dismissed, actioned), created_at. Alerts persist so the owner can see, act on, or dismiss them.
-- import_drafts: id, source (photo or text), captured_at, raw_capture (the original image or text), status (pending, confirmed, discarded). Staging for AI-parsed input before it is written.
-- import_draft_lines: id, import_draft_id (fk import_drafts), parsed fields matching a receive action (product guess, vendor guess, weight, unit_cost, date), confidence, resolved (whether the human accepted or corrected it). On confirm, each accepted line becomes a lot via the normal receive operation.
+- import_drafts: id, source (photo or text), capture_text (the typed text, for a text draft), capture_image and capture_image_type (the photo and its media type, for a photo draft), captured_on (the capture date: the device's today sent with the read), captured_at, model (the model that read it), status (pending, confirmed, discarded), settled_at (set once the draft is confirmed or discarded). A discard clears the photo, its type, and the text. Staging for AI-parsed input before it is written.
+- import_draft_lines: id, import_draft_id (fk import_drafts), line_no (1 to 30), words (the invoice's own words for the line; cleared on a discard), the drafted fields matching a receive action (product_id, vendor_id, weight_lbs, unit_cost, received_date, each empty when the reading gave no usable value or was unsure), unsure_fields (which of product, vendor, weight, cost, date the reader was unsure of), status (pending, saved, skipped), lot_id (the lot a saved line made). On confirm, each ticked line becomes a lot via the normal receive operation.
 
 ### Derived reads (views)
 

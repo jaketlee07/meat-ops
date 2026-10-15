@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { signOut } from "./sign-in/actions";
 
-type PageName = "receiving" | "production" | "menu" | "pricing" | "sales" | "trace";
+type PageName = "receiving" | "production" | "menu" | "pricing" | "sales" | "trace" | "invoices";
 
 const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string }> = [
   { name: "receiving", label: "Receiving", href: "/receiving" },
@@ -10,6 +10,7 @@ const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string }> = [
   { name: "pricing", label: "Pricing", href: "/pricing" },
   { name: "sales", label: "Sales", href: "/sales" },
   { name: "trace", label: "Trace", href: "/trace" },
+  { name: "invoices", label: "Invoices", href: "/invoices" },
 ];
 
 // The heading, the links between the pages, and Sign out. The link to the page

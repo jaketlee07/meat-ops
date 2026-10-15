@@ -37,6 +37,7 @@ export const CUSTOMER_ID = "44444444-4444-4444-4444-444444444444";
 
 const MASTER_DATA_SQL = `
 truncate
+  import_draft_lines, import_drafts,
   sale_items, sales, customers,
   finished_goods, production_batch_lots, production_batches,
   lot_adjustments, lots, inventory_balances,
@@ -78,6 +79,23 @@ export async function resetTestData(): Promise<void> {
   await pool.query(MASTER_DATA_SQL);
 }
 
+// The invoice fixture: the master data above plus an active raw product, an
+// inactive raw product, and a second vendor. No lot exists. Call it after
+// resetTestData.
+export const RAW_CHK_ID = "55555555-5555-5555-5555-555555555555";
+export const RAW_OLD_ID = "66666666-6666-6666-6666-666666666666";
+export const BELMONT_ID = "77777777-7777-7777-7777-777777777777";
+
+export async function seedInvoiceFixture(): Promise<void> {
+  await pool.query(`
+    insert into vendors(id, name) values ('${BELMONT_ID}', 'Belmont Poultry');
+    insert into products(id, code, description, species, kind) values
+      ('${RAW_CHK_ID}', 'RAW-CHK', 'Chicken Thighs (raw)', 'Chicken', 'raw');
+    insert into products(id, code, description, species, kind, active) values
+      ('${RAW_OLD_ID}', 'RAW-OLD', 'Old Turkey (raw)', 'Turkey', 'raw', false);
+  `);
+}
+
 export async function closePool(): Promise<void> {
   await pool.end();
 }
@@ -108,7 +126,10 @@ export type OperationName =
   | "adjust_lot"
   | "set_target_margin"
   | "set_list_price"
-  | "price_what_if";
+  | "price_what_if"
+  | "create_import_draft"
+  | "confirm_import_draft"
+  | "discard_import_draft";
 
 export interface OpCall {
   fn: OperationName;
@@ -135,6 +156,14 @@ const PARAM_TYPES: Record<string, string> = {
   p_target_percent: "numeric",
   p_raw_product_id: "uuid",
   p_raw_cost_per_lb: "numeric",
+  p_source: "text",
+  p_capture_text: "text",
+  p_capture_image: "bytea",
+  p_capture_image_type: "text",
+  p_captured_on: "date",
+  p_model: "text",
+  p_lines: "jsonb",
+  p_draft_id: "uuid",
   p_customer_id: "uuid",
   p_sale_number: "text",
 };

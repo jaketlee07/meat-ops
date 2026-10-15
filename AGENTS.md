@@ -80,7 +80,7 @@ npm run dev                       # development only; see below
 npm test                          # Vitest suites, then the Playwright browser suite
 npm run test:e2e                  # the browser suite only
 E2E_PORT=3200 npm test            # npm test in a stack B folder; see below
-npm run test:costing              # the golden costing and pricing suites only
+npm run test:costing              # the golden costing, pricing, and invoice-save suites only
 npm run typecheck                 # tsc --noEmit
 npm run gen:types                 # regenerate src/lib/database.types.ts from the local stack
 npm run audit                     # audit shipped dependencies; run before merge
@@ -89,10 +89,16 @@ npm run audit                     # audit shipped dependencies; run before merge
 There is no lint command.
 
 The app reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the gitignored
-repository-root `.env`, and nothing else. Make the file from the local stack:
+repository-root `.env`. It also reads an optional `ANTHROPIC_API_KEY`, the key
+that reads invoices on `/invoices`. Without the key, invoice reading is off: a
+read says it isn't set up, and nothing else changes. A value set in the app's
+process wins over `.env`. `npm test` never calls the real model: the browser
+suite starts the app with its own test key and a fake model service on this
+machine. Make the file from the local stack. The command keeps an existing
+`ANTHROPIC_API_KEY` line:
 
 ```bash
-supabase status -o env --override-name api.url=SUPABASE_URL --override-name auth.anon_key=SUPABASE_ANON_KEY | grep -E '^SUPABASE_(URL|ANON_KEY)=' > .env
+{ supabase status -o env --override-name api.url=SUPABASE_URL --override-name auth.anon_key=SUPABASE_ANON_KEY | grep -E '^SUPABASE_(URL|ANON_KEY)='; grep -sE '^ANTHROPIC_API_KEY=' .env || true; } > .env.next && mv .env.next .env
 ```
 
 The app refuses to build, start, or run when a privileged variable is set: any

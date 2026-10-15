@@ -23,6 +23,7 @@ export const TRACE_CONTROLS = [
   "a Pricing",
   "a Sales",
   "a Trace",
+  "a Invoices",
   "button Sign out",
   "input #find-sale-number",
   "button Show sale",

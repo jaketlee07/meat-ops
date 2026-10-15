@@ -16,6 +16,7 @@ export const MENU_CONTROLS = [
   "a Pricing",
   "a Sales",
   "a Trace",
+  "a Invoices",
   "button Sign out",
 ];
 
