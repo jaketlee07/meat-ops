@@ -205,6 +205,45 @@ export async function applyAlertPrice(client: TypedClient, alertId: string, pric
   return data as Product;
 }
 
+export type DigestClaimResult = "none" | "written" | "busy" | "claimed" | "failed" | "stale";
+
+export interface DigestClaim {
+  result: DigestClaimResult;
+  paragraphs: string[] | null;
+  failureKind: string | null;
+}
+
+const CLAIM_RESULTS: readonly string[] = ["none", "written", "busy", "claimed", "failed", "stale"];
+
+// The AC-0065 result for a date and the kind of send. Only "claimed" changes the day's row.
+export async function startDigest(client: TypedClient, date: string, automatic: boolean): Promise<DigestClaim> {
+  const { data, error } = await client.rpc("start_digest", { p_date: date, p_automatic: automatic });
+  if (error) throw rpcError("startDigest", error);
+  const row = data?.[0];
+  if (!row || !CLAIM_RESULTS.includes(row.result)) throw new RpcError("startDigest failed: no result", "");
+  return {
+    result: row.result as DigestClaimResult,
+    paragraphs: row.paragraphs ?? null,
+    failureKind: row.failure_kind ?? null,
+  };
+}
+
+// Finishes a writing day with its paragraphs or with a failure kind, never both.
+export async function finishDigest(
+  client: TypedClient,
+  date: string,
+  outcome: { paragraphs: string[] } | { failureKind: string },
+): Promise<Functions["finish_digest"]["Returns"]> {
+  const { data, error } = await client.rpc("finish_digest", {
+    p_date: date,
+    // The function takes exactly one of the two and null for the other; the generated types omit null.
+    p_paragraphs: ("paragraphs" in outcome ? outcome.paragraphs : null) as string[],
+    p_failure_kind: ("failureKind" in outcome ? outcome.failureKind : null) as string,
+  });
+  if (error) throw rpcError("finishDigest", error);
+  return data as Functions["finish_digest"]["Returns"];
+}
+
 export type ImportDraft = Functions["create_import_draft"]["Returns"];
 
 // One drafted line as create_import_draft takes it. Weight and cost stay text:

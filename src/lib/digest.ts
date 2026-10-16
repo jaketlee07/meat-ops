@@ -74,3 +74,37 @@ export function digestVerdict(answer: unknown, facts: string, codes: readonly st
   if (codes.some((code) => !text.includes(code))) return { kind: "unfaithful" };
   return { kind: "digest", paragraphs: trimmed };
 }
+
+// The digest page rule (alerts spec, "Digest page rule"): what /alerts does on
+// load, from the open alerts and today's digest row. The page reads the row;
+// this decides, so a test can pass any row and clock.
+export interface DigestRow {
+  status: "writing" | "written" | "failed";
+  paragraphs: string[] | null;
+  failureKind: string | null;
+  claimedAt: string;
+}
+
+// A writing claim older than this is stale (AC-0089, AC-0199).
+export const STALE_CLAIM_MS = 180_000;
+
+export type DigestPage =
+  | { kind: "no-alerts" }
+  | { kind: "written"; paragraphs: string[] }
+  | { kind: "writing" }
+  // A failed day, or a stale claim (failureKind null): a message and Try again.
+  | { kind: "failed"; failureKind: string | null }
+  // The page sends the digest action once on its own.
+  | { kind: "send" };
+
+export function digestPage(openAlerts: number, row: DigestRow | null, now: Date): DigestPage {
+  if (openAlerts === 0) return { kind: "no-alerts" };
+  if (row?.status === "written" && row.paragraphs) return { kind: "written", paragraphs: row.paragraphs };
+  if (row?.status === "writing") {
+    return now.getTime() - new Date(row.claimedAt).getTime() <= STALE_CLAIM_MS
+      ? { kind: "writing" }
+      : { kind: "failed", failureKind: null };
+  }
+  if (row?.status === "failed") return { kind: "failed", failureKind: row.failureKind };
+  return { kind: "send" };
+}

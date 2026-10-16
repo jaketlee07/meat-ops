@@ -1,6 +1,13 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { decideDismiss, decideReprice, type CallerOutcome } from "../src/app/alerts/decide.js";
-import { RpcError, type Product } from "../src/lib/rpc.js";
+import {
+  decideDigest,
+  decideDismiss,
+  decideReprice,
+  type CallerOutcome,
+  type DigestDeps,
+  type DigestModelResult,
+} from "../src/app/alerts/decide.js";
+import { RpcError, type DigestClaim, type Product } from "../src/lib/rpc.js";
 
 // The reprice and dismiss decisions, with every outside call an argument
 // (alerts spec: Change outcome order and Dismiss outcome order).
@@ -232,4 +239,340 @@ it("a write that resolves with no row is a write with no answer", async () => {
     status: "refused",
     message: "The alert may have been dismissed. Reload this page to check it.",
   });
+});
+
+// ---- The digest decision (alerts spec: Digest outcome order) ----
+
+const TODAY = "2026-10-13";
+const FACTS = "Today is Oct 13, 2026. Open alerts: 1. Urgent: 1.";
+const PARAGRAPHS = ["502 is below target."];
+const TRY_AGAIN_DIGEST = "Today's digest wasn't written. Try again in a moment.";
+const KEY_REFUSED_DIGEST =
+  "Today's digest wasn't written. The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file.";
+const claimed: DigestClaim = { result: "claimed", paragraphs: null, failureKind: null };
+
+// Every outside call counts its calls, so a test can see which were reached.
+function digestDeps(over: Partial<DigestDeps<null>> = {}) {
+  const calls = { claim: [] as unknown[], facts: 0, write: [] as unknown[], finish: [] as unknown[] };
+  const deps: DigestDeps<null> = {
+    caller: operator,
+    modelReady: () => ({ ok: true }),
+    claim: async (...args) => {
+      calls.claim.push(args);
+      return claimed;
+    },
+    readFacts: async () => {
+      calls.facts += 1;
+      return { facts: FACTS, codes: ["502"] };
+    },
+    write: async (...args): Promise<DigestModelResult> => {
+      calls.write.push(args);
+      return { ok: true, paragraphs: PARAGRAPHS };
+    },
+    finish: async (...args) => {
+      calls.finish.push(args);
+      return { digest_date: TODAY };
+    },
+    ...over,
+  };
+  return { calls, deps };
+}
+
+const SENT = { today: TODAY, automatic: true };
+
+it("AC-0124 and AC-0125: an ended session and a non-operator send and store nothing", async () => {
+  for (const [status, message] of [
+    ["ended", "You're signed out. Sign in again to see today's digest."],
+    ["not-operator", "Today's digest wasn't written. This account isn't allowed to use Meat Ops."],
+  ] as const) {
+    const { calls, deps } = digestDeps({ caller: async () => ({ status }) });
+    expect(await decideDigest(SENT, deps)).toEqual({ status: "refused", message, retry: false });
+    expect(calls).toEqual({ claim: [], facts: 0, write: [], finish: [] });
+  }
+});
+
+it("AC-0126: a caller check that gets no answer or an error other than 42501 says try again, logs once, and sends nothing", async () => {
+  for (const error of [new Error("fetch failed"), new RpcError("isOperator failed: boom", "XX000")]) {
+    const log = silence();
+    const { calls, deps } = digestDeps({ caller: async () => ({ status: "failed", error }) });
+    expect(await decideDigest(SENT, deps)).toEqual({ status: "refused", message: TRY_AGAIN_DIGEST, retry: true });
+    expect(calls).toEqual({ claim: [], facts: 0, write: [], finish: [] });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0]?.[0]).toMatch(/^writeDigest failed at before-write: /);
+    log.mockRestore();
+  }
+});
+
+it("AC-0086 and AC-0087: no key or no model address says so before any claim, request, or store", async () => {
+  const cases = [
+    ["not-set-up", "The digest isn't set up. Set ANTHROPIC_API_KEY in the app's .env file, then restart the app."],
+    [
+      "address-refused",
+      "The digest isn't set up. ANTHROPIC_BASE_URL must be unset, or a loopback address for tests. Fix it, then restart the app.",
+    ],
+  ] as const;
+  for (const [kind, message] of cases) {
+    const log = silence();
+    const { calls, deps } = digestDeps({ modelReady: () => ({ ok: false, kind }) });
+    expect(await decideDigest(SENT, deps)).toEqual({ status: "refused", message, retry: false });
+    expect(calls).toEqual({ claim: [], facts: 0, write: [], finish: [] });
+    expect(log.mock.calls).toEqual([[`writeDigest failed: kind=${kind}`]]);
+    log.mockRestore();
+  }
+});
+
+it("the session and caller outcomes come before the key", async () => {
+  const { calls, deps } = digestDeps({ caller: async () => ({ status: "ended" }), modelReady: () => ({ ok: false, kind: "not-set-up" }) });
+  expect((await decideDigest(SENT, deps)).status).toBe("refused");
+  expect(calls.claim).toEqual([]);
+});
+
+it("AC-0126: a claim call that gets no answer or is refused says try again, logs once, and sends nothing", async () => {
+  for (const error of [new Error("fetch failed"), new RpcError("startDigest failed: boom", "XX000")]) {
+    const log = silence();
+    const { calls, deps } = digestDeps({
+      claim: async () => {
+        throw error;
+      },
+    });
+    expect(await decideDigest(SENT, deps)).toEqual({ status: "refused", message: TRY_AGAIN_DIGEST, retry: true });
+    expect(calls).toEqual({ claim: [], facts: 0, write: [], finish: [] });
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0]?.[0]).toMatch(/^writeDigest failed at before-write: /);
+    log.mockRestore();
+  }
+});
+
+it("AC-0198, AC-0084, AC-0089, AC-0204: what the claim says ends the action without a request or a store", async () => {
+  const cases: ReadonlyArray<[DigestClaim, unknown]> = [
+    [{ result: "none", paragraphs: null, failureKind: null }, { status: "notice", message: "No open alerts." }],
+    [
+      { result: "written", paragraphs: ["Stored."], failureKind: null },
+      { status: "written", paragraphs: ["Stored."] },
+    ],
+    [
+      { result: "busy", paragraphs: null, failureKind: null },
+      { status: "notice", message: "Today's digest is being written. Reload this page in a minute." },
+    ],
+    [
+      { result: "failed", paragraphs: null, failureKind: "key-refused" },
+      { status: "refused", message: KEY_REFUSED_DIGEST, retry: true },
+    ],
+    [
+      { result: "failed", paragraphs: null, failureKind: "service-error" },
+      { status: "refused", message: TRY_AGAIN_DIGEST, retry: true },
+    ],
+    [{ result: "stale", paragraphs: null, failureKind: null }, { status: "refused", message: TRY_AGAIN_DIGEST, retry: true }],
+  ];
+  for (const [claim, expected] of cases) {
+    const log = silence();
+    const { calls, deps } = digestDeps({ claim: async () => claim });
+    expect(await decideDigest(SENT, deps), claim.result).toEqual(expected);
+    expect(calls.facts, claim.result).toBe(0);
+    expect(calls.write, claim.result).toEqual([]);
+    expect(calls.finish, claim.result).toEqual([]);
+    expect(log, claim.result).not.toHaveBeenCalled();
+    log.mockRestore();
+  }
+});
+
+it("the claim gets the app's date and the kind of send", async () => {
+  const { calls, deps } = digestDeps();
+  await decideDigest({ today: TODAY, automatic: false }, deps);
+  expect(calls.claim).toEqual([[null, TODAY, false]]);
+});
+
+it("a written digest sends the facts once, stores the paragraphs, and logs nothing", async () => {
+  const log = silence();
+  const { calls, deps } = digestDeps();
+  expect(await decideDigest(SENT, deps)).toEqual({ status: "written", paragraphs: PARAGRAPHS });
+  expect(calls.write).toEqual([[FACTS, ["502"]]]);
+  expect(calls.finish).toEqual([[null, TODAY, { paragraphs: PARAGRAPHS }]]);
+  expect(log).not.toHaveBeenCalled();
+});
+
+// One exact log line per kind (AC-0127), each with the day finished as failed
+// with that kind (AC-0200). The failing error carries a key, the facts, and a
+// product description; none of it may reach the log.
+const SECRETS = "sk-ant-sentinel-key 502 Smoked Turkey Drums Tom At your list price of $2.68/lb";
+const FAILURES: ReadonlyArray<{
+  name: string;
+  deps: Partial<DigestDeps<null>>;
+  kind: string;
+  line: string;
+  message: string;
+}> = [
+  {
+    name: "a failed facts read",
+    deps: {
+      readFacts: async () => {
+        throw new Error(SECRETS);
+      },
+    },
+    kind: "facts-failed",
+    line: "writeDigest failed: kind=facts-failed",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "a refused key",
+    deps: { write: async () => ({ ok: false, kind: "key-refused", status: 401 }) },
+    kind: "key-refused",
+    line: "writeDigest failed: kind=key-refused status=401",
+    message: KEY_REFUSED_DIGEST,
+  },
+  {
+    name: "a 403",
+    deps: { write: async () => ({ ok: false, kind: "key-refused", status: 403 }) },
+    kind: "key-refused",
+    line: "writeDigest failed: kind=key-refused status=403",
+    message: KEY_REFUSED_DIGEST,
+  },
+  {
+    name: "no answer in time",
+    deps: { write: async () => ({ ok: false, kind: "no-answer" }) },
+    kind: "no-answer",
+    line: "writeDigest failed: kind=no-answer",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "an error status",
+    deps: { write: async () => ({ ok: false, kind: "service-error", status: 529 }) },
+    kind: "service-error",
+    line: "writeDigest failed: kind=service-error status=529",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "a dropped connection",
+    deps: { write: async () => ({ ok: false, kind: "service-error" }) },
+    kind: "service-error",
+    line: "writeDigest failed: kind=service-error",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "a declined answer",
+    deps: { write: async () => ({ ok: false, kind: "declined" }) },
+    kind: "declined",
+    line: "writeDigest failed: kind=declined",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "a too-long answer",
+    deps: { write: async () => ({ ok: false, kind: "too-long" }) },
+    kind: "too-long",
+    line: "writeDigest failed: kind=too-long",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "an unreadable answer",
+    deps: { write: async () => ({ ok: false, kind: "unreadable" }) },
+    kind: "unreadable",
+    line: "writeDigest failed: kind=unreadable",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "an unfaithful answer",
+    deps: { write: async () => ({ ok: false, kind: "unfaithful" }) },
+    kind: "unfaithful",
+    line: "writeDigest failed: kind=unfaithful",
+    message: TRY_AGAIN_DIGEST,
+  },
+  {
+    name: "a model call that throws",
+    deps: {
+      write: async () => {
+        throw new Error(SECRETS);
+      },
+    },
+    kind: "service-error",
+    line: "writeDigest failed: kind=service-error",
+    message: TRY_AGAIN_DIGEST,
+  },
+];
+
+it("AC-0127 and AC-0200: each failure after the claim logs its one exact line and finishes the day as failed with its kind", async () => {
+  for (const failure of FAILURES) {
+    const log = silence();
+    const { calls, deps } = digestDeps(failure.deps);
+    expect(await decideDigest(SENT, deps), failure.name).toEqual({
+      status: "refused",
+      message: failure.message,
+      retry: true,
+    });
+    expect(log.mock.calls, failure.name).toEqual([[failure.line]]);
+    expect(calls.finish, failure.name).toEqual([[null, TODAY, { failureKind: failure.kind }]]);
+    log.mockRestore();
+  }
+});
+
+it("a failure before the model call sends no request", async () => {
+  const log = silence();
+  const { calls, deps } = digestDeps({
+    readFacts: async () => {
+      throw new Error("facts");
+    },
+  });
+  await decideDigest(SENT, deps);
+  expect(calls.write).toEqual([]);
+  log.mockRestore();
+});
+
+it("AC-0127, AC-0200: a store of the paragraphs with no answer or refused logs store-failed and does not finish the day as failed", async () => {
+  for (const error of [new Error(SECRETS), new RpcError("finishDigest failed: refused", "42501")]) {
+    const log = silence();
+    const { calls, deps } = digestDeps({
+      finish: async (...args) => {
+        calls.finish.push(args);
+        throw error;
+      },
+    });
+    expect(await decideDigest(SENT, deps)).toEqual({ status: "refused", message: TRY_AGAIN_DIGEST, retry: true });
+    expect(log.mock.calls).toEqual([["writeDigest failed: kind=store-failed"]]);
+    expect(calls.finish).toEqual([[null, TODAY, { paragraphs: PARAGRAPHS }]]);
+    log.mockRestore();
+  }
+});
+
+it("a store that resolves with no row is a store with no answer", async () => {
+  const log = silence();
+  const { calls, deps } = digestDeps({ finish: async () => null });
+  expect((await decideDigest(SENT, deps)).status).toBe("refused");
+  expect(log.mock.calls).toEqual([["writeDigest failed: kind=store-failed"]]);
+  expect(calls.finish).toEqual([]);
+});
+
+it("AC-0207 and AC-0208: when the call that records a failure gets no answer or is refused, the failure's message comes back, the recording is not repeated, and only the failure's line is logged", async () => {
+  for (const failure of FAILURES) {
+    for (const error of [new Error(SECRETS), new RpcError("finishDigest failed: refused", "P0001")]) {
+      const log = silence();
+      const attempts: unknown[] = [];
+      const { deps } = digestDeps({
+        ...failure.deps,
+        finish: async (...args) => {
+          attempts.push(args);
+          throw error;
+        },
+      });
+      expect(await decideDigest(SENT, deps), failure.name).toEqual({
+        status: "refused",
+        message: failure.message,
+        retry: true,
+      });
+      expect(attempts, failure.name).toHaveLength(1);
+      expect(log.mock.calls, failure.name).toEqual([[failure.line]]);
+      log.mockRestore();
+    }
+  }
+});
+
+it("AC-0127: no log line holds the key, the facts, or a product description", async () => {
+  for (const failure of FAILURES) {
+    const log = silence();
+    const { deps } = digestDeps(failure.deps);
+    await decideDigest(SENT, deps);
+    const logged = JSON.stringify(log.mock.calls);
+    for (const secret of ["sk-ant", "Smoked Turkey", "list price", FACTS]) {
+      expect(logged, `${failure.name}: ${secret}`).not.toContain(secret);
+    }
+    log.mockRestore();
+  }
 });

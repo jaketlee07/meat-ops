@@ -1,5 +1,6 @@
 import { dateInAppZone } from "./app-today";
 import type { AlertView } from "./alert-text";
+import type { DigestRow } from "./digest";
 import { isUrgent } from "./alert-text";
 import type { TypedClient } from "./supabase.js";
 
@@ -178,4 +179,20 @@ export async function listOpenAlerts(client: TypedClient): Promise<OpenAlert[]> 
 
   const alerts = ordered.map(({ row, view }) => ({ id: present(row.id, "id"), urgent: isUrgent(view), view }));
   return [...alerts.filter((alert) => alert.urgent), ...alerts.filter((alert) => !alert.urgent)];
+}
+
+// Today's digest row, or null when the day has none. Like listOpenAlerts, it
+// throws on error.
+export async function getDigest(client: TypedClient, date: string): Promise<DigestRow | null> {
+  const { data, error } = await client
+    .from("alert_digests")
+    .select("status, paragraphs, failure_kind, claimed_at")
+    .eq("digest_date", date)
+    .maybeSingle();
+  if (error) throw new Error(`getDigest failed: ${error.message}`);
+  if (!data) return null;
+  if (data.status !== "writing" && data.status !== "written" && data.status !== "failed") {
+    throw new Error("getDigest failed: unknown digest status");
+  }
+  return { status: data.status, paragraphs: data.paragraphs, failureKind: data.failure_kind, claimedAt: data.claimed_at };
 }
