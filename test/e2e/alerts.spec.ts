@@ -456,6 +456,9 @@ test.describe("the page", () => {
     // Entered first but received later: the lot received a day ago comes first.
     const later = await receiveTom(1000, "1.95", 0);
     const earlier = await receiveTom(1000, "1.90", 1);
+    await watch();
+    // Touch the earlier lot's alert so the table holds it after the later lot's.
+    await query("update alerts set updated_at = now() where lot_id = $1", [earlier]);
     await opens(page);
     expect(await groupTitles(page, "Urgent")).toEqual([await lotTitle(earlier), await lotTitle(later), MARGIN_TITLE]);
     await expect(page.getByRole("region", { name: "Other alerts" })).toHaveCount(0);
