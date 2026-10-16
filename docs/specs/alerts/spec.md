@@ -1,6 +1,6 @@
 # Spec: alerts
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (the AI never computes a figure), §4 (`alerts`), §7 "Watch (alerts)", §11 (boundaries), §12 (AI numbers match the engine; AI features degrade safely), §13 item 7; [`docs/costing.md`](../../costing.md) (target margin and list price, the Rounding note); the pricing definitions in [`../menu-pricing/spec.md`](../menu-pricing/spec.md); the AI connection in [`../invoice-entry/spec.md`](../invoice-entry/spec.md) (on `main` once Invoice entry merges; until then on `origin/feat/invoice-entry`); the access model, the write path, the `supabase/migrations/` change guidance, and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md); the intent [`docs/product/intents/price-change-history.md`](../../product/intents/price-change-history.md)
