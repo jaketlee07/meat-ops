@@ -317,6 +317,47 @@ beforeAll(async () => {
   const watched = await loose(operatorTyped).rpc("refresh_alerts", { p_today: "2026-05-20" });
   expect(watched.error, "operator refresh_alerts").toBeNull();
   exercised.add("refresh_alerts");
+  // Digest: one day claimed and finished, and a second day left claimed for
+  // the valid finish_digest call below.
+  const started = await loose(operatorTyped).rpc("start_digest", { p_date: "2026-05-20", p_automatic: false });
+  expect(started.error, "operator start_digest").toBeNull();
+  exercised.add("start_digest");
+  const finished = await loose(operatorTyped).rpc("finish_digest", {
+    p_date: "2026-05-20",
+    p_paragraphs: ["Access fixture digest."],
+    p_failure_kind: null,
+  });
+  expect(finished.error, "operator finish_digest").toBeNull();
+  exercised.add("finish_digest");
+  const claimedForFinish = await loose(operatorTyped).rpc("start_digest", { p_date: "2026-05-21", p_automatic: false });
+  expect(claimedForFinish.error, "operator start_digest for the valid finish").toBeNull();
+  // Reprice and dismiss: the margin alert the watch opened is repriced, and a
+  // price alert row, added as postgres because no cost move makes one here, is dismissed.
+  const [marginAlert] = await query<{ id: string }>(
+    "select id::text as id from public.alerts where type = 'margin_below_target' and status = 'open'",
+  );
+  expect(marginAlert, "the watch opened a margin alert").toBeDefined();
+  const repriced = await loose(operatorTyped).rpc("apply_alert_price", {
+    p_alert_id: marginAlert?.id,
+    p_price_per_lb: 3.5,
+  });
+  expect(repriced.error, "operator apply_alert_price").toBeNull();
+  exercised.add("apply_alert_price");
+  const addOpenAlert = async (type: string, productId = PROD_502_ID): Promise<string> =>
+    (
+      await query<{ id: string }>(
+        `insert into public.alerts(type, severity, product_id, facts)
+         values ($1, 'low', $2, '{}'::jsonb) returning id::text as id`,
+        [type, productId],
+      )
+    )[0]!.id;
+  const dismissedAlert = await loose(operatorTyped).rpc("dismiss_alert", { p_alert_id: await addOpenAlert("price_stale") });
+  expect(dismissedAlert.error, "operator dismiss_alert").toBeNull();
+  exercised.add("dismiss_alert");
+  // Open alerts for the valid arguments below; the valid refresh_alerts call
+  // comes after both calls that use them.
+  const toReprice = await addOpenAlert("margin_below_target");
+  const toDismiss = await addOpenAlert("low_stock", RAW_TOM_ID);
   const backPrice = await loose(operatorTyped).rpc("set_list_price", {
     p_product_id: PROD_502_ID,
     p_price_per_lb: 5,
@@ -420,6 +461,10 @@ beforeAll(async () => {
     set_list_price: { p_product_id: PROD_502_ID, p_price_per_lb: 6 },
     price_what_if: { p_raw_product_id: RAW_TOM_ID, p_raw_cost_per_lb: 2.5 },
     refresh_alerts: { p_today: "2026-05-20" },
+    apply_alert_price: { p_alert_id: toReprice, p_price_per_lb: 5 },
+    dismiss_alert: { p_alert_id: toDismiss },
+    start_digest: { p_date: "2026-05-20", p_automatic: false },
+    finish_digest: { p_date: "2026-05-21", p_paragraphs: ["Valid digest."], p_failure_kind: null },
     create_import_draft: draftArgs,
     confirm_import_draft: {
       p_draft_id: toConfirm.id,

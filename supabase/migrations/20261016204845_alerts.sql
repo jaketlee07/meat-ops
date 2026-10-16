@@ -395,3 +395,227 @@ end $$;
 revoke all on function public.refresh_alerts(date)
     from public, anon, authenticated, service_role;
 grant execute on function public.refresh_alerts(date) to authenticated;
+
+-- ============================================================
+-- Alerts, part 3: the alerts view, reprice, dismiss, and the digest.
+--
+-- v_alerts joins each alert to its product, lot, vendor, and batch for the
+-- page's reads. dismiss_alert and apply_alert_price take the watch's advisory
+-- lock after their caller check, then the alert row, so a watch never ends an
+-- alert the owner is acting on. apply_alert_price changes a price only through
+-- set_list_price. alert_digests holds one row for each day with a claim; the
+-- claim is the row, and start_digest and finish_digest are its only writers.
+-- ============================================================
+
+create view public.v_alerts with (security_invoker = true) as
+select a.id, a.type, a.severity, a.status, a.facts,
+       a.product_id, p.code, p.description,
+       a.lot_id, l.lot_number, l.received_date, l.receipt_seq, v.name as vendor_name,
+       a.batch_id, b.batch_number, b.production_date, fg.produced_seq,
+       a.created_at, a.updated_at, a.closed_at, a.ended_at
+from public.alerts a
+join public.products p on p.id = a.product_id
+left join public.lots l on l.id = a.lot_id
+left join public.vendors v on v.id = l.vendor_id
+left join public.production_batches b on b.id = a.batch_id
+left join public.finished_goods fg on fg.batch_id = b.id;
+revoke all on table public.v_alerts from public, anon, authenticated, service_role;
+grant select on table public.v_alerts to authenticated, service_role;
+
+-- Each paragraph holds 1 to 800 characters. A check cannot hold a subquery,
+-- so the rule sits in a function that only the table's check calls.
+create function private.digest_paragraphs_ok(p_paragraphs text[]) returns boolean
+language sql immutable
+set search_path = ''
+as $$
+    select coalesce(bool_and(char_length(x) between 1 and 800), false)
+    from unnest(p_paragraphs) as x;
+$$;
+revoke all on function private.digest_paragraphs_ok(text[])
+    from public, anon, authenticated, service_role;
+
+create table public.alert_digests (
+    digest_date  date primary key,
+    status       text not null check (status in ('writing', 'written', 'failed')),
+    paragraphs   text[],
+    failure_kind text,
+    model        text,
+    claimed_at   timestamptz not null,
+    finished_at  timestamptz,
+    constraint alert_digests_state check (
+        case status
+            when 'written' then cardinality(paragraphs) between 1 and 6
+                                and private.digest_paragraphs_ok(paragraphs)
+                                and failure_kind is null
+            when 'failed'  then failure_kind is not null and paragraphs is null
+            else paragraphs is null and failure_kind is null
+        end)
+);
+comment on table public.alert_digests is
+    'One row for each day with a digest claim. writing: claimed_at holds the claim time. written: 1 to 6 paragraphs of 1 to 800 characters. failed: failure_kind holds why.';
+
+revoke all on table public.alert_digests from public, anon, authenticated, service_role;
+alter table public.alert_digests enable row level security;
+create policy operators_select on public.alert_digests
+    for select to authenticated using ((select private.is_operator()));
+grant select on table public.alert_digests to authenticated, service_role;
+
+create function public.dismiss_alert(p_alert_id uuid)
+returns public.alerts
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+    v_alert public.alerts;
+begin
+    perform private.assert_caller('dismiss_alert');
+    perform pg_advisory_xact_lock(hashtextextended('meat-ops:refresh_alerts', 0));
+
+    select * into v_alert from public.alerts where id = p_alert_id for update;
+    if not found then
+        raise exception 'dismiss_alert: alert % not found', p_alert_id;
+    end if;
+    if v_alert.status <> 'open' then
+        raise exception 'dismiss_alert: It is no longer open.';
+    end if;
+
+    update public.alerts
+    set status = 'dismissed', closed_at = now(), updated_at = now()
+    where id = p_alert_id
+    returning * into v_alert;
+    return v_alert;
+end $$;
+revoke all on function public.dismiss_alert(uuid)
+    from public, anon, authenticated, service_role;
+grant execute on function public.dismiss_alert(uuid) to authenticated;
+
+-- A refusal from set_list_price passes through with its own prefix and rolls
+-- the whole call back, so the alert stays open.
+create function public.apply_alert_price(p_alert_id uuid, p_price_per_lb numeric)
+returns public.products
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+    v_alert   public.alerts;
+    v_product public.products;
+begin
+    perform private.assert_caller('apply_alert_price');
+    perform pg_advisory_xact_lock(hashtextextended('meat-ops:refresh_alerts', 0));
+
+    select * into v_alert from public.alerts where id = p_alert_id for update;
+    if not found then
+        raise exception 'apply_alert_price: alert % not found', p_alert_id;
+    end if;
+    if v_alert.status <> 'open' then
+        raise exception 'apply_alert_price: This alert is no longer open.';
+    end if;
+    if v_alert.type not in ('margin_below_target', 'price_stale') then
+        raise exception 'apply_alert_price: alert % is not a margin or price alert', p_alert_id;
+    end if;
+
+    select * into v_product from public.set_list_price(v_alert.product_id, p_price_per_lb);
+
+    update public.alerts
+    set status = 'actioned', closed_at = now(), ended_at = now(), updated_at = now()
+    where id = p_alert_id;
+    return v_product;
+end $$;
+revoke all on function public.apply_alert_price(uuid, numeric)
+    from public, anon, authenticated, service_role;
+grant execute on function public.apply_alert_price(uuid, numeric) to authenticated;
+
+-- The result is the first row of the spec's table that matches. A claim older
+-- than 180 seconds is stale. Only claimed changes the date's row.
+create function public.start_digest(p_date date, p_automatic boolean)
+returns table (result text, paragraphs text[], failure_kind text)
+language plpgsql security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+    v_row public.alert_digests;
+    v_stale boolean;
+begin
+    perform private.assert_caller('start_digest');
+
+    if p_date is null then
+        raise exception 'start_digest: date is required';
+    end if;
+    if p_automatic is null then
+        raise exception 'start_digest: the kind of send is required';
+    end if;
+
+    if not exists (select 1 from public.alerts a where a.status = 'open') then
+        return query select 'none'::text, null::text[], null::text;
+        return;
+    end if;
+
+    -- A second caller for the same date waits here for the first to commit.
+    insert into public.alert_digests as d (digest_date, status, claimed_at)
+    values (p_date, 'writing', now())
+    on conflict (digest_date) do nothing;
+    if found then
+        return query select 'claimed'::text, null::text[], null::text;
+        return;
+    end if;
+
+    select * into v_row from public.alert_digests d where d.digest_date = p_date for update;
+    v_stale := v_row.status = 'writing' and now() - v_row.claimed_at > interval '180 seconds';
+
+    if v_row.status = 'written' then
+        return query select 'written'::text, v_row.paragraphs, null::text;
+    elsif v_row.status = 'writing' and not v_stale then
+        return query select 'busy'::text, null::text[], null::text;
+    elsif not p_automatic then
+        update public.alert_digests d
+        set status = 'writing', paragraphs = null, failure_kind = null, model = null,
+            claimed_at = now(), finished_at = null
+        where d.digest_date = p_date;
+        return query select 'claimed'::text, null::text[], null::text;
+    elsif v_row.status = 'failed' then
+        return query select 'failed'::text, null::text[], v_row.failure_kind;
+    else
+        return query select 'stale'::text, null::text[], null::text;
+    end if;
+end $$;
+revoke all on function public.start_digest(date, boolean)
+    from public, anon, authenticated, service_role;
+grant execute on function public.start_digest(date, boolean) to authenticated;
+
+create function public.finish_digest(p_date date, p_paragraphs text[], p_failure_kind text)
+returns public.alert_digests
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+    v_row public.alert_digests;
+begin
+    perform private.assert_caller('finish_digest');
+
+    if (p_paragraphs is null) = (nullif(p_failure_kind, '') is null) then
+        raise exception 'finish_digest: give the paragraphs or a failure kind, not both and not neither';
+    end if;
+
+    select * into v_row from public.alert_digests d where d.digest_date = p_date for update;
+    if not found or v_row.status <> 'writing' then
+        raise exception 'finish_digest: the digest for % is not being written', p_date;
+    end if;
+
+    if p_paragraphs is not null then
+        update public.alert_digests d
+        set status = 'written', paragraphs = p_paragraphs, model = 'claude-opus-5-5',
+            finished_at = now()
+        where d.digest_date = p_date
+        returning * into v_row;
+    else
+        update public.alert_digests d
+        set status = 'failed', failure_kind = p_failure_kind, finished_at = now()
+        where d.digest_date = p_date
+        returning * into v_row;
+    end if;
+    return v_row;
+end $$;
+revoke all on function public.finish_digest(date, text[], text)
+    from public, anon, authenticated, service_role;
+grant execute on function public.finish_digest(date, text[], text) to authenticated;

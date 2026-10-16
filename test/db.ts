@@ -42,7 +42,7 @@ truncate
   finished_goods, production_batch_lots, production_batches,
   lot_adjustments, lots, inventory_balances,
   product_fees, products, fee_types, vendors,
-  private.list_price_changes, alerts
+  private.list_price_changes, alerts, alert_digests
   restart identity cascade;
 
 insert into fee_types(code, name, kind, sort_order) values

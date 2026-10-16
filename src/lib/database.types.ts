@@ -34,6 +34,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_digests: {
+        Row: {
+          claimed_at: string
+          digest_date: string
+          failure_kind: string | null
+          finished_at: string | null
+          model: string | null
+          paragraphs: string[] | null
+          status: string
+        }
+        Insert: {
+          claimed_at: string
+          digest_date: string
+          failure_kind?: string | null
+          finished_at?: string | null
+          model?: string | null
+          paragraphs?: string[] | null
+          status: string
+        }
+        Update: {
+          claimed_at?: string
+          digest_date?: string
+          failure_kind?: string | null
+          finished_at?: string | null
+          model?: string | null
+          paragraphs?: string[] | null
+          status?: string
+        }
+        Relationships: []
+      }
       alerts: {
         Row: {
           batch_id: string | null
@@ -915,6 +945,75 @@ export type Database = {
       }
     }
     Views: {
+      v_alerts: {
+        Row: {
+          batch_id: string | null
+          batch_number: string | null
+          closed_at: string | null
+          code: string | null
+          created_at: string | null
+          description: string | null
+          ended_at: string | null
+          facts: Json | null
+          id: string | null
+          lot_id: string | null
+          lot_number: string | null
+          produced_seq: number | null
+          product_id: string | null
+          production_date: string | null
+          receipt_seq: number | null
+          received_date: string | null
+          severity: string | null
+          status: string | null
+          type: string | null
+          updated_at: string | null
+          vendor_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "production_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_current_menu"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_pricing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
+          },
+        ]
+      }
       v_current_menu: {
         Row: {
           code: string | null
@@ -1046,6 +1145,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      apply_alert_price: {
+        Args: { p_alert_id: string; p_price_per_lb: number }
+        Returns: {
+          active: boolean
+          brand: string | null
+          code: string
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          lbs_per_pack: number | null
+          list_price_per_lb: number | null
+          pack_style: string | null
+          raw_product_id: string | null
+          shrink_pct: number | null
+          species: string | null
+          target_margin_pct: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "products"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_operator: { Args: never; Returns: undefined }
       confirm_import_draft: {
         Args: { p_draft_id: string; p_lines: Json }
@@ -1118,6 +1242,47 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "import_drafts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      dismiss_alert: {
+        Args: { p_alert_id: string }
+        Returns: {
+          batch_id: string | null
+          closed_at: string | null
+          created_at: string
+          ended_at: string | null
+          facts: Json
+          id: string
+          lot_id: string | null
+          product_id: string
+          severity: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "alerts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finish_digest: {
+        Args: { p_date: string; p_failure_kind: string; p_paragraphs: string[] }
+        Returns: {
+          claimed_at: string
+          digest_date: string
+          failure_kind: string | null
+          finished_at: string | null
+          model: string | null
+          paragraphs: string[] | null
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "alert_digests"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1279,6 +1444,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      start_digest: {
+        Args: { p_automatic: boolean; p_date: string }
+        Returns: {
+          failure_kind: string
+          paragraphs: string[]
+          result: string
+        }[]
       }
       void_receipt: {
         Args: { p_lot_id: string; p_reason: string }
