@@ -176,6 +176,35 @@ export async function setListPrice(
   return data as Product;
 }
 
+export type Alert = Functions["dismiss_alert"]["Returns"];
+
+// One watch (alerts spec): the five rules for the app's today. Returns the
+// open and urgent counts it leaves.
+export async function refreshAlerts(
+  client: TypedClient,
+  today: string,
+): Promise<{ open: number; urgent: number }> {
+  const { data, error } = await client.rpc("refresh_alerts", { p_today: today });
+  if (error) throw rpcError("refreshAlerts", error);
+  const row = data?.[0];
+  if (!row) throw new RpcError("refreshAlerts failed: the watch returned no counts", "");
+  return { open: row.open_count, urgent: row.urgent_count };
+}
+
+export async function dismissAlert(client: TypedClient, alertId: string): Promise<Alert> {
+  const { data, error } = await client.rpc("dismiss_alert", { p_alert_id: alertId });
+  if (error) throw rpcError("dismissAlert", error);
+  return data as Alert;
+}
+
+// Sets the list price of the alert's product through set_list_price and marks
+// the alert actioned. Returns the product row.
+export async function applyAlertPrice(client: TypedClient, alertId: string, pricePerLb: number): Promise<Product> {
+  const { data, error } = await client.rpc("apply_alert_price", { p_alert_id: alertId, p_price_per_lb: pricePerLb });
+  if (error) throw rpcError("applyAlertPrice", error);
+  return data as Product;
+}
+
 export type ImportDraft = Functions["create_import_draft"]["Returns"];
 
 // One drafted line as create_import_draft takes it. Weight and cost stay text:

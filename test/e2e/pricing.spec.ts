@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { callAsOperator, PROD_502_ID, RAW_TOM_ID, resetTestData, voidReceiptCall } from "../db";
 import { checkPageState } from "./a11y";
+import { withSeeAlerts } from "./alerts-page";
 import {
   addFinished,
   addRaw,
@@ -321,7 +322,7 @@ test.describe("the list", () => {
   }) => {
     await fixture502(0.2, 2.68);
     await opens(page);
-    expect(await checkPageState(page)).toEqual(WITH_502_BUTTON("Raise list price to $3.29/lb"));
+    expect(await checkPageState(page)).toEqual(withSeeAlerts(WITH_502_BUTTON("Raise list price to $3.29/lb")));
     await page.getByRole("button", { name: "Raise list price to $3.29/lb" }).focus();
     await page.keyboard.press("Enter");
     await expect(savedRegion(page)).toHaveText("List price for 502 saved: $3.29/lb.");
@@ -404,7 +405,7 @@ test.describe("the list", () => {
     await expect(savedRegion(page)).toHaveText("");
     expect(await productsSnapshot()).toEqual(before);
     // The pricing list after a change refusal.
-    expect(await checkPageState(page)).toEqual(WITH_502_BUTTON("Raise list price to $3.29/lb"));
+    expect(await checkPageState(page)).toEqual(withSeeAlerts(WITH_502_BUTTON("Raise list price to $3.29/lb")));
   });
 
   test("AC-0115 and AC-0137: a dropped Apply says it may not have been saved", async ({ page }) => {
@@ -713,7 +714,7 @@ test.describe("the detail", () => {
     await expect(d.price).toHaveAccessibleName(/per lb/);
     // The detail with a target margin.
     expect(await checkPageState(page)).toEqual(
-      detailControls({ apply: "Raise list price to $3.29/lb", remove: true }),
+      withSeeAlerts(detailControls({ apply: "Raise list price to $3.29/lb", remove: true })),
     );
   });
 

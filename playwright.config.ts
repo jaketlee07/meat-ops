@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { privilegedVariableNames } from "./src/privileged-env";
+import { APP_TIME_ZONE } from "./test/e2e/app-time";
 import { e2ePort, namesOwnStack, ownStackRefusal, readOwnStackFile, resolveStackEnv, stackEnvIsSet } from "./test/env";
 import { localStackRefusal, realRunner } from "./test/network";
 
@@ -84,6 +85,9 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 240_000,
       env: {
+        // The app's today comes from its time zone, so the suite fixes it and
+        // computes the same date (test/e2e/app-time.ts).
+        TZ: APP_TIME_ZONE,
         SUPABASE_URL: stack.apiUrl,
         SUPABASE_ANON_KEY: stack.anonKey,
         ANTHROPIC_API_KEY: ANTHROPIC_TEST_KEY,
