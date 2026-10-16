@@ -307,6 +307,21 @@ beforeAll(async () => {
   });
   expect(setPrice.error, "operator set_list_price").toBeNull();
   exercised.add("set_list_price");
+  // Alerts: a list price below the 20% target opens a margin alert, so the
+  // alerts table has a row; the price then goes back to 5.
+  const lowPrice = await loose(operatorTyped).rpc("set_list_price", {
+    p_product_id: PROD_502_ID,
+    p_price_per_lb: 3,
+  });
+  expect(lowPrice.error, "operator set_list_price below target").toBeNull();
+  const watched = await loose(operatorTyped).rpc("refresh_alerts", { p_today: "2026-05-20" });
+  expect(watched.error, "operator refresh_alerts").toBeNull();
+  exercised.add("refresh_alerts");
+  const backPrice = await loose(operatorTyped).rpc("set_list_price", {
+    p_product_id: PROD_502_ID,
+    p_price_per_lb: 5,
+  });
+  expect(backPrice.error, "operator set_list_price back").toBeNull();
   const whatIf = await loose(operatorTyped).rpc("price_what_if", {
     p_raw_product_id: RAW_TOM_ID,
     p_raw_cost_per_lb: 2,
@@ -404,6 +419,7 @@ beforeAll(async () => {
     set_target_margin: { p_product_id: PROD_502_ID, p_target_percent: 25 },
     set_list_price: { p_product_id: PROD_502_ID, p_price_per_lb: 6 },
     price_what_if: { p_raw_product_id: RAW_TOM_ID, p_raw_cost_per_lb: 2.5 },
+    refresh_alerts: { p_today: "2026-05-20" },
     create_import_draft: draftArgs,
     confirm_import_draft: {
       p_draft_id: toConfirm.id,

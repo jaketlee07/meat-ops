@@ -34,6 +34,94 @@ export type Database = {
   }
   public: {
     Tables: {
+      alerts: {
+        Row: {
+          batch_id: string | null
+          closed_at: string | null
+          created_at: string
+          ended_at: string | null
+          facts: Json
+          id: string
+          lot_id: string | null
+          product_id: string
+          severity: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          ended_at?: string | null
+          facts: Json
+          id?: string
+          lot_id?: string | null
+          product_id: string
+          severity: string
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          ended_at?: string | null
+          facts?: Json
+          id?: string
+          lot_id?: string | null
+          product_id?: string
+          severity?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "production_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_current_menu"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_pricing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_sale_summary"
+            referencedColumns: ["finished_product_id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string
@@ -1134,6 +1222,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      refresh_alerts: {
+        Args: { p_today: string }
+        Returns: {
+          open_count: number
+          urgent_count: number
+        }[]
       }
       set_list_price: {
         Args: { p_price_per_lb: number; p_product_id: string }
