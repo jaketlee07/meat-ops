@@ -217,3 +217,8 @@ The owner confirmed on 2026-10-16 that the `ANTHROPIC_API_KEY` line in this fold
 - **The planted direction:** the paragraphs hold 0 word-for-word copies of it (the model named 502 by its code only). With copies removed, the paragraphs still contain "fine", ignoring case: **yes**, in the sentence above that reports the instruction and says it was ignored. The figures were not changed and no margin is called fine. By the spec's assumption, this record gates nothing.
 - **Page state:** `checkPageState` passed with no axe violation; Tab order: the eight Primary links, Sign out, then each alert's controls in alert order.
 - **Key handling:** `sk-ant` and `x-api-key` appear 0 times in the capture, the app's output (9 lines, the start banner only), the runner output, and the page record. `.env` was not changed. The app was stopped by its PID afterwards; nothing listens on 3200.
+
+## Wave 6 gates (T7, 2026-10-16)
+
+- On 3497beb: `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 40 files, 725 tests, 20 s; Playwright 540, 5.5 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
+- Simplify pass over the feature's new `src/` code: nothing cut. The exports used only inside their own file (`AlertText`, `DigestVerdict`, `DIGEST_SCHEMA`, `MAX_PARAGRAPHS`, `MAX_PARAGRAPH_CHARACTERS`, `STALE_CLAIM_MS`, `RepriceDeps`, `DismissDeps`, `DigestClaimResult`, `DIGEST_KEY_REFUSED`) are each used where they are defined, and several are the plan's named exports. The saved-price line in `src/app/alerts/decide.ts` repeats one branch of pricing's multi-kind `savedMessage`, so sharing it would not be simpler.
