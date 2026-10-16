@@ -130,7 +130,12 @@ export type OperationName =
   | "price_what_if"
   | "create_import_draft"
   | "confirm_import_draft"
-  | "discard_import_draft";
+  | "discard_import_draft"
+  | "refresh_alerts"
+  | "dismiss_alert"
+  | "apply_alert_price"
+  | "start_digest"
+  | "finish_digest";
 
 export interface OpCall {
   fn: OperationName;
@@ -167,6 +172,12 @@ const PARAM_TYPES: Record<string, string> = {
   p_draft_id: "uuid",
   p_customer_id: "uuid",
   p_sale_number: "text",
+  p_today: "date",
+  p_alert_id: "uuid",
+  p_date: "date",
+  p_automatic: "boolean",
+  p_paragraphs: "text[]",
+  p_failure_kind: "text",
 };
 
 export const receiveCall = (
