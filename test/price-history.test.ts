@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { afterAll, beforeEach, expect, it } from "vitest";
 import {
   callAsOperator,
@@ -139,12 +140,24 @@ it("AC-0071: anon, authenticated, and service_role can neither read nor change t
 
 it("AC-0188: nothing the migration adds in private grants a privilege to anon, authenticated, or service_role", async () => {
   const roles = ["anon", "authenticated", "service_role"];
-  const fns = await query<{ oid: string; name: string }>(
-    `select p.oid::text, p.proname as name from pg_proc p
-     where p.pronamespace = 'private'::regnamespace
-       and p.proname in ('record_list_price_change', 'baseline_list_prices')`,
+  // What the alerts migration adds in private: every private function that no
+  // earlier migration creates, so a function added later is checked too.
+  const dir = "supabase/migrations";
+  const earlier = new Set(
+    readdirSync(dir)
+      .filter((file) => file.endsWith(".sql") && !file.endsWith("_alerts.sql"))
+      .flatMap((file) =>
+        [...readFileSync(`${dir}/${file}`, "utf8").matchAll(/create (?:or replace )?function private\.(\w+)/g)].map(
+          (match) => match[1],
+        ),
+      ),
   );
-  expect(fns.map((f) => f.name).sort()).toEqual(["baseline_list_prices", "record_list_price_change"]);
+  const fns = (
+    await query<{ oid: string; name: string }>(
+      `select p.oid::text, p.proname as name from pg_proc p where p.pronamespace = 'private'::regnamespace`,
+    )
+  ).filter((fn) => !earlier.has(fn.name));
+  expect(fns.map((f) => f.name)).toEqual(expect.arrayContaining(["baseline_list_prices", "record_list_price_change"]));
   for (const fn of fns) {
     for (const role of roles) {
       const [row] = await query<{ ok: boolean }>("select has_function_privilege($1, $2::oid, 'EXECUTE') as ok", [role, fn.oid]);
@@ -153,9 +166,9 @@ it("AC-0188: nothing the migration adds in private grants a privilege to anon, a
   }
   const seqs = await query<{ name: string }>(
     `select c.relname as name from pg_class c
-     where c.relnamespace = 'private'::regnamespace and c.relkind = 'S' and c.relname like 'list_price_changes%'`,
+     where c.relnamespace = 'private'::regnamespace and c.relkind = 'S'`,
   );
-  expect(seqs).toEqual([{ name: "list_price_changes_seq_seq" }]);
+  expect(seqs).toContainEqual({ name: "list_price_changes_seq_seq" });
   for (const seq of seqs) {
     for (const role of roles) {
       for (const priv of ["USAGE", "SELECT", "UPDATE"]) {
