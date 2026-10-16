@@ -92,3 +92,16 @@ void_sale(p_sale_id uuid, p_reason text)
 ## Wave 2 gates (T2, 2026-10-16)
 
 - `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 38 files, 685 tests, 20 s; Playwright 486, 3.1 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
+
+## T3
+
+- The stub matched its recorded sha256 (`a7036f75…`). Because `refresh_alerts` existed by then, its red moved to the next missing function: it failed at `applied.error` with `function public.apply_alert_price(p_alert_id => uuid, p_price_per_lb => numeric) does not exist`, after the receipt, target, list price, and watch calls succeeded (commit c45a219).
+- The migration's third part adds `v_alerts`, `alert_digests`, `dismiss_alert`, `apply_alert_price`, `start_digest(p_date, p_automatic)`, `finish_digest`, and the private helper `private.digest_paragraphs_ok(text[])`, which the table's check uses because a check cannot hold a subquery. `test/alerts-data.test.ts` has 15 tests.
+- Refusal texts: `dismiss_alert: It is no longer open.`, `apply_alert_price: This alert is no longer open.`, `<function>: alert <id> not found`, `apply_alert_price: alert <id> is not a margin or price alert`; `start_digest` and `finish_digest` refuse a missing argument after the caller check. `dismiss_alert` sets `closed_at`. Both functions take the watch's advisory lock after the caller check; an extra test shows each waits on a running watch.
+- `v_alerts` carries every alert column, the product's code and description, the lot's number, received date, `receipt_seq`, and vendor name, and the batch's number, production date, and `produced_seq` (left joins).
+- Mutation checks: 21 changes (state, threshold, flag, lock, grant, RLS, `security_invoker`, `search_path`, caller order, and claim-race mutations) each turned a test red on stack B and were restored. A bare insert grant on `alerts` stays refused by RLS; adding a permissive insert policy turns AC-0074 red.
+- AC-0188's test listed function names, so it missed `private.digest_paragraphs_ok`. It now takes every private function no earlier migration creates, and every private sequence, from the catalog; granting `execute` on the helper to `anon` turned it red (commit 4dc4f69).
+
+## Wave 3 gates (T3, 2026-10-16)
+
+- After `npm run db:reset:stack-b`: `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 39 files, 700 tests, 21 s; Playwright 486, 3.0 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
