@@ -1,6 +1,9 @@
+import os from "node:os";
 import { expect, test, type Page } from "@playwright/test";
 import { buildFiveAlertFixture, RAW_BEEF_ID } from "../alert-fixtures";
 import { callAsOperator, PROD_502_ID, query, receiveCall, resetTestData, VENDOR_ID } from "../db";
+import { resolveStackEnv } from "../env";
+import { OPERATOR_EMAIL } from "../users";
 import { formatDate } from "../../src/lib/format";
 import { CHANGE_UNKNOWN, DISMISS_UNKNOWN } from "../../src/lib/failures";
 import { checkPageState } from "./a11y";
@@ -10,15 +13,21 @@ import {
   alertsSnapshot,
   alertStates,
   banner,
+  BEING_WRITTEN,
   captureAction,
   CHANGE_SIGNED_OUT,
   closeAlert,
   costEarlier,
+  DIGEST_FOOTER,
+  DIGEST_SIGNED_OUT,
+  digestRegion,
+  digestRows,
   dismissButton,
   DISMISS_SIGNED_OUT,
   dropActionRequests,
   groupTitles,
   HEADER_PAGES,
+  KEY_REFUSED_DIGEST,
   marginCase,
   MARGIN_SENTENCE,
   MARGIN_TITLE,
@@ -28,26 +37,42 @@ import {
   NOT_ACTIVE,
   NOT_DISMISSED,
   NOT_SAVED_CHANGE,
+  NOT_WRITTEN_NOT_ALLOWED,
   opens,
+  openDigest,
   priceCase,
   RAISE_329,
   receiveTom,
   refusedRegion,
   savedRegion,
+  SEEDED_DIGEST,
   sectionHeadings,
+  seedDigest,
   setActive,
+  shownFacts,
   storedListPrice,
   textWithoutBanner,
+  tryAgain,
+  TRY_AGAIN_DIGEST,
   watch,
   WATCH_FAILED,
   withSeeAlerts,
   withValue,
   withWatchRefused,
+  WRITING_DIGEST,
   yieldBatch,
   ZERO_ID,
 } from "./alerts-page";
 import { appDate } from "./app-time";
+import {
+  ANTHROPIC_TEST_AUTH_TOKEN,
+  ANTHROPIC_TEST_KEY,
+  type FakeAnswer,
+  type FakeModel,
+  fakeModel,
+} from "./invoices-page";
 import { replayText } from "./pricing-page";
+import { readSession } from "./session";
 import { FORM_CONTROLS as RECEIVING_CONTROLS, fillReceipt, NOT_ALLOWED, openForm } from "./receiving-page";
 import { NON_OPERATOR_STATE, OPERATOR_STATE } from "./states";
 
@@ -471,14 +496,13 @@ test.describe("the page", () => {
     const digest = page.getByRole("region", { name: "Today's digest", exact: true });
     await expect(digest.getByText("No open alerts.", { exact: true })).toBeVisible();
     expect(await sectionHeadings(page)).toEqual(["Today's digest"]);
-    await query(
-      `insert into alert_digests(digest_date, status, paragraphs, model, claimed_at, finished_at)
-       values ($1, 'written', array['Everything is fine today.'], 'claude-opus-5-5', now(), now())`,
-      [appDate()],
-    );
+    // opens() stored a written digest for today.
+    expect(await query("select status from alert_digests where digest_date = $1", [appDate()])).toEqual([
+      { status: "written" },
+    ]);
     await opens(page);
     await expect(digest.getByText("No open alerts.", { exact: true })).toBeVisible();
-    await expect(page.getByText("Everything is fine today.")).toHaveCount(0);
+    await expect(page.getByText(SEEDED_DIGEST)).toHaveCount(0);
     // The page state with no open alert.
     expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
   });
@@ -729,5 +753,472 @@ test.describe("reprice and dismiss", () => {
     await openForm(page);
     await expect(banner(page)).toBeVisible();
     expect(await checkPageState(page)).toEqual(withSeeAlerts(RECEIVING_CONTROLS));
+  });
+});
+
+// ---- The digest ----
+
+// A digest that passes the checks for the margin case: every number is one the
+// facts hold, and it names 502.
+function marginDigest(text = "The 502 margin is 1.8%, below your 20% target. Raise the price to $3.29/lb."): FakeAnswer {
+  return { text: JSON.stringify({ paragraphs: [text] }) };
+}
+
+// For the five-alert fixture: it names every alert's product code and holds no figure.
+const FIVE_DIGEST: FakeAnswer = {
+  text: JSON.stringify({ paragraphs: ["Look at 502, RAW-TOM, 503, and RAW-BEEF first."] }),
+};
+
+test.describe("the digest", () => {
+  let model: FakeModel;
+
+  test.beforeEach(async ({ baseURL }) => {
+    model = fakeModel(baseURL);
+    await model.reset();
+  });
+
+  test("AC-0080, AC-0081, AC-0134, AC-0130: the first visit sends one request, says so in a status region, and shows the digest without moving focus", async ({
+    page,
+  }) => {
+    await marginCase();
+    await model.answer({ hold: true, then: marginDigest() });
+    // The in-flight message sits in a status region that was in the page before its text.
+    await page.addInitScript(() => {
+      const seen = { regionAddedWithText: false };
+      (window as unknown as { __digest: typeof seen }).__digest = seen;
+      new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (!(node instanceof Element)) continue;
+            for (const region of [node, ...node.querySelectorAll("[role=status]")]) {
+              if (region.getAttribute("role") === "status" && region.textContent?.includes("Writing today's digest")) {
+                seen.regionAddedWithText = true;
+              }
+            }
+          }
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await openDigest(page);
+    const writing = digestRegion(page).locator("p[role=status]");
+    await expect(writing).toHaveText(WRITING_DIGEST);
+    await model.waitForRequests(1);
+    expect(await page.evaluate(() => (window as unknown as { __digest: { regionAddedWithText: boolean } }).__digest)).toEqual({
+      regionAddedWithText: false,
+    });
+    // The page state while a digest is being written.
+    expect(await checkPageState(page)).toEqual([...NAV_CONTROLS, `button ${RAISE_329}`, "button Dismiss"]);
+
+    // AC-0134: focus stays where it was when the automatic outcome arrives.
+    await dismissButton(page, MARGIN_TITLE).focus();
+    await model.release();
+    const text = "The 502 margin is 1.8%, below your 20% target. Raise the price to $3.29/lb.";
+    await expect(digestRegion(page).getByText(text, { exact: true })).toBeVisible();
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER, { exact: true })).toBeVisible();
+    await expect(writing).toHaveText("");
+    await expect(dismissButton(page, MARGIN_TITLE)).toBeFocused();
+    expect(await model.requests()).toHaveLength(1);
+    expect(await digestRows()).toEqual([{ status: "written", paragraphs: [text], failure_kind: null }]);
+    // The page state with a written digest.
+    expect(await checkPageState(page)).toEqual([...NAV_CONTROLS, `button ${RAISE_329}`, "button Dismiss"]);
+  });
+
+  test("AC-0082: a second load the same day sends nothing and shows the stored digest, also after a new alert", async ({
+    page,
+  }) => {
+    await marginCase();
+    await model.answer(marginDigest());
+    await openDigest(page);
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toBeVisible();
+    await yieldBatch();
+    await openDigest(page);
+    await expect(page.getByRole("region", { name: "Other alerts" })).toBeVisible();
+    await expect(digestRegion(page).getByText("The 502 margin is 1.8%", { exact: false })).toBeVisible();
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toBeVisible();
+    await page.reload();
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toBeVisible();
+    expect(await model.requests()).toHaveLength(1);
+  });
+
+  test("AC-0085: with no open alert a load sends nothing and stores no digest", async ({ page }) => {
+    await openDigest(page);
+    await expect(digestRegion(page).getByText("No open alerts.", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(digestRegion(page).getByText("No open alerts.", { exact: true })).toBeVisible();
+    expect(await model.requests()).toEqual([]);
+    expect(await digestRows()).toEqual([]);
+  });
+
+  test("AC-0083, AC-0097, AC-0098, AC-0109, AC-0162: the request has the fixed fields, one user message of the page's own facts, and no machine value", async ({
+    page,
+  }) => {
+    await buildFiveAlertFixture({ today: appDate(), watch: false });
+    await model.answer(FIVE_DIGEST, FIVE_DIGEST);
+    await openDigest(page);
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toBeVisible();
+    const facts = await shownFacts(page);
+    expect(facts.split("\n")).toHaveLength(6);
+    const [first] = await model.requests();
+    expect(first).toBeDefined();
+    const { body, headers } = first!;
+
+    // AC-0083
+    expect(Object.keys(body).sort()).toEqual(["max_tokens", "messages", "model", "output_config", "system"]);
+    expect(body.model).toBe("claude-opus-5-5");
+    expect(body.max_tokens).toBe(16000);
+    expect(Object.keys(body.output_config).sort()).toEqual(["effort", "format"]);
+    expect(body.output_config.effort).toBe("low");
+    expect(body.output_config.format.type).toBe("json_schema");
+    expect(body.output_config.format.schema).toEqual({
+      type: "object",
+      properties: { paragraphs: { type: "array", items: { type: "string" } } },
+      required: ["paragraphs"],
+      additionalProperties: false,
+    });
+    expect(headers["anthropic-beta"]).toBeUndefined();
+
+    // AC-0097: one user message, whose text is the facts the page's sentences make.
+    expect(body.messages).toEqual([{ role: "user", content: [{ type: "text", text: facts }] }]);
+
+    // AC-0109 and AC-0162.
+    expect(headers["x-api-key"]).toBe(ANTHROPIC_TEST_KEY);
+    expect(headers.authorization).toBeUndefined();
+    expect(JSON.stringify({ headers, body })).not.toContain(ANTHROPIC_TEST_AUTH_TOKEN);
+    const squash = (text: string) => text.toLowerCase().replaceAll(/\s+/g, "");
+    const machine = [
+      os.hostname(),
+      os.type(),
+      os.platform(),
+      `Other:${os.platform()}`,
+      "macOS",
+      "Windows",
+      "Linux",
+      os.arch(),
+      process.version,
+      process.version.replace(/^v/, ""),
+      "MacOS",
+      "FreeBSD",
+      "OpenBSD",
+      "iOS",
+      "Android",
+      "Unknown",
+    ];
+    for (const [name, value] of Object.entries(headers)) {
+      for (const word of machine) expect(squash(value), `${name} holds ${word}`).not.toContain(squash(word));
+    }
+    expect(Object.keys(headers).filter((name) => name.startsWith("x-stainless"))).toEqual([]);
+    expect(headers["user-agent"]).not.toMatch(/Anthropic/i);
+
+    // AC-0098: the same system text for a different set of open alerts.
+    await closeAlert(await alertIdOf("yield_anomaly"));
+    await closeAlert(await alertIdOf("low_stock"));
+    await query("delete from alert_digests");
+    await openDigest(page);
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toBeVisible();
+    const requests = await model.requests();
+    expect(requests).toHaveLength(2);
+    expect(requests[1]!.body.messages).not.toEqual(body.messages);
+    expect(requests[1]!.body.system).toBe(body.system);
+    expect(typeof body.system).toBe("string");
+    expect(body.system.length).toBeGreaterThan(100);
+  });
+
+  test("AC-0099: the request holds none of the master data, the operator's email, the session, or the anon key", async ({
+    page,
+    context,
+  }) => {
+    await buildFiveAlertFixture({ today: appDate(), watch: false });
+    await query(
+      "update vendors set contact_name = 'Sentinel Contact', phone = '555-0199', email = 'sentinel@example.test', notes = 'sentinel vendor note'",
+    );
+    await query("update products set brand = 'Sentinel Brand'");
+    await query("update lots set notes = 'sentinel lot note'");
+    await query("update production_batches set notes = 'sentinel batch note'");
+    await query("insert into customers(name) values ('Sentinel Customer')");
+    await model.answer(FIVE_DIGEST);
+    await openDigest(page);
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toBeVisible();
+    const cookies = (await context.cookies()).filter((cookie) => cookie.name.startsWith("sb-"));
+    expect(cookies.length).toBeGreaterThan(0);
+    const session = readSession(cookies);
+    const sentinels = [
+      "Sentinel Contact",
+      "555-0199",
+      "sentinel@example.test",
+      "sentinel vendor note",
+      "Sentinel Brand",
+      "sentinel lot note",
+      "sentinel batch note",
+      "Sentinel Customer",
+      OPERATOR_EMAIL,
+      resolveStackEnv().anonKey,
+      session.access_token,
+      session.refresh_token,
+      ...cookies.map((cookie) => cookie.value),
+    ];
+    const [request] = await model.requests();
+    const sent = JSON.stringify({ headers: request!.headers, body: request!.body });
+    for (const sentinel of sentinels) expect(sent, sentinel.slice(0, 24)).not.toContain(sentinel);
+  });
+
+  test("AC-0110: a paragraph shows as literal text and adds no element", async ({ page }) => {
+    await marginCase();
+    await query("update products set description = '<b>9</b>' where id = $1", [PROD_502_ID]);
+    await model.answer({ text: JSON.stringify({ paragraphs: ["Check 502 <b>9</b> first."] }) });
+    await openDigest(page);
+    await expect(digestRegion(page).getByText("Check 502 <b>9</b> first.", { exact: true })).toBeVisible();
+    await expect(page.locator("main b")).toHaveCount(0);
+  });
+
+  test("AC-0003, AC-0004, AC-0124, AC-0125, AC-0084, AC-0198, AC-0204: replayed digest requests", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    await marginCase();
+    await model.answer(marginDigest());
+    // The request the page sent on its own, as a replay would carry it.
+    const sent = await captureAction(page, () => openDigest(page));
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toBeVisible();
+    await query("delete from alert_digests");
+    await model.reset();
+
+    // A day with no row: no session or a non-operator's session changes nothing and sends nothing.
+    const before = await alertsSnapshot();
+    expect(await replayText(playwright, baseURL, sent, undefined)).toContain(DIGEST_SIGNED_OUT);
+    expect(await replayText(playwright, baseURL, sent, NON_OPERATOR_STATE)).toContain(NOT_WRITTEN_NOT_ALLOWED);
+    expect(await alertsSnapshot()).toEqual(before);
+    expect(await model.requests()).toEqual([]);
+
+    // AC-0084: a written day returns its digest and sends nothing.
+    await seedDigest({ status: "written", paragraphs: ["Stored paragraph for today."] });
+    expect(await replayText(playwright, baseURL, sent, OPERATOR_STATE)).toContain("Stored paragraph for today.");
+    expect(await model.requests()).toEqual([]);
+
+    // AC-0204: the page's own send for a failed day or an aged claim gets the page's message, with no request.
+    const days: ReadonlyArray<[Parameters<typeof seedDigest>[0], string]> = [
+      [{ status: "failed", kind: "service-error" }, TRY_AGAIN_DIGEST],
+      [{ status: "failed", kind: "key-refused" }, KEY_REFUSED_DIGEST],
+      [{ status: "writing", ageSeconds: 181 }, TRY_AGAIN_DIGEST],
+      [{ status: "writing", ageSeconds: 100 }, BEING_WRITTEN],
+    ];
+    for (const [day, message] of days) {
+      await query("delete from alert_digests");
+      await seedDigest(day);
+      const rows = await digestRows();
+      expect(await replayText(playwright, baseURL, sent, OPERATOR_STATE), JSON.stringify(day)).toContain(message);
+      expect(await digestRows(), JSON.stringify(day)).toEqual(rows);
+      expect(await model.requests(), JSON.stringify(day)).toEqual([]);
+    }
+
+    // AC-0198: with no open alert the replay says so and stores nothing.
+    await query("delete from alert_digests");
+    await query("update alerts set status = 'dismissed', closed_at = now()");
+    expect(await replayText(playwright, baseURL, sent, OPERATOR_STATE)).toContain("No open alerts.");
+    expect(await digestRows()).toEqual([]);
+    expect(await model.requests()).toEqual([]);
+  });
+
+  test("AC-0088, AC-0095, AC-0185, AC-0136, AC-0130: a refused key says so with Try again, a reload sends nothing, and Try again sends one request", async ({
+    page,
+  }) => {
+    for (const status of [401, 403]) {
+      await resetTestData();
+      await model.reset();
+      await marginCase();
+      await model.answer({ status });
+      await openDigest(page);
+      await expect(digestRegion(page).getByText(KEY_REFUSED_DIGEST, { exact: true })).toBeVisible();
+      await expect(tryAgain(page)).toBeVisible();
+      await model.waitForRequests(1);
+      expect(await digestRows(), String(status)).toEqual([{ status: "failed", paragraphs: null, failure_kind: "key-refused" }]);
+    }
+    // The page state after an AC-0088 outcome.
+    expect(await checkPageState(page)).toEqual([...NAV_CONTROLS, "button Try again", `button ${RAISE_329}`, "button Dismiss"]);
+
+    // AC-0095: a reload shows the same message and sends nothing.
+    await page.reload();
+    await expect(digestRegion(page).getByText(KEY_REFUSED_DIGEST, { exact: true })).toBeVisible();
+    await expect(tryAgain(page)).toBeVisible();
+    expect(await model.requests()).toHaveLength(1);
+
+    // AC-0185 and AC-0136: Try again sends one request, and focus lands on the outcome's message.
+    await model.answer({ status: 500 });
+    await tryAgain(page).click();
+    await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible();
+    await expect(digestRegion(page).locator("[tabindex='-1']")).toBeFocused();
+    expect(await model.requests()).toHaveLength(2);
+    expect(await digestRows()).toEqual([{ status: "failed", paragraphs: null, failure_kind: "service-error" }]);
+
+    await model.answer(marginDigest());
+    await tryAgain(page).click();
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER, { exact: true })).toBeVisible();
+    await expect(digestRegion(page).locator("[tabindex='-1']")).toBeFocused();
+    await expect(tryAgain(page)).toHaveCount(0);
+    expect(await model.requests()).toHaveLength(3);
+    expect((await digestRows())[0]?.status).toBe("written");
+  });
+
+  // Each way the digest request can end that AC-0090 names, but the 60 second wait.
+  const FAILURES: ReadonlyArray<{ name: string; answer: FakeAnswer; kind: string }> = [
+    { name: "an error status", answer: { status: 500 }, kind: "service-error" },
+    { name: "a dropped connection", answer: { drop: true }, kind: "service-error" },
+    {
+      name: "a refusal",
+      answer: { text: JSON.stringify({ paragraphs: ["502 is fine."] }), stop_reason: "refusal" },
+      kind: "declined",
+    },
+    {
+      name: "max_tokens",
+      answer: { text: JSON.stringify({ paragraphs: ["502 is fine."] }), stop_reason: "max_tokens" },
+      kind: "too-long",
+    },
+    { name: "an answer that is not JSON", answer: { text: "not json" }, kind: "unreadable" },
+    { name: "an answer with the wrong shape", answer: { text: JSON.stringify({ lines: [] }) }, kind: "unreadable" },
+    {
+      name: "seven paragraphs",
+      answer: { text: JSON.stringify({ paragraphs: Array.from({ length: 7 }, () => "502 again.") }) },
+      kind: "unreadable",
+    },
+    { name: "an empty paragraph", answer: { text: JSON.stringify({ paragraphs: ["  "] }) }, kind: "unreadable" },
+    {
+      name: "a number the facts do not hold",
+      answer: marginDigest("The 502 margin is 1.8%, below your 20% target. Aim for 3.30."),
+      kind: "unfaithful",
+    },
+    { name: "a missing product code", answer: { text: JSON.stringify({ paragraphs: ["All is well."] }) }, kind: "unfaithful" },
+  ];
+
+  test("AC-0090, AC-0095, AC-0130: each way the request fails says the digest wasn't written, offers Try again, and leaves the day failed", async ({
+    page,
+  }) => {
+    for (const failure of FAILURES) {
+      await resetTestData();
+      await model.reset();
+      await marginCase();
+      await model.answer(failure.answer);
+      await openDigest(page);
+      await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true }), failure.name).toBeVisible();
+      await expect(tryAgain(page), failure.name).toBeVisible();
+      await expect(digestRegion(page).getByText(DIGEST_FOOTER), failure.name).toHaveCount(0);
+      expect(await model.requests(), failure.name).toHaveLength(1);
+      expect(await digestRows(), failure.name).toEqual([{ status: "failed", paragraphs: null, failure_kind: failure.kind }]);
+      // AC-0095: a reload shows the message again and sends nothing.
+      await page.reload();
+      await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true }), failure.name).toBeVisible();
+      await expect(tryAgain(page), failure.name).toBeVisible();
+      expect(await model.requests(), failure.name).toHaveLength(1);
+    }
+    // The page state after an AC-0090 outcome.
+    expect(await checkPageState(page)).toEqual([...NAV_CONTROLS, "button Try again", `button ${RAISE_329}`, "button Dismiss"]);
+  });
+
+  test("AC-0090: no answer within 60 seconds ends the wait with the same message", async ({ page }) => {
+    test.setTimeout(150_000);
+    await marginCase();
+    await model.answer({ hold: true, then: marginDigest() });
+    await openDigest(page);
+    await expect(digestRegion(page).locator("[role=status]", { hasText: WRITING_DIGEST })).toBeVisible();
+    await model.waitForRequests(1);
+    await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible({ timeout: 90_000 });
+    await expect(tryAgain(page)).toBeVisible();
+    expect(await digestRows()).toEqual([{ status: "failed", paragraphs: null, failure_kind: "no-answer" }]);
+    expect(await model.requests()).toHaveLength(1);
+  });
+
+  test("AC-0090, AC-0089: a refused store of the paragraphs says the digest wasn't written and leaves the day writing", async ({
+    page,
+  }) => {
+    await marginCase();
+    await model.answer(marginDigest());
+    await query("revoke execute on function public.finish_digest(date, text[], text) from authenticated");
+    try {
+      await openDigest(page);
+      await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible();
+      await expect(tryAgain(page)).toBeVisible();
+      await expect(digestRegion(page).getByText(DIGEST_FOOTER)).toHaveCount(0);
+      expect(await model.requests()).toHaveLength(1);
+      expect(await digestRows()).toEqual([{ status: "writing", paragraphs: null, failure_kind: null }]);
+    } finally {
+      await query("grant execute on function public.finish_digest(date, text[], text) to authenticated");
+    }
+    // With the claim fresh, a reload says another write is in progress and sends nothing.
+    await page.reload();
+    await expect(digestRegion(page).getByText(BEING_WRITTEN, { exact: true })).toBeVisible();
+    expect(await model.requests()).toHaveLength(1);
+  });
+
+  test("AC-0089, AC-0199, AC-0185: a fresh claim says it is being written; an aged one offers Try again, which sends one request", async ({
+    page,
+  }) => {
+    await marginCase();
+    await seedDigest({ status: "writing", ageSeconds: 100 });
+    await openDigest(page);
+    await expect(digestRegion(page).getByText(BEING_WRITTEN, { exact: true })).toBeVisible();
+    await expect(tryAgain(page)).toHaveCount(0);
+    expect(await model.requests()).toEqual([]);
+    // The page state with a claim being written.
+    expect(await checkPageState(page)).toEqual([...NAV_CONTROLS, `button ${RAISE_329}`, "button Dismiss"]);
+
+    await query("update alert_digests set claimed_at = now() - interval '181 seconds'");
+    await page.reload();
+    await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible();
+    await expect(tryAgain(page)).toBeVisible();
+    expect(await model.requests()).toEqual([]);
+    // The page state after an AC-0199 outcome.
+    expect(await checkPageState(page)).toEqual([...NAV_CONTROLS, "button Try again", `button ${RAISE_329}`, "button Dismiss"]);
+
+    await model.answer(marginDigest());
+    await tryAgain(page).click();
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER, { exact: true })).toBeVisible();
+    expect(await model.requests()).toHaveLength(1);
+    expect((await digestRows())[0]?.status).toBe("written");
+  });
+
+  test("AC-0096: a digest stored for yesterday only does not stop today's request", async ({ page }) => {
+    await marginCase();
+    await seedDigest({ status: "written", date: appDate(-1), paragraphs: ["Yesterday's digest."] });
+    await model.answer(marginDigest());
+    await openDigest(page);
+    await expect(digestRegion(page).getByText(DIGEST_FOOTER, { exact: true })).toBeVisible();
+    await expect(page.getByText("Yesterday's digest.")).toHaveCount(0);
+    expect(await model.requests()).toHaveLength(1);
+  });
+
+  test("AC-0190: a digest that reaches the model sends one request, also for 429, 500, 529, and a dropped connection", async ({
+    page,
+  }) => {
+    const answers: ReadonlyArray<[string, FakeAnswer]> = [
+      ["429", { status: 429 }],
+      ["500", { status: 500 }],
+      ["529", { status: 529 }],
+      ["a drop", { drop: true }],
+    ];
+    for (const [name, answer] of answers) {
+      await resetTestData();
+      await model.reset();
+      await marginCase();
+      await model.answer(answer, marginDigest());
+      await openDigest(page);
+      await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true }), name).toBeVisible();
+      await page.waitForTimeout(500);
+      expect(await model.requests(), name).toHaveLength(1);
+    }
+  });
+
+  test("AC-0205: after the page's own send fails, leaving and pressing Back sends no further request", async ({ page }) => {
+    await marginCase();
+    await model.answer({ status: 500 }, marginDigest());
+    await openDigest(page);
+    await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible();
+    await model.waitForRequests(1);
+    await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Receiving" }).click();
+    await expect(page).toHaveURL(/\/receiving$/);
+    await page.goBack();
+    await expect(page.getByRole("heading", { level: 1, name: "Alerts" })).toBeVisible();
+    await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(await model.requests()).toHaveLength(1);
+    expect(await digestRows()).toEqual([{ status: "failed", paragraphs: null, failure_kind: "service-error" }]);
   });
 });

@@ -9,6 +9,7 @@ import {
   receiveCall,
   VENDOR_ID,
 } from "../db";
+import { formatDate } from "../../src/lib/format";
 import { appDate } from "./app-time";
 import { MENU_CONTROLS } from "./menu-page";
 
@@ -45,6 +46,21 @@ export const MARGIN_SENTENCE =
 export const RAISE_329 = "Raise list price to $3.29/lb";
 
 export async function opens(page: Page, url = "/alerts"): Promise<void> {
+  // A written digest for today keeps the page from sending its own digest
+  // request, so the alert specs run as if the digest were done. The digest
+  // specs open the page with openDigest, which leaves the day alone.
+  await query(
+    `insert into alert_digests(digest_date, status, paragraphs, model, claimed_at, finished_at)
+     values ($1, 'written', array[$2::text], 'claude-opus-5-5', now(), now())
+     on conflict (digest_date) do nothing`,
+    [appDate(), SEEDED_DIGEST],
+  );
+  await openDigest(page, url);
+}
+
+export const SEEDED_DIGEST = "Everything is fine today.";
+
+export async function openDigest(page: Page, url = "/alerts"): Promise<void> {
   await page.goto(url);
   await expect(page.getByRole("heading", { level: 1, name: "Alerts" })).toBeVisible();
 }
@@ -170,6 +186,7 @@ export async function alertsSnapshot(): Promise<unknown> {
     alerts: await query("select * from alerts order by id"),
     products: await query("select * from products order by code"),
     history: await query("select * from private.list_price_changes order by seq"),
+    digests: await query("select * from alert_digests order by digest_date"),
   };
 }
 
@@ -242,4 +259,91 @@ export async function dropActionRequests(page: Page): Promise<{ readonly count: 
     }
   });
   return dropped;
+}
+
+// ---- The digest ----
+
+export const TRY_AGAIN_DIGEST = "Today's digest wasn't written. Try again in a moment.";
+export const KEY_REFUSED_DIGEST =
+  "Today's digest wasn't written. The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file.";
+export const WRITING_DIGEST = "Writing today's digest. This can take up to a minute.";
+export const BEING_WRITTEN = "Today's digest is being written. Reload this page in a minute.";
+export const DIGEST_FOOTER = "Written by Claude from the alerts open at the time. Every open alert is listed below.";
+export const DIGEST_SIGNED_OUT = "You're signed out. Sign in again to see today's digest.";
+export const NOT_WRITTEN_NOT_ALLOWED = "Today's digest wasn't written. This account isn't allowed to use Meat Ops.";
+
+export interface DigestRowState {
+  status: string;
+  paragraphs: string[] | null;
+  failure_kind: string | null;
+}
+
+export async function digestRows(): Promise<DigestRowState[]> {
+  return query<DigestRowState>("select status, paragraphs, failure_kind from alert_digests order by digest_date");
+}
+
+// A row for a day, as the claim and finish functions leave it. `ageSeconds` is
+// how long ago the claim was made.
+export async function seedDigest(
+  row:
+    | { status: "written"; paragraphs?: string[]; date?: string }
+    | { status: "failed"; kind: string; date?: string }
+    | { status: "writing"; ageSeconds: number; date?: string },
+): Promise<void> {
+  const date = row.date ?? appDate();
+  if (row.status === "written") {
+    await query(
+      `insert into alert_digests(digest_date, status, paragraphs, model, claimed_at, finished_at)
+       values ($1, 'written', $2::text[], 'claude-opus-5-5', now(), now())`,
+      [date, row.paragraphs ?? [SEEDED_DIGEST]],
+    );
+  } else if (row.status === "failed") {
+    await query(
+      `insert into alert_digests(digest_date, status, failure_kind, claimed_at, finished_at)
+       values ($1, 'failed', $2, now(), now())`,
+      [date, row.kind],
+    );
+  } else {
+    await query(
+      `insert into alert_digests(digest_date, status, claimed_at)
+       values ($1, 'writing', now() - make_interval(secs => $2))`,
+      [date, row.ageSeconds],
+    );
+  }
+}
+
+export function digestRegion(page: Page): Locator {
+  return page.getByRole("region", { name: "Today's digest", exact: true });
+}
+
+export function tryAgain(page: Page): Locator {
+  return page.getByRole("button", { name: "Try again", exact: true });
+}
+
+// The facts the page's own sentences make, read from the screen the way
+// digestFacts words them: totals, then one line per alert in the order shown.
+export async function shownFacts(page: Page): Promise<string> {
+  const lines: string[] = [];
+  let urgent = 0;
+  for (const [section, prefix] of [
+    ["Urgent", "Urgent."],
+    ["Other alerts", "Other."],
+  ] as const) {
+    const region = page.getByRole("region", { name: section, exact: true });
+    if ((await region.count()) === 0) continue;
+    for (const group of await region.getByRole("group").all()) {
+      const title = ((await group.getByRole("heading", { level: 3 }).textContent()) ?? "").trim();
+      const sentence = ((await group.locator("p").first().textContent()) ?? "").trim();
+      const price = group.locator("button:not([aria-label])");
+      const next =
+        (await price.count()) > 0
+          ? ((await price.textContent()) ?? "").trim()
+          : ((await group.locator("p", { hasText: /^Next step:/ }).textContent()) ?? "")
+              .replace(/^Next step:\s*/, "")
+              .trim();
+      if (prefix === "Urgent.") urgent += 1;
+      lines.push(`${prefix} ${title}. ${sentence} Next step: ${next}${next.endsWith(".") ? "" : "."}`);
+    }
+  }
+  return [`Today is ${formatDate(appDate())}. Open alerts: ${lines.length}. Urgent: ${urgent}.`, ...lines].join("\n");
 }
