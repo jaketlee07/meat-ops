@@ -124,18 +124,25 @@ export async function readReceipt(input: ReadInput, catalog: Catalog, today: str
   }
 }
 
-// One digest sends one request: no retries, and a 60 second limit on the wait for
-// the answer to start (alerts AC-0090, AC-0190). The facts are the whole user
+// One digest sends one request: no retries, and a 60 second limit on the whole
+// answer (alerts AC-0090, AC-0190). The SDK's own timeout covers only the wait for
+// the response headers, so the limit is also an abort signal, and its firing reads
+// as no answer whatever error the SDK throws. The facts are the whole user
 // message. The answer is parsed and checked here (AC-0091 to AC-0093), so
 // only paragraphs that passed leave this function.
 export async function writeDigest(facts: string, codes: readonly string[]): Promise<DigestModelResult> {
   const built = buildClient();
   if (!built.ok) return built;
 
+  const deadline = AbortSignal.timeout(DIGEST_TIMEOUT_MS);
   let message;
   try {
-    message = await built.client.messages.create(digestRequest(facts), { timeout: DIGEST_TIMEOUT_MS });
+    message = await built.client.messages.create(digestRequest(facts), {
+      timeout: DIGEST_TIMEOUT_MS,
+      signal: deadline,
+    });
   } catch (error) {
+    if (deadline.aborted) return { ok: false, kind: "no-answer" };
     return { ok: false, ...failureOf(error) };
   }
 

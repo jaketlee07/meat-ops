@@ -1126,6 +1126,18 @@ test.describe("the digest", () => {
     expect(await model.requests()).toHaveLength(1);
   });
 
+  test("AC-0090: an answer that starts but never finishes also ends the wait at 60 seconds", async ({ page }) => {
+    test.setTimeout(150_000);
+    await marginCase();
+    await model.answer({ stallAfterHeaders: true });
+    await openDigest(page);
+    await model.waitForRequests(1);
+    await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible({ timeout: 90_000 });
+    await expect(tryAgain(page)).toBeVisible();
+    expect(await digestRows()).toEqual([{ status: "failed", paragraphs: null, failure_kind: "no-answer" }]);
+    expect(await model.requests()).toHaveLength(1);
+  });
+
   test("AC-0090, AC-0089: a refused store of the paragraphs says the digest wasn't written and leaves the day writing", async ({
     page,
   }) => {
