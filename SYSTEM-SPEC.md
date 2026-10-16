@@ -95,8 +95,8 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 ### AI-support state (new for this scope)
 
 - alerts: id, type (one of: margin_below_target, low_stock, cost_anomaly, yield_anomaly, price_stale), severity (low, medium, high), subject (a reference to the product, lot, or batch it concerns), message (plain language), suggested_action (what to do, for example a reprice value), status (open, dismissed, actioned), created_at. Alerts persist so the owner can see, act on, or dismiss them.
-- import_drafts: id, source (photo or text), captured_at, raw_capture (the original image or text), status (pending, confirmed, discarded). Staging for AI-parsed input before it is written.
-- import_draft_lines: id, import_draft_id (fk import_drafts), parsed fields matching a receive action (product guess, vendor guess, weight, unit_cost, date), confidence, resolved (whether the human accepted or corrected it). On confirm, each accepted line becomes a lot via the normal receive operation.
+- import_drafts: id, source (photo or text), capture_text (the typed text, for a text draft), capture_image and capture_image_type (the photo and its media type, for a photo draft), captured_on (the capture date: the device's today sent with the read), captured_at, model (the model that read it), status (pending, confirmed, discarded), settled_at (set once the draft is confirmed or discarded). A discard clears the photo, its type, and the text. Staging for AI-parsed input before it is written.
+- import_draft_lines: id, import_draft_id (fk import_drafts), line_no (1 to 30), words (the invoice's own words for the line; cleared on a discard), the drafted fields matching a receive action (product_id, vendor_id, weight_lbs, unit_cost, received_date, each empty when the reading gave no usable value or was unsure), unsure_fields (which of product, vendor, weight, cost, date the reader was unsure of), status (pending, saved, skipped), lot_id (the lot a saved line made). On confirm, each ticked line becomes a lot via the normal receive operation.
 
 ### Derived reads (views)
 
@@ -105,7 +105,8 @@ the app is allowed to bypass.
 
 - v_product_pricing: per finished product, the full cost build-up: raw moving-average cost, post-shrink cost, processing fees, target margin, resulting cost per lb, and suggested price per lb, plus the list price, whether the raw input has a cost, the suggested list price, the margin at the list price, the price action (set, raise, or lower), and whether the product needs a new price or is below its target. The pricing page and the AI advisor read this. The what-if function price_what_if works out the same cost, price, and margin for a typed raw cost.
 - v_current_menu: per finished product, its suggested price, its list price, and whether it is sellable now (has finished stock, or has raw available to make it). The menu reads this.
-- v_sale_traceability: per sale line, the full chain: sale, customer name (empty when the sale has no customer), sale line id, finished product, lbs sold and price per lb on the line, batch, production date, raw lot, raw product, vendor, received date, lbs drawn from that lot, and that lot's cost. Void sales do not appear. Both forward trace (sale to origin) and reverse trace (lot to every sale) read this.
+- v_sale_traceability: per sale line, the full chain: sale, customer name (empty when the sale has no customer), sale line id, finished product, lbs sold and price per lb on the line, batch, production date, raw lot, raw product, vendor, received date, lbs drawn from that lot, and that lot's cost. Void sales do not appear. It also carries the sale, the customer, the raw product's code, and the keys that put batches and lots in the order they were drawn. Both forward trace (sale to origin) and reverse trace (lot to every sale) read this.
+- v_sale_summary: one row per sale, void or not, with its finished product, customer name (empty when the sale has no customer), total lbs sold, price per lb, and the void time and reason. The sales page reads it.
 
 ## 5. The deterministic engine (behavioral contracts, no code)
 

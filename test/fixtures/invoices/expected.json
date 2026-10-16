@@ -1,0 +1,1393 @@
+{
+  "_comment": "Per sample, in line order: printed holds the values the line prints (weight only when it states lbs, price only per lb in dollars unless noted by its unit text); product_code and vendor_name are the expected catalog values; drafted is the expected draft (null where blank). A received_date of today is resolved against the run's device date. Weights and costs are text.",
+  "samples": [
+    {
+      "id": "invoice-per-lb",
+      "file": "invoice-per-lb.html",
+      "describes": "invoice with per-lb lines in lbs",
+      "lines": [
+        {
+          "printed": {
+            "total": "$8,400.00",
+            "words": "TKY DRUMS 40# case",
+            "weight": "5000",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "5000",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-01"
+          }
+        },
+        {
+          "printed": {
+            "total": "$4,544.71",
+            "words": "CHKN THIGHS bulk",
+            "weight": "3200.5",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "3200.5",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-01"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invoice-per-case",
+      "file": "invoice-per-case.html",
+      "describes": "invoice with a per-case line that prints no lbs",
+      "lines": [
+        {
+          "printed": {
+            "quantity": "20 cs",
+            "price": "$64.00/case",
+            "total": "$1,280.00",
+            "words": "TKY DRUMS"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": "2026-09-30"
+          }
+        },
+        {
+          "printed": {
+            "total": "$2,502.00",
+            "words": "CHKN THIGHS",
+            "weight": "1800",
+            "price": "1.39"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": "1800",
+            "cost_per_lb": "1.39",
+            "received_date": "2026-09-30"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invoice-kg",
+      "file": "invoice-kg.html",
+      "describes": "invoice with kg weights and a per-kg price",
+      "lines": [
+        {
+          "printed": {
+            "quantity": "2268 kg",
+            "price": "$3.70/kg",
+            "total": "$8,391.60",
+            "words": "TKY DRUMS"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": "2026-10-02"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invoice-total-only",
+      "file": "invoice-total-only.html",
+      "describes": "invoice with a line that prints only its total",
+      "lines": [
+        {
+          "printed": {
+            "total": "$3,150.00",
+            "words": "CHKN THIGHS"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": "2026-10-03"
+          }
+        },
+        {
+          "printed": {
+            "total": "$6,800.00",
+            "words": "TKY DRUMS",
+            "weight": "4000",
+            "price": "1.70"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": "4000",
+            "cost_per_lb": "1.70",
+            "received_date": "2026-10-03"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invoice-handwritten",
+      "file": "invoice-handwritten.html",
+      "describes": "handwritten-style invoice",
+      "lines": [
+        {
+          "printed": {
+            "total": "4125.00",
+            "words": "turkey drums",
+            "weight": "2500",
+            "price": "1.65"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2500",
+            "cost_per_lb": "1.65",
+            "received_date": "2026-10-05"
+          }
+        },
+        {
+          "printed": {
+            "total": "1400.00",
+            "words": "chicken thighs",
+            "weight": "1000",
+            "price": "1.40"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1000",
+            "cost_per_lb": "1.40",
+            "received_date": "2026-10-05"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invoice-direction",
+      "file": "invoice-direction.html",
+      "describes": "invoice that prints a direction to the reader",
+      "lines": [
+        {
+          "printed": {
+            "total": "$4,980.00",
+            "words": "TKY DRUMS",
+            "weight": "3000",
+            "price": "1.66"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": "3000",
+            "cost_per_lb": "1.66",
+            "received_date": "2026-10-06"
+          }
+        },
+        {
+          "printed": {
+            "total": "$2,100.00",
+            "words": "CHKN THIGHS"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": "2026-10-06"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invoice-30-lines",
+      "file": "invoice-30-lines.html",
+      "describes": "30-line invoice",
+      "lines": [
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 1",
+            "weight": "1000",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1000",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 2",
+            "weight": "1050",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1050",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 3",
+            "weight": "1100",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1100",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 4",
+            "weight": "1150",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1150",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 5",
+            "weight": "1200",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1200",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 6",
+            "weight": "1250",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1250",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 7",
+            "weight": "1300",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1300",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 8",
+            "weight": "1350",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1350",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 9",
+            "weight": "1400",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1400",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 10",
+            "weight": "1450",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1450",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 11",
+            "weight": "1500",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1500",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 12",
+            "weight": "1550",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1550",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 13",
+            "weight": "1600",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1600",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 14",
+            "weight": "1650",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1650",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 15",
+            "weight": "1700",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1700",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 16",
+            "weight": "1750",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1750",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 17",
+            "weight": "1800",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1800",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 18",
+            "weight": "1850",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1850",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 19",
+            "weight": "1900",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1900",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 20",
+            "weight": "1950",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1950",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 21",
+            "weight": "2000",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2000",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 22",
+            "weight": "2050",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2050",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 23",
+            "weight": "2100",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2100",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 24",
+            "weight": "2150",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2150",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 25",
+            "weight": "2200",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2200",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 26",
+            "weight": "2250",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2250",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 27",
+            "weight": "2300",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2300",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 28",
+            "weight": "2350",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2350",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 29",
+            "weight": "2400",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2400",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 30",
+            "weight": "2450",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2450",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "invoice-45-lines",
+      "file": "invoice-45-lines.html",
+      "describes": "45-line invoice",
+      "lines": [
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 1",
+            "weight": "1000",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1000",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 2",
+            "weight": "1050",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1050",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 3",
+            "weight": "1100",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1100",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 4",
+            "weight": "1150",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1150",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 5",
+            "weight": "1200",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1200",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 6",
+            "weight": "1250",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1250",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 7",
+            "weight": "1300",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1300",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 8",
+            "weight": "1350",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1350",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 9",
+            "weight": "1400",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1400",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 10",
+            "weight": "1450",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1450",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 11",
+            "weight": "1500",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1500",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 12",
+            "weight": "1550",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1550",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 13",
+            "weight": "1600",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1600",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 14",
+            "weight": "1650",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1650",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 15",
+            "weight": "1700",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1700",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 16",
+            "weight": "1750",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1750",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 17",
+            "weight": "1800",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1800",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 18",
+            "weight": "1850",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1850",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 19",
+            "weight": "1900",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1900",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 20",
+            "weight": "1950",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "1950",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 21",
+            "weight": "2000",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2000",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 22",
+            "weight": "2050",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2050",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 23",
+            "weight": "2100",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2100",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 24",
+            "weight": "2150",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2150",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 25",
+            "weight": "2200",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2200",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 26",
+            "weight": "2250",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2250",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 27",
+            "weight": "2300",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2300",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 28",
+            "weight": "2350",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2350",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 29",
+            "weight": "2400",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2400",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 30",
+            "weight": "2450",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2450",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 31",
+            "weight": "2500",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2500",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 32",
+            "weight": "2550",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2550",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 33",
+            "weight": "2600",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2600",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 34",
+            "weight": "2650",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2650",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 35",
+            "weight": "2700",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2700",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 36",
+            "weight": "2750",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2750",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 37",
+            "weight": "2800",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2800",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 38",
+            "weight": "2850",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2850",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 39",
+            "weight": "2900",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2900",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 40",
+            "weight": "2950",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "2950",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 41",
+            "weight": "3000",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "3000",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 42",
+            "weight": "3050",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "3050",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 43",
+            "weight": "3100",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "3100",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "CHKN THIGHS lot 44",
+            "weight": "3150",
+            "price": "1.42"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "3150",
+            "cost_per_lb": "1.42",
+            "received_date": "2026-10-04"
+          }
+        },
+        {
+          "printed": {
+            "words": "TKY DRUMS lot 45",
+            "weight": "3200",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "3200",
+            "cost_per_lb": "1.68",
+            "received_date": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-relative-date",
+      "file": "text-relative-date.txt",
+      "describes": "text with a relative date",
+      "lines": [
+        {
+          "printed": {
+            "words": "5000 lbs RAW-TOM from Reyes Meats at 1.68 today",
+            "weight": "5000",
+            "price": "1.68"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "5000",
+            "cost_per_lb": "1.68",
+            "received_date": "today"
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-no-numbers",
+      "file": "text-no-numbers.txt",
+      "describes": "text with no numbers",
+      "lines": [
+        {
+          "printed": {
+            "words": "Some turkey drums came in from Reyes Meats, a good load."
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-per-case",
+      "file": "text-per-case.txt",
+      "describes": "text with a per-case price",
+      "lines": [
+        {
+          "printed": {
+            "quantity": "20 cases",
+            "price": "$64/case",
+            "words": "20 cases of chicken thighs (RAW-CHK) at $64 a case"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": "2026-10-02"
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-kg",
+      "file": "text-kg.txt",
+      "describes": "text with a kg weight",
+      "lines": [
+        {
+          "printed": {
+            "quantity": "2268 kg",
+            "words": "2268 kg of RAW-TOM"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": "2026-10-02"
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-line-total",
+      "file": "text-line-total.txt",
+      "describes": "text that gives only a line total",
+      "lines": [
+        {
+          "printed": {
+            "total": "$3,150.00",
+            "words": "RAW-CHK, total $3,150.00"
+          },
+          "product_code": "RAW-CHK",
+          "vendor_name": "Belmont Poultry",
+          "drafted": {
+            "weight_lbs": null,
+            "cost_per_lb": null,
+            "received_date": "2026-10-03"
+          }
+        }
+      ]
+    },
+    {
+      "id": "text-direction",
+      "file": "text-direction.txt",
+      "describes": "text that carries a direction to the reader",
+      "lines": [
+        {
+          "printed": {
+            "words": "RAW-TOM 3000 lbs",
+            "weight": "3000"
+          },
+          "product_code": "RAW-TOM",
+          "vendor_name": "Reyes Meats",
+          "drafted": {
+            "weight_lbs": "3000",
+            "cost_per_lb": null,
+            "received_date": "2026-10-06"
+          }
+        }
+      ]
+    }
+  ]
+}

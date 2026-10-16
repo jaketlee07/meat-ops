@@ -314,6 +314,56 @@ beforeAll(async () => {
   expect(whatIf.error, "operator price_what_if").toBeNull();
   exercised.add("price_what_if");
 
+  // Invoice drafts: each of the three functions called once as the operator,
+  // then two more waiting drafts for the valid arguments below.
+  const draftArgs = {
+    p_source: "text",
+    p_capture_text: "5000 lbs RAW-TOM from Reyes Meats at 1.68",
+    p_captured_on: "2026-10-09",
+    p_model: "access-fixture",
+    p_lines: [
+      {
+        words: "TKY DRUMS 40#",
+        product_id: RAW_TOM_ID,
+        vendor_id: VENDOR_ID,
+        weight_lbs: "5000",
+        unit_cost: "1.68",
+        received_date: "2026-10-01",
+        unsure: [],
+      },
+    ],
+  };
+  const makeDraft = async (): Promise<{ id: string; lineId: string }> => {
+    const created = await loose(operatorTyped).rpc("create_import_draft", draftArgs);
+    expect(created.error, "operator create_import_draft").toBeNull();
+    const id = String((created.data as { id: string }).id);
+    const [line] = await query<{ id: string }>("select id from import_draft_lines where import_draft_id = $1", [id]);
+    return { id, lineId: line!.id };
+  };
+  exercised.add("create_import_draft");
+  const savedDraft = await makeDraft();
+  const confirmed = await loose(operatorTyped).rpc("confirm_import_draft", {
+    p_draft_id: savedDraft.id,
+    p_lines: [
+      {
+        line_id: savedDraft.lineId,
+        product_id: RAW_TOM_ID,
+        vendor_id: VENDOR_ID,
+        weight_lbs: "5",
+        unit_cost: "1.68",
+        received_date: "2026-10-01",
+      },
+    ],
+  });
+  expect(confirmed.error, "operator confirm_import_draft").toBeNull();
+  exercised.add("confirm_import_draft");
+  const discardedDraft = await makeDraft();
+  const discarded = await loose(operatorTyped).rpc("discard_import_draft", { p_draft_id: discardedDraft.id });
+  expect(discarded.error, "operator discard_import_draft").toBeNull();
+  exercised.add("discard_import_draft");
+  const toConfirm = await makeDraft();
+  const toDiscard = await makeDraft();
+
   // Targets that stay valid: an untouched lot to void, a sale to void, a lot to adjust.
   const untouched = await receiveLot(operatorTyped, {
     productId: RAW_TOM_ID,
@@ -354,6 +404,21 @@ beforeAll(async () => {
     set_target_margin: { p_product_id: PROD_502_ID, p_target_percent: 25 },
     set_list_price: { p_product_id: PROD_502_ID, p_price_per_lb: 6 },
     price_what_if: { p_raw_product_id: RAW_TOM_ID, p_raw_cost_per_lb: 2.5 },
+    create_import_draft: draftArgs,
+    confirm_import_draft: {
+      p_draft_id: toConfirm.id,
+      p_lines: [
+        {
+          line_id: toConfirm.lineId,
+          product_id: RAW_TOM_ID,
+          vendor_id: VENDOR_ID,
+          weight_lbs: "5",
+          unit_cost: "1.68",
+          received_date: "2026-10-01",
+        },
+      ],
+    },
+    discard_import_draft: { p_draft_id: toDiscard.id },
   };
 });
 

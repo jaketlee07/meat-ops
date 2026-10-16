@@ -37,6 +37,7 @@ export const CUSTOMER_ID = "44444444-4444-4444-4444-444444444444";
 
 const MASTER_DATA_SQL = `
 truncate
+  import_draft_lines, import_drafts,
   sale_items, sales, customers,
   finished_goods, production_batch_lots, production_batches,
   lot_adjustments, lots, inventory_balances,
@@ -78,6 +79,23 @@ export async function resetTestData(): Promise<void> {
   await pool.query(MASTER_DATA_SQL);
 }
 
+// The invoice fixture: the master data above plus an active raw product, an
+// inactive raw product, and a second vendor. No lot exists. Call it after
+// resetTestData.
+export const RAW_CHK_ID = "55555555-5555-5555-5555-555555555555";
+export const RAW_OLD_ID = "66666666-6666-6666-6666-666666666666";
+export const BELMONT_ID = "77777777-7777-7777-7777-777777777777";
+
+export async function seedInvoiceFixture(): Promise<void> {
+  await pool.query(`
+    insert into vendors(id, name) values ('${BELMONT_ID}', 'Belmont Poultry');
+    insert into products(id, code, description, species, kind) values
+      ('${RAW_CHK_ID}', 'RAW-CHK', 'Chicken Thighs (raw)', 'Chicken', 'raw');
+    insert into products(id, code, description, species, kind, active) values
+      ('${RAW_OLD_ID}', 'RAW-OLD', 'Old Turkey (raw)', 'Turkey', 'raw', false);
+  `);
+}
+
 export async function closePool(): Promise<void> {
   await pool.end();
 }
@@ -108,7 +126,10 @@ export type OperationName =
   | "adjust_lot"
   | "set_target_margin"
   | "set_list_price"
-  | "price_what_if";
+  | "price_what_if"
+  | "create_import_draft"
+  | "confirm_import_draft"
+  | "discard_import_draft";
 
 export interface OpCall {
   fn: OperationName;
@@ -135,6 +156,16 @@ const PARAM_TYPES: Record<string, string> = {
   p_target_percent: "numeric",
   p_raw_product_id: "uuid",
   p_raw_cost_per_lb: "numeric",
+  p_source: "text",
+  p_capture_text: "text",
+  p_capture_image: "bytea",
+  p_capture_image_type: "text",
+  p_captured_on: "date",
+  p_model: "text",
+  p_lines: "jsonb",
+  p_draft_id: "uuid",
+  p_customer_id: "uuid",
+  p_sale_number: "text",
 };
 
 export const receiveCall = (
@@ -616,4 +647,65 @@ export async function getFinishedGoods(finishedProductId: string): Promise<Finis
     lbs_produced: Number(r.lbs_produced),
     lbs_remaining: Number(r.lbs_remaining),
   }));
+}
+
+// ---- The sales spec's "sale fixture" ----
+
+export const VALLEY_ID = "55555555-5555-5555-5555-555555555555";
+
+export interface SaleFixture {
+  lotAId: string;
+  lotBId: string;
+  lotANumber: string;
+  lotBNumber: string;
+  batch1Id: string;
+  batch2Id: string;
+  saleId?: string;
+}
+
+async function numberOf(table: "lots" | "production_batches", id: string): Promise<string> {
+  const col = table === "lots" ? "lot_number" : "batch_number";
+  return String((await query(`select ${col} as n from public.${table} where id = $1`, [id]))[0]?.n);
+}
+
+// Lots A and B of RAW-TOM and batches 1 and 2 of 502 (4,620 and 770 finished
+// lbs), through the operations. Options: a 3.29 list price on 502, and the
+// 5,000-lb sale to Fulton Market Deli dated 2026-10-08 (number S-5000).
+export async function saleFixture(opts: { listPrice?: boolean; sale?: boolean } = {}): Promise<SaleFixture> {
+  await query("insert into vendors(id, name) values ($1, 'Valley Poultry')", [VALLEY_ID]);
+  const run = async (call: OpCall): Promise<string> => {
+    const outcome = await callAsOperator(call);
+    if (!outcome.ok) throw new Error(`${call.fn}: ${outcome.error}`);
+    return idOf(outcome);
+  };
+  const lotAId = await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 5000, 1.68, "2026-10-01"));
+  const lotBId = await run(receiveCall(RAW_TOM_ID, VALLEY_ID, 3000, 1.8, "2026-10-05"));
+  const batch1Id = await run(produceCall(PROD_502_ID, 6000, null, "2026-10-06"));
+  const batch2Id = await run(produceCall(PROD_502_ID, 1000, null, "2026-10-07"));
+  if (opts.listPrice) {
+    await run({ fn: "set_list_price", args: { p_product_id: PROD_502_ID, p_price_per_lb: 3.29 } });
+  }
+  let saleId: string | undefined;
+  if (opts.sale) {
+    saleId = await run({
+      fn: "record_sale",
+      args: {
+        p_finished_product_id: PROD_502_ID,
+        p_lbs: 5000,
+        p_price_per_lb: 3.29,
+        p_customer_id: CUSTOMER_ID,
+        p_sale_date: "2026-10-08",
+        p_sale_number: "S-5000",
+      },
+    });
+  }
+  return {
+    lotAId,
+    lotBId,
+    lotANumber: await numberOf("lots", lotAId),
+    lotBNumber: await numberOf("lots", lotBId),
+    batch1Id,
+    batch2Id,
+    saleId,
+  };
 }

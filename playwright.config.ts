@@ -14,6 +14,20 @@ const HOST = "127.0.0.1";
 const ownStackFile = readOwnStackFile();
 const PORT = e2ePort(process.env.E2E_PORT, namesOwnStack(ownStackFile));
 
+// The fake model service listens on the next port up, the spare app that the
+// invoice specs start for AC-0021 and AC-0028 on the one after, and a small
+// forwarder in front of the database API (AC-0097) on the one after that, so two
+// folders' runs (3100 and 3200) never collide.
+const FAKE_MODEL_PORT = PORT + 1;
+if (PORT + 3 > 65535) throw new Error("E2E_PORT must leave room for three more ports (at most 65532). Refusing to run.");
+
+// What the invoice specs expect the app to hold. Keep these two in step with
+// ANTHROPIC_TEST_KEY in test/e2e/invoices-page.ts. The suite sets all three
+// names itself, so neither .env nor the shell can supply them: Next.js fills a
+// name from .env only when the process has no value for it.
+const ANTHROPIC_TEST_KEY = "sk-ant-test-sentinel";
+const ANTHROPIC_TEST_AUTH_TOKEN = "sk-ant-test-auth-token-sentinel";
+
 // The localhost guard, the own-stack check, and the network check run here, at
 // config load, before the web server builds the app. Playwright loads this file
 // again in every worker, so the checks run there too.
@@ -55,11 +69,27 @@ export default defineConfig({
       dependencies: ["setup"],
     },
   ],
-  webServer: {
-    command: `env ${unsetPrivileged} sh -c "npm run build && npm run start -- -p ${PORT}"`,
-    port: PORT,
-    reuseExistingServer: false,
-    timeout: 240_000,
-    env: { SUPABASE_URL: stack.apiUrl, SUPABASE_ANON_KEY: stack.anonKey },
-  },
+  webServer: [
+    // The fake model comes first, so the app never starts without it.
+    {
+      command: `env ${unsetPrivileged} node test/e2e/fake-model.mjs`,
+      port: FAKE_MODEL_PORT,
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: { FAKE_MODEL_PORT: String(FAKE_MODEL_PORT) },
+    },
+    {
+      command: `env ${unsetPrivileged} sh -c "npm run build && npm run start -- -p ${PORT}"`,
+      port: PORT,
+      reuseExistingServer: false,
+      timeout: 240_000,
+      env: {
+        SUPABASE_URL: stack.apiUrl,
+        SUPABASE_ANON_KEY: stack.anonKey,
+        ANTHROPIC_API_KEY: ANTHROPIC_TEST_KEY,
+        ANTHROPIC_BASE_URL: `http://${HOST}:${FAKE_MODEL_PORT}`,
+        ANTHROPIC_AUTH_TOKEN: ANTHROPIC_TEST_AUTH_TOKEN,
+      },
+    },
+  ],
 });
