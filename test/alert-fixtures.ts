@@ -55,6 +55,13 @@ export interface FiveAlertFixture {
   subjects: Record<AlertType, AlertSubject>;
 }
 
+// A date `days` after (or before, when negative) an ISO date.
+function shifted(date: string, days: number): string {
+  const moved = new Date(`${date}T00:00:00Z`);
+  moved.setUTCDate(moved.getUTCDate() + days);
+  return moved.toISOString().slice(0, 10);
+}
+
 async function run(call: OpCall): Promise<string> {
   const outcome = await callAsOperator(call);
   if (!outcome.ok) throw new Error(`${call.fn}: ${outcome.error}`);
@@ -64,7 +71,15 @@ async function run(call: OpCall): Promise<string> {
 // With `watch: false` the data is built and no watch runs, for a test that
 // changes something before the first watch. Otherwise the fixture runs its
 // first watch and asserts it left exactly one open alert of each type.
-export async function buildFiveAlertFixture(opts: { watch?: boolean } = {}): Promise<FiveAlertFixture> {
+// `today` (default 2026-10-13) is the watch's today; every date above moves
+// with it, so the browser suite can build the fixture for the app's real today.
+export async function buildFiveAlertFixture(
+  opts: { watch?: boolean; today?: string } = {},
+): Promise<FiveAlertFixture> {
+  const today = opts.today ?? FIVE_ALERT_TODAY;
+  // Offsets from 2026-10-13, the date the comments above and the spec use.
+  const on = (month: number, day: number) =>
+    shifted(today, Math.round((Date.UTC(2026, month - 1, day) - Date.UTC(2026, 9, 13)) / 86_400_000));
   await query(
     `insert into products(id, code, description, species, kind) values
        ('${RAW_BEEF_ID}', 'RAW-BEEF', 'Beef Trim (raw)', 'Beef', 'raw');
@@ -75,7 +90,7 @@ export async function buildFiveAlertFixture(opts: { watch?: boolean } = {}): Pro
 
   const costs = ["1.60", "1.68", "1.70", "1.64"];
   for (const [i, cost] of costs.entries()) {
-    await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, cost, `2026-10-0${i + 1}`));
+    await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, cost, on(10, i + 1)));
   }
   // The price alert's product takes its sheet price now, before the cost moves.
   const [sheet] = await query<{ price: string }>(
@@ -84,16 +99,16 @@ export async function buildFiveAlertFixture(opts: { watch?: boolean } = {}): Pro
   );
   await run({ fn: "set_list_price", args: { p_product_id: PROD_503_ID, p_price_per_lb: sheet?.price ?? null } });
 
-  const costLotId = await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 5000, "1.90", "2026-10-05"));
+  const costLotId = await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 5000, "1.90", on(10, 5)));
   await run({ fn: "set_target_margin", args: { p_product_id: PROD_502_ID, p_target_percent: 20 } });
   await run({ fn: "set_list_price", args: { p_product_id: PROD_502_ID, p_price_per_lb: 2.68 } });
-  const batchId = await run(produceCall(PROD_502_ID, 1000, 700, "2026-10-06"));
+  const batchId = await run(produceCall(PROD_502_ID, 1000, 700, on(10, 6)));
 
-  await run(receiveCall(RAW_BEEF_ID, VENDOR_ID, 2000, "2.00", "2026-10-05"));
-  await run(produceCall(PROD_601_ID, 1800, null, "2026-10-10"));
+  await run(receiveCall(RAW_BEEF_ID, VENDOR_ID, 2000, "2.00", on(10, 5)));
+  await run(produceCall(PROD_601_ID, 1800, null, on(10, 10)));
 
   const fixture: FiveAlertFixture = {
-    today: FIVE_ALERT_TODAY,
+    today,
     subjects: {
       margin_below_target: { productId: PROD_502_ID, lotId: null, batchId: null },
       cost_anomaly: { productId: RAW_TOM_ID, lotId: costLotId, batchId: null },
