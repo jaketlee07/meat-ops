@@ -78,3 +78,17 @@ void_sale(p_sale_id uuid, p_reason text)
 ## Wave 1 gates (T1 and T4, 2026-10-16)
 
 - `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 37 files, 633 tests, 17 s; Playwright 486, 3.1 m.
+
+## T2
+
+- The stub matched its recorded sha256 (`5031b3fe…`) and both tests failed red on `function public.refresh_alerts(p_today => date) does not exist` after their receipt, target, and list-price calls succeeded (commit 2d41980). `alerts` joined the truncate list in the green commit, because with it the stub fails earlier on the missing table.
+- The migration's second part adds `public.alerts` (RLS, the operator read policy, `select` only) and `public.refresh_alerts(p_today date)`, which returns `(open_count, urgent_count)`. `test/alerts-watch.test.ts` has 52 tests; `test/alert-fixtures.ts` builds the five-alert fixture with or without its first watch.
+- Deviations from plan Design: a price alert's `changed_at` fact is the last change's time as UTC ISO text, so the app derives its date in the app's time zone (AC-0106); the cost and yield conditions compare `|x - usual|` with `max(floor × usual, 3 × median deviation)` and so never divide by a usual cost; a yield batch's entry order is `finished_goods.produced_seq`; a cleared alert also gets `closed_at`.
+- AC-0036's "an unmeasured fourth opens none" cannot tell an unmeasured batch from a measured one on the spec's numbers, because an unmeasured batch's shrink equals its shrink used. An extra test under AC-0036 sets the product's shrink to 0.10 so that counting unmeasured batches as candidates or references turns red.
+- Mutation checks: 33 changes to `refresh_alerts`, each applied with `create or replace` on stack B and restored, turned at least one test red (window edges, the 10-row limits, the bands, the zero guards, `active`, the advisory lock, the lifecycle statements, severity). Three single guards stayed green only because each is written twice; removing both copies turned red.
+- AC-0144 timing (run once in T2; T7 reruns it as its goal check): 50 raw and 100 finished products with targets and list prices, 2,000 lots received 2026-09-05 to 2026-10-14, 1,000 batches produced 2026-09-22 to 2026-10-10, built through the operations; warm-up 97.3 ms, five runs 77.1, 107.1, 76.6, 79.5, 79.8 ms, median 79.5 ms against the 1 s bar. No index was added.
+- Appending to an applied migration needs `npm run db:reset:stack-b`; `supabase migration up` reports it as up to date.
+
+## Wave 2 gates (T2, 2026-10-16)
+
+- `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 38 files, 685 tests, 20 s; Playwright 486, 3.1 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
