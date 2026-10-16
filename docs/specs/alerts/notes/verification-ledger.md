@@ -66,3 +66,15 @@ void_sale(p_sale_id uuid, p_reason text)
 - Menu-pricing AC-0034 now ends "...are unchanged, apart from the one `private.list_price_changes` row the history trigger adds (alerts spec)." `test/pricing.test.ts` is unchanged.
 - Gates: typecheck pass; build pass; `E2E_PORT=3200 npm test` pass (Vitest 36 files, 618 tests, 18 s; Playwright 486, 3.1 m); `npm run test:costing` pass (37 tests); `gen:types` leaves no diff.
 - `supabase migration new` waits on a prompt unless stdin is `/dev/null`.
+
+## T4
+
+- The stub matched its recorded sha256 (`339270ed…`) and failed red with `Cannot find module '../src/lib/alert-text.js'` (commit 2cfbcc0). Later tests are appended below the unchanged stub text.
+- Modules: `src/lib/alert-text.ts` (`AlertView`, `alertText`, `digestFacts`, `isUrgent`), `src/lib/digest.ts` (`DIGEST_INSTRUCTIONS`, `DIGEST_SCHEMA`, `digestRequest`, `digestVerdict`), `src/lib/app-today.ts` (`appToday`, `dateInAppZone`), and `formatDays` and `formatChange` in `src/lib/format.ts`. `docs/costing.md` has the Days and Change rows.
+- `digestRequest` sends the facts as one text block in one user message (`content: [{ type: "text", text: facts }]`), as invoice-reading sends a read. `digestVerdict` trims space, tab, CR, and LF, and counts code points.
+- Each non-obvious test was shown able to fail: removing the product-code check failed AC-0093; measuring with `.length` failed AC-0091. AC-0106 gives different dates under three time zones in one file.
+- A first full run in T4 had one Playwright failure outside the diff, `receiving.spec.ts:577` (AC-0042 and AC-0046, an expired access token refreshes and saves), which passed on the immediate rerun and in the wave-1 gate run below. Treated as a flake; watched in later runs.
+
+## Wave 1 gates (T1 and T4, 2026-10-16)
+
+- `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 37 files, 633 tests, 17 s; Playwright 486, 3.1 m.
