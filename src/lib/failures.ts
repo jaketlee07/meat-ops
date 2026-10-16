@@ -139,6 +139,21 @@ export function changeFailureMessage(error: unknown, stage: FailureStage): strin
   return `${NOT_SAVED_CHANGE} ${refusalReason(error, code)}`;
 }
 
+// Alert dismissals (alerts AC-0117 to AC-0122, AC-0129). A reprice from an alert
+// reuses the change texts above, except that the session text names the alert's reprice.
+export const NOT_DISMISSED = "The alert wasn't dismissed.";
+// AC-0129: the write call got no answer from the database, so the alert may be dismissed.
+export const DISMISS_UNKNOWN = "The alert may have been dismissed. Reload this page to check it.";
+// AC-0117: the session ended after the page loaded.
+export const DISMISS_SIGNED_OUT = "You're signed out. Sign in again to dismiss this alert.";
+
+export function dismissFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_DISMISSED} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return DISMISS_UNKNOWN;
+  return `${NOT_DISMISSED} ${refusalReason(error, code)}`;
+}
+
 // Invoice reading (invoice-entry AC-0016, AC-0022, AC-0023, AC-0117, AC-0185, AC-0190).
 // The model failures' texts live in invoice-reading.ts; "Try again" is read from there.
 export const NOT_READ = "The invoice wasn't read.";
@@ -211,7 +226,7 @@ export function draftDiscardFailureMessage(error: unknown, stage: FailureStage):
   return `${NOT_DISCARDED} ${text}`;
 }
 
-// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, readInvoice, saveDraft, and discardDraft.
+// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, the two alert actions, readInvoice, saveDraft, and discardDraft.
 export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
@@ -221,6 +236,8 @@ export type LoggedAction =
   | "saveTargetMargin"
   | "removeTargetMargin"
   | "saveListPrice"
+  | "applyAlertPrice"
+  | "dismissAlert"
   | "readInvoice"
   | "saveDraft"
   | "discardDraft";
