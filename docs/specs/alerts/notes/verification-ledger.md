@@ -105,3 +105,16 @@ void_sale(p_sale_id uuid, p_reason text)
 ## Wave 3 gates (T3, 2026-10-16)
 
 - After `npm run db:reset:stack-b`: `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 39 files, 700 tests, 21 s; Playwright 486, 3.0 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
+
+## T5
+
+- Commits dd2edcb (the watch in the header and the urgent banner), 68b4f70 (the alerts page with reprice and dismiss), 410960b and dedd899 (browser coverage). `src/app/_server/watch.ts` runs one cached watch per request with the app's today; `src/app/page-header.tsx` is async, ends the Primary navigation with Alerts, and holds a region named "Urgent alerts" with the banner or the watch failure line (on `/alerts` the page shows the failure line above its first section).
+- Deviations from plan Design: the banner region is a `div` with `role="region"` because it has no heading; margin and price alerts show a "Next step" label above their button rather than repeating its text; the alert order is applied in `listOpenAlerts` (SQL orders by creation time and code, then code sorts by type and subject within a run and puts urgent first); the pricing saved-message line is repeated in `src/app/alerts/decide.ts` because `pricing/save-change.ts` is outside T5's Touches; `buildFiveAlertFixture` takes an optional `today` so browser fixtures count dates from the app's today (`TZ=America/Chicago` for the app under Playwright).
+- The AC-0182 order check was shown able to fail by disabling the subject order. The AC-0026 cleared case uses the low-stock alert, because voiding the cost lot changes RAW-TOM's cost and rightly reopens a price alert.
+- `test/alert-actions.test.ts` drives every branch of the change and dismiss outcome orders (11 tests). The six other page helpers' control lists gained "a Alerts"; three pricing lists gained "a See alerts" where their fixture leaves a margin alert.
+- Rendered page, five-alert fixture: at 1280 px a single 36 rem column with the title, the wrapped Primary links (Alerts plain as the current page), Sign out, "Today's digest", "Urgent" (margin, then cost), and "Other alerts" (yield, price, low stock), each a bordered card with a bold title, its sentence, its next step, a full-width blue reprice button or a link, and a full-width Dismiss button; at 320 px the same, with no horizontal scroll. `/receiving` shows the banner in red under Sign out. Figures checked by hand: 14 × 64.2857 − 200 = 700 lbs to order; (2.2688 − 2.0688) ÷ 2.0688 = 9.67%.
+- Another token-refresh test in `receiving.spec.ts` (line 973, a revoked session on void) failed once in a partial run inside T5 and passed in every full run. Same class as line 577.
+
+## Wave 4 gates (T5, 2026-10-16)
+
+- `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 40 files, 711 tests, 19 s; Playwright 524, 3.4 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
