@@ -118,3 +118,15 @@ void_sale(p_sale_id uuid, p_reason text)
 ## Wave 4 gates (T5, 2026-10-16)
 
 - `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 40 files, 711 tests, 19 s; Playwright 524, 3.4 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
+
+## T6
+
+- Commits b60735b (the digest through the model connection), 4a24157 (the digest section and the page rule), a4e9439 (browser coverage). Discovery predicate: `readReceipt` built its client inline, so its construction moved unchanged into a private `buildClient()` and the error mapping into `failureOf()`; invoice-entry's suites are unchanged and green.
+- Deviations from plan Design: `writeDigest(facts, codes)` takes the open alerts' product codes for AC-0093; a facts read that finds no open alert after the claim is a facts-failed outcome, so no request goes out with zero alerts; before the claim, a missing key or address logs `writeDigest failed: kind=not-set-up` or `kind=address-refused`; the action treats any send flag other than "false" as on its own; the digest page rule is the pure `digestPage()` in `src/lib/digest.ts`; after Try again, focus goes to a focusable outcome container that holds the message or the paragraphs; the browser helper `opens()` seeds a written digest for today so the T5 specs send no request.
+- A mutation that let an automatic send take over a failed day turned AC-0204 and AC-0205 red. The rerendered page on browser Back does remount the digest section, so the once-a-day guarantee rests on the claim, as designed.
+- 2026-10-16 fix (commit 90de4f9): the SDK's `timeout` covers only the wait for the response headers, so a digest answer that sent headers and then stalled could hold the wait past AC-0090's 60 seconds. `writeDigest` now passes a per-request `AbortSignal.timeout(60_000)` and reads its firing as no answer. The fake model gained a `stallAfterHeaders` answer; the new browser test failed against the unfixed call (the page stayed on "Writing") and passes with the fix. `AbortSignal.timeout` adds no `setTimeout`, so AC-0175's comparison is unaffected.
+- Rendered page, five-alert fixture with a written digest at 320 px: "Today's digest" shows two plain paragraphs naming 502, RAW-TOM, RAW-BEEF, and 503 with only the facts' figures ("20%"), then the muted line "Written by Claude from the alerts open at the time. Every open alert is listed below.", then the alert sections; no horizontal scroll. With a failure: "Today's digest wasn't written. Try again in a moment." in red with a full-width Try again button above "Urgent".
+
+## Wave 5 gates (T6, 2026-10-16)
+
+- `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 40 files, 725 tests, 19 s; Playwright 540, 5.5 m (two digest tests wait the full 60 seconds). `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
