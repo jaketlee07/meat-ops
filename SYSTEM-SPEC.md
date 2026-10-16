@@ -94,7 +94,9 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 
 ### AI-support state (new for this scope)
 
-- alerts: id, type (one of: margin_below_target, low_stock, cost_anomaly, yield_anomaly, price_stale), severity (low, medium, high), subject (a reference to the product, lot, or batch it concerns), message (plain language), suggested_action (what to do, for example a reprice value), status (open, dismissed, actioned), created_at. Alerts persist so the owner can see, act on, or dismiss them.
+- alerts: id, type (one of: margin_below_target, low_stock, cost_anomaly, yield_anomaly, price_stale), severity (high, medium, low), product_id (fk products: the finished product of a margin, price, or yield alert, the raw product of a cost or low-stock alert), lot_id (fk lots, a cost alert only), batch_id (fk production_batches, a yield alert only), facts (jsonb: the figures the alert was saved with, rounded when stored), status (open, dismissed, actioned, cleared), created_at, updated_at, closed_at (when it left open), ended_at (when its episode ended: a watch found the condition gone, or the owner repriced from it). The alert's sentence and next step are worded from facts when a page shows it. Alerts persist so the owner can see, act on, or dismiss them. Only the watch writes them, and the owner's dismiss and reprice presses.
+- alert_digests: digest_date (primary key, the app's today), status (writing, written, failed), paragraphs (1 to 6 of 1 to 800 characters, when written), failure_kind (when failed), model, claimed_at, finished_at. One row is one day's claim, so the page asks the model at most once a day on its own.
+- private.list_price_changes (not in the Data API): seq, product_id (fk products), old_price, new_price, cost_per_lb (the product's cost per lb at that moment, empty when it had none), changed_at, baseline (true for the row the migration wrote for a list price that already existed). A trigger on products writes one row for every list-price change, whoever makes it.
 - import_drafts: id, source (photo or text), capture_text (the typed text, for a text draft), capture_image and capture_image_type (the photo and its media type, for a photo draft), captured_on (the capture date: the device's today sent with the read), captured_at, model (the model that read it), status (pending, confirmed, discarded), settled_at (set once the draft is confirmed or discarded). A discard clears the photo, its type, and the text. Staging for AI-parsed input before it is written.
 - import_draft_lines: id, import_draft_id (fk import_drafts), line_no (1 to 30), words (the invoice's own words for the line; cleared on a discard), the drafted fields matching a receive action (product_id, vendor_id, weight_lbs, unit_cost, received_date, each empty when the reading gave no usable value or was unsure), unsure_fields (which of product, vendor, weight, cost, date the reader was unsure of), status (pending, saved, skipped), lot_id (the lot a saved line made). On confirm, each ticked line becomes a lot via the normal receive operation.
 
@@ -209,15 +211,26 @@ clarified rather than guessed.
 ### Watch (alerts)
 
 The system watches its own data and raises alerts, learning normal ranges from
-history rather than relying only on hardcoded thresholds:
-- Margin below target: a product's suggested price at its current list yields less than its target margin.
-- Low stock: raw availability is low against recent consumption rate.
-- Cost anomaly: a receipt priced far outside the product's historical range.
-- Yield anomaly: a batch yield far off the product's usual shrink.
-- Price stale: a list price that has not moved while its cost has drifted.
-Delivery: urgent alerts surface immediately; the rest roll into a plain-language
-daily digest. Every alert carries a next step (for example a reprice value or a
-draft purchase), so an alert is actionable, not just informational.
+history rather than relying only on hardcoded thresholds. Five rules run in
+Postgres (`refresh_alerts`) every time a header page renders, which includes the
+page a save returns to. Each compares exact values and stores its figures rounded. "Recent" is the 14
+days ending today, and the app passes today in its own time zone.
+- Margin below target (urgent, severity high): an active finished product whose margin at its list price is below its target margin.
+- Cost anomaly (urgent, high): a recent, non-void receipt of an active raw product that has at least 3 earlier receipts and a usual cost above 0. The usual cost is the median cost per lb of the latest 10 earlier receipts. It alerts when the cost differs from the usual by at least the larger of 10% and 3 times the usual swing (the median of each receipt's distance from the usual cost, as a share of it).
+- Yield anomaly (medium): a recent batch of an active finished product whose measured shrink (1 minus finished lbs over raw lbs) differs from the usual shrink by at least the larger of 3 points and 3 times the median distance of the reference batches from it. A batch is measured unless its finished lbs equal what the product's set shrink gives. The usual shrink is the median of the latest 10 earlier measured batches when there are at least 3, otherwise the batch's own set shrink with a 3 point band.
+- Low stock (medium): an active raw product with less than 7 days left, which is its on-hand lbs over its daily use, the lbs drawn by batches in the last 28 days divided by 28. The alert suggests ordering 14 days of use, rounded up to a whole lb.
+- Price stale (low): an active finished product with a list price, needing a new price but not below target, whose cost per lb has moved 5% or more since its last list-price change recorded (a recorded cost above 0).
+An alert is open until the owner dismisses it or reprices from it, or a watch finds
+its condition gone and clears it. A dismissed alert stays dismissed until its
+problem clears; if the problem returns, a new alert opens.
+Delivery: urgent alerts (margin and cost) surface immediately in a banner on every
+page and wait on `/alerts`; the rest wait on `/alerts`. The first visit to `/alerts`
+each day asks the model to write a plain-language digest of the open alerts from
+the alerts' own sentences and figures; its text is shown only when every number in
+it comes from those sentences and every alert's product code is in it. Every alert
+carries a next step: a one-press list price for the two price alerts, and a
+sentence and a link for the other three. Nothing changes a price but the owner's
+press.
 
 ### Advise (pricing and purchasing)
 
