@@ -84,9 +84,10 @@ select private.baseline_list_prices();
 -- opens, updates, and ends alerts to match. Every comparison uses exact
 -- numeric values; a figure is rounded only when it is stored. A median is the
 -- mean of the middle one or two values picked by row_number(), because
--- percentile_cont returns float8. A usual swing or usual shrink band is
--- compared as |x - usual| >= band * usual (or the median of |x - usual|
--- itself), so no division by a possibly zero usual cost is ever evaluated.
+-- percentile_cont returns float8. Only the cost floor is scaled by the usual
+-- cost (|x - usual| >= band * usual), so no division by a possibly zero usual
+-- cost is ever evaluated; the yield band is compared unscaled, as shrink
+-- points.
 -- ============================================================
 
 create table public.alerts (
@@ -384,6 +385,7 @@ begin
                 and c.batch_id is not distinct from a.batch_id)
         returning a.id
     )
+    -- The select into is only here because the row-changing with needs a final statement.
     select (select count(*) from updated) + (select count(*) from inserted) + (select count(*) from ended)
     into v_changes;
 
