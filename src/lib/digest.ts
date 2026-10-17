@@ -50,6 +50,11 @@ const EDGE_SPACE = /^[ \t\r\n]+|[ \t\r\n]+$/g;
 // Number token: a run of digits with any "," or "." between two digits.
 const NUMBER_TOKEN = /\d+(?:[.,]\d+)*/g;
 
+// AC-0092: a number character other than 0 to 9 (full-width digits, superscripts,
+// fractions, Roman numerals) or an invisible formatting character (zero-width
+// joiner, word joiner, soft hyphen, bidirectional control) is never faithful.
+const NOT_PLAIN_NUMBER = /[^\P{N}0-9]|\p{Cf}/u;
+
 function numberTokens(text: string): string[] {
   return text.match(NUMBER_TOKEN) ?? [];
 }
@@ -69,6 +74,7 @@ export function digestVerdict(answer: unknown, facts: string, codes: readonly st
     return { kind: "unreadable" };
   }
   const text = trimmed.join("\n");
+  if (NOT_PLAIN_NUMBER.test(text)) return { kind: "unfaithful" };
   const held = new Set(numberTokens(facts));
   if (numberTokens(text).some((token) => !held.has(token))) return { kind: "unfaithful" };
   if (codes.some((code) => !text.includes(code))) return { kind: "unfaithful" };

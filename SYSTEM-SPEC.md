@@ -217,7 +217,7 @@ page a save returns to. Each compares exact values and stores its figures rounde
 days ending today, and the app passes today in its own time zone.
 - Margin below target (urgent, severity high): an active finished product whose margin at its list price is below its target margin.
 - Cost anomaly (urgent, high): a recent, non-void receipt of an active raw product that has at least 3 earlier receipts and a usual cost above 0. The usual cost is the median cost per lb of the latest 10 earlier receipts. It alerts when the cost differs from the usual by at least the larger of 10% and 3 times the usual swing (the median of each receipt's distance from the usual cost, as a share of it).
-- Yield anomaly (medium): a recent batch of an active finished product whose measured shrink (1 minus finished lbs over raw lbs) differs from the usual shrink by at least the larger of 3 points and 3 times the median distance of the reference batches from it. A batch is measured unless its finished lbs equal what the product's set shrink gives. The usual shrink is the median of the latest 10 earlier measured batches when there are at least 3, otherwise the batch's own set shrink with a 3 point band.
+- Yield anomaly (medium): a recent batch of an active finished product whose measured shrink (1 minus finished lbs over raw lbs) differs from the usual shrink by at least the larger of 3 points and 3 times the median distance of the reference batches from it. A batch is measured unless its finished lbs equal what the batch's shrink used gives. The usual shrink is the median of the latest 10 earlier measured batches when there are at least 3, otherwise the batch's own set shrink with a 3 point band.
 - Low stock (medium): an active raw product with less than 7 days left, which is its on-hand lbs over its daily use, the lbs drawn by batches in the last 28 days divided by 28. The alert suggests ordering 14 days of use, rounded up to a whole lb.
 - Price stale (low): an active finished product with a list price, needing a new price but not below target, whose cost per lb has moved 5% or more since its last list-price change recorded (a recorded cost above 0).
 An alert is open until the owner dismisses it or reprices from it, or a watch finds
@@ -227,7 +227,11 @@ Delivery: urgent alerts (margin and cost) surface immediately in a banner on eve
 page and wait on `/alerts`; the rest wait on `/alerts`. The first visit to `/alerts`
 each day asks the model to write a plain-language digest of the open alerts from
 the alerts' own sentences and figures; its text is shown only when every number in
-it comes from those sentences and every alert's product code is in it. Every alert
+it comes from those sentences and every alert's product code is in it. A number
+means plain digits 0 to 9; a paragraph that holds any other number character
+(full-width or other-script digits, superscripts, fractions, Roman numeral
+characters) or any invisible formatting character (zero-width characters, word
+joiner, soft hyphen, byte order mark, direction controls) is not shown. Every alert
 carries a next step: a one-press list price for the two price alerts, and a
 sentence and a link for the other three. Nothing changes a price but the owner's
 press.

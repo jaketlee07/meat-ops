@@ -47,6 +47,20 @@ it("AC-0092: a digest with a number the facts do not hold is refused", () => {
   }
 });
 
+it("AC-0092: a number written in other characters, or split by an invisible one, is refused", () => {
+  const facts = digestFacts([MARGIN], "2026-10-13");
+  const codes = ["502"];
+  const digest = (text: string) => digestVerdict({ paragraphs: [text] }, facts, codes);
+  expect(digest("502 margin is 1.8%.")).toEqual({ kind: "digest", paragraphs: ["502 margin is 1.8%."] });
+  expect(digest("502 margin is \uFF19\uFF10%.")).toEqual({ kind: "unfaithful" });
+  expect(digest("502 price is $3\u2060.29.")).toEqual({ kind: "unfaithful" });
+  expect(digest("502 shows 2026\u2060.1 today.")).toEqual({ kind: "unfaithful" });
+  expect(digest("502 target is 20\u00B2%.")).toEqual({ kind: "unfaithful" });
+  expect(digest("502 uses \u00BD of it.")).toEqual({ kind: "unfaithful" });
+  expect(digest("502 batch \u2167.")).toEqual({ kind: "unfaithful" });
+  expect(digest("502 needs a look\u200B.")).toEqual({ kind: "unfaithful" });
+});
+
 // The tests below grow the stub file (T4 EXECUTE); the stub above is unchanged.
 import { afterEach } from "vitest";
 import { dateInAppZone } from "../src/lib/app-today.js";
