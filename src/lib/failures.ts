@@ -5,6 +5,7 @@
 
 import { formatDate, formatWeight } from "./format";
 import { readFailureMessage } from "./invoice-reading";
+import { NO_COUNTS_MESSAGE } from "./rpc";
 
 export const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
 export const INACTIVE_PRODUCT = "This product is no longer active.";
@@ -311,6 +312,22 @@ export function logMessage(error: unknown): string {
 export function actionFailureLogLine(action: LoggedAction, stage: FailureStage, error: unknown): string {
   const code = codeOf(error);
   return `${action} failed at ${stage}: ${logMessage(error)}${code ? ` (code ${code})` : ""}`;
+}
+
+// The watch's one log line (alerts spec: the header and /alerts watch). It tells
+// four causes apart by a fixed label and reads nothing from the error's message
+// but its kind, so no figure, product, or alert can reach it: an engine refusal
+// (with its SQLSTATE), a request that hit the time limit or was aborted, an
+// answer with no counts, and any other failure to get an answer.
+export function watchFailureLogLine(error: unknown): string {
+  const code = codeOf(error);
+  const message = error instanceof Error ? error.message : "";
+  let cause: string;
+  if (code) cause = `engine refused (code ${code})`;
+  else if (message === NO_COUNTS_MESSAGE) cause = "answer had no counts";
+  else if (/^\w+ failed: (AbortError|TimeoutError)\b/.test(message)) cause = "timed out or aborted";
+  else cause = "no answer";
+  return `runWatch failed: ${cause}`;
 }
 
 // An auth-js error, read for its code and status only. Both are missing or 0

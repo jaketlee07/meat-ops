@@ -178,6 +178,10 @@ export async function setListPrice(
 
 export type Alert = Functions["dismiss_alert"]["Returns"];
 
+// What refreshAlerts throws when the watch answers with no row; the watch's log
+// line tells it from a transport failure by this text.
+export const NO_COUNTS_MESSAGE = "refreshAlerts failed: the watch returned no counts";
+
 // One watch (alerts spec): the five rules for the app's today. Returns the
 // open and urgent counts it leaves.
 export async function refreshAlerts(
@@ -187,7 +191,7 @@ export async function refreshAlerts(
   const { data, error } = await client.rpc("refresh_alerts", { p_today: today });
   if (error) throw rpcError("refreshAlerts", error);
   const row = data?.[0];
-  if (!row) throw new RpcError("refreshAlerts failed: the watch returned no counts", "");
+  if (!row) throw new RpcError(NO_COUNTS_MESSAGE, "");
   return { open: row.open_count, urgent: row.urgent_count };
 }
 
