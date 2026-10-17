@@ -322,9 +322,24 @@ it("AC-0086 and AC-0087: no key or no model address says so before any claim, re
 });
 
 it("the session and caller outcomes come before the key", async () => {
-  const { calls, deps } = digestDeps({ caller: async () => ({ status: "ended" }), modelReady: () => ({ ok: false, kind: "not-set-up" }) });
-  expect((await decideDigest(SENT, deps)).status).toBe("refused");
-  expect(calls.claim).toEqual([]);
+  const cases = [
+    { caller: { status: "ended" }, state: ["You're signed out. Sign in again to see today's digest.", false], lines: 0 },
+    {
+      caller: { status: "not-operator" },
+      state: ["Today's digest wasn't written. This account isn't allowed to use Meat Ops.", false],
+      lines: 0,
+    },
+    { caller: { status: "failed", error: new Error("fetch failed") }, state: [TRY_AGAIN_DIGEST, true], lines: 1 },
+  ] as const;
+  for (const { caller, state, lines } of cases) {
+    const log = silence();
+    const { calls, deps } = digestDeps({ caller: async () => caller, modelReady: () => ({ ok: false, kind: "not-set-up" }) });
+    expect(await decideDigest(SENT, deps), caller.status).toEqual({ status: "refused", message: state[0], retry: state[1] });
+    expect(calls, caller.status).toEqual({ claim: [], facts: 0, write: [], finish: [] });
+    expect(log.mock.calls, caller.status).toHaveLength(lines);
+    if (lines > 0) expect(log.mock.calls[0]?.[0]).toMatch(/^writeDigest failed at before-write: /);
+    log.mockRestore();
+  }
 });
 
 it("AC-0126: a claim call that gets no answer or is refused says try again, logs once, and sends nothing", async () => {
@@ -534,10 +549,15 @@ it("AC-0127, AC-0200: a store of the paragraphs with no answer or refused logs s
 
 it("a store that resolves with no row is a store with no answer", async () => {
   const log = silence();
-  const { calls, deps } = digestDeps({ finish: async () => null });
+  const { calls, deps } = digestDeps({
+    finish: async (...args) => {
+      calls.finish.push(args);
+      return null;
+    },
+  });
   expect((await decideDigest(SENT, deps)).status).toBe("refused");
   expect(log.mock.calls).toEqual([["writeDigest failed: kind=store-failed"]]);
-  expect(calls.finish).toEqual([]);
+  expect(calls.finish).toEqual([[null, TODAY, { paragraphs: PARAGRAPHS }]]);
 });
 
 it("AC-0207 and AC-0208: when the call that records a failure gets no answer or is refused, the failure's message comes back, the recording is not repeated, and only the failure's line is logged", async () => {
