@@ -17,3 +17,12 @@ select open_count, urgent_count from public.refresh_alerts('2026-10-13');
 select open_count, urgent_count from public.refresh_alerts('2026-10-13');
 \echo run 5
 select open_count, urgent_count from public.refresh_alerts('2026-10-13');
+\timing off
+-- Proof the timed watch ran the yield rule: batches the rule takes as candidates
+-- for the watch's 14 days (measured, produced 2026-09-30 to 2026-10-13), and the
+-- yield alerts the watch left open.
+reset role;
+select (select count(*) from production_batches b
+        where b.production_date between date '2026-10-13' - 13 and date '2026-10-13'
+          and b.finished_lbs_out <> round(b.raw_lbs_in * (1 - b.shrink_pct_used), 3)) as yield_candidates,
+       (select count(*) from alerts where type = 'yield_anomaly' and status = 'open') as open_yield_alerts;

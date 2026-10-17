@@ -1,5 +1,6 @@
 -- AC-0144 fixture: 50 active raw products, 100 active finished products with list
--- prices and targets, 2,000 lots, and 1,000 batches, built through the operations.
+-- prices and targets, 2,000 lots, and 1,000 batches (half of them measured), built
+-- through the operations.
 -- Run against the local stack as postgres, from psql, after one `npm test` has made
 -- the test operator (the allowlist is empty after a reset):
 --   docker exec -i supabase_db_meat-ops-b psql -U postgres -v ON_ERROR_STOP=1 < ac0144-fixture.sql
@@ -41,7 +42,11 @@ begin
     perform public.set_target_margin(f.id, 20);
     perform public.set_list_price(f.id, 2.50 + (f.n % 10) / 10.0);
     for j in 1..10 loop
-      perform public.produce_batch(f.id, 100, null, date '2026-09-20' + j * 2);
+      -- Even batches are measured (a finished weight the 23% shrink does not give), so
+      -- the yield rule has candidates inside the watch's 14 days and measured
+      -- references before them. Odd batches are not (finished lbs from the shrink).
+      perform public.produce_batch(f.id, 100,
+        case when j % 2 = 0 then 76.5 - ((f.n + j) % 5) end, date '2026-09-20' + j * 2);
     end loop;
   end loop;
 end $$;
