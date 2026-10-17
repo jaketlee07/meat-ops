@@ -303,14 +303,25 @@ test.describe("the urgent banner", () => {
     await costEarlier();
     const f = await openForm(page);
     await expect(banner(page)).toHaveCount(0);
+    const status = page.locator("main > div > [role=status]");
+    await expect(status).toHaveCount(1);
     await page.evaluate(() => {
       (window as unknown as { __kept: boolean }).__kept = true;
+      (window as unknown as { __status: Element | null }).__status = document.querySelector("main > div > [role=status]");
     });
     await fillReceipt(f, { weight: "1000", cost: "1.90" });
     await f.date.fill(appDate());
     await f.save.click();
     await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
     await expect(banner(page).getByText("1 urgent alert needs you.", { exact: true })).toBeVisible();
+    // The banner sits in a status container the page had before the save, so it is announced.
+    await expect(status.getByText("1 urgent alert needs you.", { exact: true })).toBeVisible();
+    expect(
+      await page.evaluate(() => {
+        const kept = (window as unknown as { __status: Element | null }).__status;
+        return kept !== null && kept.isConnected && kept.contains(document.querySelector("[aria-label='Urgent alerts']"));
+      }),
+    ).toBe(true);
     expect(await page.evaluate(() => (window as unknown as { __kept?: boolean }).__kept)).toBe(true);
   });
 
@@ -634,6 +645,27 @@ test.describe("reprice and dismiss", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/alerts$/);
     await expect(page.getByRole("heading", { level: 1, name: "Alerts" })).toBeVisible();
+  });
+
+  test("AC-0133: while one write is held, the card's other button shows it is not usable", async ({ page }) => {
+    await marginCase();
+    await opens(page);
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/alerts**", async (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && "next-action" in request.headers()) await gate;
+      await route.continue();
+    });
+    const raise = page.getByRole("button", { name: RAISE_329, exact: true });
+    const dismiss = dismissButton(page, MARGIN_TITLE);
+    await raise.click();
+    await expect(raise).toHaveAttribute("aria-disabled", "true");
+    await expect(dismiss).toHaveAttribute("aria-disabled", "true");
+    release();
+    await expect(savedRegion(page)).toHaveText("List price for 502 saved: $3.29/lb.");
   });
 
   for (const kind of ["reprice", "dismiss"] as const) {
@@ -1044,7 +1076,9 @@ test.describe("the digest", () => {
 
     // AC-0185 and AC-0136: Try again sends one request, and focus lands on the outcome's message.
     await model.answer({ status: 500 });
-    await tryAgain(page).click();
+    // AC-0133: from the keyboard alone.
+    await tryAgain(page).focus();
+    await page.keyboard.press("Enter");
     await expect(digestRegion(page).getByText(TRY_AGAIN_DIGEST, { exact: true })).toBeVisible();
     await expect(digestRegion(page).locator("[tabindex='-1']")).toBeFocused();
     expect(await model.requests()).toHaveLength(2);

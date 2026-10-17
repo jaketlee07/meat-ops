@@ -51,7 +51,12 @@ export async function PageHeader({ title, current }: { title: string; current: P
           </button>
         </form>
       </div>
-      {watch && <UrgentBanner watch={watch} />}
+      {/* A status container that is in the page before a save fills it, so a banner a save raises is announced. */}
+      {watch && (
+        <div role="status">
+          <UrgentBanner watch={watch} />
+        </div>
+      )}
     </div>
   );
 }

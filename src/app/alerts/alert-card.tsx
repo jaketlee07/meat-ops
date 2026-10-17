@@ -67,7 +67,7 @@ export function AlertCard({ alert, onResult }: { alert: OpenAlert; onResult: (st
               <input type="hidden" name="value" value={priceFieldText(view.suggestedListPrice)} />
               <button
                 type="submit"
-                aria-disabled={pending === "reprice" ? true : undefined}
+                aria-disabled={pending !== null ? true : undefined}
                 className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
               >
                 {nextStep}
@@ -96,7 +96,7 @@ export function AlertCard({ alert, onResult }: { alert: OpenAlert; onResult: (st
           <button
             type="submit"
             aria-label={`Dismiss ${title}`}
-            aria-disabled={pending === "dismiss" ? true : undefined}
+            aria-disabled={pending !== null ? true : undefined}
             className="w-full rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:opacity-60"
           >
             Dismiss
