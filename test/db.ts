@@ -506,6 +506,65 @@ export async function raceCalls(a: OpCall, b: OpCall): Promise<[CallOutcome, Cal
   }
 }
 
+// Two calls held behind a lock. raceCalls runs its first call to completion
+// before it starts the second, so it cannot test a lock both calls take at
+// their start. Here one plain connection holds `lockSql` (a select ... for
+// update) in an open transaction, both calls start on their own operator
+// sessions, and the lock is released once each call is waiting on a lock or has
+// settled. The calls then finish one at a time, in the order they settle.
+export async function raceCallsBehindLock(
+  lockSql: string,
+  lockValues: unknown[],
+  a: OpCall,
+  b: OpCall,
+): Promise<[CallOutcome, CallOutcome]> {
+  const deadline = Date.now() + RACE_BUDGET_MS;
+  const left = () => deadline - Date.now();
+  const sessions: Session[] = [];
+  const holder = await pool.connect();
+  let holding = true;
+  let clean = false;
+  try {
+    await holder.query("begin");
+    await holder.query(lockSql, lockValues);
+    const sessionA = await openOperatorSession();
+    sessions.push(sessionA);
+    const sessionB = await openOperatorSession();
+    sessions.push(sessionB);
+
+    const settled = [false, false];
+    const pending = [a, b].map((call, i) =>
+      run(sessions[i] as Session, call).then((o) => {
+        settled[i] = true;
+        return { i, o };
+      }),
+    );
+    for (;;) {
+      if (left() <= 0) throw new Error(`race harness: the calls ${a.fn} and ${b.fn} were neither waiting nor finished`);
+      const waiting = await Promise.all(sessions.map((x) => lockWaits(x.pid)));
+      if (sessions.every((_, i) => settled[i] || waiting[i])) break;
+      await sleep(15);
+    }
+    await holder.query("commit");
+    holding = false;
+
+    const outcomes: CallOutcome[] = [];
+    const first = await bounded(Promise.race(pending), left(), "neither call returned after the lock was released");
+    outcomes[first.i] = first.o;
+    await sessions[first.i]!.client.query(first.o.ok ? "commit" : "rollback");
+    const secondIndex = 1 - first.i;
+    const second = await bounded(pending[secondIndex]!, left(), "the second call stayed blocked after the first ended");
+    outcomes[secondIndex] = second.o;
+    await sessions[secondIndex]!.client.query(second.o.ok ? "commit" : "rollback");
+    clean = true;
+    return [outcomes[0] as CallOutcome, outcomes[1] as CallOutcome];
+  } finally {
+    if (holding) await holder.query("rollback").catch(() => undefined);
+    holder.release();
+    await Promise.all(sessions.map((x) => closeSession(x, clean)));
+  }
+}
+
 // ---- Ledger invariants (read-only, catalog-wide) ----
 
 // One fingerprint (row count and content hash) for every table in public,

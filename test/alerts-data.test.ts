@@ -8,6 +8,7 @@ import {
   PROD_502_ID,
   query,
   raceCalls,
+  raceCallsBehindLock,
   RAW_TOM_ID,
   receiveCall,
   resetTestData,
@@ -240,6 +241,26 @@ it("AC-0064: two start_digest calls at the same time claim a date once", async (
   // A second race on the same day, now that a fresh claim exists, claims nothing.
   const [c, d] = await raceCalls(start(DAY, true), start(DAY, false));
   expect([c.rows?.[0]?.result, d.rows?.[0]?.result]).toEqual(["busy", "busy"]);
+});
+
+// AC-0064: Try again takes over a failed day or an aged claim under the row's
+// lock. The first call to the row waits on a held lock with the second behind
+// it, so both have read the same old row before either updates it.
+it("AC-0064: two Try again presses at the same time claim a failed day, or a claim older than 180 seconds, once", async () => {
+  await marginCase();
+  for (const state of ["failed", "stale"] as const) {
+    await setDigestState(state);
+    const [a, b] = await raceCallsBehindLock(
+      "select 1 from public.alert_digests where digest_date = $1 for update",
+      [DAY],
+      start(DAY, false),
+      start(DAY, false),
+    );
+    expect(a.error, state).toBeUndefined();
+    expect(b.error, state).toBeUndefined();
+    expect([a.rows?.[0]?.result, b.rows?.[0]?.result].sort(), state).toEqual(["busy", "claimed"]);
+    expect((await query("select status from public.alert_digests")).length, state).toBe(1);
+  }
 });
 
 type DigestState = "none" | "written" | "failed" | "fresh" | "stale";
