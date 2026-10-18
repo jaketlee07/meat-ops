@@ -229,7 +229,7 @@ each day asks the model to write a plain-language digest of the open alerts from
 the alerts' own sentences and figures; its text is shown only when every number in
 it comes from those sentences and every alert's product code is in it. A number
 is a run of any Unicode number characters (digits 0 to 9, full-width digits,
-fractions, superscripts) with a "," or "." between two of them. A digest
+fractions, superscripts) with any "," or "." between two of them. A digest
 paragraph may hold only plain characters: printable ASCII, curly single and
 double quotes, the en dash, the em dash, the ellipsis, and a letter or number
 character the alerts' own text holds, never an invisible formatting character.

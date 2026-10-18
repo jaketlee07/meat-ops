@@ -647,7 +647,7 @@ test.describe("reprice and dismiss", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Alerts" })).toBeVisible();
   });
 
-  test("while one write is held, the card's other button carries aria-disabled until the write ends", async ({
+  test("while one write is held, the card's other button carries aria-disabled", async ({
     page,
   }) => {
     await marginCase();
@@ -670,7 +670,7 @@ test.describe("reprice and dismiss", () => {
     await expect(savedRegion(page)).toHaveText("List price for 502 saved: $3.29/lb.");
   });
 
-  test("while a Dismiss is held, the card's reprice button carries aria-disabled until the Dismiss ends", async ({
+  test("while a Dismiss is held, the card's reprice button carries aria-disabled", async ({
     page,
   }) => {
     await marginCase();

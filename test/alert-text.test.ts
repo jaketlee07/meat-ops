@@ -47,7 +47,7 @@ it("AC-0092: a digest with a number the facts do not hold is refused", () => {
   }
 });
 
-it("AC-0092: a number written in other characters, or split by an invisible one, is refused", () => {
+it("AC-0092: a number written in characters the facts do not hold, or split by an invisible one, is refused", () => {
   const facts = digestFacts([MARGIN], "2026-10-13");
   const codes = ["502"];
   const digest = (text: string) => digestVerdict({ paragraphs: [text] }, facts, codes);
@@ -59,6 +59,15 @@ it("AC-0092: a number written in other characters, or split by an invisible one,
   expect(digest("502 uses \u00BD of it.")).toEqual({ kind: "unfaithful" });
   expect(digest("502 batch \u2167.")).toEqual({ kind: "unfaithful" });
   expect(digest("502 needs a look\u200B.")).toEqual({ kind: "unfaithful" });
+});
+
+it("AC-0092: the printable ASCII range ends at U+007E", () => {
+  const facts = digestFacts([MARGIN], "2026-10-13");
+  const digest = (text: string) => digestVerdict({ paragraphs: [text] }, facts, ["502"]);
+  // The facts hold 1 and 1.8, so only the character check can refuse these.
+  expect(digest("502 margin is 1~1.8%.")).toEqual({ kind: "digest", paragraphs: ["502 margin is 1~1.8%."] });
+  expect(digest("502 margin is 1\u007F1.8%.")).toEqual({ kind: "unfaithful" });
+  expect(digest("502 margin is 1\u001F1.8%.")).toEqual({ kind: "unfaithful" });
 });
 
 // The tests below grow the stub file (T4 EXECUTE); the stub above is unchanged.
