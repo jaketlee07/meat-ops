@@ -333,3 +333,17 @@ Target b864c16, delta 7903993..b864c16. Adversarial, security, and quality revie
 - A test in `test/alert-text.test.ts` refuses U+007F and U+001F between tokens the facts hold, and passes U+007E; red against `isPlain`'s bound set to 0x7f.
 - The two busy-button test titles drop "until the write ends" and "until the Dismiss ends", which their tests do not check; the round 1 character test's title says the characters are refused because the facts do not hold them.
 - `SYSTEM-SPEC.md` §7 says a number has "any" "," or "." between two of its characters, as the Number token does; the overview's `test/` row names `digest-characters.test.ts`.
+
+## Review round 4 and completion evidence handoff (2026-10-17)
+
+Review round 4 (delta b864c16..fb8fc1d, adversarial-reviewer and quality-engineer): both returned the exact clean sentinel, recorded as a direct clean (round 4, retry 3 of 5). Security was clean after adjudication in round 3; frontend-reviewer was clean in round 2 and the later deltas change no page code; experience-reviewer is not installed (named skip). Gates on fb8fc1d: typecheck and build pass; `E2E_PORT=3200 npm test` passes with Vitest 41 files and 734 tests and Playwright 542 tests; `npm run test:costing` passes 37 tests; `npm run gen:types` leaves no diff; `lint-spec-status` is clean. Every one of the 180 criteria is ticked, the spec is Shipped, and the plan is Done.
+
+For close-work:
+- **Delivery:** work-loop run `48a973db-e763-483f-b97f-ccf0d8f67c4f`, branch `feat/alerts`, built in `~/Developer/meat-ops-alerts` on stack B.
+- **Accepted outcome and authority:** `SYSTEM-SPEC.md` §13 feature 7 (Alerts: the watch and the daily digest) with `docs/product/intents/price-change-history.md`; spec and plan approved by the owner on 2026-10-13; the controlled amendment (the plain digest character rule, T8) approved by the owner on 2026-10-17.
+- **Implemented scope and evidence:** T1 to T8, each with its section above and its wave's gates; the recorded run, the page inspection, and the AC-0160 live run under T7.
+- **Durable outputs:** `SYSTEM-SPEC.md` §4 and §7 (T7, T8); menu-pricing AC-0034's clause (T1); `docs/costing.md`'s Days and Change rows (T4); `docs/architecture/overview.md` (T7, T8); `AGENTS.md`'s digest sentence (T7); `src/lib/database.types.ts` (AC-0172, no diff); the price-change-history intent is answered by the spec's Assumptions and moves to `backlog.closed` at close-work.
+- **Non-goals and follow-ons:** the spec's Follow-ons (a purchasing advisor that ranks vendors, and pushed alert cards on a phone); the hosted rollout, which belongs to the hosted-supabase-rollout intent; the two deferred Nits of review round 1 (urgency decided in two places, the stored model literal) with their reasons in that section.
+- **Unresolved obligations:** the pull request is not open and the branch's commits since 2026-10-14 are not pushed, both waiting on the owner; nothing has been applied to the hosted project.
+- **Completion event candidate:** the merge of `feat/alerts` into `main`.
+- **Authority facts:** the owner is the only source, write, and deletion authority; no hosted write was made, and no review artifact under `.context/` is committed.
