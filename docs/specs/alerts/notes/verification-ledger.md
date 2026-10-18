@@ -259,6 +259,7 @@ Fixed (commits 22e660c to 7b216e1):
 - The watch's log line uses fixed labels (`engine refused (code X)`, `timed out or aborted`, `answer had no counts`, `no answer`) from `watchFailureLogLine` in `src/lib/failures.ts`, never the error's text; a no-database test feeds messages holding figures and shows none reach the line.
 - Two concurrent Try again claims, on a failed day and on a claim older than 180 seconds, give one `claimed` and one `busy` (`raceCallsBehindLock` in `test/db.ts` holds the row from a third connection until both calls wait). With `for update` removed from `start_digest` the test failed with `['claimed', 'claimed']`.
 - The migration's header comment now says only the cost floor is scaled, the unused `v_changes` sum has a one-line reason, and this ledger's T2 line says the same (comments only, no SQL change).
+- `SYSTEM-SPEC.md` §7 says a batch is measured unless its finished lbs equal what the batch's shrink used gives (commit 22e660c); this bullet was added after review round 2 found it missing from this list.
 - AC-0144 rerun with a fixture that reaches the yield rule: the same counts (50 raw, 100 finished, 2,000 lots, 1,000 batches), with the even-numbered batches measured (finished lbs 76.5 minus 0 to 4, never the 77.0 the shrink gives). Proof: 300 yield candidate batches in the 14-day window and 60 open yield alerts after the run; each watch returned 150 open and 90 urgent. Warm-up 145.196 ms; five runs 92.205, 93.738, 93.073, 90.393, 89.175 ms; median 92.205 ms against the 1 s bar, so no index was added.
 
 Deferred Nits, with their reasons:
@@ -304,3 +305,24 @@ Revised: AC-0092 refuses every held character that is not a letter or number, U+
 ## Amendment review round 10 (spec stage, 2026-10-17)
 
 Target 193ed7d, the delta 2c220ef..193ed7d. Security clean after adjudication. Shaping and adversarial each sustained one Nit, the same one: AC-0092's passing clause let every held letter through while naming the held letter U+3164 among characters refused. Revised: the passing clause names a held letter or number "that is not default-ignorable"; the definition, the stub, and its sha256 are unchanged.
+
+## T8 (2026-10-17)
+
+- Commits c6bb73e (the stub), df00aa9 (the rule), 3204d55 (round 2's test fixes), 7016a47 (`SYSTEM-SPEC.md` §7 and the overview). The stub was extracted byte for byte to `test/digest-characters.test.ts` (sha256 `965afef6...d02`, matching the plan) and run before any `src/` change: 3 of 4 tests failed on their assertions, as the stub validation recorded; with the change all 4 pass and the stub is unedited.
+- `src/lib/digest.ts`: `NUMBER_TOKEN` is a run of `\p{N}` characters with "," or "." between two of them (`u` flag); `isPlain` checks each trimmed paragraph by whole code points against printable ASCII, the seven marks, and a `\p{L}` or `\p{N}` character the facts hold that is not default-ignorable.
+- The AC-0091 code-point cases use U+10400 with facts that hold it (800 make a digest, 801 are unreadable); counting length in UTF-16 units turned the 800 case red.
+- Deviation: the held-Dismiss case is a sibling browser test with its own fixture, because the reprice-held test's card leaves the page once its reprice completes.
+
+Review round 2's nine sustained findings, closed:
+- Adversarial Concern (the rule only in the ledger): the controlled amendment, approved by the owner on 2026-10-17, puts it in the Plain digest character definition and AC-0092.
+- Security advisory (default-ignorable marks outside `\p{Cf}`): `isPlain` never admits a default-ignorable code point, held or not; the stub refuses held U+200B, U+2060, U+034F, U+FE00, U+3164, and U+00AD.
+- Adversarial Nit (the busy-button test could not fail for the reprice button): a held-Dismiss test asserts the reprice button's `aria-disabled="true"`; red against line 70 set back to `pending === "reprice"`.
+- Adversarial and quality Nits (AC-0133 and AC-0064 tags on tests that do not check them): the busy-button test is titled by what it checks, and the race test is titled under AC-0065's Try again row.
+- Quality Nit (the race test's comment): it says both calls are past the no-op insert, so only the row lock keeps the second from claiming.
+- Quality Nit (the timeout label checked against a typed-in message): the test feeds `watchFailureLogLine` the error the real `refreshAlerts` throws when `withTimeout` aborts a never-answering fetch.
+- Adversarial Nit (§7 said one paragraph is held back): §7 says one such paragraph refuses the whole digest, defines a number as a run of any Unicode number characters, and states the accepted limits; the overview's digest line points to §7 without listing checks.
+- Adversarial Nit (the round 1 Fixed list left out the §7 measured-batch wording): added to that list above.
+
+## Wave 2 gates (T8, 2026-10-17)
+
+- On 7016a47: `npm run typecheck` and `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 41 files, 733 tests, 28 s; Playwright 542, 6.0 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
