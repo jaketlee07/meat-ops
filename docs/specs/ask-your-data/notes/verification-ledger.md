@@ -207,3 +207,11 @@ Post-gates reviewers, dispatched in parallel: `adversarial-reviewer`, `security-
 | Quality 5: a watch failure line names neither the step nor the message, and can count a press twice | Nit | repair-the-artifact: each press counted once, the line names the press, the step, and the error |
 | Quality 6: the See alerts expectation is keyed on query ids | Nit | repair-the-artifact: an `urgentAlert` flag on each case row, beside the setup that opens the alert |
 | Adversarial 5, quality 7: the round 1 record gives one finding number to two findings | Nit | repair-the-artifact: rows renumbered to the raw report's ids (adversarial 5 and 6) |
+
+## Review round 3 (2026-10-18, delta 1232c5e..3e7209e)
+
+`adversarial-reviewer` and `quality-engineer` reviewed the round 2 repairs only; `frontend-reviewer` was clean in round 2 and the delta changes no page code. Quality: clean. Recorded as round 3, retry 3 of 5, with 1 sustained fingerprint.
+
+| Finding | Severity | Disposition |
+| --- | --- | --- |
+| Adversarial 1: the in-flight refusal test's title names AC-0107, which it did not check | Nit | repair-the-artifact: the test now asserts the field's `aria-describedby` is `ask-question-error` right after the refusal |

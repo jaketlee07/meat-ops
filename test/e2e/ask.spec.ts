@@ -307,6 +307,7 @@ test.describe("the page", () => {
     const p = await openAsk(page);
     await ask(p, "   ");
     await expect(p.error).toHaveText(QUESTION_BLANK);
+    await expect(p.field).toHaveAttribute("aria-describedby", "ask-question-error");
     await model.answer({ hold: true, then: RAW_TOM_ANSWER });
     await ask(p, "How much RAW-TOM do I have?");
     await model.waitForRequests(1);
