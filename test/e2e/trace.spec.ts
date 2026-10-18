@@ -687,7 +687,9 @@ test.describe("focus after Show sale and Show lots", () => {
     await saleFixture({ listPrice: true, sale: true });
     await open(page, "/trace?sale=S-5000");
     await expect(page.getByRole("heading", { level: 2, name: "S-5000" })).toBeVisible();
-    await expect(page.getByRole("status")).toHaveCount(0);
+    // The header's own status container (it announces the urgent banner) is the page's only one.
+    await expect(page.getByRole("status")).toHaveCount(1);
+    await expect(page.locator("[role=status]:not(main > div > [role=status])")).toHaveCount(0);
     await expect(page.locator("main [aria-live]")).toHaveCount(0);
   });
 });
