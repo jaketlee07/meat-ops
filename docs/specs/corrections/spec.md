@@ -1,6 +1,6 @@
 # Spec: corrections
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §4 (lots, production, sales, corrections), §5 (the engine's operations), §6 invariants 4, 6, and 7, §11 (boundaries); [`docs/costing.md`](../../costing.md) (the average rule, the zero-stock rule, the void_receipt and adjust_lot rules, the seven invariants, the Rounding note); the sale rules in [`../sales/spec.md`](../sales/spec.md) (a sale is undone only by a void with a reason); the alert rules in [`../alerts/spec.md`](../alerts/spec.md) (on `main` once Alerts merges); the access model, the write path, the `supabase/migrations/` change guidance, and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md); the intent [`docs/product/intents/corrections-consumed-receipts.md`](../../product/intents/corrections-consumed-receipts.md)

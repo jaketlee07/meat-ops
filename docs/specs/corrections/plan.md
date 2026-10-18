@@ -1,7 +1,7 @@
 # Plan: corrections
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md` (areas, access model, write path, failure notes); `docs/costing.md` (the rules this work changes).
   - **Analogous implementations:** the engine's correction operations in `supabase/migrations/20261007183252_corrections.sql` (`void_receipt`, `void_sale`, `adjust_lot`: caller check, argument checks before the lock, lock, then state checks); `produce_batch` and `record_sale` in `supabase/migrations/20261007181933_engine_hardening.sql`; the receipt void in `src/app/receiving/void-dialog.tsx` and `voidReceipt` in `src/app/receiving/actions.ts`; the sale void and its decision module, `src/app/sales/void-dialog.tsx` and `src/app/sales/save-sale.ts`.
