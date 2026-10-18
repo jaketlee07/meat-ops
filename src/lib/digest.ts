@@ -47,21 +47,36 @@ export type DigestVerdict =
 // AC-0091: white space here is spaces, tabs, and line breaks only.
 const EDGE_SPACE = /^[ \t\r\n]+|[ \t\r\n]+$/g;
 
-// Number token: a run of digits with any "," or "." between two digits.
-const NUMBER_TOKEN = /\d+(?:[.,]\d+)*/g;
+// Number token: a run of Unicode number characters (\p{N}: full-width digits,
+// superscripts, fractions, Roman numerals) with any "," or "." between two of
+// them.
+const NUMBER_TOKEN = /\p{N}+(?:[.,]\p{N}+)*/gu;
 
-// AC-0092: a number character other than 0 to 9 (full-width digits, superscripts,
-// fractions, Roman numerals) or an invisible formatting character (zero-width
-// joiner, word joiner, soft hyphen, bidirectional control) is never faithful.
-const NOT_PLAIN_NUMBER = /[^\P{N}0-9]|\p{Cf}/u;
+// AC-0092: plain digest characters are printable ASCII, these seven marks, and
+// a letter or number character the facts hold. A default-ignorable character
+// (zero-width joiner, word joiner, soft hyphen, variation selector) never counts.
+const PLAIN_MARKS = new Set(["\u2018", "\u2019", "\u201C", "\u201D", "\u2013", "\u2014", "\u2026"]);
+const LETTER_OR_NUMBER = /^[\p{L}\p{N}]$/u;
+const DEFAULT_IGNORABLE = /^\p{Default_Ignorable_Code_Point}$/u;
+
+function isPlain(paragraph: string, facts: ReadonlySet<string>): boolean {
+  // Whole code points, not UTF-16 units.
+  return Array.from(paragraph).every((c) => {
+    const code = c.codePointAt(0) as number;
+    if (code >= 0x20 && code <= 0x7e) return true;
+    if (PLAIN_MARKS.has(c)) return true;
+    return LETTER_OR_NUMBER.test(c) && !DEFAULT_IGNORABLE.test(c) && facts.has(c);
+  });
+}
 
 function numberTokens(text: string): string[] {
   return text.match(NUMBER_TOKEN) ?? [];
 }
 
 // AC-0091 to AC-0093. unreadable: not the answer schema, or a paragraph count
-// or length out of bounds. unfaithful: a number token the facts do not hold, or
-// a product code (codes holds each open alert's) the text does not contain.
+// or length out of bounds. unfaithful: a paragraph with a character that is not
+// plain, a number token the facts do not hold, or a product code (codes holds
+// each open alert's) the text does not contain.
 export function digestVerdict(answer: unknown, facts: string, codes: readonly string[]): DigestVerdict {
   if (typeof answer !== "object" || answer === null || Array.isArray(answer)) return { kind: "unreadable" };
   const keys = Object.keys(answer);
@@ -74,7 +89,8 @@ export function digestVerdict(answer: unknown, facts: string, codes: readonly st
     return { kind: "unreadable" };
   }
   const text = trimmed.join("\n");
-  if (NOT_PLAIN_NUMBER.test(text)) return { kind: "unfaithful" };
+  const factCharacters = new Set(Array.from(facts));
+  if (!trimmed.every((p) => isPlain(p, factCharacters))) return { kind: "unfaithful" };
   const held = new Set(numberTokens(facts));
   if (numberTokens(text).some((token) => !held.has(token))) return { kind: "unfaithful" };
   if (codes.some((code) => !text.includes(code))) return { kind: "unfaithful" };

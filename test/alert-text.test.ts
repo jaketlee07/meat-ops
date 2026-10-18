@@ -200,7 +200,8 @@ it("AC-0192: the facts label urgent and other alerts and keep a next step's own 
 });
 
 it("AC-0091: an answer is a digest only when it holds 1 to 6 paragraphs of 1 to 800 characters", () => {
-  const verdict = (answer: unknown) => digestVerdict(answer, "", []);
+  // The facts hold U+10400, a letter outside the BMP, so only length decides.
+  const verdict = (answer: unknown) => digestVerdict(answer, "\u{10400}", []);
   const ok = (paragraphs: string[]) => ({ kind: "digest", paragraphs });
   expect(verdict({ paragraphs: ["a"] })).toEqual(ok(["a"]));
   expect(verdict({ paragraphs: Array(6).fill("a") })).toEqual(ok(Array(6).fill("a")));
@@ -209,9 +210,9 @@ it("AC-0091: an answer is a digest only when it holds 1 to 6 paragraphs of 1 to 
   // White space at the edges does not count, and a blank paragraph is empty.
   expect(verdict({ paragraphs: [" \t\n a \n"] })).toEqual(ok(["a"]));
   expect(verdict({ paragraphs: ["  \n\t "] })).toEqual({ kind: "unreadable" });
-  // Characters are code points: 800 emoji pass, 801 fail.
-  expect(verdict({ paragraphs: ["😀".repeat(800)] }).kind).toBe("digest");
-  expect(verdict({ paragraphs: ["😀".repeat(801)] })).toEqual({ kind: "unreadable" });
+  // Characters are code points: 800 of U+10400 pass, 801 fail.
+  expect(verdict({ paragraphs: ["\u{10400}".repeat(800)] }).kind).toBe("digest");
+  expect(verdict({ paragraphs: ["\u{10400}".repeat(801)] })).toEqual({ kind: "unreadable" });
   expect(verdict({ paragraphs: [`${"a".repeat(800)}  \n`] }).kind).toBe("digest");
   expect(verdict({ paragraphs: ["a".repeat(801)] })).toEqual({ kind: "unreadable" });
   // Not the answer schema.
