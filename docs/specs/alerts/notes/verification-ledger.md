@@ -300,3 +300,7 @@ Target 2c220ef, the delta 748767d..2c220ef. The same three reviewers; no Concern
 Owner ruling (2026-10-17): **keep the narrowing** put to the owner after round 8. Only letters and number characters carry over from the facts, so a product code or name that holds a symbol such as "°" or "®", a non-breaking space, or an unusual hyphen can never be copied into a digest, and while an alert is open on such a code every digest fails. Codes such as 502, RAW-TOM, and 502½ are unaffected.
 
 Revised: AC-0092 refuses every held character that is not a letter or number, U+00A0 and combining marks included, and the Assumptions name that class in the definition's own terms; the stub's facts hold U+00A0, U+0323, and U+20E0, each with a refused case (new sha256, stub validation rerun); T8's Done when and the Master brief closeout require §7's meaning of a number; the control-character clause is gone.
+
+## Amendment review round 10 (spec stage, 2026-10-17)
+
+Target 193ed7d, the delta 2c220ef..193ed7d. Security clean after adjudication. Shaping and adversarial each sustained one Nit, the same one: AC-0092's passing clause let every held letter through while naming the held letter U+3164 among characters refused. Revised: the passing clause names a held letter or number "that is not default-ignorable"; the definition, the stub, and its sha256 are unchanged.
