@@ -125,6 +125,8 @@ export type OperationName =
   | "void_receipt"
   | "void_sale"
   | "adjust_lot"
+  | "correct_receipt"
+  | "reverse_batch"
   | "set_target_margin"
   | "set_list_price"
   | "price_what_if"
@@ -157,6 +159,7 @@ const PARAM_TYPES: Record<string, string> = {
   p_sale_date: "date",
   p_lot_id: "uuid",
   p_sale_id: "uuid",
+  p_batch_id: "uuid",
   p_reason: "text",
   p_new_remaining_lbs: "numeric",
   p_target_percent: "numeric",
@@ -235,6 +238,21 @@ export const voidSaleCall = (saleId: string, reason: string | null = "wrong cust
 export const adjustCall = (lotId: string, newLbs: Arg, reason: string | null = "count"): OpCall => ({
   fn: "adjust_lot",
   args: { p_lot_id: lotId, p_new_remaining_lbs: newLbs, p_reason: reason },
+});
+
+export const correctCall = (
+  lotId: string,
+  cost: Arg,
+  weight: Arg,
+  reason: string | null = "invoice price",
+): OpCall => ({
+  fn: "correct_receipt",
+  args: { p_lot_id: lotId, p_unit_cost: cost, p_weight_lbs: weight, p_reason: reason },
+});
+
+export const reverseCall = (batchId: string, reason: string | null = "entered twice"): OpCall => ({
+  fn: "reverse_batch",
+  args: { p_batch_id: batchId, p_reason: reason },
 });
 
 export interface SqlCall {
