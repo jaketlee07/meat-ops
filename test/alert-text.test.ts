@@ -148,7 +148,7 @@ it("AC-0102: a cost alert reads as the spec writes it, above or below", () => {
     title: "Unusual cost: lot L-5",
     sentence:
       "RAW-TOM Turkey Drums TOM (raw) from Reyes Meats, received Oct 5, 2026, cost $1.9000/lb. That is 14.46% above the usual $1.6600/lb, the middle of its last 4 receipts.",
-    nextStep: "Check it against the invoice. If the cost is wrong, void the receipt on Receiving before production uses it.",
+    nextStep: "Check it against the invoice. If the cost is wrong, correct the receipt on Receiving.",
   });
   expect(alertText({ ...COST, change: -0.1446 } as AlertView).sentence).toContain("14.46% below the usual");
 });
@@ -202,7 +202,7 @@ it("AC-0192: the facts label urgent and other alerts and keep a next step's own 
   const lines = digestFacts([COST, STOCK, PRICE], "2026-10-13").split("\n");
   expect(lines[0]).toBe("Today is Oct 13, 2026. Open alerts: 3. Urgent: 1.");
   expect(lines[1]?.startsWith("Urgent. Unusual cost: lot L-5. RAW-TOM")).toBe(true);
-  expect(lines[1]?.endsWith("production uses it.")).toBe(true);
+  expect(lines[1]?.endsWith("correct the receipt on Receiving.")).toBe(true);
   expect(lines[2]?.endsWith("Next step: Order about 1,300 lbs to cover 14 days.")).toBe(true);
   expect(lines[3]?.startsWith("Other. Price not updated: 502")).toBe(true);
   expect(lines[3]?.endsWith("Next step: Raise list price to $2.94/lb.")).toBe(true);

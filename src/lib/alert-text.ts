@@ -111,7 +111,7 @@ export function alertText(view: AlertView): AlertText {
           `${name(view)} from ${view.vendorName}, received ${formatDate(view.receivedDate)}, cost ${formatCostPerLb(view.unitCost)}. ` +
           `That is ${formatChange(view.change)} ${view.change < 0 ? "below" : "above"} the usual ${formatCostPerLb(view.usualCost)}, ` +
           `the middle of its last ${view.referenceCount} receipts.`,
-        nextStep: "Check it against the invoice. If the cost is wrong, void the receipt on Receiving before production uses it.",
+        nextStep: "Check it against the invoice. If the cost is wrong, correct the receipt on Receiving.",
       };
     case "yield_anomaly":
       return {
