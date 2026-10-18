@@ -450,6 +450,19 @@ describe("correct_receipt", () => {
     expect(rows.every((r) => r.cost === "1.9000")).toBe(true);
   });
 
+  it("a correction leaves every lot's prior average as it was entered", async () => {
+    await resetTestData();
+    const first = await callAsClient(operator, receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, 18, "2026-10-02"));
+    const second = await callAsClient(operator, receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, 2, "2026-10-03"));
+    expect(first.ok && second.ok, `${first.error} ${second.error}`).toBe(true);
+    await correct(correctCall(idOf(first), 1.8, 1000));
+    const [row] = await query<{ prior: string }>(
+      "select prior_avg_cost::text as prior from public.lots where id = $1",
+      [idOf(second)],
+    );
+    expect(row?.prior).toBe("18.0000");
+  });
+
   it("AC-0204: no API role holds a privilege on the correction table's identity sequence", async () => {
     for (const role of ["anon", "authenticated", "service_role"]) {
       const [row] = await query<{ ok: boolean }>(

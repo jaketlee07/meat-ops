@@ -9,8 +9,8 @@ import { OPERATOR_EMAIL } from "./users.js";
 // It resets state between tests and reads back raw tables to check invariants
 // (conservation, lot immutability). It NEVER writes to the protected
 // transactional tables (lots, inventory_balances, production_batches,
-// production_batch_lots, finished_goods, sale_items, sales, lot_adjustments, receipt_corrections). Those are
-// populated exclusively through the costing RPCs under test. resetTestData only
+// production_batch_lots, finished_goods, sale_items, sales, lot_adjustments,
+// receipt_corrections). Those are populated exclusively through the costing RPCs under test. resetTestData only
 // truncates and re-seeds MASTER data (fee_types, vendors, products, fees),
 // which mirrors the top of supabase/seed.sql.
 //
@@ -42,7 +42,7 @@ truncate
   import_draft_lines, import_drafts,
   sale_items, sales, customers,
   finished_goods, production_batch_lots, production_batches,
-  lot_adjustments, lots, inventory_balances,
+  lot_adjustments, receipt_corrections, lots, inventory_balances,
   product_fees, products, fee_types, vendors,
   private.list_price_changes, alerts, alert_digests
   restart identity cascade;
