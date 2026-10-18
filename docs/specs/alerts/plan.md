@@ -21,7 +21,7 @@
 
 ## Approach
 
-The work runs bottom up, in seven tasks, each leaving `npm test` green.
+The work runs bottom up, in eight tasks, each leaving `npm test` green.
 
 1. **Price history (T1).** `private.list_price_changes`, its trigger on `products`, the baseline step, and the menu-pricing AC-0034 clause. Small and independent, so the stale-price rule has data to read.
 2. **The watch (T2).** The `alerts` table, `refresh_alerts`, and the five rules in SQL, proved against exact fixtures with the watch's today passed in. This is the riskiest part: exact medians, windows, zero guards, and the lifecycle.
@@ -30,6 +30,7 @@ The work runs bottom up, in seven tasks, each leaving `npm test` green.
 5. **The page and the banner (T5).** The header's watch and banner, `/alerts` with its lists and the reprice and dismiss actions, and the other pages' browser-helper updates.
 6. **The digest (T6).** `writeDigest` in `model.ts`, the digest action, the page's digest section, and the fake-model tests.
 7. **Docs and recorded runs (T7).** The durable outputs, the goal-based checks, the held-call runs, and the live run.
+8. **The digest's characters (T8).** The plain-character rule in `digestVerdict` and review round 2's test and wording fixes, added by the 2026-10-17 controlled amendment.
 
 ## Constraints
 
@@ -52,7 +53,7 @@ Most construction tests live under each task. Cross-cutting:
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| Master brief, `SYSTEM-SPEC.md` §4 and §7 | T7, T8 | The §4 and §7 edits in the diff | close-work finds each built column and each threshold |
+| Master brief, `SYSTEM-SPEC.md` §4 and §7 | T7, T8 | The §4 and §7 edits in the diff | close-work finds each built column and each threshold, and §7's digest character rule and its accepted limits matching the spec's Plain digest character definition and Assumptions |
 | Shipped contract amended, menu-pricing AC-0034 | T1 | The clause in the diff; `test/pricing.test.ts` unchanged and green | close-work finds the clause and the unchanged test |
 | Display formats, `docs/costing.md` Rounding note | T4 | AC-0107 and AC-0108 green in `test/alert-text.test.ts` | close-work finds the Days and Change rows |
 | Current architecture, trust boundary, and AI connection, `docs/architecture/overview.md` | T7 | The overview diff | close-work matches each named row and sentence to `src/`, `supabase/`, and `test/` |
@@ -467,19 +468,20 @@ it("AC-0092: a digest with a number the facts do not hold is refused", () => {
 
 **Depends on:** T7
 
-**Touches:** `src/lib/digest.ts`, `test/digest-characters.test.ts`, `test/alert-text.test.ts`, `SYSTEM-SPEC.md`, `test/e2e/alerts.spec.ts`, `test/alerts-data.test.ts`, `test/failures.test.ts`, `docs/specs/alerts/notes/verification-ledger.md`
+**Touches:** `src/lib/digest.ts`, `test/digest-characters.test.ts`, `test/alert-text.test.ts`, `SYSTEM-SPEC.md`, `docs/architecture/overview.md`, `test/e2e/alerts.spec.ts`, `test/alerts-data.test.ts`, `test/failures.test.ts`, `docs/specs/alerts/notes/verification-ledger.md`
 
 **Tests:**
-- `test/digest-characters.test.ts`, a new file, no database. stub: true. Test functions and ACs: "AC-0092: a digest of plain digest characters passes" (AC-0092), "AC-0092: a character that is not a plain digest character refuses the digest" (AC-0092), "AC-0092: one paragraph that is not plain refuses the whole digest" (AC-0092). sha256 `43c2f4016ce25dd916ff21084d334cfd24d3754d5d4cde6c70b59e98970c2a78`.
+- `test/digest-characters.test.ts`, a new file, no database. stub: true. Test functions and ACs: "AC-0092: a digest of plain digest characters passes" (AC-0092), "AC-0092: a character that is not a plain digest character refuses the digest" (AC-0092), "AC-0092: one paragraph that is not plain refuses the whole digest" (AC-0092). sha256 `c13c0832ff9309234ca07c5759bf1f1fa7dbb45942bf4e9748bc112adac998dd`.
 
 ```ts
 import { expect, it } from "vitest";
 import { digestVerdict } from "../src/lib/digest.js";
 
-// Facts that hold the tokens 1, 13, 2026, 502, 3.29, 1.8, and 20, and the letter U+00F1.
+// Facts that hold the tokens 1, 13, 2026, 502, 3.29, 1.8, and 20, a line feed,
+// U+00F1, U+00BD, and U+3164 (a default-ignorable letter).
 const FACTS = [
   "Today is Oct 13, 2026. Open alerts: 1. Urgent: 1.",
-  "Urgent. Margin below target: 502 Jalape\u00F1o Drums. At your list price of $3.29/lb, the margin is 1.8%, below your 20% target.",
+  "Urgent. Margin below target: 502 Jalape\u00F1o Half\u00BD Drums\u3164. At your list price of $3.29/lb, the margin is 1.8%, below your 20% target.",
 ].join("\n");
 
 const digest = (...paragraphs: string[]) => digestVerdict({ paragraphs }, FACTS, ["502"]);
@@ -487,24 +489,28 @@ const digest = (...paragraphs: string[]) => digestVerdict({ paragraphs }, FACTS,
 it("AC-0092: a digest of plain digest characters passes", () => {
   for (const text of [
     "502 is at 1.8%, below your 20% target.",
-    "502\u2019s margin of \u201C1.8%\u201D is below 20% \u2013 raise it \u2014 now\u2026",
-    "502 Jalape\u00F1o Drums is at 1.8%.",
+    "\u2018502\u2019s\u2019 margin of \u201C1.8%\u201D is below 20% \u2013 raise it \u2014 now\u2026",
+    "502 Jalape\u00F1o Half\u00BD Drums is at 1.8%.",
   ]) {
     expect(digest(text), JSON.stringify(text)).toEqual({ kind: "digest", paragraphs: [text] });
   }
+  expect(digest("  502 is at 1.8%.\n")).toEqual({ kind: "digest", paragraphs: ["502 is at 1.8%."] });
 });
 
 it("AC-0092: a character that is not a plain digest character refuses the digest", () => {
   for (const text of [
     "502 margin is 1\u034F1.8%.",
     "502 margin is 1\uFE001.8%.",
+    "502 margin is 1\u31641.8%.",
+    "502 is at 1.8%.\nBelow 20%.",
+    "502 is at 1.8%.\u0007",
+    "502 needs a look\u200B.",
     "502 margin is 1\u0417%.",
     "502 Jalapen\u0303o Drums is at 1.8%.",
     "502 is at 1.8% in Z\u00FCrich.",
     "502 is at 1.8%,\u00A0below 20%.",
-    "502 is at 1.8%.\u0007",
+    "502 uses \u00BC of it.",
     "502 margin is \uFF19\uFF10%.",
-    "502 needs a look\u200B.",
   ]) {
     expect(digest(text), JSON.stringify(text)).toEqual({ kind: "unfaithful" });
   }
@@ -516,14 +522,15 @@ it("AC-0092: one paragraph that is not plain refuses the whole digest", () => {
 ```
 
 - `test/alert-text.test.ts`'s AC-0092 tests stay green; its round 1 test of other number characters and invisible formatting characters may move into the new file.
+- The AC-0091 code-point cases in `test/alert-text.test.ts` change from U+1F600 with empty facts, which the amended AC-0092 refuses, to U+10400 with facts that hold it: 800 of them make a digest and 801 are unreadable, and counting length in UTF-16 units still turns the 800 case red.
 - Review round 2's test fixes, each an edit to an existing test: the busy-button test in `test/e2e/alerts.spec.ts` also holds a Dismiss and checks that the reprice button carries `aria-disabled="true"` before the release and that "Alert dismissed." shows after it; that test's title and the race test's title in `test/alerts-data.test.ts`, and the race test's comment, name only what they check; the watch's timeout label in `test/failures.test.ts` is checked against the error `refreshAlerts` throws when its time limit aborts the fetch.
 
 **Approach:**
-- Replace `NOT_PLAIN_NUMBER` in `src/lib/digest.ts` with a check of each trimmed paragraph against the plain digest characters, where the letters allowed beyond ASCII are the letters the facts hold.
-- `SYSTEM-SPEC.md` §7 "Watch (alerts)" states the plain-character rule, and that one such paragraph refuses the whole digest.
+- Replace `NOT_PLAIN_NUMBER` in `src/lib/digest.ts` with a check of each trimmed paragraph against the plain digest characters: printable ASCII, the seven marks, and any character the facts hold, never a `\p{Cc}` or `\p{Default_Ignorable_Code_Point}` character.
+- `SYSTEM-SPEC.md` §7 "Watch (alerts)" states the plain-character rule, that one such paragraph refuses the whole digest, and the accepted limits; `docs/architecture/overview.md`'s digest line points to §7 without listing its checks.
 - The ledger's review round 1 Fixed list gains the §7 measured-batch wording, and the ledger records T8's results.
 
-**Done when:** the T8 tests are green, each review round 2 sustained finding is fixed and recorded in the ledger, and `npm test` exits 0.
+**Done when:** the T8 tests are green, `SYSTEM-SPEC.md` §7 states the plain-character rule and its accepted limits, each review round 2 sustained finding is fixed and recorded in the ledger, and `npm test` exits 0.
 
 ### Stub validation
 
@@ -535,7 +542,7 @@ Run 2026-10-13, then rerun for the T1 stub after its table moved to the `private
 - **Declared test-harness side effects,** all on stack A through `localhost`: global setup's idempotent creation of the test users and their allowlist rows, and `resetTestData`'s truncate and reseed of the local database. These are the side effects `npm test` has on every run. The `AGENTS.md` folder check listed no other stack A folder before the run.
 - **Probe of the load-bearing mechanisms,** in one rolled-back transaction on stack A: a `SECURITY DEFINER` trigger on `products` read the product's `cost_per_lb` from `v_product_pricing` (2.1818 for a 1.68 receipt at 23% shrink); a `SECURITY DEFINER` function called by an operator session called `set_list_price` and passed its caller check; a partial unique index with `nulls not distinct` refused a second live row; and `->>` on a `jsonb` built from `round(x, 4)` kept the scale (`0.1000`, `-0.1024`). Afterwards no probe object or row remained.
 - The scratch copy was removed.
-- **T8 stub, run 2026-10-17** (controlled amendment): the block was written to a `git archive` copy of `HEAD` (ee78fd3) in the session's scratch directory, outside the repository, and its sha256 (`43c2f4016ce25dd916ff21084d334cfd24d3754d5d4cde6c70b59e98970c2a78`, the code lines plus one terminal newline) was recorded from that copy, which `cmp` matched to the block. Compile: `tsc --noEmit -p tsconfig.json` over the copy exited 0. Red: `node node_modules/vitest/vitest.mjs run` over the one file, with a scratch config holding only that file, `pool: "forks"`, no global setup (the file touches no database), and a scratch `cacheDir`, exited 1: 1 file, 2 of 3 tests failed on their assertions ("a character that is not a plain digest character refuses the digest" got a digest for "502 margin is 1" + U+034F + "1.8%."; "one paragraph that is not plain refuses the whole digest" got a digest), and "a digest of plain digest characters passes" passed. Isolation: `sandbox-exec` with all network denied (a `curl` to `https://api.anthropic.com` under the profile exited 6, could not resolve), file-content reads denied except `/`, the repository (for the linked `node_modules`), the Node 22.17.0 install, the scratch directory, `os.tmpdir()`, `/private/var/db/timezone`, `/System`, `/usr`, `/private/etc`, and `/dev` (a read of `~/.zshrc` was refused), writes denied except the scratch directory, `os.tmpdir()`, and `/dev` (a write into the repository was refused), and a 120-second `alarm`. No harness side effect: no database, no network. A minimal plain-character check patched into the copy's `src/lib/digest.ts` turned all 3 tests green, so the block is satisfiable. The scratch copy was removed.
+- **T8 stub, run 2026-10-17** (controlled amendment, rerun after amendment review round 7): the block was written to a `git archive` copy of `HEAD` (c196df4) in the session's scratch directory, outside the repository, and its sha256 (`c13c0832ff9309234ca07c5759bf1f1fa7dbb45942bf4e9748bc112adac998dd`, the code lines plus one terminal newline) was recorded from that copy, which `cmp` matched to the block. Compile: `tsc --noEmit -p tsconfig.json` over the copy exited 0. Red: `node node_modules/vitest/vitest.mjs run` over the one file, with a scratch config holding only that file, `pool: "forks"`, no global setup (the file touches no database), and a scratch `cacheDir`, exited 1: all 3 tests failed on their assertions ("a digest of plain digest characters passes" got `unfaithful` for a paragraph holding the facts' U+00BD; "a character that is not a plain digest character refuses the digest" got a digest for "502 margin is 1" + U+034F + "1.8%."; "one paragraph that is not plain refuses the whole digest" got a digest). Isolation: `sandbox-exec` with all network denied (a `curl` to `https://api.anthropic.com` under the profile exited 6, could not resolve), file-content reads denied except `/`, the repository (for the linked `node_modules`), the Node 22.17.0 install, the scratch directory, `os.tmpdir()`, `/private/var/db/timezone`, `/System`, `/usr`, `/private/etc`, and `/dev` (a read of `~/.zshrc` was refused), writes denied except the scratch directory, `os.tmpdir()`, and `/dev` (a write into the repository was refused), and a 120-second `alarm`. No harness side effect: no database, no network. A minimal plain-character check patched into the copy's `src/lib/digest.ts` turned all 3 tests green, so the block is satisfiable. The scratch copy was removed.
 
 ## Rollout
 
@@ -560,3 +567,4 @@ Run 2026-10-13, then rerun for the T1 stub after its table moved to the `private
 - 2026-10-13: after review round 3: a failed record leaves the day writing and adds no log line; the browser Back check starts from the page's own failed send; the claim race names its state; the live-run direction record ignores word-for-word copies of the planted description and gates nothing, by the owner's choice.
 - 2026-10-13: after review rounds 4 and 5: the unchecked "the day stays writing" clause is gone, and so is the "failed record" term; AC-0200, AC-0207, and AC-0208 name the failing call that records a failure, and a failed store of the paragraphs keeps its store-failed line.
 - 2026-10-17: controlled amendment after post-gates review round 2: the new Plain digest character definition and AC-0092 state the owner's plain-character rule; T8 implements it with round 2's test and wording fixes.
+- 2026-10-17: after amendment review round 7: the character check reads trimmed paragraphs; any character the facts hold is plain, except control and default-ignorable code points; the accepted limits are recorded; T8 names the AC-0091 code-point edit, the overview, and the §7 closeout.

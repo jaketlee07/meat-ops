@@ -278,3 +278,11 @@ Owner rulings (2026-10-17):
 - **Plain characters only.** A digest paragraph may hold only printable ASCII (U+0020 to U+007E), the typographic marks U+2018, U+2019, U+201C, U+201D, U+2013, U+2014, and U+2026, and any letter (Unicode general category L) that appears in the digest facts; a paragraph holding any other character is refused as unfaithful. This replaces the round 1 ruling's `\p{N}` and `\p{Cf}` list and closes the default-ignorable and look-alike cases with it. The live run's six paragraphs hold only printable ASCII.
 
 All nine sustained findings are scheduled into the amendment's new task, T8.
+
+## Amendment review round 7 (spec stage, 2026-10-17)
+
+Target c196df4, the amendment ee78fd3..c196df4. Reviewers in parallel: shaping-reviewer, adversarial-reviewer, and security-reviewer (llm-agent and injection spec-stage framing inlined). Sustained 16 (3 Concerns, 13 advisory or Nits), refuted 2 (a dash example the definition already decides; a sign or unit next to a held number, which the approved Number token never covered).
+
+Owner ruling (2026-10-17): **settle the rule with known limits.** The checks prove every digit run is a figure the facts hold and that no hidden or foreign character changes how it reads; they do not prove the words around a figure keep its meaning, so a sign or unit the model adds, a figure written in words, or a letter beside a digit can still mislead, and the owner accepts that, because the alert list under the digest always shows the engine's own figures. With it, any character the facts hold is plain, so a product code with a symbol such as "½" can still be copied, and no control or default-ignorable character is ever plain.
+
+Revised in the amendment: the definition and AC-0092 read trimmed paragraphs and name each example's character exactly; the accepted limits and the product-code consequence are in the spec's Assumptions; T8's stub adds U+2018, a held "½", a held U+3164 that is still refused, a line feed inside a paragraph, and an edge-trim case (new sha256, stub validation rerun); T8 names the AC-0091 code-point edit, the overview, and the §7 closeout; the plan's Approach counts eight tasks.
