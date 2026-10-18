@@ -1,6 +1,6 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import type { ModelAnswer } from "../../src/lib/ask";
-import { query, resetTestData, saleFixture, seedInvoiceFixture, type SaleFixture } from "../db";
+import { query, resetTestData, saleFixture, seedInvoiceFixture, tableFingerprints, type SaleFixture } from "../db";
 import { NAV_CONTROLS } from "./alerts-page";
 import type { FakeAnswer } from "./invoices-page";
 
@@ -52,6 +52,13 @@ export const NEED_LOT_NUMBER = "Add the lot number to your question.";
 export const DECLINE = "Ask can't answer that question. Try one of the questions below.";
 export const ASK_AGAIN = "The answer couldn't be looked up. Ask your question again.";
 export const LOOKUP_TRY_AGAIN = "The answer couldn't be looked up. Try again.";
+export const TRY_AGAIN_ASK = "The question wasn't answered. Try again in a moment.";
+export const KEY_REFUSED =
+  "Ask isn't working. The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file.";
+export const DECLINED_BY_MODEL = "The question wasn't answered. The model declined it. Try asking another way.";
+export const NOT_SET_UP = "Ask isn't set up. Set ANTHROPIC_API_KEY in the app's .env file, then restart the app.";
+export const ADDRESS_REFUSED =
+  "Ask isn't set up. ANTHROPIC_BASE_URL must be unset, or a loopback address for tests. Fix it, then restart the app.";
 export const NOTE = "Every figure here comes from Meat Ops' records. Claude only chose what to look up.";
 
 export const RAW_TOM_LABEL = "RAW-TOM Turkey Drums TOM (raw)";
@@ -166,4 +173,69 @@ export async function withSaleSummaryRefused(during: () => Promise<void>): Promi
   } finally {
     await query("grant select on public.v_sale_summary to authenticated");
   }
+}
+
+// ---- Presses change no row (AC-0086) ----
+
+// One fingerprint (row count and content hash) for every table in public and in
+// private, found through the catalog. Keys of private tables start "private.".
+export async function allFingerprints(): Promise<Record<string, string>> {
+  const out: Record<string, string> = { ...(await tableFingerprints()) };
+  const tables = await query<{ name: string }>(`
+    select c.relname as name
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'private' and c.relkind in ('r', 'p')
+      and not exists (select 1 from pg_depend d where d.objid = c.oid and d.deptype = 'e')
+    order by 1`);
+  for (const t of tables) {
+    const [row] = await query<{ n: number; h: string }>(
+      `select count(*)::int as n, md5(coalesce(string_agg(t::text, '|' order by t::text), '')) as h
+       from private."${t.name}" t`,
+    );
+    out[`private.${t.name}`] = `${row?.n}:${row?.h}`;
+  }
+  return out;
+}
+
+export interface PressWatch {
+  // One line per table a press changed, with the press that changed it.
+  changes: string[];
+  // The number of presses seen.
+  presses: number;
+  // Tables a test changes by hand while a press is in flight.
+  ignore: Set<string>;
+}
+
+// Takes a fingerprint of every table before and after each ask or lookup press
+// the context's pages send (a server action POST to /ask), so a test can assert
+// that no press, whatever its outcome, changed a row. The response is fetched
+// whole and passed on unchanged.
+export async function watchPresses(context: BrowserContext): Promise<PressWatch> {
+  const watch: PressWatch = { changes: [], presses: 0, ignore: new Set() };
+  await context.route(
+    (url) => url.pathname === "/ask",
+    async (route) => {
+      const request = route.request();
+      if (request.method() !== "POST" || !("next-action" in request.headers())) {
+        await route.continue().catch(() => {});
+        return;
+      }
+      try {
+        const before = await allFingerprints();
+        const response = await route.fetch({ timeout: 0 });
+        const after = await allFingerprints();
+        watch.presses += 1;
+        for (const name of Object.keys({ ...before, ...after })) {
+          if (!watch.ignore.has(name) && before[name] !== after[name]) {
+            watch.changes.push(`press ${watch.presses} changed ${name}`);
+          }
+        }
+        await route.fulfill({ response });
+      } catch {
+        // The context closed or the fake model was reset while the press was held.
+        await route.abort().catch(() => {});
+      }
+    },
+  );
+  return watch;
 }

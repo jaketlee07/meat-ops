@@ -1,10 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { readdirSync, readFileSync } from "node:fs";
+import os from "node:os";
+import { join } from "node:path";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 import { CATALOG, QUERY_IDS } from "../../src/lib/ask";
+import { receiveLot } from "../../src/lib/rpc";
 import {
   callAsOperator,
   CUSTOMER_ID,
   idOf,
   type OpCall,
+  PROD_502_ID,
   query,
   RAW_TOM_ID,
   receiveCall,
@@ -14,9 +19,24 @@ import {
   VENDOR_ID,
   voidSaleCall,
 } from "../db";
+import { resolveStackEnv } from "../env";
+import { OPERATOR_EMAIL, signInOperator } from "../users";
 import { checkPageState } from "./a11y";
-import { banner, captureAction, HEADER_PAGES, marginCase, opens, setActive, WATCH_FAILED, withSeeAlerts, withWatchRefused } from "./alerts-page";
 import {
+  alertStates,
+  banner,
+  captureAction,
+  HEADER_PAGES,
+  marginCase,
+  opens,
+  setActive,
+  WATCH_FAILED,
+  withSeeAlerts,
+  withWatchRefused,
+} from "./alerts-page";
+import {
+  ADDRESS_REFUSED,
+  allFingerprints,
   ask,
   ASK_AGAIN,
   ASK_CONTROLS,
@@ -26,7 +46,9 @@ import {
   choice,
   DECLINE,
   DECLINE_ANSWER,
+  DECLINED_BY_MODEL,
   IN_FLIGHT,
+  KEY_REFUSED,
   LOOKUP_TRY_AGAIN,
   modelAnswer,
   NAME_THE_PRODUCT,
@@ -34,21 +56,37 @@ import {
   NEED_SALE_NUMBER,
   NOT_ALLOWED_ASK,
   NOT_ALLOWED_LOOKUP,
+  NOT_SET_UP,
   NOTE,
   openAsk,
   QUESTION_BLANK,
   QUESTION_TOO_LONG,
+  RAW_TKB_ID,
   RAW_TKB_LABEL,
   RAW_TOM_LABEL,
   shownAnswer,
   SIGNED_OUT_ASK,
   SIGNED_OUT_LOOKUP,
+  TRY_AGAIN_ASK,
+  watchPresses,
   WHICH_PRODUCT,
   withSaleSummaryRefused,
+  type PressWatch,
 } from "./ask-page";
-import { type FakeModel, fakeModel, FRAMING, replayWith } from "./invoices-page";
+import {
+  ANTHROPIC_TEST_AUTH_TOKEN,
+  ANTHROPIC_TEST_KEY,
+  type FakeAnswer,
+  type FakeModel,
+  fakeModel,
+  FRAMING,
+  ports,
+  replayWith,
+  startSpare,
+} from "./invoices-page";
 import { NOT_ALLOWED, sendsActionRequest } from "./receiving-page";
-import { NON_OPERATOR_STATE, OPERATOR_STATE } from "./states";
+import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
+import { NON_OPERATOR_STATE, OPERATOR_STATE, signInThroughForm } from "./states";
 
 // The ask page, end to end: a real browser over the production build, the local
 // database, and the fake model service, which hands out the model's answers and
@@ -57,11 +95,19 @@ import { NON_OPERATOR_STATE, OPERATOR_STATE } from "./states";
 test.use({ storageState: OPERATOR_STATE });
 
 let model: FakeModel;
+let fixture: SaleFixture;
+// AC-0086: every ask and lookup press in this file is watched, and none may change a row.
+let presses: PressWatch;
 
-test.beforeEach(async ({ baseURL }) => {
-  await askCatalogFixture();
+test.beforeEach(async ({ baseURL, context }) => {
+  fixture = await askCatalogFixture();
   model = fakeModel(baseURL);
   await model.reset();
+  presses = await watchPresses(context);
+});
+
+test.afterEach(() => {
+  expect(presses.changes, "rows changed by a press").toEqual([]);
 });
 
 async function run(call: OpCall): Promise<string> {
@@ -745,6 +791,8 @@ test.describe("choosing what to look up", () => {
   });
 
   test("AC-0059, AC-0106: a product made inactive before the read says to ask again", async ({ page }) => {
+    // The test itself changes a product while the press is in flight.
+    presses.ignore.add("products");
     const p = await openAsk(page);
     await model.answer({ hold: true, then: modelAnswer({ query: "raw_stock", product_code: "RAW-TOM" }) });
     await p.field.fill("How much RAW-TOM do I have?");
@@ -761,4 +809,554 @@ test.describe("choosing what to look up", () => {
       await setActive(RAW_TOM_ID, true);
     }
   });
+});
+
+// ---- What the model receives ----
+
+const HOW_MUCH = "How much RAW-TOM do I have?";
+const RAW_TOM_ANSWER = modelAnswer({ query: "raw_stock", product_code: "RAW-TOM" });
+const ACTIVE_CODES = ["502", "503", "RAW-CHK", "RAW-TKB", "RAW-TOM"];
+
+// One Ask press with an answer from the model; returns the page parts and the one request.
+async function askOnce(page: Page, question = HOW_MUCH) {
+  const p = await openAsk(page);
+  await model.answer(RAW_TOM_ANSWER);
+  await ask(p, question);
+  await expect(p.answer).toBeVisible();
+  const requests = await model.requests();
+  expect(requests).toHaveLength(1);
+  return { p, request: requests[0]! };
+}
+
+test.describe("what the model receives", () => {
+  test("AC-0060, AC-0065: the body and settings are fixed, and only the key authorizes the request", async ({ page }) => {
+    const { request } = await askOnce(page);
+    const { body, headers } = request;
+    expect(Object.keys(body).sort()).toEqual(["max_tokens", "messages", "model", "output_config", "system"]);
+    expect(body.model).toBe("claude-opus-5-5");
+    expect(body.max_tokens).toBe(16000);
+    expect(Object.keys(body.output_config).sort()).toEqual(["effort", "format"]);
+    expect(body.output_config.effort).toBe("low");
+    expect(body.output_config.format.type).toBe("json_schema");
+    expect(headers["anthropic-beta"]).toBeUndefined();
+    expect(headers["x-api-key"]).toBe(ANTHROPIC_TEST_KEY);
+    // The suite's app has ANTHROPIC_AUTH_TOKEN set; the request must not carry it.
+    expect(headers.authorization).toBeUndefined();
+    expect(JSON.stringify({ headers, body })).not.toContain(ANTHROPIC_TEST_AUTH_TOKEN);
+  });
+
+  test("AC-0061: the schema allows exactly the active codes for product_code and for each candidate", async ({ page }) => {
+    const { request } = await askOnce(page);
+    const schema = request.body.output_config.format.schema as {
+      properties: {
+        product_code: { anyOf: Array<{ enum?: string[]; type?: string }> };
+        candidates: { items: { enum: string[] } };
+      };
+    };
+    const allowed = schema.properties.product_code.anyOf;
+    expect(allowed.flatMap((option) => option.enum ?? []).sort()).toEqual(ACTIVE_CODES);
+    expect(allowed.filter((option) => option.type === "null")).toHaveLength(1);
+    expect(allowed).toHaveLength(2);
+    expect([...schema.properties.candidates.items.enum].sort()).toEqual(ACTIVE_CODES);
+  });
+
+  test("AC-0062: one user message holds the question and every active product, and nothing inactive", async ({ page }) => {
+    const question = "How much turkey do I have in the cooler?";
+    const { request } = await askOnce(page, question);
+    expect(request.body.messages).toHaveLength(1);
+    expect(request.body.messages[0]?.role).toBe("user");
+    const content = request.body.messages[0]?.content ?? [];
+    expect(content).toHaveLength(1);
+    const text = String(content[0]?.text);
+    expect(text).toContain(question);
+    const products = await query<{ code: string; description: string }>(
+      "select code, description from products where active order by code",
+    );
+    expect(products.map((product) => product.code)).toEqual(ACTIVE_CODES);
+    for (const { code, description } of products) {
+      expect(text, code).toContain(`"code":${JSON.stringify(code)},"description":${JSON.stringify(description)}`);
+    }
+    const sent = JSON.stringify(request.body);
+    for (const unwanted of ["RAW-OLD", "Old Turkey (raw)"]) expect(sent, unwanted).not.toContain(unwanted);
+  });
+
+  test("AC-0063: the request holds none of the other data in the database, the session, or the browser", async ({
+    page,
+    context,
+  }) => {
+    await query(
+      "update vendors set contact_name = 'Sentinel Contact', phone = '555-0199', email = 'sentinel@example.test', notes = 'sentinel vendor note' where id = $1",
+      [VENDOR_ID],
+    );
+    await query("update products set brand = 'Sentinel Brand' where id = $1", [RAW_TOM_ID]);
+    await receiveLot(await signInOperator(), {
+      productId: RAW_TOM_ID,
+      vendorId: VENDOR_ID,
+      weightLbs: 100,
+      unitCost: 9.8765,
+      received: "2026-10-01",
+      lotNumber: "L-SENTINEL",
+      notes: "sentinel lot note",
+    });
+    const [batch] = await query<{ batch_number: string }>("select batch_number from production_batches where id = $1", [
+      fixture.batch1Id,
+    ]);
+    const p = await openAsk(page);
+    const cookies = (await context.cookies()).filter((cookie) => cookie.name.startsWith("sb-"));
+    expect(cookies.length).toBeGreaterThan(0);
+    const session = readSession(cookies);
+    const sentinels = [
+      "Sentinel Contact",
+      "555-0199",
+      "sentinel@example.test",
+      "sentinel vendor note",
+      "Sentinel Brand",
+      "L-SENTINEL",
+      "9.8765",
+      "sentinel lot note",
+      "Reyes Meats",
+      "Valley Poultry",
+      "Belmont Poultry",
+      "Fulton Market Deli",
+      fixture.lotANumber,
+      fixture.lotBNumber,
+      batch!.batch_number,
+      "S-5000",
+      OPERATOR_EMAIL,
+      resolveStackEnv().anonKey,
+      session.access_token,
+      session.refresh_token,
+      ...cookies.map((cookie) => cookie.value),
+    ];
+    await model.answer(RAW_TOM_ANSWER);
+    await ask(p, HOW_MUCH);
+    await expect(p.answer).toBeVisible();
+    const [request] = await model.requests();
+    const sent = JSON.stringify({ headers: request!.headers, body: request!.body });
+    for (const sentinel of sentinels) expect(sent, sentinel.slice(0, 24)).not.toContain(sentinel);
+  });
+
+  test("AC-0066: no header value holds this machine's host name, operating system, architecture, or Node version", async ({
+    page,
+  }) => {
+    const { request } = await askOnce(page);
+    const squash = (text: string) => text.toLowerCase().replaceAll(/\s+/g, "");
+    const machine = [
+      os.hostname(),
+      os.type(),
+      os.platform(),
+      `Other:${os.platform()}`,
+      "macOS",
+      "Windows",
+      "Linux",
+      os.arch(),
+      process.version,
+      process.version.replace(/^v/, ""),
+      "MacOS",
+      "FreeBSD",
+      "OpenBSD",
+      "iOS",
+      "Android",
+      "Unknown",
+    ];
+    for (const [name, value] of Object.entries(request.headers)) {
+      for (const word of machine) expect(squash(value), `${name} holds ${word}`).not.toContain(squash(word));
+    }
+    expect(Object.keys(request.headers).filter((name) => name.startsWith("x-stainless"))).toEqual([]);
+    expect(request.headers["user-agent"]).not.toMatch(/Anthropic/i);
+  });
+
+  test("AC-0067: no response in the page states reached carries the key, and no static file does", async ({ page }) => {
+    const bodies: Array<Promise<string>> = [];
+    page.on("response", (response) => {
+      bodies.push(response.body().then((buffer) => buffer.toString("latin1")).catch(() => ""));
+    });
+    // The first load, a failure message, the choose state, and an answer.
+    const p = await openAsk(page);
+    await model.answer({ status: 401 }, CHOOSE_ANSWER);
+    await ask(p, "How much turkey do I have?");
+    await expect(p.message).toHaveText(KEY_REFUSED);
+    await ask(p, "How much turkey do I have?");
+    await expect(p.choices).toHaveCount(2);
+    await choice(p, RAW_TKB_LABEL).click();
+    await expect(p.answer).toBeVisible();
+    await page.goto("/ask");
+    await expect(p.ask).toBeVisible();
+    const seen = await Promise.all(bodies);
+    expect(seen.length).toBeGreaterThan(3);
+    for (const body of seen) {
+      expect(body).not.toContain(ANTHROPIC_TEST_KEY);
+      expect(body).not.toContain(ANTHROPIC_TEST_AUTH_TOKEN);
+    }
+
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+        entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)],
+      );
+    const files = walk(join(process.cwd(), ".next", "static"));
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      const content = readFileSync(file);
+      expect(content.includes(ANTHROPIC_TEST_KEY), file).toBe(false);
+      expect(content.includes(ANTHROPIC_TEST_AUTH_TOKEN), file).toBe(false);
+    }
+  });
+
+  test("AC-0068: one Ask press sends exactly one request, also for 429, 500, 529, and a dropped connection", async ({
+    page,
+  }) => {
+    const answers: ReadonlyArray<[string, FakeAnswer]> = [
+      ["429", { status: 429 }],
+      ["500", { status: 500 }],
+      ["529", { status: 529 }],
+      ["a drop", { drop: true }],
+    ];
+    for (const [name, answer] of answers) {
+      await model.reset();
+      await model.answer(answer, RAW_TOM_ANSWER);
+      const p = await openAsk(page);
+      await ask(p, HOW_MUCH);
+      await expect(p.message, name).toHaveText(TRY_AGAIN_ASK);
+      await page.waitForTimeout(500);
+      expect(await model.requests(), name).toHaveLength(1);
+    }
+  });
+});
+
+// ---- Lookups send no request ----
+
+test.describe("lookups", () => {
+  test("AC-0069, AC-0082: replayed lookups send no request, and unusable ones say to ask again", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    const p = await openAsk(page);
+    await model.answer(CHOOSE_ANSWER);
+    await ask(p, "How much turkey do I have?");
+    const sent = await captureAction(page, () => choice(p, RAW_TKB_LABEL).click());
+    await expect(p.answer).toBeVisible();
+    const before = await requestCount();
+    expect(before).toBe(1);
+    const rows = await allFingerprints();
+
+    const replay = (change: { query: string; param: string }) =>
+      replayWith(playwright, baseURL, sent, OPERATOR_STATE, change);
+    for (const [query_, param] of [
+      ["raw_stock", "RAW-OLD"],
+      ["raw_stock", "502"],
+      ["raw_stock", ""],
+      ["sale_lots", "a".repeat(65)],
+      ["stock_value", "RAW-TOM"],
+    ] as const) {
+      const text = await replay({ query: query_, param });
+      expect(text, `${query_} ${param.slice(0, 10)}`).toContain(ASK_AGAIN);
+      expect(text, `${query_} ${param.slice(0, 10)}`).not.toContain("Looked up: ");
+    }
+    // A usable lookup answers, and still sends no request.
+    expect(await replay({ query: "raw_stock", param: "RAW-TOM" })).toContain("on hand");
+    expect(await requestCount()).toBe(before);
+    expect(await allFingerprints()).toEqual(rows);
+  });
+
+  test("AC-0082, AC-0106: a product button pressed after its product became inactive says to ask again", async ({
+    page,
+  }) => {
+    const p = await openAsk(page);
+    await model.answer(CHOOSE_ANSWER);
+    await ask(p, "How much turkey do I have?");
+    await expect(p.choices).toHaveCount(2);
+    await setActive(RAW_TKB_ID, false);
+    try {
+      await choice(p, RAW_TKB_LABEL).click();
+      await expect(p.message).toHaveText(ASK_AGAIN);
+      await expect(p.message).toBeFocused();
+      await expect(p.answer).toHaveCount(0);
+      await expect(p.lookAgain).toHaveCount(0);
+      expect(await requestCount()).toBe(1);
+      // The on-page AC-0082 message.
+      expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+    } finally {
+      await setActive(RAW_TKB_ID, true);
+    }
+  });
+
+  test("AC-0080, AC-0081, AC-0069, AC-0103, AC-0106: a refused read offers Look it up again, which shows the answer without the model", async ({
+    page,
+  }) => {
+    const p = await openAsk(page);
+    await withSaleSummaryRefused(async () => {
+      await model.answer(modelAnswer({ query: "sale_lots", number: "S-5000" }));
+      await ask(p, "Which lots went into sale S-5000?");
+      await expect(p.message).toHaveText(LOOKUP_TRY_AGAIN);
+      await expect(p.message).toBeFocused();
+      await expect(p.lookAgain).toBeVisible();
+      await expect(p.answer).toHaveCount(0);
+      expect(await requestCount()).toBe(1);
+      expect(await checkPageState(page)).toEqual(askControls("button Look it up again"));
+
+      // Still refused: the same message again, and no request.
+      await p.lookAgain.click();
+      await expect(p.message).toBeFocused();
+      await expect(p.message).toHaveText(LOOKUP_TRY_AGAIN);
+      expect(await requestCount()).toBe(1);
+
+      // The database answers again; the keyboard alone reaches the button and presses it.
+      await query("grant select on public.v_sale_summary to authenticated");
+      await expect(p.message).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(p.lookAgain).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(p.answer).toBeVisible();
+      await expect(p.heading).toBeFocused();
+      await expect(p.answer.getByText(/^Sale S-5000 on Oct 8, 2026/)).toBeVisible();
+      await expect(p.lookAgain).toHaveCount(0);
+      expect(await requestCount()).toBe(1);
+    });
+  });
+});
+
+// ---- Failures on the page ----
+
+// The answer text of a null query, as the fake model sends it.
+function nullQueryText(): string {
+  return JSON.stringify({ query: null, product_code: null, candidates: [], number: null });
+}
+
+const ASK_FAILURES: Array<{ ids: string; name: string; answer: FakeAnswer; message: string; state: boolean }> = [
+  { ids: "AC-0076", name: "status 401", answer: { status: 401 }, message: KEY_REFUSED, state: true },
+  { ids: "AC-0076", name: "status 403", answer: { status: 403 }, message: KEY_REFUSED, state: false },
+  {
+    ids: "AC-0077",
+    name: "stop reason refusal",
+    answer: { text: nullQueryText(), stop_reason: "refusal" },
+    message: DECLINED_BY_MODEL,
+    state: true,
+  },
+  { ids: "AC-0078", name: "a dropped connection", answer: { drop: true }, message: TRY_AGAIN_ASK, state: true },
+  { ids: "AC-0078", name: "status 400", answer: { status: 400 }, message: TRY_AGAIN_ASK, state: false },
+  { ids: "AC-0078", name: "status 500", answer: { status: 500 }, message: TRY_AGAIN_ASK, state: false },
+  { ids: "AC-0078", name: "status 529", answer: { status: 529 }, message: TRY_AGAIN_ASK, state: false },
+  {
+    ids: "AC-0078",
+    name: "stop reason max_tokens",
+    answer: { text: nullQueryText(), stop_reason: "max_tokens" },
+    message: TRY_AGAIN_ASK,
+    state: true,
+  },
+  {
+    ids: "AC-0078",
+    name: "a text that is not the answer schema",
+    answer: { text: "this is not JSON" },
+    message: TRY_AGAIN_ASK,
+    state: true,
+  },
+  {
+    ids: "AC-0078, AC-0079",
+    name: "an answer with a property the schema does not name",
+    answer: { text: JSON.stringify({ query: null, product_code: null, candidates: [], number: null, extra: 1 }) },
+    message: TRY_AGAIN_ASK,
+    state: false,
+  },
+];
+
+test.describe("ask failures on the page", () => {
+  for (const { ids, name, answer, message, state } of ASK_FAILURES) {
+    test(`${ids}, AC-0106: ${name} says "${message.slice(0, 40)}...", sends one request, and takes focus`, async ({
+      page,
+    }) => {
+      const p = await openAsk(page);
+      await model.answer(answer);
+      await ask(p, HOW_MUCH);
+      await expect(p.message).toHaveText(message);
+      await expect(p.message).toBeFocused();
+      await expect(p.answer).toHaveCount(0);
+      await expect(p.choices).toHaveCount(0);
+      await expect(p.status).toHaveText("");
+      await expect(p.field).toHaveValue(HOW_MUCH);
+      expect(await requestCount()).toBe(1);
+      if (state) expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+    });
+  }
+
+  test("AC-0075, AC-0106: a refused product list read says to try again and sends no request", async ({ page }) => {
+    const p = await openAsk(page);
+    await query("revoke select on public.products from authenticated");
+    try {
+      await ask(p, HOW_MUCH);
+      await expect(p.message).toHaveText(TRY_AGAIN_ASK);
+      await expect(p.message).toBeFocused();
+      expect(await requestCount()).toBe(0);
+      expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+    } finally {
+      await query("grant select on public.products to authenticated");
+    }
+  });
+
+  test("AC-0070, AC-0106: after the session ended, an Ask press and a product-button press say so and send no request", async ({
+    browser,
+    baseURL,
+  }) => {
+    // A session of its own, so the saved operator session that later tests reuse is untouched.
+    const context = await browser.newContext({ baseURL });
+    const watch = await watchPresses(context);
+    try {
+      const page = await context.newPage();
+      await signInThroughForm(page, OPERATOR_EMAIL);
+      const p = await openAsk(page);
+      await model.answer(CHOOSE_ANSWER);
+      await ask(p, "How much turkey do I have?");
+      await expect(p.choices).toHaveCount(2);
+
+      // End the session at the auth server, then age the access token so the
+      // proxy has to refresh it, and the refresh is refused.
+      const cookies = (await context.cookies()).filter(isAuthCookie);
+      const stack = resolveStackEnv();
+      const revoked = await fetch(`${stack.apiUrl}/auth/v1/logout?scope=local`, {
+        method: "POST",
+        headers: { apikey: stack.anonKey, authorization: `Bearer ${readSession(cookies).access_token}` },
+      });
+      expect(revoked.status).toBe(204);
+      await context.addCookies(withExpiredAccessToken(cookies));
+
+      await choice(p, RAW_TKB_LABEL).click();
+      await expect(p.message).toHaveText(SIGNED_OUT_LOOKUP);
+      await expect(p.message).toBeFocused();
+      expect(await requestCount()).toBe(1);
+      expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+
+      await model.answer(CHOOSE_ANSWER);
+      await ask(p, "How much turkey do I have?");
+      await expect(p.message).toHaveText(SIGNED_OUT_ASK);
+      await expect(p.message).toBeFocused();
+      await expect(p.field).toHaveValue("How much turkey do I have?");
+      expect(await requestCount()).toBe(1);
+      expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+      expect(watch.changes).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+// ---- Presses change no row ----
+
+test.describe("presses change no row", () => {
+  test("AC-0086: with 502's list price changed after /ask loaded, an Ask press and a lookup press change no row", async ({
+    page,
+  }) => {
+    await resetTestData();
+    await marginCase();
+    const p = await openAsk(page);
+    await expect(banner(page).getByText("1 urgent alert needs you.", { exact: true })).toBeVisible();
+    expect((await alertStates()).filter((alert) => alert.status === "open")).toHaveLength(1);
+    // A watch run by a press would see the margin held and end the open alert.
+    await query("update products set list_price_per_lb = 3.29 where id = $1", [PROD_502_ID]);
+    const before = await allFingerprints();
+    expect(Object.keys(before).some((name) => name.startsWith("private."))).toBe(true);
+
+    await model.answer(CHOOSE_ANSWER, DECLINE_ANSWER);
+    await ask(p, "How much turkey do I have?");
+    // Only RAW-TOM exists in the margin case.
+    await expect(p.choices).toHaveCount(1);
+    expect(await allFingerprints()).toEqual(before);
+    await choice(p, RAW_TOM_LABEL).click();
+    await expect(p.answer).toBeVisible();
+    expect(await allFingerprints()).toEqual(before);
+    await ask(p, "What were my sales last month?");
+    await expect(p.message).toHaveText(DECLINE);
+    expect(await allFingerprints()).toEqual(before);
+    expect((await alertStates()).filter((alert) => alert.status === "open")).toHaveLength(1);
+    // The watch saw all three presses.
+    expect(presses.presses).toBe(3);
+  });
+});
+
+// ---- An app started with another key or address ----
+
+async function withSpare(
+  browser: Browser,
+  baseURL: string | undefined,
+  env: Record<string, string>,
+  during: (page: Page, spare: Awaited<ReturnType<typeof startSpare>>) => Promise<void>,
+): Promise<void> {
+  const spare = await startSpare(ports(baseURL).spare, env);
+  const context = await browser.newContext({ baseURL: spare.url, storageState: OPERATOR_STATE });
+  try {
+    const watch = await watchPresses(context);
+    await during(await context.newPage(), spare);
+    expect(watch.changes, "rows changed by a press").toEqual([]);
+  } finally {
+    await context.close();
+    await spare.stop();
+  }
+}
+
+const failedLines = (output: string) => output.split("\n").filter((line) => line.startsWith("askQuestion failed"));
+
+test.describe("an app started without a usable key or address", () => {
+  test("AC-0072, AC-0106: an empty key says Ask isn't set up, sends nothing, and logs one line", async ({
+    browser,
+    baseURL,
+  }) => {
+    await withSpare(browser, baseURL, { ANTHROPIC_API_KEY: "", ANTHROPIC_BASE_URL: model.base }, async (page, spare) => {
+      const p = await openAsk(page);
+      await ask(p, HOW_MUCH);
+      await expect(p.message).toHaveText(NOT_SET_UP);
+      await expect(p.message).toBeFocused();
+      expect(await requestCount()).toBe(0);
+      expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+      await expect.poll(() => failedLines(spare.output()).length).toBe(1);
+      expect(failedLines(spare.output())).toEqual(["askQuestion failed: kind=not-set-up"]);
+      expect(spare.output()).not.toContain(HOW_MUCH);
+    });
+  });
+
+  test("AC-0074, AC-0106: a key and an address that is not loopback says Ask isn't set up, sends nothing, and logs one line", async ({
+    browser,
+    baseURL,
+  }) => {
+    const key = "sk-ant-ask-address-sentinel";
+    await withSpare(browser, baseURL, { ANTHROPIC_API_KEY: key, ANTHROPIC_BASE_URL: "https://example.com" }, async (page, spare) => {
+      const p = await openAsk(page);
+      await ask(p, HOW_MUCH);
+      await expect(p.message).toHaveText(ADDRESS_REFUSED);
+      await expect(p.message).toBeFocused();
+      expect(await requestCount()).toBe(0);
+      expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+      await expect.poll(() => failedLines(spare.output()).length).toBe(1);
+      expect(failedLines(spare.output())).toEqual(["askQuestion failed: kind=address-refused"]);
+      expect(spare.output()).not.toContain(key);
+    });
+  });
+
+  for (const [name, hold] of [
+    ["an answer held past 60 seconds", { hold: true, then: RAW_TOM_ANSWER }],
+    ["an answer whose headers arrive and whose body stalls", { stallAfterHeaders: true }],
+  ] as const satisfies ReadonlyArray<readonly [string, FakeAnswer]>) {
+    test(`AC-0078, AC-0083, AC-0106: ${name} ends at 60 seconds with one request and one no-answer log line`, async ({
+      browser,
+      baseURL,
+    }) => {
+      test.setTimeout(150_000);
+      await withSpare(
+        browser,
+        baseURL,
+        { ANTHROPIC_API_KEY: ANTHROPIC_TEST_KEY, ANTHROPIC_BASE_URL: `http://127.0.0.1:${ports(baseURL).model}` },
+        async (page, spare) => {
+          const p = await openAsk(page);
+          await model.answer(hold);
+          await ask(p, HOW_MUCH);
+          await model.waitForRequests(1);
+          await expect(p.status).toHaveText(IN_FLIGHT);
+          await expect(p.message).toHaveText(TRY_AGAIN_ASK, { timeout: 90_000 });
+          await expect(p.message).toBeFocused();
+          await expect(p.status).toHaveText("");
+          expect(await requestCount()).toBe(1);
+          expect(failedLines(spare.output())).toEqual(["askQuestion failed: kind=no-answer"]);
+          expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
+        },
+      );
+    });
+  }
 });

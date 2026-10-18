@@ -63,3 +63,14 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - AC-0127's command prints nothing.
 - Controller fixes: three test labels named the wrong criterion (now AC-0047, AC-0068, AC-0069); the choose state's `query` is typed as a product query.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `E2E_PORT=3200 npm test` exit 0, Vitest 810 passed (44 files, 32 s), Playwright 542 passed (6.1 m).
+
+## T4 (2026-10-18)
+
+- Executed in two `implementer` dispatches; controller reran every gate. Part 1 built every T4 app file and the browser tests for access and navigation, the page, answers on screen, and choosing (commit 2f5dd3f). Part 2 wrote the tests for the request, the failures, the spare-app and 60-second cases, and the remaining page states.
+- Built: `src/app/ask/page.tsx`, `ask-panel.tsx`, `actions.ts` (`askQuestion`, `lookUpAnswer`), `form-fields.ts`, and `error.tsx`; the Ask link just before Alerts in `src/app/page-header.tsx`; "a Ask" before "a Alerts" in the control lists of `test/e2e/menu-page.ts`, `invoices-page.ts`, `sales-page.ts`, `trace-page.ts`, `receiving-page.ts`, and `production-page.ts` (`pricing-page.ts` and `alerts-page.ts` take `MENU_CONTROLS`); `test/e2e/ask-page.ts` and `test/e2e/ask.spec.ts`, 64 tests.
+- Deviation: `test/e2e/fake-model.mjs` is unchanged. Alerts already added `{ stallAfterHeaders: true }` (a 200, its headers, and part of a body, then nothing until reset), which is the answer the plan named `{ stallBody: true }`; the AC-0078 stalled-body case uses it.
+- AC-0086 is checked by one route watch on every server-action POST to `/ask` the browser sends, in every test of the file: it fingerprints every `public` table and both `private` tables (`private.list_price_changes`, `private.operators`) before and after the press, and an `afterEach` asserts no change. AC-0059's test exempts `products`, which it changes by hand while the press is held. Replayed requests are fingerprinted explicitly in the AC-0069 and AC-0082 replay test.
+- AC-0070 uses a revoked session plus an expired access token, as `receiving.spec.ts` AC-0042 does: the proxy refreshes an expired token alone, and the press then succeeds.
+- AC-0075 revokes `select` on `public.products` after `/ask` loads, since the page load reads no product; the grant is restored in a `finally`.
+- The two 60-second AC-0078 cases run on a spare app started with `ANTHROPIC_API_KEY` set to the suite's test key and `ANTHROPIC_BASE_URL` to the fake model; each shows the message, sends one request, and leaves exactly one `askQuestion failed: kind=no-answer` line in the spare app's output.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `E2E_PORT=3200 npm test` exit 0, Vitest 810 passed (44 files, 26 s), Playwright 606 passed (8.3 m).
