@@ -228,7 +228,7 @@ For close-work:
 - **Implemented scope and evidence:** T1 to T5, each with its section above and its wave's gates; the recorded run, the page inspection, and the live run (AC-0110 to AC-0114) under T5; review rounds 1 to 4.
 - **Durable outputs:** `SYSTEM-SPEC.md` §7, §10, and §11 (T5); `docs/architecture/overview.md`, the areas map, Variables and Network bullets, and the AI connection section (T5 and review round 1); `AGENTS.md`'s environment paragraph (T5); `src/lib/database.types.ts` unchanged (AC-0130).
 - **Non-goals and follow-ons:** the spec's Follow-on (asking a question aloud needs voice input, `SYSTEM-SPEC.md` §10); the hosted rollout, which belongs to the hosted-supabase-rollout intent. No review finding is deferred.
-- **Unresolved obligations:** the pull request is not open and the branch's commits since 9e90129 are not pushed, both waiting on the owner; nothing has been applied to the hosted project.
+- **Unresolved obligations:** pull request #23 (https://github.com/jaketlee07/meat-ops/pull/23), opened and pushed at the owner's direction on 2026-10-18, waits on the owner's review and merge; nothing has been applied to the hosted project.
 - **Completion event candidate:** the merge of `feat/ask-your-data` into `main`.
 - **Authority facts:** the owner is the only source, write, and deletion authority; no hosted write was made, and no review artifact under `.context/` is committed. The owner's key stays in this folder's gitignored `.env`.
 
