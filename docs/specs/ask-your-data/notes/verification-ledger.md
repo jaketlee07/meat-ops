@@ -32,3 +32,13 @@ Observations and owner decisions recorded after the spec and plan baselines. The
 ### Resolve-vs-surface record
 
 Opened at PLAN. Each review finding is recorded here with its disposition; it closes at DECIDE.
+
+## T1 (2026-10-18)
+
+- Executed by the `implementer` subagent in the primary working tree; controller reran every gate.
+- Stub materialized byte-identical at `test/ask-rules.test.ts` (sha256 ceb6a5f1…278644); observed red: `Cannot find module '../src/lib/ask.js'`. The file then grew to 29 cases.
+- Built: `src/lib/ask.ts` (the catalog, the page texts, `checkQuestion`, `INSTRUCTIONS`, `answerSchema`, `askRequest`, `parseModelAnswer`, `interpret`, `parseLookup`, and the failure kinds, messages, and log line); `hasExactly` exported from `src/lib/invoice-reading.ts` with no other change; `test/fixtures/questions/questions.json`, 34 samples (24 in-catalog, 2 ambiguous, 8 out-of-catalog).
+- `INSTRUCTIONS` equals the plan's fixed text line for line (15 lines), checked by a script that compares the two.
+- Deviation: `askFailureKind` repeats invoice entry's three-line rule, because `failureKind`'s result type holds kinds Ask does not have (`too-long`). Invoice reading is unchanged.
+- Controller fixes: the exported `hasExactly` line regained the space the edit dropped; the question-set test no longer carries AC-0110's id, since AC-0110 is closed only by the live run.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `E2E_PORT=3200 npm test` exit 0, Vitest 763 passed (42 files, 24 s), Playwright 542 passed (5.7 m).

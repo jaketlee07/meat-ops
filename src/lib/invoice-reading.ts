@@ -230,7 +230,7 @@ export interface AnswerMessage {
   content: ReadonlyArray<{ type: string; text?: unknown }>;
 }
 
-const hasExactly = (value: Record<string, unknown>, keys: readonly string[]) => {
+export const hasExactly = (value: Record<string, unknown>, keys: readonly string[]) => {
   const own = Object.keys(value);
   return own.length === keys.length && keys.every((key) => key in value);
 };
