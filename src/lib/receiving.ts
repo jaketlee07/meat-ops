@@ -1,4 +1,5 @@
 import type { Database } from "./database.types.js";
+import { required } from "./sales";
 import type { TypedClient } from "./supabase.js";
 
 // Typed reads for the receiving screen. Like views.ts, every read throws on
@@ -12,7 +13,7 @@ export type RawProduct = Pick<Tables["products"]["Row"], "id" | "code" | "descri
 export type Vendor = Pick<Tables["vendors"]["Row"], "id" | "name">;
 
 // Mirrors the void_receipt rule from columns the operator can read: void when
-// voided_at is set; untouched when remaining_lbs equals weight_lbs and the lot
+// voided_at is set; untouched when remaining_lbs equals current_weight_lbs and the lot
 // has no lot_adjustments rows; in use otherwise. The engine stays authoritative.
 export type ReceiptStatus = "untouched" | "in-use" | "void";
 
@@ -21,11 +22,39 @@ export interface RecentReceipt {
   lotNumber: string;
   receivedDate: string;
   vendorName: string;
+  // The current figures; the recorded ones are what the receipt was saved with.
   weightLbs: number;
   unitCost: number;
+  // The current figures as the database's own text, for the correction form.
+  weightText: string;
+  costText: string;
+  recordedWeightLbs: number;
+  recordedUnitCost: number;
+  // The reason of the latest correction, or null when the receipt was never corrected.
+  correctedReason: string | null;
   remainingLbs: number;
   voidReason: string | null;
   status: ReceiptStatus;
+}
+
+export interface LotFigures {
+  lotNumber: string;
+  productId: string;
+  costText: string;
+  weightText: string;
+  unitCost: number;
+  weightLbs: number;
+  remainingLbs: number;
+  voidedAt: string | null;
+}
+
+export interface BatchMadeFrom {
+  batchId: string;
+  batchNumber: string;
+  productCode: string;
+  productionDate: string;
+  costPerFinishedLb: number;
+  reversed: boolean;
 }
 
 export interface RecentReceipts {
@@ -63,7 +92,7 @@ export async function listRecentReceipts(
   const { data, error, count } = await client
     .from("lots")
     .select(
-      "id, lot_number, received_date, weight_lbs, unit_cost, remaining_lbs, void_reason, voided_at, vendors(name), lot_adjustments(count)",
+      "id, lot_number, received_date, weight_lbs, unit_cost, current_weight_lbs, current_unit_cost, weightText:current_weight_lbs::text, costText:current_unit_cost::text, remaining_lbs, void_reason, voided_at, vendors(name), lot_adjustments(count), receipt_corrections(reason, correction_seq)",
       { count: "exact" },
     )
     .eq("product_id", productId)
@@ -74,10 +103,15 @@ export async function listRecentReceipts(
 
   const receipts = data.map((lot) => {
     const adjustments = lot.lot_adjustments[0]?.count ?? 0;
+    const weightLbs = required(lot.current_weight_lbs, "listRecentReceipts");
+    const latest = lot.receipt_corrections.reduce<(typeof lot.receipt_corrections)[number] | null>(
+      (best, row) => (best === null || row.correction_seq > best.correction_seq ? row : best),
+      null,
+    );
     const status: ReceiptStatus =
       lot.voided_at !== null
         ? "void"
-        : lot.remaining_lbs === lot.weight_lbs && adjustments === 0
+        : lot.remaining_lbs === weightLbs && adjustments === 0
           ? "untouched"
           : "in-use";
     return {
@@ -85,14 +119,64 @@ export async function listRecentReceipts(
       lotNumber: lot.lot_number,
       receivedDate: lot.received_date,
       vendorName: lot.vendors.name,
-      weightLbs: lot.weight_lbs,
-      unitCost: lot.unit_cost,
+      weightLbs,
+      unitCost: required(lot.current_unit_cost, "listRecentReceipts"),
+      weightText: required(lot.weightText, "listRecentReceipts"),
+      costText: required(lot.costText, "listRecentReceipts"),
+      recordedWeightLbs: lot.weight_lbs,
+      recordedUnitCost: lot.unit_cost,
+      correctedReason: latest?.reason ?? null,
       remainingLbs: lot.remaining_lbs,
       voidReason: lot.void_reason,
       status,
     };
   });
   return { receipts, total: count };
+}
+
+// The lot's current figures, or null when no lot has the id.
+export async function getLotFigures(client: TypedClient, lotId: string): Promise<LotFigures | null> {
+  const { data, error } = await client
+    .from("lots")
+    .select(
+      "lot_number, product_id, current_unit_cost, current_weight_lbs, costText:current_unit_cost::text, weightText:current_weight_lbs::text, remaining_lbs, voided_at",
+    )
+    .eq("id", lotId)
+    .maybeSingle();
+  if (error) throw new Error(`getLotFigures failed: ${error.message}`);
+  if (!data) return null;
+  return {
+    lotNumber: data.lot_number,
+    productId: data.product_id,
+    costText: required(data.costText, "getLotFigures"),
+    weightText: required(data.weightText, "getLotFigures"),
+    unitCost: required(data.current_unit_cost, "getLotFigures"),
+    weightLbs: required(data.current_weight_lbs, "getLotFigures"),
+    remainingLbs: data.remaining_lbs,
+    voidedAt: data.voided_at,
+  };
+}
+
+// Every batch made from the lot, reversed or not, in draw order. A lot feeds a
+// few batches, so the 1,000-row cap never applies.
+export async function listBatchesMadeFrom(client: TypedClient, lotId: string): Promise<BatchMadeFrom[]> {
+  const { data, error } = await client
+    .from("finished_goods")
+    .select(
+      "batch_id, production_batches!inner(batch_number, production_date, cost_per_finished_lb, reversed_at, products:finished_product_id(code), production_batch_lots!inner(lot_id))",
+    )
+    .eq("production_batches.production_batch_lots.lot_id", lotId)
+    .order("produced_date")
+    .order("produced_seq");
+  if (error) throw new Error(`listBatchesMadeFrom failed: ${error.message}`);
+  return data.map((row) => ({
+    batchId: row.batch_id,
+    batchNumber: row.production_batches.batch_number,
+    productCode: row.production_batches.products.code,
+    productionDate: row.production_batches.production_date,
+    costPerFinishedLb: row.production_batches.cost_per_finished_lb,
+    reversed: row.production_batches.reversed_at !== null,
+  }));
 }
 
 export async function listActiveRawProducts(client: TypedClient): Promise<RawProduct[]> {

@@ -119,6 +119,30 @@ export async function voidSale(
   return data as VoidedSale;
 }
 
+export interface CorrectReceiptInput {
+  lotId: string;
+  unitCost: number;
+  weightLbs: number;
+  reason: string;
+}
+
+export async function correctReceipt(client: TypedClient, input: CorrectReceiptInput): Promise<Lot> {
+  const { data, error } = await client.rpc("correct_receipt", {
+    p_lot_id: input.lotId,
+    p_unit_cost: input.unitCost,
+    p_weight_lbs: input.weightLbs,
+    p_reason: input.reason,
+  });
+  if (error) throw rpcError("correctReceipt", error);
+  return data as Lot;
+}
+
+export async function reverseBatch(client: TypedClient, batchId: string, reason: string): Promise<ProductionBatch> {
+  const { data, error } = await client.rpc("reverse_batch", { p_batch_id: batchId, p_reason: reason });
+  if (error) throw rpcError("reverseBatch", error);
+  return data as ProductionBatch;
+}
+
 export interface AdjustLotInput {
   lotId: string;
   newRemainingLbs: number;
