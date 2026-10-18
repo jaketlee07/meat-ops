@@ -647,7 +647,9 @@ test.describe("reprice and dismiss", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Alerts" })).toBeVisible();
   });
 
-  test("AC-0133: while one write is held, the card's other button shows it is not usable", async ({ page }) => {
+  test("while one write is held, the card's other button carries aria-disabled until the write ends", async ({
+    page,
+  }) => {
     await marginCase();
     await opens(page);
     let release: () => void = () => {};
@@ -666,6 +668,27 @@ test.describe("reprice and dismiss", () => {
     await expect(dismiss).toHaveAttribute("aria-disabled", "true");
     release();
     await expect(savedRegion(page)).toHaveText("List price for 502 saved: $3.29/lb.");
+  });
+
+  test("while a Dismiss is held, the card's reprice button carries aria-disabled until the Dismiss ends", async ({
+    page,
+  }) => {
+    await marginCase();
+    await opens(page);
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/alerts**", async (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && "next-action" in request.headers()) await gate;
+      await route.continue();
+    });
+    const raise = page.getByRole("button", { name: RAISE_329, exact: true });
+    await dismissButton(page, MARGIN_TITLE).click();
+    await expect(raise).toHaveAttribute("aria-disabled", "true");
+    release();
+    await expect(savedRegion(page)).toHaveText("Alert dismissed.");
   });
 
   for (const kind of ["reprice", "dismiss"] as const) {

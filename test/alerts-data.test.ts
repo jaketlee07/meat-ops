@@ -243,10 +243,10 @@ it("AC-0064: two start_digest calls at the same time claim a date once", async (
   expect([c.rows?.[0]?.result, d.rows?.[0]?.result]).toEqual(["busy", "busy"]);
 });
 
-// AC-0064: Try again takes over a failed day or an aged claim under the row's
-// lock. The first call to the row waits on a held lock with the second behind
-// it, so both have read the same old row before either updates it.
-it("AC-0064: two Try again presses at the same time claim a failed day, or a claim older than 180 seconds, once", async () => {
+// Try again takes over a failed day or an aged claim under the row's lock. The
+// held lock keeps both calls past the no-op insert, so only the row lock keeps
+// the second call from claiming.
+it("AC-0065: two Try again presses at the same time take over a failed or aged day once, and the second gets busy", async () => {
   await marginCase();
   for (const state of ["failed", "stale"] as const) {
     await setDigestState(state);
