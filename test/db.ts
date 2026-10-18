@@ -9,7 +9,7 @@ import { OPERATOR_EMAIL } from "./users.js";
 // It resets state between tests and reads back raw tables to check invariants
 // (conservation, lot immutability). It NEVER writes to the protected
 // transactional tables (lots, inventory_balances, production_batches,
-// production_batch_lots, finished_goods, sale_items, sales, lot_adjustments). Those are
+// production_batch_lots, finished_goods, sale_items, sales, lot_adjustments, receipt_corrections). Those are
 // populated exclusively through the costing RPCs under test. resetTestData only
 // truncates and re-seeds MASTER data (fee_types, vendors, products, fees),
 // which mirrors the top of supabase/seed.sql.
@@ -17,7 +17,9 @@ import { OPERATOR_EMAIL } from "./users.js";
 // Sessions that call the operations (callAsOperator, raceCalls) take
 // `set local role authenticated` and operator JWT claims, so they pass the same
 // caller check as the app. The only other ledger writes a test may attempt are
-// ones a criterion requires to be refused.
+// ones a criterion requires to be refused, and the check tests of AC-0068 to
+// AC-0079, which each write one violating row through pg inside a transaction
+// they roll back.
 
 const env = resolveStackEnv();
 const pool = new Pool({ connectionString: env.dbUrl });
@@ -606,12 +608,21 @@ export async function tableFingerprints(): Promise<Record<string, string>> {
   return out;
 }
 
-// AC-0030, AC-0031, AC-0054, AC-0032, AC-0033 for every raw product, lot, and
-// finished lot. Void lots and void sales are excluded from the remaining-lbs
-// equalities and checked for AC-0033 instead.
-export async function assertLedgerInvariants(): Promise<void> {
-  const expect = await loadExpect();
-  const { rows } = await pool.query(`
+// The checks run against any querier, so a test can write one violating row
+// inside a transaction it rolls back and see the check name it.
+export interface Querier {
+  query(text: string): Promise<{ rows: unknown[] }>;
+}
+
+// AC-0030, AC-0032, AC-0033, and the corrections spec's AC-0069, AC-0070,
+// AC-0074 to AC-0078 for every raw product, lot, batch, finished lot, and sale
+// line. Void lots and void sales are excluded from the remaining-lbs equalities
+// and checked for AC-0033 instead. AC-0079 joins when `includeAverage` is set.
+export async function ledgerViolations(
+  run: Querier,
+  includeAverage = false,
+): Promise<{ violation: string; subject: string }[]> {
+  const { rows } = await run.query(`
     select 'AC-0030 qty_on_hand <> sum(remaining)' as violation, p.id::text as subject
     from products p
     left join inventory_balances b on b.product_id = p.id
@@ -619,7 +630,7 @@ export async function assertLedgerInvariants(): Promise<void> {
            on l.product_id = p.id
     where p.kind = 'raw' and coalesce(b.qty_on_hand, 0) <> coalesce(l.s, 0)
     union all
-    select 'AC-0031 remaining <> weight - consumed - adjusted', l.id::text
+    select 'AC-0070 remaining <> current weight - used - adjusted', l.id::text
     from lots l
     left join (select lot_id, sum(lbs_consumed) c from production_batch_lots group by lot_id) c
            on c.lot_id = l.id
@@ -627,13 +638,13 @@ export async function assertLedgerInvariants(): Promise<void> {
                from lot_adjustments group by lot_id) a
            on a.lot_id = l.id
     where l.voided_at is null
-      and l.remaining_lbs <> l.weight_lbs - coalesce(c.c, 0) - coalesce(a.a, 0)
+      and l.remaining_lbs <> l.current_weight_lbs - coalesce(c.c, 0) - coalesce(a.a, 0)
     union all
-    select 'AC-0054 remaining > weight - consumed', l.id::text
+    select 'AC-0069 remaining > current weight - used', l.id::text
     from lots l
     left join (select lot_id, sum(lbs_consumed) c from production_batch_lots group by lot_id) c
            on c.lot_id = l.id
-    where l.voided_at is null and l.remaining_lbs > l.weight_lbs - coalesce(c.c, 0)
+    where l.voided_at is null and l.remaining_lbs > l.current_weight_lbs - coalesce(c.c, 0)
     union all
     select 'AC-0032 remaining <> produced - sold', f.id::text
     from finished_goods f
@@ -653,23 +664,60 @@ export async function assertLedgerInvariants(): Promise<void> {
     from lots l
     where l.voided_at is not null
       and exists (select 1 from lot_adjustments a where a.lot_id = l.id)
+    union all
+    select 'AC-0074 consumption lot cost <> lot current cost', pbl.id::text
+    from production_batch_lots pbl join lots l on l.id = pbl.lot_id
+    where pbl.lot_unit_cost <> l.current_unit_cost
+    union all
+    select 'AC-0075 finished lot cost <> batch cost', f.id::text
+    from finished_goods f join production_batches b on b.id = f.batch_id
+    where f.cost_per_lb <> b.cost_per_finished_lb
+    union all
+    select 'AC-0076 sale line cost <> finished lot cost', si.id::text
+    from sale_items si join finished_goods f on f.id = si.finished_goods_id
+    where si.cost_per_lb <> f.cost_per_lb
+    union all
+    select 'AC-0077 batch raw cost total <> sum of consumption', b.id::text
+    from production_batches b
+    left join (select batch_id, sum(lbs_consumed * lot_unit_cost) t
+               from production_batch_lots group by batch_id) c on c.batch_id = b.id
+    where b.raw_cost_total <> round(coalesce(c.t, 0), 4)
+    union all
+    select 'AC-0078 current cost or weight <> latest correction', l.id::text
+    from lots l
+    left join lateral (select rc.new_unit_cost, rc.new_weight_lbs
+                       from receipt_corrections rc where rc.lot_id = l.id
+                       order by rc.correction_seq desc limit 1) rc on true
+    where l.current_unit_cost is distinct from coalesce(rc.new_unit_cost, l.unit_cost)
+       or l.current_weight_lbs is distinct from coalesce(rc.new_weight_lbs, l.weight_lbs)
   `);
-  expect(rows).toEqual([]);
+  const out = rows as { violation: string; subject: string }[];
+  return includeAverage ? [...out, ...(await averageViolations(run))] : out;
 }
 
-// AC-0028: every raw product with lbs on hand carries its stock-on-hand
-// average. The average is computed in SQL, never in TypeScript.
-export async function assertAverageIsStockOnHand(): Promise<void> {
+export async function assertLedgerInvariants(): Promise<void> {
   const expect = await loadExpect();
-  const { rows } = await pool.query(`
-    select b.product_id, b.moving_avg_cost::float8 as stored, round(l.v / l.q, 4)::float8 as expected
+  expect(await ledgerViolations(pool)).toEqual([]);
+}
+
+// AC-0028 and AC-0079: every raw product with lbs on hand carries its
+// stock-on-hand average at current cost. The average is computed in SQL, never
+// in TypeScript.
+export async function averageViolations(run: Querier): Promise<{ violation: string; subject: string }[]> {
+  const { rows } = await run.query(`
+    select 'AC-0079 average <> stock-on-hand average' as violation, b.product_id::text as subject
     from inventory_balances b
-    join (select product_id, sum(remaining_lbs) q, sum(remaining_lbs * unit_cost) v
+    join (select product_id, sum(remaining_lbs) q, sum(remaining_lbs * current_unit_cost) v
           from lots group by product_id having sum(remaining_lbs) > 0) l
       on l.product_id = b.product_id
     where b.moving_avg_cost <> round(l.v / l.q, 4)
   `);
-  expect(rows).toEqual([]);
+  return rows as { violation: string; subject: string }[];
+}
+
+export async function assertAverageIsStockOnHand(): Promise<void> {
+  const expect = await loadExpect();
+  expect(await averageViolations(pool)).toEqual([]);
 }
 
 // ---- Raw read helpers (assertions only, never cost math) ----

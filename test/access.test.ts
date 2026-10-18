@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createTypedClient } from "../src/lib/supabase.js";
 import {
   adjustLot,
@@ -18,6 +18,7 @@ import {
   PROD_502_ID,
   RAW_TOM_ID,
   VENDOR_ID,
+  assertLedgerInvariants,
   closePool,
   query,
   resetTestData,
@@ -274,6 +275,22 @@ beforeAll(async () => {
   });
   await adjustLot(operatorTyped, { lotId: adjusted.id, newRemainingLbs: 700, reason: "count" });
   exercised.add("adjust_lot");
+  // Correct a receipt: one correction row, so the table has a row to read.
+  const corrected = await receiveLot(operatorTyped, {
+    productId: RAW_TOM_ID,
+    vendorId: VENDOR_ID,
+    weightLbs: 60,
+    unitCost: 2,
+    received: "2026-05-12",
+  });
+  const fixtureCorrection = await loose(operatorTyped).rpc("correct_receipt", {
+    p_lot_id: corrected.id,
+    p_unit_cost: 2.25,
+    p_weight_lbs: 60,
+    p_reason: "access fixture",
+  });
+  expect(fixtureCorrection.error, "operator correct_receipt").toBeNull();
+  exercised.add("correct_receipt");
   const doomed = await receiveLot(operatorTyped, {
     productId: RAW_TOM_ID,
     vendorId: VENDOR_ID,
@@ -456,6 +473,12 @@ beforeAll(async () => {
     void_receipt: { p_lot_id: untouched.id, p_reason: "access test" },
     void_sale: { p_sale_id: spare.id, p_reason: "access test" },
     adjust_lot: { p_lot_id: adjusted.id, p_new_remaining_lbs: 600, p_reason: "count" },
+    correct_receipt: {
+      p_lot_id: corrected.id,
+      p_unit_cost: 2.5,
+      p_weight_lbs: 60,
+      p_reason: "access test",
+    },
     check_operator: {},
     set_target_margin: { p_product_id: PROD_502_ID, p_target_percent: 25 },
     set_list_price: { p_product_id: PROD_502_ID, p_price_per_lb: 6 },
@@ -488,6 +511,10 @@ afterAll(async () => {
 });
 
 describe("Access model", () => {
+  afterEach(async () => {
+    await assertLedgerInvariants();
+  });
+
   it("AC-0001: anon reads no relation, calls no function, and sees no GraphQL collection", async () => {
     expect(relations.length).toBeGreaterThan(0);
     expect(functions.length).toBeGreaterThan(0);
@@ -575,13 +602,15 @@ describe("Access model", () => {
     }
   });
 
-  it("AC-0052: service_role cannot execute any public function", async () => {
+  it("AC-0052: anon and service_role cannot execute any public function", async () => {
     for (const fn of functions) {
-      const [row] = await query<{ ok: boolean }>(
-        "select has_function_privilege('service_role', $1::oid, 'EXECUTE') as ok",
+      const [row] = await query<{ anon: boolean; service: boolean }>(
+        `select has_function_privilege('anon', $1::oid, 'EXECUTE') as anon,
+                has_function_privilege('service_role', $1::oid, 'EXECUTE') as service`,
         [fn.oid],
       );
-      expect(row?.ok, `service_role EXECUTE on ${fn.name}`).toBe(false);
+      expect(row?.anon, `anon EXECUTE on ${fn.name}`).toBe(false);
+      expect(row?.service, `service_role EXECUTE on ${fn.name}`).toBe(false);
       const res = await service.rpc(fn.name, dummyArgs(fn));
       expect(res.error?.code, `service_role rpc ${fn.name}`).toBe("42501");
     }
