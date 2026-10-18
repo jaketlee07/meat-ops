@@ -4,7 +4,7 @@ import { signOut } from "./sign-in/actions";
 
 export const WATCH_FAILED = "Alerts couldn't be checked.";
 
-type PageName = "receiving" | "production" | "menu" | "pricing" | "sales" | "trace" | "invoices" | "alerts";
+type PageName = "receiving" | "production" | "menu" | "pricing" | "sales" | "trace" | "invoices" | "ask" | "alerts";
 
 const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string }> = [
   { name: "receiving", label: "Receiving", href: "/receiving" },
@@ -14,6 +14,7 @@ const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string }> = [
   { name: "sales", label: "Sales", href: "/sales" },
   { name: "trace", label: "Trace", href: "/trace" },
   { name: "invoices", label: "Invoices", href: "/invoices" },
+  { name: "ask", label: "Ask", href: "/ask" },
   { name: "alerts", label: "Alerts", href: "/alerts" },
 ];
 
