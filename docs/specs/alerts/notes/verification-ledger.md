@@ -326,3 +326,10 @@ Review round 2's nine sustained findings, closed:
 ## Wave 2 gates (T8, 2026-10-17)
 
 - On 7016a47: `npm run typecheck` and `npm run build` pass; `E2E_PORT=3200 npm test` pass: Vitest 41 files, 733 tests, 28 s; Playwright 542, 6.0 m. `npm run test:costing` pass (37 tests). `npm run gen:types` leaves no diff.
+
+## Review round 3 (post-gates delta, 2026-10-17)
+
+Target b864c16, delta 7903993..b864c16. Adversarial, security, and quality reviewers (frontend: named skip, the delta changes no page code). Security clean after adjudication. Sustained 6 Nits, refuted 0; recorded as round 3, retry 3 of 5. Fixed in commit d50902a:
+- A test in `test/alert-text.test.ts` refuses U+007F and U+001F between tokens the facts hold, and passes U+007E; red against `isPlain`'s bound set to 0x7f.
+- The two busy-button test titles drop "until the write ends" and "until the Dismiss ends", which their tests do not check; the round 1 character test's title says the characters are refused because the facts do not hold them.
+- `SYSTEM-SPEC.md` §7 says a number has "any" "," or "." between two of its characters, as the Number token does; the overview's `test/` row names `digest-characters.test.ts`.
