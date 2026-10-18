@@ -203,10 +203,12 @@ advise. All three obey the core principle in section 2.
 The owner asks questions in plain language ("how much raw turkey do I have," "what
 is my margin on smoked necks," "what did I pay for the lot behind that sale"). The
 system answers by selecting from a fixed catalog of typed queries over the views and
-filling in the parameters. It does not generate arbitrary queries. Every answer is
-grounded in a query defined by the builder, so answers cannot drift or fabricate.
+the app's typed reads, and filling in the parameters. It does not generate arbitrary
+queries. Every answer is grounded in a query defined by the builder, so answers cannot
+drift or fabricate.
 The query catalog is an explicit, enumerable list; unknown questions are declined or
-clarified rather than guessed.
+clarified rather than guessed. The catalog's questions are listed in
+`docs/architecture/overview.md` (AI connection).
 
 ### Watch (alerts)
 
@@ -292,7 +294,7 @@ reads nothing and calls no operation. The owner is the only user in the MVP.
 ### Three AI moments
 
 - Margin advisor with what-if: the money moment. Target margin per product, a pushed reprice suggestion when cost moves, one-tap apply, and a hypothetical-cost projection.
-- Ask your data: typed queries over the views, answered in plain language.
+- Ask your data: typed queries over the views and the app's typed reads, answered in plain language.
 - Invoice-photo entry: snap an invoice, confirm the drafted lots. Directly answers the "I don't want another spreadsheet" objection.
 
 ### Explicitly out of MVP (state as roadmap)
@@ -316,7 +318,7 @@ margins, warns you before you lose money, and traces a recall in seconds.
 - Never compute cost, price, shrink, average, or margin outside the deterministic engine.
 - Never write to lots, inventory_balances, production, finished goods, sales, or lot_adjustments except through the six operations.
 - Never change a lot's unit cost after it is recorded.
-- Never let the AI answer with a fabricated or freely generated query; answers come only from the typed query catalog over the views.
+- Never let the AI answer with a fabricated or freely generated query; answers come only from the typed query catalog over the views and the app's typed reads.
 - Never write AI-extracted data without human confirmation.
 - Never auto-apply a price or purchase; the human approves every action.
 - Never let a device compute the ledger offline; capture and replay server-side.
