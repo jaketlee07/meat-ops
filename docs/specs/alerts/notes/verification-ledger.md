@@ -264,3 +264,17 @@ Fixed (commits 22e660c to 7b216e1):
 Deferred Nits, with their reasons:
 - Urgency decided in two places (`isUrgent` by type, the banner count by severity `high`): the spec defines urgent alerts as margin and cost alerts and AC-0045 gives exactly those severity high, so both follow one spec rule, and changing either is an owner-approved spec change that updates both.
 - The stored digest model is a literal in `finish_digest`: AC-0066 fixes the stored model, so a model change is an owner-approved spec change that updates `MODEL` and the literal together.
+
+## Review round 2 (post-gates delta, 2026-10-17)
+
+Target 7903993, delta c841457..7903993. The same four reviewers. Sustained 9 (1 Concern, 7 Nits, and 1 advisory security finding); refuted 3 (frontend: the busy-button test gap and its title, judged outside that role's authority; quality: the lock harness, whose only caller always locks the day's row). Recorded as round 2, retry 2 of 5.
+
+- **Concern (adversarial 1):** the 2026-10-17 character ruling lives in this ledger, `SYSTEM-SPEC.md` §7, and the code, but not in the approved spec, whose Number token definition and AC-0092 still show an answer the code now refuses.
+- **Advisory (security 1):** the ruling's `\p{Cf}` misses default-ignorable marks of category Mn, U+034F and U+FE00 to U+FE0F, so "1" + U+034F + "1.8%" passes as the held tokens 1 and 1.8 while it displays as "11.8%".
+- **Nits:** the busy-button test holds only a reprice, so the reprice button's half of the fix cannot fail; the AC-0133 and AC-0064 tags on two new tests name criteria they do not check; the race test's comment describes the mutated function; the watch's timeout label is tested against a typed-in message rather than the error `refreshAlerts` throws; `SYSTEM-SPEC.md` §7 says one paragraph is held back where the whole digest is refused; the round 1 Fixed list leaves out the §7 measured-batch wording, which commit 22e660c changed to "what the batch's shrink used gives".
+
+Owner rulings (2026-10-17):
+- **Amend the spec.** The character rule goes into the approved spec through the controlled-amendment path, rather than reverting the code to the approved rule.
+- **Plain characters only.** A digest paragraph may hold only printable ASCII (U+0020 to U+007E), the typographic marks U+2018, U+2019, U+201C, U+201D, U+2013, U+2014, and U+2026, and any letter (Unicode general category L) that appears in the digest facts; a paragraph holding any other character is refused as unfaithful. This replaces the round 1 ruling's `\p{N}` and `\p{Cf}` list and closes the default-ignorable and look-alike cases with it. The live run's six paragraphs hold only printable ASCII.
+
+All nine sustained findings are scheduled into the amendment's new task, T8.
