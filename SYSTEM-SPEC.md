@@ -228,11 +228,16 @@ page and wait on `/alerts`; the rest wait on `/alerts`. The first visit to `/ale
 each day asks the model to write a plain-language digest of the open alerts from
 the alerts' own sentences and figures; its text is shown only when every number in
 it comes from those sentences and every alert's product code is in it. A number
-means plain digits 0 to 9; a paragraph that holds any other number character
-(full-width or other-script digits, superscripts, fractions, Roman numeral
-characters) or any invisible formatting character (zero-width characters, word
-joiner, soft hyphen, byte order mark, direction controls) is not shown. Every alert
-carries a next step: a one-press list price for the two price alerts, and a
+is a run of any Unicode number characters (digits 0 to 9, full-width digits,
+fractions, superscripts) with a "," or "." between two of them. A digest
+paragraph may hold only plain characters: printable ASCII, curly single and
+double quotes, the en dash, the em dash, the ellipsis, and a letter or number
+character the alerts' own text holds, never an invisible formatting character.
+One paragraph that holds any other character refuses the whole digest. The checks
+do not catch a sign or unit the model adds, a figure written in words, or a letter
+beside a digit; the alert list under the digest always shows the engine's own
+figures. Every alert carries
+a next step: a one-press list price for the two price alerts, and a
 sentence and a link for the other three. Nothing changes a price but the owner's
 press.
 
