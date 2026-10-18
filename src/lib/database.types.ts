@@ -692,6 +692,8 @@ export type Database = {
           production_date: string
           raw_cost_total: number
           raw_lbs_in: number
+          reversal_reason: string | null
+          reversed_at: string | null
           shrink_pct_used: number
         }
         Insert: {
@@ -705,6 +707,8 @@ export type Database = {
           production_date?: string
           raw_cost_total: number
           raw_lbs_in: number
+          reversal_reason?: string | null
+          reversed_at?: string | null
           shrink_pct_used: number
         }
         Update: {
@@ -718,6 +722,8 @@ export type Database = {
           production_date?: string
           raw_cost_total?: number
           raw_lbs_in?: number
+          reversal_reason?: string | null
+          reversed_at?: string | null
           shrink_pct_used?: number
         }
         Relationships: [
@@ -1419,6 +1425,8 @@ export type Database = {
           production_date: string
           raw_cost_total: number
           raw_lbs_in: number
+          reversal_reason: string | null
+          reversed_at: string | null
           shrink_pct_used: number
         }
         SetofOptions: {
@@ -1496,6 +1504,30 @@ export type Database = {
           open_count: number
           urgent_count: number
         }[]
+      }
+      reverse_batch: {
+        Args: { p_batch_id: string; p_reason: string }
+        Returns: {
+          batch_number: string
+          cost_per_finished_lb: number
+          created_at: string
+          finished_lbs_out: number
+          finished_product_id: string
+          id: string
+          notes: string | null
+          production_date: string
+          raw_cost_total: number
+          raw_lbs_in: number
+          reversal_reason: string | null
+          reversed_at: string | null
+          shrink_pct_used: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "production_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_list_price: {
         Args: { p_price_per_lb: number; p_product_id: string }

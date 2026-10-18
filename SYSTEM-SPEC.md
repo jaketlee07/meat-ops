@@ -78,7 +78,7 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 
 ### Production
 
-- production_batches: id, batch_number (unique), finished_product_id (fk products), production_date, raw_lbs_in, shrink_pct_used, finished_lbs_out, raw_cost_total, cost_per_finished_lb, notes, created_at
+- production_batches: id, batch_number (unique), finished_product_id (fk products), production_date, raw_lbs_in, shrink_pct_used, finished_lbs_out, raw_cost_total, cost_per_finished_lb, notes, created_at, reversed_at and reversal_reason (both set or both empty; a reversed batch stays in the table). A lot's used lbs count only batches that are not reversed.
 - production_batch_lots: id, batch_id (fk production_batches), lot_id (fk lots), lbs_consumed, lot_unit_cost (the lot's current cost; it follows a receipt correction). Records which raw lots fed a batch. This is the trace link and the specific-identification cost.
 - finished_goods: id, batch_id (fk production_batches), finished_product_id (fk products), lbs_produced, lbs_remaining, cost_per_lb (production cost, raw plus processing), produced_date, produced_seq (insertion order, breaks ties between lots with the same produced_date). Each batch yields one finished lot.
 
@@ -113,14 +113,16 @@ the app is allowed to bypass.
 
 ## 5. The deterministic engine (behavioral contracts, no code)
 
-Seven operations are the only way inventory and cost change: receive raw, produce a
-batch, record a sale, void a receipt, void a sale, adjust a lot, and correct a receipt.
+Eight operations are the only way inventory and cost change: receive raw, produce a
+batch, record a sale, void a receipt, void a sale, adjust a lot, correct a receipt, and
+reverse a batch.
 The app and the AI call these; nothing writes to lots, inventory_balances, production,
 finished goods, sales, lot_adjustments, or receipt_corrections directly. Each operation checks that the caller is the
 owner, refuses invalid arguments before it takes any lock, and changes nothing when
-it refuses. Receive raw, produce a batch, void a receipt, adjust a lot, and correct a receipt lock the raw
+it refuses. Receive raw, produce a batch, void a receipt, adjust a lot, correct a receipt, and reverse a batch lock the raw
 product, so they queue one behind another on that product. Correct a receipt also locks the
-finished products made from the lot, after the raw product. Record a sale and void a
+finished products made from the lot, after the raw product. Reverse a batch locks the batch's
+finished product after the raw product, before it locks the batch. Record a sale and void a
 sale lock the finished product they draw from, so they queue one behind another on that
 product. Producing a batch and recording a sale on one finished product lock different
 things and do not queue on each other. After it has its lock, an operation reads stock
@@ -159,8 +161,8 @@ through its finished lot and batch, to one or more raw lots with a vendor and da
 Input: lot, void reason (at least one non-space character).
 Behavior: marks a receipt that nothing has touched as void, with the reason and a
 time, and takes its lbs out of stock. The lot stays in the table with 0 lbs
-remaining. It is refused when any production has consumed from the lot, when the lot
-has an adjustment, or when it is already void. When the void leaves a raw product
+remaining. It is refused when a batch that is not reversed has consumed from the lot, when
+the lot has an adjustment, or when it is already void. When the void leaves a raw product
 with no lbs on hand, the average goes back to a value from before the voided
 receipts; docs/costing.md gives the exact rule and its known limit.
 Otherwise the average is the stock-on-hand average of the lots still held.
@@ -177,7 +179,8 @@ It is refused when the sale is already void.
 Input: lot, new remaining lbs, reason (count, waste, spoilage, or other), optional note.
 Behavior: sets the lot's remaining lbs to the counted value and records an
 adjustment row with the old lbs, the new lbs, and the reason. The new value runs from
-0 up to the lot's current weight minus the lbs production has consumed from it. The
+0 up to the lot's current weight minus the lbs batches that are not reversed have consumed
+from it. The
 lot's unit cost does not change, and the product's average moves to the stock-on-hand
 average. It is refused on a void lot.
 
@@ -194,6 +197,17 @@ lot. The product's average moves to the stock-on-hand average at current cost, a
 its value at 0 lbs on hand. It is refused on a void lot, when neither the cost nor the
 weight changes, when the new weight is below what production used and adjustments
 removed, and for a bad cost, weight, or reason. A correction is undone by correcting back.
+
+### Reverse a batch
+
+Input: batch, reason (at least one non-space character).
+Behavior: in one step, voids every non-void sale with a line on the batch's finished lot
+as Void a sale does, with the reason "Reversed with batch <number>: <reason>" and the
+batch's reversal time; takes the batch's finished lot to 0 lbs; returns each consumption
+row's lbs to the lot it came from; and marks the batch reversed with the reason and a
+time. The consumption rows stay as the record, and the raw product's average moves to
+the stock-on-hand average. It is refused when the batch is already reversed, when the
+batch does not exist, and for a blank reason. A reversal cannot be undone.
 
 ## 6. Costing guarantees (the invariants)
 

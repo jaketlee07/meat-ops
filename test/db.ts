@@ -614,10 +614,12 @@ export interface Querier {
   query(text: string): Promise<{ rows: unknown[] }>;
 }
 
-// AC-0030, AC-0032, AC-0033, and the corrections spec's AC-0069, AC-0070,
-// AC-0074 to AC-0078 for every raw product, lot, batch, finished lot, and sale
-// line. Void lots and void sales are excluded from the remaining-lbs equalities
-// and checked for AC-0033 instead. AC-0079 joins when `includeAverage` is set.
+// AC-0030 and the corrections spec's AC-0068 to AC-0078 for every raw product,
+// lot, batch, finished lot, and sale line. Used lbs and finished-lot
+// conservation count only batches that are not reversed; reversed batches are
+// checked by AC-0072 and AC-0073. Void lots and void sales are excluded from
+// the remaining-lbs equalities and checked for AC-0071 instead. AC-0079 joins
+// when `includeAverage` is set.
 export async function ledgerViolations(
   run: Querier,
   includeAverage = false,
@@ -632,7 +634,9 @@ export async function ledgerViolations(
     union all
     select 'AC-0070 remaining <> current weight - used - adjusted', l.id::text
     from lots l
-    left join (select lot_id, sum(lbs_consumed) c from production_batch_lots group by lot_id) c
+    left join (select pbl.lot_id, sum(pbl.lbs_consumed) c
+               from production_batch_lots pbl join production_batches b on b.id = pbl.batch_id
+               where b.reversed_at is null group by pbl.lot_id) c
            on c.lot_id = l.id
     left join (select lot_id, sum(old_remaining_lbs - new_remaining_lbs) a
                from lot_adjustments group by lot_id) a
@@ -642,12 +646,15 @@ export async function ledgerViolations(
     union all
     select 'AC-0069 remaining > current weight - used', l.id::text
     from lots l
-    left join (select lot_id, sum(lbs_consumed) c from production_batch_lots group by lot_id) c
+    left join (select pbl.lot_id, sum(pbl.lbs_consumed) c
+               from production_batch_lots pbl join production_batches b on b.id = pbl.batch_id
+               where b.reversed_at is null group by pbl.lot_id) c
            on c.lot_id = l.id
     where l.voided_at is null and l.remaining_lbs > l.current_weight_lbs - coalesce(c.c, 0)
     union all
-    select 'AC-0032 remaining <> produced - sold', f.id::text
+    select 'AC-0068 remaining <> produced - sold', f.id::text
     from finished_goods f
+    join production_batches fb on fb.id = f.batch_id and fb.reversed_at is null
     left join (select si.finished_goods_id, sum(si.lbs_sold) s
                from sale_items si join sales s on s.id = si.sale_id
                where s.voided_at is null
@@ -655,15 +662,28 @@ export async function ledgerViolations(
            on s.finished_goods_id = f.id
     where f.lbs_remaining <> f.lbs_produced - coalesce(s.s, 0)
     union all
-    select 'AC-0033 void lot has a consumption row', l.id::text
+    select 'AC-0071 void lot has a consumption row', l.id::text
     from lots l
     where l.voided_at is not null
-      and exists (select 1 from production_batch_lots pbl where pbl.lot_id = l.id)
+      and exists (select 1 from production_batch_lots pbl
+                  join production_batches b on b.id = pbl.batch_id
+                  where pbl.lot_id = l.id and b.reversed_at is null)
     union all
-    select 'AC-0033 void lot has an adjustment row', l.id::text
+    select 'AC-0071 void lot has an adjustment row', l.id::text
     from lots l
     where l.voided_at is not null
       and exists (select 1 from lot_adjustments a where a.lot_id = l.id)
+    union all
+    select 'AC-0072 reversed batch finished lot has lbs', f.id::text
+    from finished_goods f join production_batches b on b.id = f.batch_id
+    where b.reversed_at is not null and f.lbs_remaining <> 0
+    union all
+    select 'AC-0073 reversed batch finished lot has a live sale line', si.id::text
+    from sale_items si
+    join sales s on s.id = si.sale_id
+    join finished_goods f on f.id = si.finished_goods_id
+    join production_batches b on b.id = f.batch_id
+    where b.reversed_at is not null and s.voided_at is null
     union all
     select 'AC-0074 consumption lot cost <> lot current cost', pbl.id::text
     from production_batch_lots pbl join lots l on l.id = pbl.lot_id

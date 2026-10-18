@@ -9,7 +9,7 @@ missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.t
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
-`record_sale`, `void_receipt`, `void_sale`, `adjust_lot`, and `correct_receipt`, the views
+`record_sale`, `void_receipt`, `void_sale`, `adjust_lot`, `correct_receipt`, and `reverse_batch`, the views
 `v_product_pricing` and `v_sale_summary`, and the function `price_what_if`.
 Nothing in TypeScript computes a cost, an average, or a price.
 
@@ -166,11 +166,15 @@ can still carry a voided cost.
 
 6. Conservation
    For every raw product, inventory_balances.qty_on_hand equals the sum of
-   lots.remaining_lbs. Finished lbs_remaining never exceeds lbs_produced. Each
-   non-void lot's remaining lbs equals its current weight minus the lbs
-   production consumed minus the lbs removed by adjustments, and never exceeds
-   current weight minus consumed lbs. No void lot has a consumption row or an
-   adjustment row. The test suites run this check after every test.
+   lots.remaining_lbs. Finished lbs_remaining never exceeds lbs_produced. A
+   lot's used lbs are the lbs consumed by batches that are not reversed. Each
+   non-void lot's remaining lbs equals its current weight minus its used lbs
+   minus the lbs removed by adjustments, and never exceeds current weight minus
+   used lbs. Each finished lot of a batch that is not reversed has remaining lbs
+   equal to its produced lbs minus the lbs on lines of non-void sales drawn from
+   it. A reversed batch's finished lot has 0 lbs remaining and no line of a
+   non-void sale. No void lot has an adjustment row, or a consumption row of a
+   batch that is not reversed. The test suites run this check after every test.
 
 7. Traceability
    Every sale_item resolves through v_sale_traceability to at least one raw lot
@@ -186,10 +190,11 @@ bad input and changes nothing when it refuses.
 
 ### void_receipt
 
-Voids a lot that nothing has touched: no production consumed from it, no
-adjustment row, and remaining lbs equal to the current weight. A receipt
-corrected to a new weight with nothing else done to it is untouched. A void lot has
-0 lbs remaining and stays in the table.
+Voids a lot that nothing has touched: no batch that is not reversed consumed
+from it, no adjustment row, and remaining lbs equal to the current weight. A
+receipt corrected to a new weight with nothing else done to it is untouched, and
+so is a receipt whose only batches were reversed. A void lot has 0 lbs remaining
+and stays in the table.
 
 Example: receive 1,000 lbs at 1.68 and 500 lbs at 1.80. Stock is 1,500 lbs at
 an average of 1.72. Void the second lot: stock is 1,000 lbs and the average is
@@ -203,15 +208,19 @@ The prior average of a lot is the average just before it was entered.
    that come after the last non-void lot. When no lot is non-void, this covers
    all the product's lots.
 2. The prior average of the first void lot, in FIFO order, among the void lots
-   that come after the last lot production drew from. When production has drawn
-   from none of the product's lots, this covers all its void lots.
+   that come after the last lot a batch that is not reversed drew from. When no
+   such batch has drawn from any of the product's lots, this covers all its void
+   lots.
 3. The prior average of the lot being voided.
 
 Example: stock is 0 lbs at an average of 1.8000. Receive 1,000 lbs at 18.00; the
 average is 18. Void that lot and the average returns to 1.8000. Receive two lots
 of 1,000 lbs at 18.00 and void both, in either order, and the average is 1.8000.
 Receive lots at 18.00 and 20.00, then a lot at 2.00 that is adjusted to 0 as
-waste, and void the first two in either order: the average is 1.8000.
+waste, and void the first two in either order: the average is 1.8000. The same
+holds when a batch of 2,500 raw lbs drew from all three lots and was reversed
+before the adjustment and the voids, since a reversed batch does not count as a
+draw.
 
 Known limit, accepted by the owner on 2026-10-07: a lot's prior average is
 fixed when it is entered, so it can include other lots that are voided later.
@@ -237,7 +246,8 @@ refused.
 ### adjust_lot
 
 Sets a lot's remaining lbs to a counted value. The value runs from 0 up to the
-current weight minus the lbs production consumed from the lot. The reason is
+current weight minus the lbs batches that are not reversed consumed from the
+lot. The reason is
 one of count, waste, spoilage, or other. The call records one adjustment row with
 the old lbs, the new lbs, and the reason, and it leaves unit_cost unchanged. A
 void lot cannot be adjusted.
@@ -245,12 +255,56 @@ void lot cannot be adjusted.
 Example: a 1,000 lb lot has 600 lbs consumed, so the cap is 400 lbs. Setting it
 to 250 lbs with reason waste leaves 250 lbs on hand at the same 1.68 average.
 Setting 401 lbs is refused. In the correct_receipt example below, lot B corrected
-to 3,100 lbs can be adjusted to 1,100 lbs and not to 1,100.001.
+to 3,100 lbs can be adjusted to 1,100 lbs and not to 1,100.001. In the
+reverse_batch example below, after batch 2 is reversed lot B can be adjusted to
+2,000 lbs and not to 2,000.001.
 
 The average after an adjustment is the stock-on-hand average. Receive 1,000 lbs
 at 1.68 and 1,000 lbs at 1.80, then adjust the second lot to 250 lbs. Stock is
 1,250 lbs and the average is 1.704:
 (1000 * 1.68 + 250 * 1.80) / 1250 = 1.704
+
+### reverse_batch
+
+Reverses a batch that should not exist, as one step that does all of this or
+none of it:
+
+1. Each non-void sale with a line on the batch's finished lot is voided as
+   `void_sale` voids it: every line of the sale returns its lbs to the finished
+   lot it came from, and the sale gets the reason "Reversed with batch <number>:
+   <reason>". The voided sales and the batch share one time, the transaction's.
+   A sale that was already void keeps its own reason and time, and a sale with no
+   line on the batch's finished lot is not voided.
+2. The batch's finished lot goes to 0 lbs remaining.
+3. Each consumption row's lbs go back to the lot it came from.
+4. The batch is marked reversed with the reason and the time.
+5. The raw product's stock and average are recomputed from its lots.
+
+The consumption rows stay as the record of what was drawn and returned, so a
+lot's used lbs count only batches that are not reversed. A reversal cannot be
+undone: the batch stays in the table marked reversed, and the next batch draws
+the returned lbs first. A reversed batch is refused, and so are a blank reason
+and a batch that does not exist.
+
+Locks. The call takes the raw product's stock row, then the finished product's
+`products` row, then the batch, so it queues behind and ahead of `record_sale`,
+`void_sale`, `produce_batch`, and `correct_receipt` on the same products and no
+pair can wait on each other. A sale written first is voided by the reversal. A
+sale or a batch started during the reversal waits for it.
+
+Example, in the sale fixture of the correct_receipt section, before the 5,000-lb
+sale:
+
+- Reverse batch 2: lot B has 2,000 lbs remaining, batch 2's finished lot has 0
+  lbs, and 502 has 4,620 finished lbs on hand.
+- Reverse batch 1 instead: lot A has 5,000 lbs and lot B 2,000 lbs remaining, and
+  the average is (5000 * 1.68 + 2000 * 1.80) / 7000 = 1.7143.
+
+With the 5,000-lb sale, reversing batch 2 voids that sale (its 4,620 lbs return to
+batch 1's finished lot, and its 380 lbs to batch 2's, which then goes to 0), so
+batch 1's finished lot has 4,620 lbs remaining. A 1,000-lb sale dated Oct 6 can
+draw only batch 1 and is not voided. A batch of 1,500 raw lbs produced Oct 8
+after the reversal draws 1,500 lbs from lot B.
 
 ### correct_receipt
 
