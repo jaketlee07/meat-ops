@@ -90,8 +90,9 @@ There is no lint command.
 
 The app reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the gitignored
 repository-root `.env`. It also reads an optional `ANTHROPIC_API_KEY`, the key
-that reads invoices on `/invoices`. Without the key, invoice reading is off: a
-read says it isn't set up, and nothing else changes. A value set in the app's
+that reads invoices on `/invoices` and writes the daily digest on `/alerts`.
+Without the key, invoice reading and the digest are off: each says it isn't set
+up, and nothing else changes. A value set in the app's
 process wins over `.env`. `npm test` never calls the real model: the browser
 suite starts the app with its own test key and a fake model service on this
 machine. Make the file from the local stack. The command keeps an existing

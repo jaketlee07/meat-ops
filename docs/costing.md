@@ -264,6 +264,8 @@ through the same formats:
 | Shrink | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.23 → 23%; 0.235 → 23.5%; 0.2345 → 23.45%; 0 → 0% |
 | Margin (at a list price) | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.2 → 20%; 0.018 → 1.8%; 0.2001 → 20.01%; 0.2481 → 24.81%; -0.0527 → -5.27%; 0 → 0% |
 | Raw cost total | "$", thousands separators, 2 decimals | 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01 |
+| Days (days left) | 0 to 1 decimals with a trailing zero dropped, then " day" when the rounded value is exactly 1 and " days" otherwise | 5.3333 → 5.3 days; 7 → 7 days; 1 → 1 day; 0 → 0 days; 0.96 → 1 day |
+| Change (a cost change or drift) | the absolute value of the fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%"; the words "up", "down", "above", and "below" carry the sign | 0.0962 → 9.62%; -0.1024 → 10.24%; 0.1 → 10%; 0.6667 → 66.67% |
 
 Where the database has nothing to show, the screen uses text:
 
