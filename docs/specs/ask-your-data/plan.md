@@ -1,7 +1,7 @@
 # Plan: ask-your-data
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md` (areas map, app trust boundary, AI connection).
   - **Analogous implementations:** invoice entry's read action, `src/app/invoices/` (`actions.ts`, `read-invoice.ts`, `read-forms.tsx`, `error.tsx`) over `src/lib/invoice-reading.ts` and `src/app/_server/model.ts`; the trace page, `src/app/trace/` (`sale-trace.tsx`, `lot-trace.tsx`), for answers built from the shared reads. After the rebase onto `main`, Alerts' digest action and `writeDigest` in `model.ts` are the closest analog for a second model call.

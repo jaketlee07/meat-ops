@@ -1,6 +1,6 @@
 # Spec: ask-your-data
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (the AI never computes a figure), §7 "Answer (ask your data)", §10 (the three AI moments), §11 (boundaries), §12 (AI numbers match the engine; AI features decline or ask rather than guess), §13 item 6; the AI connection in [`docs/architecture/overview.md`](../../architecture/overview.md) and its definitions in [`../invoice-entry/spec.md`](../invoice-entry/spec.md); the header pages, the urgent banner, and the digest's model call in [`../alerts/spec.md`](../alerts/spec.md) and its plan (on `main` once Alerts merges; until then on `origin/feat/alerts`); the pricing advice and its order in [`../menu-pricing/spec.md`](../menu-pricing/spec.md) AC-0064 to AC-0066; Receiving's Recent receipts in [`../receiving/spec.md`](../receiving/spec.md) ("Recent receipts and void"); the sale and trace definitions in [`../sales/spec.md`](../sales/spec.md); the access model and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md)
@@ -161,162 +161,162 @@ Definitions used by these criteria:
 
 Access and navigation
 
-- [ ] **AC-0001.** While signed out, a request for `/ask` ends on `/sign-in`.
-- [ ] **AC-0002.** Signed in as a non-operator, `/ask` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no question field.
-- [ ] **AC-0003.** An ask or lookup request replayed with no session, or with a non-operator's session, sends no request to the model service.
-- [ ] **AC-0015.** An ask or lookup request replayed with no session, or with a non-operator's session, returns no text that starts with "Looked up: ".
-- [ ] **AC-0004.** An ask request replayed with a non-operator's session returns "The question wasn't answered. This account isn't allowed to use Meat Ops.", and a lookup request "The answer wasn't looked up. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0005.** Every header page and `/ask` show, in the navigation region named "Primary", a link named "Ask" to `/ask` placed immediately before the link named "Alerts".
-- [ ] **AC-0006.** On `/ask`, the only link in the Primary navigation with an `aria-current` attribute is the Ask link, and its value is `page`.
-- [ ] **AC-0007.** The responses to page requests for `/ask`, signed in or not, carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
-- [ ] **AC-0008.** In the margin case, `/ask` shows "1 urgent alert needs you." with a link named "See alerts" to `/alerts`.
-- [ ] **AC-0009.** When the database refuses the page's watch, `/ask` shows "Alerts couldn't be checked." where the banner goes.
-- [ ] **AC-0016.** When the database refuses the page's watch, an ask press whose model answer is a choice still shows its answer.
+- [x] **AC-0001.** While signed out, a request for `/ask` ends on `/sign-in`.
+- [x] **AC-0002.** Signed in as a non-operator, `/ask` shows "This account isn't allowed to use Meat Ops." and a Sign out button, and shows no question field.
+- [x] **AC-0003.** An ask or lookup request replayed with no session, or with a non-operator's session, sends no request to the model service.
+- [x] **AC-0015.** An ask or lookup request replayed with no session, or with a non-operator's session, returns no text that starts with "Looked up: ".
+- [x] **AC-0004.** An ask request replayed with a non-operator's session returns "The question wasn't answered. This account isn't allowed to use Meat Ops.", and a lookup request "The answer wasn't looked up. This account isn't allowed to use Meat Ops."
+- [x] **AC-0005.** Every header page and `/ask` show, in the navigation region named "Primary", a link named "Ask" to `/ask` placed immediately before the link named "Alerts".
+- [x] **AC-0006.** On `/ask`, the only link in the Primary navigation with an `aria-current` attribute is the Ask link, and its value is `page`.
+- [x] **AC-0007.** The responses to page requests for `/ask`, signed in or not, carry `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY`.
+- [x] **AC-0008.** In the margin case, `/ask` shows "1 urgent alert needs you." with a link named "See alerts" to `/alerts`.
+- [x] **AC-0009.** When the database refuses the page's watch, `/ask` shows "Alerts couldn't be checked." where the banner goes.
+- [x] **AC-0016.** When the database refuses the page's watch, an ask press whose model answer is a choice still shows its answer.
 
 The page
 
-- [ ] **AC-0010.** `/ask` has a "Your question" text field, an "Ask" button, and a section headed "Questions Ask can answer" that lists the catalog's eight example questions in catalog order.
-- [ ] **AC-0011.** Each question in this table is refused with its message beside the field, and no request reaches the model service. The first matching row wins. A question's characters are counted as the server action receives it, with each CR LF pair or lone CR counted as one character.
+- [x] **AC-0010.** `/ask` has a "Your question" text field, an "Ask" button, and a section headed "Questions Ask can answer" that lists the catalog's eight example questions in catalog order.
+- [x] **AC-0011.** Each question in this table is refused with its message beside the field, and no request reaches the model service. The first matching row wins. A question's characters are counted as the server action receives it, with each CR LF pair or lone CR counted as one character.
 
   | Question | Message |
   | --- | --- |
   | blank or only white space | Type a question, like: How much RAW-TOM do I have? |
   | more than 500 characters | Keep the question to 500 characters or fewer. |
-- [ ] **AC-0018.** A question of exactly 500 characters is sent to the model service.
-- [ ] **AC-0012.** While an ask press is in flight, `/ask` shows "Looking up your answer. This can take up to a minute." in a region with `role="status"`.
-- [ ] **AC-0017.** While an ask press is in flight, the Ask button, every product button on the page, and Look it up again are disabled.
-- [ ] **AC-0013.** After a press of Ask, of an AC-0050 product button, or of Look it up again, whatever its outcome, the question field keeps its value.
-- [ ] **AC-0014.** Reloading `/ask` after an answer shows no answer and sends no request to the model service.
+- [x] **AC-0018.** A question of exactly 500 characters is sent to the model service.
+- [x] **AC-0012.** While an ask press is in flight, `/ask` shows "Looking up your answer. This can take up to a minute." in a region with `role="status"`.
+- [x] **AC-0017.** While an ask press is in flight, the Ask button, every product button on the page, and Look it up again are disabled.
+- [x] **AC-0013.** After a press of Ask, of an AC-0050 product button, or of Look it up again, whatever its outcome, the question field keeps its value.
+- [x] **AC-0014.** Reloading `/ask` after an answer shows no answer and sends no request to the model service.
 
 The answers
 
-- [ ] **AC-0020.** The `raw_stock` answer text for a raw product with a non-void receipt is "You have <on hand> of <code> <description> on hand. Its average cost is <average>.", with its on hand and average cost as receiving AC-0007 shows them. In the production 502 fixture, for RAW-TOM, it is "You have 8,000 lbs of RAW-TOM Turkey Drums TOM (raw) on hand. Its average cost is $1.7250/lb."
-- [ ] **AC-0021.** The `raw_stock` answer text for a raw product with no non-void receipt is "You have <on hand> of <code> <description> on hand, and no average cost yet.", with its on hand as receiving AC-0067 shows it. In the production 502 fixture with both receipts voided, for RAW-TOM, it is "You have 0 lbs of RAW-TOM Turkey Drums TOM (raw) on hand, and no average cost yet."
-- [ ] **AC-0022.** The `finished_stock` answer text is "You have <finished lbs on hand> of <code> <description> ready to sell."; in the sale fixture, for 502, "You have 5,390 lbs of 502 Smoked Turkey Drums Tom ready to sell."
-- [ ] **AC-0023.** The `product_margin` answer text for a product whose raw input has a cost is the menu-pricing AC-0065 advice for its case, followed by " That is below your target." when it is below target. In the margin case it is "Cost is $2.6318/lb. $3.29/lb holds your 20% target margin. At your list price of $2.68/lb, the margin is 1.8%. That is below your target."
-- [ ] **AC-0024.** In the pricing 502 fixture, the `product_margin` answer text for 502 is "Cost is $2.6318/lb. With no target margin, the suggested price is cost plus $0.0500/lb in margin fees. This product has no list price yet."
-- [ ] **AC-0025.** The `product_margin` answer text for a product whose raw input has no cost is "<code> <description> has no cost yet."; in the pricing 502 fixture with RAW-TOM's receipt voided, "502 Smoked Turkey Drums Tom has no cost yet."
-- [ ] **AC-0026.** The `pricing_attention` answer text lists each active finished product that needs a new price, in the menu-pricing AC-0064 order for "Needs a new price", each as "<code> <description>: " followed by its menu-pricing AC-0066 button name, with ", below your target" after it when it is below target. The list follows "1 product needs a new price:" for one product, and "N products need a new price:" for N above one. In the margin case it is "1 product needs a new price:" and "502 Smoked Turkey Drums Tom: Raise list price to $3.29/lb, below your target".
-- [ ] **AC-0027.** In the margin case with 502's list price at 3.29, the `pricing_attention` answer text is "No product needs a new price right now."
-- [ ] **AC-0028.** The `sellable_now` answer text lists each active finished product that is sellable, in code order, each as "<code> <description>: " followed by its finished lbs on hand, " ready, ", its raw lbs on hand, and " of raw on hand". The list follows "You can sell 1 product now:" for one product, and "You can sell N products now:" for N above one. In the sale fixture it is "You can sell 1 product now:" and "502 Smoked Turkey Drums Tom: 5,390 lbs ready, 1,000 lbs of raw on hand".
-- [ ] **AC-0029.** When no active finished product is sellable, the `sellable_now` answer text is "No product can be sold right now."
-- [ ] **AC-0030.** The `recent_receipts` answer text lists the receipts that receiving AC-0020 lists for the product, in that order, each as "<received date>, <vendor>: <weight> at <cost per lb>, lot <lot number>", after "Recent receipts of <code> <description>, most recent first:". In the sale fixture, for RAW-TOM, the items are "Oct 5, 2026, Valley Poultry: 3,000 lbs at $1.8000/lb, lot " followed by lot B's number, then "Oct 1, 2026, Reyes Meats: 5,000 lbs at $1.6800/lb, lot " followed by lot A's number.
-- [ ] **AC-0031.** In the `recent_receipts` answer, a void receipt's item ends with " (void)".
-- [ ] **AC-0032.** When the raw product has more than 10 receipts, the `recent_receipts` answer text ends with "Showing the 10 most recent of N receipts.", where N is the product's receipt count, as Receiving's Recent receipts says it. The check fixture holds 11 receipts of RAW-TOM.
-- [ ] **AC-0033.** When the raw product has no receipt, the `recent_receipts` answer text is "<code> <description> has no receipts yet."; for RAW-TOM, "RAW-TOM Turkey Drums TOM (raw) has no receipts yet."
-- [ ] **AC-0034.** After the 5,000-lb sale, the `sale_lots` answer text for S-5000 is "Sale S-5000 on Oct 8, 2026 (Fulton Market Deli): 5,000 lbs of 502 Smoked Turkey Drums Tom at $3.29/lb. It came from these raw lots:", then the items "Lot " followed by lot A's number and ": RAW-TOM Turkey Drums TOM (raw) from Reyes Meats, received Oct 1, 2026, at $1.6800/lb", and "Lot " followed by lot B's number and ": RAW-TOM Turkey Drums TOM (raw) from Valley Poultry, received Oct 5, 2026, at $1.8000/lb". Each raw lot is listed once, where it first appears in the sale's trace order: finished lots in draw order, and under each finished lot its raw lots in draw order.
-- [ ] **AC-0035.** For a sale with no customer, the `sale_lots` answer text shows "(No customer)" where AC-0034 shows the customer's name in parentheses.
-- [ ] **AC-0036.** After the 5,000-lb sale is voided with the reason "wrong customer", the `sale_lots` answer text for S-5000 is "Sale S-5000 was voided: wrong customer."
-- [ ] **AC-0037.** The `sale_lots` answer text for a number that names no sale is "No sale has number <number>."; for S-9999, "No sale has number S-9999."
-- [ ] **AC-0038.** After the 5,000-lb sale, the `lot_sales` answer text for lot B is "Lot " followed by lot B's number and ": 3,000 lbs of RAW-TOM Turkey Drums TOM (raw) from Valley Poultry, received Oct 5, 2026, at $1.8000/lb. It reached these sales:", then the one item "S-5000 on Oct 8, 2026 (Fulton Market Deli)". Each sale among the lot's sales is listed once, newest sale date first, then last entered first, with "(No customer)" for a sale with no customer.
-- [ ] **AC-0019.** After the 5,000-lb sale and then three sales of 100 lbs of 502 at 3.29 to Fulton Market Deli dated 2026-10-09, numbered S-6002, S-6001, and S-6003 and entered in that order, the `lot_sales` items for lot B are, in order, "S-6003 on Oct 9, 2026 (Fulton Market Deli)", "S-6001 on Oct 9, 2026 (Fulton Market Deli)", "S-6002 on Oct 9, 2026 (Fulton Market Deli)", and "S-5000 on Oct 8, 2026 (Fulton Market Deli)".
-- [ ] **AC-0039.** In the sale fixture without a sale, the `lot_sales` answer text for lot A is "Lot " followed by lot A's number and ": 5,000 lbs of RAW-TOM Turkey Drums TOM (raw) from Reyes Meats, received Oct 1, 2026, at $1.6800/lb. No sale was made from this lot."
-- [ ] **AC-0040.** For a void receipt, the `lot_sales` answer text is its first sentence, as AC-0039 forms it, followed by " This receipt was voided: <reason>." and nothing more.
-- [ ] **AC-0041.** The `lot_sales` answer text for a number that names no receipt is "No receipt has lot number <number>."; for L-UNKNOWN, "No receipt has lot number L-UNKNOWN."
-- [ ] **AC-0042.** Every answer shows "Looked up: " followed by its query's looked-up line; for `raw_stock` and RAW-TOM, "Looked up: stock on hand for RAW-TOM Turkey Drums TOM (raw)".
-- [ ] **AC-0043.** Every answer shows its query's link, with the link name and address the catalog gives.
-- [ ] **AC-0044.** Every answer ends with the note "Every figure here comes from Meat Ops' records. Claude only chose what to look up."
-- [ ] **AC-0045.** An answer's figures are the database's at the press: in the production 502 fixture, after a third RAW-TOM receipt of 1,000 lbs is saved between two ask presses with the same model answer, the second `raw_stock` answer shows "You have 9,000 lbs".
-- [ ] **AC-0046.** Text in an answer shows as literal text: a product description, a vendor name, a customer name, a void reason, or a model answer's number `<b>9</b>` (from a question that contains it) shows as those eight characters and adds no element to the page.
+- [x] **AC-0020.** The `raw_stock` answer text for a raw product with a non-void receipt is "You have <on hand> of <code> <description> on hand. Its average cost is <average>.", with its on hand and average cost as receiving AC-0007 shows them. In the production 502 fixture, for RAW-TOM, it is "You have 8,000 lbs of RAW-TOM Turkey Drums TOM (raw) on hand. Its average cost is $1.7250/lb."
+- [x] **AC-0021.** The `raw_stock` answer text for a raw product with no non-void receipt is "You have <on hand> of <code> <description> on hand, and no average cost yet.", with its on hand as receiving AC-0067 shows it. In the production 502 fixture with both receipts voided, for RAW-TOM, it is "You have 0 lbs of RAW-TOM Turkey Drums TOM (raw) on hand, and no average cost yet."
+- [x] **AC-0022.** The `finished_stock` answer text is "You have <finished lbs on hand> of <code> <description> ready to sell."; in the sale fixture, for 502, "You have 5,390 lbs of 502 Smoked Turkey Drums Tom ready to sell."
+- [x] **AC-0023.** The `product_margin` answer text for a product whose raw input has a cost is the menu-pricing AC-0065 advice for its case, followed by " That is below your target." when it is below target. In the margin case it is "Cost is $2.6318/lb. $3.29/lb holds your 20% target margin. At your list price of $2.68/lb, the margin is 1.8%. That is below your target."
+- [x] **AC-0024.** In the pricing 502 fixture, the `product_margin` answer text for 502 is "Cost is $2.6318/lb. With no target margin, the suggested price is cost plus $0.0500/lb in margin fees. This product has no list price yet."
+- [x] **AC-0025.** The `product_margin` answer text for a product whose raw input has no cost is "<code> <description> has no cost yet."; in the pricing 502 fixture with RAW-TOM's receipt voided, "502 Smoked Turkey Drums Tom has no cost yet."
+- [x] **AC-0026.** The `pricing_attention` answer text lists each active finished product that needs a new price, in the menu-pricing AC-0064 order for "Needs a new price", each as "<code> <description>: " followed by its menu-pricing AC-0066 button name, with ", below your target" after it when it is below target. The list follows "1 product needs a new price:" for one product, and "N products need a new price:" for N above one. In the margin case it is "1 product needs a new price:" and "502 Smoked Turkey Drums Tom: Raise list price to $3.29/lb, below your target".
+- [x] **AC-0027.** In the margin case with 502's list price at 3.29, the `pricing_attention` answer text is "No product needs a new price right now."
+- [x] **AC-0028.** The `sellable_now` answer text lists each active finished product that is sellable, in code order, each as "<code> <description>: " followed by its finished lbs on hand, " ready, ", its raw lbs on hand, and " of raw on hand". The list follows "You can sell 1 product now:" for one product, and "You can sell N products now:" for N above one. In the sale fixture it is "You can sell 1 product now:" and "502 Smoked Turkey Drums Tom: 5,390 lbs ready, 1,000 lbs of raw on hand".
+- [x] **AC-0029.** When no active finished product is sellable, the `sellable_now` answer text is "No product can be sold right now."
+- [x] **AC-0030.** The `recent_receipts` answer text lists the receipts that receiving AC-0020 lists for the product, in that order, each as "<received date>, <vendor>: <weight> at <cost per lb>, lot <lot number>", after "Recent receipts of <code> <description>, most recent first:". In the sale fixture, for RAW-TOM, the items are "Oct 5, 2026, Valley Poultry: 3,000 lbs at $1.8000/lb, lot " followed by lot B's number, then "Oct 1, 2026, Reyes Meats: 5,000 lbs at $1.6800/lb, lot " followed by lot A's number.
+- [x] **AC-0031.** In the `recent_receipts` answer, a void receipt's item ends with " (void)".
+- [x] **AC-0032.** When the raw product has more than 10 receipts, the `recent_receipts` answer text ends with "Showing the 10 most recent of N receipts.", where N is the product's receipt count, as Receiving's Recent receipts says it. The check fixture holds 11 receipts of RAW-TOM.
+- [x] **AC-0033.** When the raw product has no receipt, the `recent_receipts` answer text is "<code> <description> has no receipts yet."; for RAW-TOM, "RAW-TOM Turkey Drums TOM (raw) has no receipts yet."
+- [x] **AC-0034.** After the 5,000-lb sale, the `sale_lots` answer text for S-5000 is "Sale S-5000 on Oct 8, 2026 (Fulton Market Deli): 5,000 lbs of 502 Smoked Turkey Drums Tom at $3.29/lb. It came from these raw lots:", then the items "Lot " followed by lot A's number and ": RAW-TOM Turkey Drums TOM (raw) from Reyes Meats, received Oct 1, 2026, at $1.6800/lb", and "Lot " followed by lot B's number and ": RAW-TOM Turkey Drums TOM (raw) from Valley Poultry, received Oct 5, 2026, at $1.8000/lb". Each raw lot is listed once, where it first appears in the sale's trace order: finished lots in draw order, and under each finished lot its raw lots in draw order.
+- [x] **AC-0035.** For a sale with no customer, the `sale_lots` answer text shows "(No customer)" where AC-0034 shows the customer's name in parentheses.
+- [x] **AC-0036.** After the 5,000-lb sale is voided with the reason "wrong customer", the `sale_lots` answer text for S-5000 is "Sale S-5000 was voided: wrong customer."
+- [x] **AC-0037.** The `sale_lots` answer text for a number that names no sale is "No sale has number <number>."; for S-9999, "No sale has number S-9999."
+- [x] **AC-0038.** After the 5,000-lb sale, the `lot_sales` answer text for lot B is "Lot " followed by lot B's number and ": 3,000 lbs of RAW-TOM Turkey Drums TOM (raw) from Valley Poultry, received Oct 5, 2026, at $1.8000/lb. It reached these sales:", then the one item "S-5000 on Oct 8, 2026 (Fulton Market Deli)". Each sale among the lot's sales is listed once, newest sale date first, then last entered first, with "(No customer)" for a sale with no customer.
+- [x] **AC-0019.** After the 5,000-lb sale and then three sales of 100 lbs of 502 at 3.29 to Fulton Market Deli dated 2026-10-09, numbered S-6002, S-6001, and S-6003 and entered in that order, the `lot_sales` items for lot B are, in order, "S-6003 on Oct 9, 2026 (Fulton Market Deli)", "S-6001 on Oct 9, 2026 (Fulton Market Deli)", "S-6002 on Oct 9, 2026 (Fulton Market Deli)", and "S-5000 on Oct 8, 2026 (Fulton Market Deli)".
+- [x] **AC-0039.** In the sale fixture without a sale, the `lot_sales` answer text for lot A is "Lot " followed by lot A's number and ": 5,000 lbs of RAW-TOM Turkey Drums TOM (raw) from Reyes Meats, received Oct 1, 2026, at $1.6800/lb. No sale was made from this lot."
+- [x] **AC-0040.** For a void receipt, the `lot_sales` answer text is its first sentence, as AC-0039 forms it, followed by " This receipt was voided: <reason>." and nothing more.
+- [x] **AC-0041.** The `lot_sales` answer text for a number that names no receipt is "No receipt has lot number <number>."; for L-UNKNOWN, "No receipt has lot number L-UNKNOWN."
+- [x] **AC-0042.** Every answer shows "Looked up: " followed by its query's looked-up line; for `raw_stock` and RAW-TOM, "Looked up: stock on hand for RAW-TOM Turkey Drums TOM (raw)".
+- [x] **AC-0043.** Every answer shows its query's link, with the link name and address the catalog gives.
+- [x] **AC-0044.** Every answer ends with the note "Every figure here comes from Meat Ops' records. Claude only chose what to look up."
+- [x] **AC-0045.** An answer's figures are the database's at the press: in the production 502 fixture, after a third RAW-TOM receipt of 1,000 lbs is saved between two ask presses with the same model answer, the second `raw_stock` answer shows "You have 9,000 lbs".
+- [x] **AC-0046.** Text in an answer shows as literal text: a product description, a vendor name, a customer name, a void reason, or a model answer's number `<b>9</b>` (from a question that contains it) shows as those eight characters and adds no element to the page.
 
 Choosing what to look up
 
-- [ ] **AC-0050.** A product query with no usable product and at least one candidate shows "Which product do you mean?" and one button per candidate, in candidate order, each named "<code> <description>". In the ask catalog fixture, a `raw_stock` model answer with `product_code` "502" and `candidates` ["502", "RAW-TOM", "RAW-TOM", "RAW-OLD", "RAW-TKB"] shows the buttons "RAW-TOM Turkey Drums TOM (raw)" and "RAW-TKB Turkey Breast (raw)".
-- [ ] **AC-0051.** A model answer with seven usable candidates gives the first five as its candidates.
-- [ ] **AC-0052.** Pressing an AC-0050 button shows the answer to the model answer's query for that button's product.
-- [ ] **AC-0053.** A product query with no usable product and no candidate says "Name the product in your question, by its code or its description."
-- [ ] **AC-0054.** A number query with no usable number says "Add the sale number to your question." for `sale_lots` and "Add the lot number to your question." for `lot_sales`.
-- [ ] **AC-0048.** A `lot_sales` model answer whose `number` is 64 characters long and appears in the question gives the choice of `lot_sales` for that number.
-- [ ] **AC-0049.** A `sale_lots` model answer whose `number` is "S-5001" for the question "Which lots went into sale S-5000?" gives the AC-0054 outcome.
-- [ ] **AC-0047.** A `lot_sales` model answer whose `number` is "L-20261001-1A2B3C" for the question "Who bought from lot L-20261001-1a2b3c?" gives the AC-0054 outcome.
-- [ ] **AC-0055.** For the question "Which lots went into sale S-5000?", a `sale_lots` model answer whose `number` is " S-5000 " gives the choice of `sale_lots` for S-5000.
-- [ ] **AC-0056.** A number query's model answer whose `number` is 65 characters long and appears in the question gives the AC-0054 outcome for its query.
-- [ ] **AC-0057.** A model answer whose `query` is null says "Ask can't answer that question. Try one of the questions below."
-- [ ] **AC-0058.** A `pricing_attention` or `sellable_now` model answer gives the choice of its query whatever its `product_code`, `candidates`, and `number` hold.
-- [ ] **AC-0059.** When the model answer's product is made inactive after the product list read and before the choice's read, the ask press says "The answer couldn't be looked up. Ask your question again." The check makes RAW-TOM inactive while the fake model holds a `raw_stock` model answer for RAW-TOM.
+- [x] **AC-0050.** A product query with no usable product and at least one candidate shows "Which product do you mean?" and one button per candidate, in candidate order, each named "<code> <description>". In the ask catalog fixture, a `raw_stock` model answer with `product_code` "502" and `candidates` ["502", "RAW-TOM", "RAW-TOM", "RAW-OLD", "RAW-TKB"] shows the buttons "RAW-TOM Turkey Drums TOM (raw)" and "RAW-TKB Turkey Breast (raw)".
+- [x] **AC-0051.** A model answer with seven usable candidates gives the first five as its candidates.
+- [x] **AC-0052.** Pressing an AC-0050 button shows the answer to the model answer's query for that button's product.
+- [x] **AC-0053.** A product query with no usable product and no candidate says "Name the product in your question, by its code or its description."
+- [x] **AC-0054.** A number query with no usable number says "Add the sale number to your question." for `sale_lots` and "Add the lot number to your question." for `lot_sales`.
+- [x] **AC-0048.** A `lot_sales` model answer whose `number` is 64 characters long and appears in the question gives the choice of `lot_sales` for that number.
+- [x] **AC-0049.** A `sale_lots` model answer whose `number` is "S-5001" for the question "Which lots went into sale S-5000?" gives the AC-0054 outcome.
+- [x] **AC-0047.** A `lot_sales` model answer whose `number` is "L-20261001-1A2B3C" for the question "Who bought from lot L-20261001-1a2b3c?" gives the AC-0054 outcome.
+- [x] **AC-0055.** For the question "Which lots went into sale S-5000?", a `sale_lots` model answer whose `number` is " S-5000 " gives the choice of `sale_lots` for S-5000.
+- [x] **AC-0056.** A number query's model answer whose `number` is 65 characters long and appears in the question gives the AC-0054 outcome for its query.
+- [x] **AC-0057.** A model answer whose `query` is null says "Ask can't answer that question. Try one of the questions below."
+- [x] **AC-0058.** A `pricing_attention` or `sellable_now` model answer gives the choice of its query whatever its `product_code`, `candidates`, and `number` hold.
+- [x] **AC-0059.** When the model answer's product is made inactive after the product list read and before the choice's read, the ask press says "The answer couldn't be looked up. Ask your question again." The check makes RAW-TOM inactive while the fake model holds a `raw_stock` model answer for RAW-TOM.
 
 What the model receives
 
-- [ ] **AC-0060.** A question's request body has exactly the top-level fields `model`, `max_tokens`, `system`, `messages`, and `output_config`, with `model` `claude-opus-5-5`, `max_tokens` 16000, and `output_config` holding exactly `effort` `low` and a `format` of type `json_schema` holding the answer schema; and the request carries no `anthropic-beta` header.
-- [ ] **AC-0061.** In the ask catalog fixture, the request's answer schema allows exactly the codes RAW-CHK, RAW-TKB, RAW-TOM, 502, and 503 as the values of `product_code`, besides null, and of each `candidates` item.
-- [ ] **AC-0062.** In the ask catalog fixture, a question's `messages` hold one user message that contains the question as typed and every active raw product's and active finished product's code and description, and contains neither "RAW-OLD" nor "Old Turkey (raw)".
-- [ ] **AC-0063.** In the ask catalog fixture with these values stored, a request for the question "How much RAW-TOM do I have?" contains none of them: the vendor names "Reyes Meats" and "Valley Poultry"; Reyes Meats' contact name "Sentinel Contact", phone "555-0199", email "sentinel@example.test", and notes "sentinel vendor note"; RAW-TOM's brand "Sentinel Brand"; the customer name "Fulton Market Deli"; lot A's and lot B's numbers; batch 1's number; "S-5000"; a RAW-TOM lot with lot number "L-SENTINEL", a cost of 9.8765 per lb, and notes "sentinel lot note"; the operator's email; the browser's Supabase auth cookie value; and the Supabase anon key.
-- [ ] **AC-0064.** A request's `system` field is the same text for two different questions sent with two different sets of active products, and contains neither question.
-- [ ] **AC-0065.** A request carries the configured key in its `x-api-key` header and carries no `authorization` header, also when `ANTHROPIC_AUTH_TOKEN` is set in the app's environment.
-- [ ] **AC-0066.** Ignoring case and spaces, no header value in a request contains this machine's host name; its operating system's name as Node.js reports it (`os.type()` or `os.platform()`), as its product name (macOS, Windows, or Linux), or as the header inventory lists it; its CPU architecture (`os.arch()`); or its Node.js version with or without its leading `v`.
-- [ ] **AC-0067.** With a sentinel value as `ANTHROPIC_API_KEY`, no response the browser receives in any page state contains it, and no file under `.next/static` contains it after `npm run build`.
-- [ ] **AC-0068.** An ask press that reaches the model service sends it exactly one request, also when the service answers with status 429, 500, or 529 or drops the connection.
-- [ ] **AC-0069.** A lookup press, whatever its outcome, sends no request to the model service.
+- [x] **AC-0060.** A question's request body has exactly the top-level fields `model`, `max_tokens`, `system`, `messages`, and `output_config`, with `model` `claude-opus-5-5`, `max_tokens` 16000, and `output_config` holding exactly `effort` `low` and a `format` of type `json_schema` holding the answer schema; and the request carries no `anthropic-beta` header.
+- [x] **AC-0061.** In the ask catalog fixture, the request's answer schema allows exactly the codes RAW-CHK, RAW-TKB, RAW-TOM, 502, and 503 as the values of `product_code`, besides null, and of each `candidates` item.
+- [x] **AC-0062.** In the ask catalog fixture, a question's `messages` hold one user message that contains the question as typed and every active raw product's and active finished product's code and description, and contains neither "RAW-OLD" nor "Old Turkey (raw)".
+- [x] **AC-0063.** In the ask catalog fixture with these values stored, a request for the question "How much RAW-TOM do I have?" contains none of them: the vendor names "Reyes Meats" and "Valley Poultry"; Reyes Meats' contact name "Sentinel Contact", phone "555-0199", email "sentinel@example.test", and notes "sentinel vendor note"; RAW-TOM's brand "Sentinel Brand"; the customer name "Fulton Market Deli"; lot A's and lot B's numbers; batch 1's number; "S-5000"; a RAW-TOM lot with lot number "L-SENTINEL", a cost of 9.8765 per lb, and notes "sentinel lot note"; the operator's email; the browser's Supabase auth cookie value; and the Supabase anon key.
+- [x] **AC-0064.** A request's `system` field is the same text for two different questions sent with two different sets of active products, and contains neither question.
+- [x] **AC-0065.** A request carries the configured key in its `x-api-key` header and carries no `authorization` header, also when `ANTHROPIC_AUTH_TOKEN` is set in the app's environment.
+- [x] **AC-0066.** Ignoring case and spaces, no header value in a request contains this machine's host name; its operating system's name as Node.js reports it (`os.type()` or `os.platform()`), as its product name (macOS, Windows, or Linux), or as the header inventory lists it; its CPU architecture (`os.arch()`); or its Node.js version with or without its leading `v`.
+- [x] **AC-0067.** With a sentinel value as `ANTHROPIC_API_KEY`, no response the browser receives in any page state contains it, and no file under `.next/static` contains it after `npm run build`.
+- [x] **AC-0068.** An ask press that reaches the model service sends it exactly one request, also when the service answers with status 429, 500, or 529 or drops the connection.
+- [x] **AC-0069.** A lookup press, whatever its outcome, sends no request to the model service.
 
 Refused and failed requests
 
-- [ ] **AC-0070.** When the session has ended after the page loaded, an ask press says "You're signed out. Sign in again to ask a question." and a lookup press says "You're signed out. Sign in again to look up this answer.", and neither sends a request to the model service.
-- [ ] **AC-0071.** When an ask or lookup press's caller check gets no answer, or is answered with an error other than the operator check's `42501` refusal, the action returns "The question wasn't answered. Try again in a moment." for an ask press or "The answer wasn't looked up. Try again in a moment." for a lookup press, and sends no request to the model service.
-- [ ] **AC-0072.** When `ANTHROPIC_API_KEY` is empty in the app's environment, an ask press says "Ask isn't set up. Set ANTHROPIC_API_KEY in the app's .env file, then restart the app." and sends no request.
-- [ ] **AC-0073.** When `ANTHROPIC_API_KEY` is set neither in the app's process nor in its `.env`, an ask press gives the AC-0072 outcome.
-- [ ] **AC-0074.** When `ANTHROPIC_API_KEY` is set and not empty and there is no model address, an ask press says "Ask isn't set up. ANTHROPIC_BASE_URL must be unset, or a loopback address for tests. Fix it, then restart the app." and sends no request.
-- [ ] **AC-0075.** When an ask press's product list read fails, the action returns "The question wasn't answered. Try again in a moment." and sends no request to the model service.
-- [ ] **AC-0076.** When the model service answers with status 401 or 403, the page says "Ask isn't working. The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file."
-- [ ] **AC-0077.** When the model service ends its answer with stop reason `refusal`, the page says "The question wasn't answered. The model declined it. Try asking another way."
-- [ ] **AC-0078.** When the model service gives no complete response within 60 seconds of the request being sent, also when its response headers arrive in time and its body stalls, drops the connection, answers with an error status (400 or above) other than 401 and 403, ends its answer with stop reason `max_tokens`, or answers with something that does not parse as the answer schema, the page says "The question wasn't answered. Try again in a moment."
-- [ ] **AC-0079.** A model answer that parses as JSON but has a property the answer schema does not name, lacks one it names, gives one a value of the wrong type, or gives a `query` that is neither a catalog id nor null is AC-0078's outcome.
-- [ ] **AC-0080.** When a choice's read fails, the page says "The answer couldn't be looked up. Try again." with a button named "Look it up again".
-- [ ] **AC-0081.** Pressing "Look it up again" once the database answers shows the choice's answer.
-- [ ] **AC-0082.** A lookup request replayed with a query that is not a catalog id, or with a product or number that is not usable for its query, returns "The answer couldn't be looked up. Ask your question again." The check replays `raw_stock` with RAW-OLD, with 502, and with no product; `sale_lots` with a 65-character number; and `stock_value` with RAW-TOM.
-- [ ] **AC-0083.** Each ask failure that comes from the model service or its readiness leaves one server log line holding the ask action's name, the kind named here, and the model service's status when there is one, and no other text: AC-0072 and AC-0073, not-set-up; AC-0074, address-refused; AC-0076, key-refused; AC-0077, declined; no complete response within 60 seconds, no-answer; a dropped connection or another error status, service-error; stop reason `max_tokens` or a model answer that does not parse as the answer schema, unreadable. The check fails a press whose error message carries the key, the question, and a product description.
-- [ ] **AC-0084.** With `ANTHROPIC_LOG=debug` in the app's environment, the server's output during an ask press contains none of the question, the active products' descriptions, or the key.
-- [ ] **AC-0085.** With `.env` holding `ANTHROPIC_API_KEY=sk-ant-env-sentinel` and `ANTHROPIC_BASE_URL=https://api.anthropic.com`, `npm run test:e2e` run under a sandbox that refuses outbound connections to every address but loopback exits 0, and no request the fake model receives during the run carries `sk-ant-env-sentinel`.
-- [ ] **AC-0086.** An ask press or a lookup press, whatever its outcome, changes no row in any `public` or `private` table. The check fixture includes the margin case with 502's list price set to 3.29 through `pg` after `/ask` loads, so a watch run by the press would end the open margin alert.
+- [x] **AC-0070.** When the session has ended after the page loaded, an ask press says "You're signed out. Sign in again to ask a question." and a lookup press says "You're signed out. Sign in again to look up this answer.", and neither sends a request to the model service.
+- [x] **AC-0071.** When an ask or lookup press's caller check gets no answer, or is answered with an error other than the operator check's `42501` refusal, the action returns "The question wasn't answered. Try again in a moment." for an ask press or "The answer wasn't looked up. Try again in a moment." for a lookup press, and sends no request to the model service.
+- [x] **AC-0072.** When `ANTHROPIC_API_KEY` is empty in the app's environment, an ask press says "Ask isn't set up. Set ANTHROPIC_API_KEY in the app's .env file, then restart the app." and sends no request.
+- [x] **AC-0073.** When `ANTHROPIC_API_KEY` is set neither in the app's process nor in its `.env`, an ask press gives the AC-0072 outcome.
+- [x] **AC-0074.** When `ANTHROPIC_API_KEY` is set and not empty and there is no model address, an ask press says "Ask isn't set up. ANTHROPIC_BASE_URL must be unset, or a loopback address for tests. Fix it, then restart the app." and sends no request.
+- [x] **AC-0075.** When an ask press's product list read fails, the action returns "The question wasn't answered. Try again in a moment." and sends no request to the model service.
+- [x] **AC-0076.** When the model service answers with status 401 or 403, the page says "Ask isn't working. The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file."
+- [x] **AC-0077.** When the model service ends its answer with stop reason `refusal`, the page says "The question wasn't answered. The model declined it. Try asking another way."
+- [x] **AC-0078.** When the model service gives no complete response within 60 seconds of the request being sent, also when its response headers arrive in time and its body stalls, drops the connection, answers with an error status (400 or above) other than 401 and 403, ends its answer with stop reason `max_tokens`, or answers with something that does not parse as the answer schema, the page says "The question wasn't answered. Try again in a moment."
+- [x] **AC-0079.** A model answer that parses as JSON but has a property the answer schema does not name, lacks one it names, gives one a value of the wrong type, or gives a `query` that is neither a catalog id nor null is AC-0078's outcome.
+- [x] **AC-0080.** When a choice's read fails, the page says "The answer couldn't be looked up. Try again." with a button named "Look it up again".
+- [x] **AC-0081.** Pressing "Look it up again" once the database answers shows the choice's answer.
+- [x] **AC-0082.** A lookup request replayed with a query that is not a catalog id, or with a product or number that is not usable for its query, returns "The answer couldn't be looked up. Ask your question again." The check replays `raw_stock` with RAW-OLD, with 502, and with no product; `sale_lots` with a 65-character number; and `stock_value` with RAW-TOM.
+- [x] **AC-0083.** Each ask failure that comes from the model service or its readiness leaves one server log line holding the ask action's name, the kind named here, and the model service's status when there is one, and no other text: AC-0072 and AC-0073, not-set-up; AC-0074, address-refused; AC-0076, key-refused; AC-0077, declined; no complete response within 60 seconds, no-answer; a dropped connection or another error status, service-error; stop reason `max_tokens` or a model answer that does not parse as the answer schema, unreadable. The check fails a press whose error message carries the key, the question, and a product description.
+- [x] **AC-0084.** With `ANTHROPIC_LOG=debug` in the app's environment, the server's output during an ask press contains none of the question, the active products' descriptions, or the key.
+- [x] **AC-0085.** With `.env` holding `ANTHROPIC_API_KEY=sk-ant-env-sentinel` and `ANTHROPIC_BASE_URL=https://api.anthropic.com`, `npm run test:e2e` run under a sandbox that refuses outbound connections to every address but loopback exits 0, and no request the fake model receives during the run carries `sk-ant-env-sentinel`.
+- [x] **AC-0086.** An ask press or a lookup press, whatever its outcome, changes no row in any `public` or `private` table. The check fixture includes the margin case with 502's list price set to 3.29 through `pg` after `/ask` loads, so a watch run by the press would end the open margin alert.
 
 Error page
 
-- [ ] **AC-0090.** After a `/ask` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the page without a browser reload.
-- [ ] **AC-0091.** When the `/ask` error page appears, keyboard focus is on its heading.
+- [x] **AC-0090.** After a `/ask` load fails because the database is unreachable, pressing Try again once the database is reachable again shows the page without a browser reload.
+- [x] **AC-0091.** When the `/ask` error page appears, keyboard focus is on its heading.
 
 Recorded page states
 
-- [ ] **AC-0092.** In each recorded page state, the checks of AC-0100, AC-0101, AC-0102, AC-0108, and AC-0109 pass.
-- [ ] **AC-0093.** After each press's AC-0071 outcome with the local auth service stopped, and after the AC-0073 outcome, keyboard focus is on the message that states it.
+- [x] **AC-0092.** In each recorded page state, the checks of AC-0100, AC-0101, AC-0102, AC-0108, and AC-0109 pass.
+- [x] **AC-0093.** After each press's AC-0071 outcome with the local auth service stopped, and after the AC-0073 outcome, keyboard focus is on the message that states it.
 
 Accessibility and phone width
 
-- [ ] **AC-0100.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
-- [ ] **AC-0101.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
-- [ ] **AC-0102.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
-- [ ] **AC-0103.** Each of these can be completed with the keyboard alone: Ask with a typed question, an AC-0050 product button, Look it up again, and an answer's link.
-- [ ] **AC-0104.** After an answer, keyboard focus is on its heading, "Answer".
-- [ ] **AC-0105.** After an AC-0011 refusal, keyboard focus is on the question field.
-- [ ] **AC-0106.** After an ask failure except AC-0071 and AC-0073, or the AC-0050, AC-0053, AC-0054, AC-0057, or on-page AC-0082 outcome, keyboard focus is on the message that states it.
-- [ ] **AC-0107.** After an AC-0011 refusal, the question field's `aria-describedby` points to the message.
-- [ ] **AC-0108.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
-- [ ] **AC-0109.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
+- [x] **AC-0100.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
+- [x] **AC-0101.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
+- [x] **AC-0102.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
+- [x] **AC-0103.** Each of these can be completed with the keyboard alone: Ask with a typed question, an AC-0050 product button, Look it up again, and an answer's link.
+- [x] **AC-0104.** After an answer, keyboard focus is on its heading, "Answer".
+- [x] **AC-0105.** After an AC-0011 refusal, keyboard focus is on the question field.
+- [x] **AC-0106.** After an ask failure except AC-0071 and AC-0073, or the AC-0050, AC-0053, AC-0054, AC-0057, or on-page AC-0082 outcome, keyboard focus is on the message that states it.
+- [x] **AC-0107.** After an AC-0011 refusal, the question field's `aria-describedby` points to the message.
+- [x] **AC-0108.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
+- [x] **AC-0109.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
 
 Live questions
 
-- [ ] **AC-0110.** In the recorded live run, every sample whose expected outcome is a choice gets that choice, AC-0050's product buttons including its expected product, or the AC-0057 decline.
-- [ ] **AC-0111.** In the recorded live run, at least 90% of the samples whose expected outcome is a choice get exactly that choice.
-- [ ] **AC-0112.** In the recorded live run, every sample whose expected outcome is AC-0050's product buttons gets buttons that include both its named products, or the AC-0057 decline.
-- [ ] **AC-0113.** In the recorded live run, every out-of-catalog sample gets the AC-0057 decline.
-- [ ] **AC-0114.** In the recorded live run, over the ask catalog fixture plus 300 more active products (150 raw and 150 finished), the question "How much RAW-TOM do I have?" gets the `raw_stock` choice for RAW-TOM.
+- [x] **AC-0110.** In the recorded live run, every sample whose expected outcome is a choice gets that choice, AC-0050's product buttons including its expected product, or the AC-0057 decline.
+- [x] **AC-0111.** In the recorded live run, at least 90% of the samples whose expected outcome is a choice get exactly that choice.
+- [x] **AC-0112.** In the recorded live run, every sample whose expected outcome is AC-0050's product buttons gets buttons that include both its named products, or the AC-0057 decline.
+- [x] **AC-0113.** In the recorded live run, every out-of-catalog sample gets the AC-0057 decline.
+- [x] **AC-0114.** In the recorded live run, over the ask catalog fixture plus 300 more active products (150 raw and 150 finished), the question "How much RAW-TOM do I have?" gets the `raw_stock` choice for RAW-TOM.
 
 Build and repository checks
 
-- [ ] **AC-0120.** `npm run build` exits 0.
-- [ ] **AC-0121.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
-- [ ] **AC-0122.** `npm run typecheck` exits 0.
-- [ ] **AC-0123.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
-- [ ] **AC-0124.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
-- [ ] **AC-0125.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
-- [ ] **AC-0126.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
+- [x] **AC-0120.** `npm run build` exits 0.
+- [x] **AC-0121.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
+- [x] **AC-0122.** `npm run typecheck` exits 0.
+- [x] **AC-0123.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
+- [x] **AC-0124.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
+- [x] **AC-0125.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
+- [x] **AC-0126.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
   - `grep -rniE "env(\.|\[['\"])[a-z0-9_]*(service_role|secret|jwt|db_url|database_url|postgres)" src/ | grep -v '^src/privileged-env.ts:'`
   - `grep -rnE "\}\s*=\s*process\.env" src/`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`
-- [ ] **AC-0127.** No file under `src/` but `src/app/_server/model.ts` imports `@anthropic-ai/sdk` or reads an `ANTHROPIC_` variable from the environment: `grep -rnE "@anthropic-ai/sdk|env(\.|\[['\"])ANTHROPIC_" src/ | grep -v '^src/app/_server/model.ts:'` prints nothing on `main` when the build starts and on the closing commit.
-- [ ] **AC-0128.** The files under `src/` whose text contains `process.env` are the same as on `main` when the build starts: `grep -rlE "process\.env" src/ | sort` prints the same list on both.
-- [ ] **AC-0129.** Compared with `main` when the build starts, no file under `supabase/` differs: `git diff --stat <that main> -- supabase/` prints nothing.
-- [ ] **AC-0130.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff, and `git diff <that main> -- src/lib/database.types.ts` prints nothing.
-- [ ] **AC-0131.** Compared with `main`'s `package.json` when the build starts, `dependencies` and `devDependencies` are unchanged.
-- [ ] **AC-0132.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
+- [x] **AC-0127.** No file under `src/` but `src/app/_server/model.ts` imports `@anthropic-ai/sdk` or reads an `ANTHROPIC_` variable from the environment: `grep -rnE "@anthropic-ai/sdk|env(\.|\[['\"])ANTHROPIC_" src/ | grep -v '^src/app/_server/model.ts:'` prints nothing on `main` when the build starts and on the closing commit.
+- [x] **AC-0128.** The files under `src/` whose text contains `process.env` are the same as on `main` when the build starts: `grep -rlE "process\.env" src/ | sort` prints the same list on both.
+- [x] **AC-0129.** Compared with `main` when the build starts, no file under `supabase/` differs: `git diff --stat <that main> -- supabase/` prints nothing.
+- [x] **AC-0130.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff, and `git diff <that main> -- src/lib/database.types.ts` prints nothing.
+- [x] **AC-0131.** Compared with `main`'s `package.json` when the build starts, `dependencies` and `devDependencies` are unchanged.
+- [x] **AC-0132.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
 
 ## Follow-ons
 

@@ -215,3 +215,404 @@ Post-gates reviewers, dispatched in parallel: `adversarial-reviewer`, `security-
 | Finding | Severity | Disposition |
 | --- | --- | --- |
 | Adversarial 1: the in-flight refusal test's title names AC-0107, which it did not check | Nit | repair-the-artifact: the test now asserts the field's `aria-describedby` is `ask-question-error` right after the refusal |
+
+## Review round 4 and completion evidence handoff (2026-10-18)
+
+Review round 4 (delta 3e7209e..6667e1c, `adversarial-reviewer`): the exact clean sentinel, recorded as a direct clean (round 4, retry 3 of 5). `quality-engineer` was clean in round 3, `frontend-reviewer` in round 2 (the later deltas change no page code), and `security-reviewer` after adjudication in round 1 (no later delta crosses a trust boundary); `experience-reviewer` is not installed (named skip). Gates on 6667e1c: typecheck and build pass; `E2E_PORT=3200 npm test` passes with Vitest 811 tests (44 files) and Playwright 609 tests. `npm run test:costing` passed 37 tests on e8473a3, and nothing in `src/lib/`, a migration, or a database function changed after it. All 118 criteria are ticked, the spec is Shipped, the plan is Done, and `lint-spec-status` is clean. `reviewers-clean` moved the run to CODE-HUMAN-GATE (seq 33).
+
+Tail triage: the feature adds 4,299 lines under `src/` and `test/`, so its review shape is MIXED; the plan's five layers are its decomposition, each its own commits (T1 62b4bab, T2 f423b8b, T3 90ad0a0, T4 2f5dd3f and 21db16e, T5 51857d3 and e8473a3), followed by the review fixes (1232c5e, 3e7209e, 6667e1c). One review unit covered them.
+
+For close-work:
+- **Delivery:** work-loop run `337c2093-a31b-4019-9522-73dac794f0f6`, branch `feat/ask-your-data`, built in `~/Developer/meat-ops-ask` on stack B.
+- **Accepted outcome and authority:** `SYSTEM-SPEC.md` §13 feature 6 (Ask your data: the typed query catalog and the plain-language answer surface); spec and plan approved by the owner on 2026-10-16; the owner directed the merge of `main` and the move to stack B on 2026-10-18, and chose on 2026-10-18 to copy the key line from `../meat-ops/.env` for the live run.
+- **Implemented scope and evidence:** T1 to T5, each with its section above and its wave's gates; the recorded run, the page inspection, and the live run (AC-0110 to AC-0114) under T5; review rounds 1 to 4.
+- **Durable outputs:** `SYSTEM-SPEC.md` §7, §10, and §11 (T5); `docs/architecture/overview.md`, the areas map, Variables and Network bullets, and the AI connection section (T5 and review round 1); `AGENTS.md`'s environment paragraph (T5); `src/lib/database.types.ts` unchanged (AC-0130).
+- **Non-goals and follow-ons:** the spec's Follow-on (asking a question aloud needs voice input, `SYSTEM-SPEC.md` §10); the hosted rollout, which belongs to the hosted-supabase-rollout intent. No review finding is deferred.
+- **Unresolved obligations:** the pull request is not open and the branch's commits since 9e90129 are not pushed, both waiting on the owner; nothing has been applied to the hosted project.
+- **Completion event candidate:** the merge of `feat/ask-your-data` into `main`.
+- **Authority facts:** the owner is the only source, write, and deletion authority; no hosted write was made, and no review artifact under `.context/` is committed. The owner's key stays in this folder's gitignored `.env`.
+
+### Review verdict
+
+```json review-verdict.v1
+{
+  "schema_version": "review-verdict.v1",
+  "state": "READY_WITH_RESIDUAL_RISK",
+  "mode": "full",
+  "review_unit": "ask-your-data post-gates review, target 6667e1c against main ca5c891",
+  "warranted_reviewers": [
+    {
+      "role": "adversarial-reviewer",
+      "mandatory": true,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/337c2093-a31b-4019-9522-73dac794f0f6/4-post-gates-adversarial-reviewer-raw.md"
+    },
+    {
+      "role": "security-reviewer",
+      "mandatory": true,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/337c2093-a31b-4019-9522-73dac794f0f6/1-post-gates-security-reviewer-adjudication.md"
+    },
+    {
+      "role": "quality-engineer",
+      "mandatory": true,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/337c2093-a31b-4019-9522-73dac794f0f6/3-post-gates-quality-engineer-raw.md"
+    },
+    {
+      "role": "frontend-reviewer",
+      "mandatory": false,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/337c2093-a31b-4019-9522-73dac794f0f6/2-post-gates-frontend-reviewer-raw.md"
+    }
+  ],
+  "named_skips": [
+    {
+      "code": "experience-reviewer-absent",
+      "category": "non-mandatory reviewer not installed",
+      "reason": "The experience-reviewer agent is not installed in this repository.",
+      "residual_eligible": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "r1-adversarial-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "blocker",
+      "effective_severity": "blocker",
+      "citation": "test/e2e/ask.spec.ts:592",
+      "text": "Page-state checks ran after only 2 of the 8 answer states.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "checkPageState after every catalog answer (1232c5e)."
+    },
+    {
+      "id": "r1-adversarial-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "test/ask-answers.test.ts:147",
+      "text": "AC-0026 and AC-0028 plural leads and multi-row order untested.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Two-product pricing and sellable cases (1232c5e, 3e7209e)."
+    },
+    {
+      "id": "r1-adversarial-3",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:1337",
+      "text": "Nothing pinned the 60-second limit from below.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Elapsed time bounded to 55 to 75 s (1232c5e)."
+    },
+    {
+      "id": "r1-adversarial-5",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/ask-rules.test.ts:402",
+      "text": "Unit assertions that could not fail or named the wrong case.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Dead loop removed, counts measured, duplicate removed (1232c5e)."
+    },
+    {
+      "id": "r1-adversarial-6",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/architecture/overview.md:17",
+      "text": "The areas map did not name askModel.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "src/app/ row names the ask call (1232c5e)."
+    },
+    {
+      "id": "r1-quality-1",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "test/e2e/ask-page.ts:234",
+      "text": "The press watch hid its own failures.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Failures recorded so the afterEach fails (1232c5e, 3e7209e)."
+    },
+    {
+      "id": "r1-quality-4",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "test/e2e/ask.spec.ts:592",
+      "text": "Page-state checks after 2 of 8 answers.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same repair as r1-adversarial-1 (1232c5e)."
+    },
+    {
+      "id": "r1-quality-5",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:1352",
+      "text": "The 60-second cases did not bound the time.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Bounded to 55 to 75 s (1232c5e)."
+    },
+    {
+      "id": "r1-quality-6",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:261",
+      "text": "AC-0010 examples compared with the code's own catalog.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Literal examples (1232c5e)."
+    },
+    {
+      "id": "r1-quality-7",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/ask-rules.test.ts:402",
+      "text": "A sentinel check that could not fail.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Removed (1232c5e)."
+    },
+    {
+      "id": "r1-quality-8",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/ask-actions.test.ts:343",
+      "text": "A lookup test could not tell whether the read ran.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Replacement counts its reads (1232c5e)."
+    },
+    {
+      "id": "r1-quality-9",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/ask-actions.test.ts:212",
+      "text": "A test label named a read failure for a model failure.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Duplicate test removed (1232c5e)."
+    },
+    {
+      "id": "r1-quality-10",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:1356",
+      "text": "The 60-second tests read the spare app's log once.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Log polled (1232c5e)."
+    },
+    {
+      "id": "r1-frontend-1",
+      "source_role": "frontend-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "src/app/ask/ask-panel.tsx:102",
+      "text": "A refusal made with Enter was not announced.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "role=alert on the refusal (1232c5e)."
+    },
+    {
+      "id": "r1-frontend-2",
+      "source_role": "frontend-reviewer",
+      "severity": "nit",
+      "effective_severity": "concern",
+      "citation": "src/app/ask/ask-panel.tsx:78",
+      "text": "An old refusal stayed on the field while the next Ask was in flight.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Refusal shown only when no press is in flight (1232c5e)."
+    },
+    {
+      "id": "r1-frontend-3",
+      "source_role": "frontend-reviewer",
+      "severity": "nit",
+      "effective_severity": "concern",
+      "citation": "src/app/ask/ask-panel.tsx:92",
+      "text": "Enter before hydration could put the question in the address.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The field has no name (1232c5e)."
+    },
+    {
+      "id": "r2-quality-1",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "test/ask-answers.test.ts:216",
+      "text": "The sellable_now case could not fail on order.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Third product 1000 separates code order (3e7209e)."
+    },
+    {
+      "id": "r2-adversarial-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/ask-answers.test.ts:181",
+      "text": "Title named this spec's AC-0064.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Named as menu-pricing AC-0064 (3e7209e)."
+    },
+    {
+      "id": "r2-adversarial-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:322",
+      "text": "Title named AC-0011.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Removed (3e7209e)."
+    },
+    {
+      "id": "r2-adversarial-3",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:307",
+      "text": "Title named AC-0105 without a focus check.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Removed (3e7209e)."
+    },
+    {
+      "id": "r2-adversarial-5",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/ask-your-data/notes/verification-ledger.md:192",
+      "text": "One finding number for two findings.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Renumbered (3e7209e)."
+    },
+    {
+      "id": "r2-quality-2",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/ask-answers.test.ts:181",
+      "text": "New titles cited criteria they did not check.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same repair as r2-adversarial-1 to 3 (3e7209e)."
+    },
+    {
+      "id": "r2-quality-4",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:270",
+      "text": "A length check that could not fail.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Removed (3e7209e)."
+    },
+    {
+      "id": "r2-quality-5",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask-page.ts:239",
+      "text": "A watch failure line named no step and could count twice.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Counted once, step and message named (3e7209e)."
+    },
+    {
+      "id": "r2-quality-6",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:657",
+      "text": "See alerts expectation keyed on query ids.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "urgentAlert flag on each case row (3e7209e)."
+    },
+    {
+      "id": "r2-quality-7",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/ask-your-data/notes/verification-ledger.md:192",
+      "text": "One finding number for two findings.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same repair as r2-adversarial-5 (3e7209e)."
+    },
+    {
+      "id": "r3-adversarial-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/ask.spec.ts:306",
+      "text": "Title named AC-0107 without checking it.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "aria-describedby asserted after the refusal (6667e1c)."
+    }
+  ],
+  "required_gates": [
+    {
+      "name": "npm run typecheck",
+      "outcome": "passed",
+      "evidence": "6667e1c, exit 0"
+    },
+    {
+      "name": "npm run build",
+      "outcome": "passed",
+      "evidence": "6667e1c, exit 0"
+    },
+    {
+      "name": "E2E_PORT=3200 npm test",
+      "outcome": "passed",
+      "evidence": "6667e1c, Vitest 811 (44 files), Playwright 609"
+    },
+    {
+      "name": "npm run test:costing",
+      "outcome": "passed",
+      "evidence": "e8473a3, 37 passed; no src/lib, migration, or function change since"
+    },
+    {
+      "name": "npm run gen:types",
+      "outcome": "passed",
+      "evidence": "51857d3, database.types.ts byte-identical"
+    },
+    {
+      "name": "npm audit --omit=dev --audit-level=high",
+      "outcome": "passed",
+      "evidence": "51857d3, 0 vulnerabilities"
+    },
+    {
+      "name": "lint-spec-status",
+      "outcome": "passed",
+      "evidence": "spec metadata clean after Shipped"
+    }
+  ],
+  "deferrals": [],
+  "blind_spots": [],
+  "human_gate_status": "pending",
+  "non_authoritative_score": null
+}
+```
