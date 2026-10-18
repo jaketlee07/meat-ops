@@ -220,23 +220,27 @@ export async function watchPresses(context: BrowserContext): Promise<PressWatch>
         await route.continue().catch(() => {});
         return;
       }
+      watch.presses += 1;
+      const press = watch.presses;
+      let step = "the fingerprint before";
       try {
         const before = await allFingerprints();
+        step = "the fetch";
         const response = await route.fetch({ timeout: 0 });
+        step = "the fingerprint after";
         const after = await allFingerprints();
-        watch.presses += 1;
         for (const name of Object.keys({ ...before, ...after })) {
           if (!watch.ignore.has(name) && before[name] !== after[name]) {
-            watch.changes.push(`press ${watch.presses} changed ${name}`);
+            watch.changes.push(`press ${press} changed ${name}`);
           }
         }
+        step = "the fulfill";
         await route.fulfill({ response });
       } catch (error) {
-        // A watch failure is a test failure: the press is counted and named, so
-        // the afterEach fails instead of the press passing unwatched.
-        watch.presses += 1;
-        const name = error instanceof Error ? error.name : "unknown";
-        watch.changes.push(`press ${watch.presses}: watch failed: ${name}`);
+        // A watch failure is a test failure: the line names the press, the step,
+        // and the error, so the afterEach fails instead of the press passing unwatched.
+        const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        watch.changes.push(`press ${press}: watch failed at ${step}: ${message}`);
         await route.abort().catch(() => {});
       }
     },

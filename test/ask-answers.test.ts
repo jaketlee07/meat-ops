@@ -178,7 +178,7 @@ async function addProduct503(): Promise<void> {
   await run(receiveCall(RAW_TKB_ID, VENDOR_ID, 2000, 2.1, "2026-10-02"));
 }
 
-it("AC-0026, AC-0064: two products that need a new price read the plural lead, below-target 503 before 502", async () => {
+it("AC-0026: two products that need a new price read the plural lead, below-target 503 before 502 (menu-pricing AC-0064 order)", async () => {
   await receiveOnly();
   await addProduct503();
   // 502 has no list price (needs one, not below target); 503 is below its target.
@@ -213,13 +213,20 @@ it("AC-0028: sellable now lists 502 with its finished and raw lbs in the sale fi
   });
 });
 
-it("AC-0028: two sellable products read the plural lead in code order", async () => {
+it("AC-0028: three sellable products read the plural lead in code order, not entry or id order", async () => {
   await receiveOnly();
   await addProduct503();
+  // Entered last, with the id that sorts last, but "1000" sorts first as text.
+  await query(
+    `insert into products(id, code, description, species, kind, raw_product_id, shrink_pct)
+     values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '1000', 'Smoked Turkey Wings', 'Turkey', 'finished', $1, 0.1000)`,
+    [RAW_TOM_ID],
+  );
   const answer = await answerFor(operator, { query: "sellable_now" });
   expect(answer?.text).toEqual({
-    lead: "You can sell 2 products now:",
+    lead: "You can sell 3 products now:",
     items: [
+      "1000 Smoked Turkey Wings: 0 lbs ready, 5,000 lbs of raw on hand",
       "502 Smoked Turkey Drums Tom: 0 lbs ready, 5,000 lbs of raw on hand",
       "503 Smoked Turkey Breast: 0 lbs ready, 2,000 lbs of raw on hand",
     ],

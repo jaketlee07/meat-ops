@@ -267,7 +267,6 @@ test.describe("the page", () => {
       "Which lots went into sale S-20261008-1a2b3c?",
       "Who bought from lot L-20261001-1a2b3c?",
     ]);
-    expect(examples).toHaveLength(8);
     // First-run: the field, Ask, and the list; no message, no answer, no status text.
     await expect(p.answer).toHaveCount(0);
     await expect(p.status).toHaveText("");
@@ -304,7 +303,7 @@ test.describe("the page", () => {
     expect(await requestCount()).toBe(0);
   });
 
-  test("AC-0105, AC-0107: a refusal leaves the field once the next valid Ask is in flight", async ({ page }) => {
+  test("AC-0012, AC-0107: a refusal leaves the field once the next valid Ask is in flight", async ({ page }) => {
     const p = await openAsk(page);
     await ask(p, "   ");
     await expect(p.error).toHaveText(QUESTION_BLANK);
@@ -319,7 +318,7 @@ test.describe("the page", () => {
     await expect(p.answer).toBeVisible();
   });
 
-  test("AC-0011: the field has no name, so an Enter before the page loads cannot put the question in the address", async ({
+  test("the field has no name, so an Enter before the page loads cannot put the question in the address (plan: nothing in the URL)", async ({
     page,
   }) => {
     const p = await openAsk(page);
@@ -500,7 +499,14 @@ interface Expected {
   link: { name: string; href: string };
 }
 
-const QUERY_CASES: Array<{ id: string; setup: () => Promise<SaleFixture>; expected: (f: SaleFixture) => Expected }> = [
+// `urgentAlert` marks a setup that opens an urgent alert (the margin case), so its
+// page carries the banner's See alerts link.
+const QUERY_CASES: Array<{
+  id: string;
+  setup: () => Promise<SaleFixture>;
+  urgentAlert?: boolean;
+  expected: (f: SaleFixture) => Expected;
+}> = [
   {
     id: "raw_stock",
     setup: async () => {
@@ -537,6 +543,7 @@ const QUERY_CASES: Array<{ id: string; setup: () => Promise<SaleFixture>; expect
       await marginCase();
       return {} as SaleFixture;
     },
+    urgentAlert: true,
     expected: () => ({
       question: "What is my margin on 502?",
       answer: modelAnswer({ query: "product_margin", product_code: "502" }),
@@ -552,6 +559,7 @@ const QUERY_CASES: Array<{ id: string; setup: () => Promise<SaleFixture>; expect
       await marginCase();
       return {} as SaleFixture;
     },
+    urgentAlert: true,
     expected: () => ({
       question: "Which products need a new price?",
       answer: modelAnswer({ query: "pricing_attention" }),
@@ -630,7 +638,7 @@ const QUERY_CASES: Array<{ id: string; setup: () => Promise<SaleFixture>; expect
 ];
 
 test.describe("answers on screen", () => {
-  for (const { id, setup, expected } of QUERY_CASES) {
+  for (const { id, setup, urgentAlert, expected } of QUERY_CASES) {
     test(`AC-0042, AC-0043, AC-0044, AC-0104: ${id} shows what was looked up, the answer, its link, and the note`, async ({
       page,
     }) => {
@@ -651,11 +659,8 @@ test.describe("answers on screen", () => {
       });
       expect(await requestCount()).toBe(1);
       await expect(p.field).toHaveValue(want.question);
-      // The margin case holds one urgent alert, so its page carries the See alerts link.
       const controls = askControls(`a ${want.link.name}`);
-      expect(await checkPageState(page)).toEqual(
-        id === "product_margin" || id === "pricing_attention" ? withSeeAlerts(controls) : controls,
-      );
+      expect(await checkPageState(page)).toEqual(urgentAlert ? withSeeAlerts(controls) : controls);
     });
   }
 

@@ -189,8 +189,21 @@ Post-gates reviewers, dispatched in parallel: `adversarial-reviewer`, `security-
 | Quality 1: the press watch hides its own failures | Concern | repair-the-artifact: a watch failure is counted and recorded, so the `afterEach` fails |
 | Frontend 1: a refusal made with Enter is not announced | Concern | repair-the-artifact: the refusal message has `role="alert"` |
 | Adversarial 3, quality 5 and 10: the 60-second cases do not bound the time and read the log once | Nit | repair-the-artifact: elapsed time from the request bounded to 55 to 75 s; the log line polled |
-| Adversarial 4, quality 7, 8, 9: unit assertions that cannot fail or name the wrong case | Nit | repair-the-artifact: dead sentinel loop removed, the lookup test counts its read, the duplicate test removed |
-| Adversarial 5: the areas map does not name `askModel` | Nit | repair-the-artifact: the `src/app/` row names `readReceipt`, `writeDigest`, and the ask call `askModel` |
+| Adversarial 5, quality 7, 8, 9: unit assertions that cannot fail or name the wrong case | Nit | repair-the-artifact: dead sentinel loop removed, the lookup test counts its read, the duplicate test removed |
+| Adversarial 6: the areas map does not name `askModel` | Nit | repair-the-artifact: the `src/app/` row names `readReceipt`, `writeDigest`, and the ask call `askModel` |
 | Quality 6: the AC-0010 examples are compared with the code's own catalog | Nit | repair-the-artifact: the eight examples asserted as literal text |
 | Frontend 2: an old refusal stays on the field while the next Ask is in flight | Nit, effective Concern (changes page behavior) | repair-the-artifact: the refusal shows only when no press is in flight |
 | Frontend 3: Enter before hydration could put the question in the address | Nit, effective Concern (changes page behavior) | repair-the-artifact: the field has no `name` |
+
+## Review round 2 (2026-10-18, delta e8473a3..1232c5e)
+
+`adversarial-reviewer`, `quality-engineer`, and `frontend-reviewer` reviewed the round 1 repairs only; `security-reviewer` was clean in round 1 and the delta crosses no trust boundary. Frontend: clean. Recorded as round 2, retry 2 of 5, with 10 sustained fingerprints. Refuted: adversarial 4 (the repaired lookup test no longer checks the choice: `test/ask-rules.test.ts` pins `parseLookup`'s choice and the AC-0069 lookup test pins the choice passed to the read), quality 3 (an uncounted read in an unchanged test, outside this round's delta).
+
+| Finding | Severity | Disposition |
+| --- | --- | --- |
+| Quality 1: the two-product `sellable_now` case cannot fail on order (code order equals entry and id order) | Concern | repair-the-artifact: a third product, code `1000`, entered last with the id that sorts last, so code order differs from both |
+| Adversarial 1, 2, 3, quality 2: three new test titles name criteria they do not check | Nit | repair-the-artifact: AC-0064 named as menu-pricing AC-0064; AC-0011 and AC-0105 removed from the two page tests |
+| Quality 4: a length check that cannot fail | Nit | repair-the-artifact: removed |
+| Quality 5: a watch failure line names neither the step nor the message, and can count a press twice | Nit | repair-the-artifact: each press counted once, the line names the press, the step, and the error |
+| Quality 6: the See alerts expectation is keyed on query ids | Nit | repair-the-artifact: an `urgentAlert` flag on each case row, beside the setup that opens the alert |
+| Adversarial 5, quality 7: the round 1 record gives one finding number to two findings | Nit | repair-the-artifact: rows renumbered to the raw report's ids (adversarial 5 and 6) |
