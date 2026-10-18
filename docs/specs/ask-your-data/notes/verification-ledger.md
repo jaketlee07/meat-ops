@@ -1,0 +1,34 @@
+# Verification ledger: ask-your-data
+
+Observations and owner decisions recorded after the spec and plan baselines. The spec and plan stay pinned; this file carries what the work learned. Newest last.
+
+## Before EXECUTE (2026-10-18)
+
+- 2026-10-16: the owner approved the spec and the plan. `approve-plan` recorded the baseline (spec hash c60bc9a94d66…, plan hash bf6c6acde413…).
+- 2026-10-18: the owner directed a merge of `origin/main` into `feat/ask-your-data` (merge commit fb472a1) in place of the rebase the spec's Always do names. `main` was at ca5c891, Alerts' merge (PR #22), so the build's precondition holds. The merge had no conflict. Outside this spec's folder the merged tree equals ca5c891 (`git diff --stat ca5c891 HEAD -- . ':!docs/specs/ask-your-data'` prints nothing). "`main` when the build starts" in AC-0127 to AC-0131 is ca5c891.
+- 2026-10-18: the owner directed this folder onto stack B, in place of the stack A the spec's Assumptions name. Setup by `AGENTS.md` "Set up a folder on stack B": `npm ci` (190 packages, 0 vulnerabilities); the copy (`cmp` reports an exact copy); `supabase start` (stack B was already running); the folder check (it listed only `../meat-ops`, which has no `supabase/.env` and so is on stack A); `npm run db:reset:stack-b` (applied main's migrations through `20261016204845_alerts.sql`); the `.env` command (`SUPABASE_URL` is `http://127.0.0.1:55321`; no `ANTHROPIC_API_KEY` line). Tests run as `E2E_PORT=3200 npm test`, after the folder check lists no other stack B folder. `../meat-ops-alerts` is also a stack B folder; it was not running.
+- 2026-10-18: baseline `E2E_PORT=3200 npm test` on the merged code before any ask-your-data change: pass. Vitest 41 files, 734 tests, 24 s; Playwright 542 tests, 5.8 m.
+- Canonical preflight: `workspace.toml` registers no spec, so `workspace-status` reports empty `ready` and `active` sets. The owner's request names this spec, so the build uses it. `check-base-freshness` reported the head current; `loop-engine status` read SPEC-PLAN-APPROVED; `loop-cohort identity` and `plan check-current` passed; `approve-plan` was a no-op; `schedule` persisted 5 waves (T1, T2, T3, T4, T5); `plan-locked` moved the run to CODE-IMPLEMENTATION. Tasks run one at a time.
+- Stub digests: the three `stub: true` blocks extracted from `plan.md` match their recorded sha256 (T1 `ceb6a5f1…`, T2 `8002424a…`, T3 `e35573e8…`).
+- Dependencies & integration predicate: on ca5c891, `src/app/_server/model.ts` has a private `buildClient()` that sets `apiKey`, `baseURL`, `authToken: null`, `webhookKey: null`, `logLevel: "off"`, `maxRetries: 0`, and the sparse `fetch`; `writeDigest` already passes a per-request `{ timeout, signal }` to `messages.create`. The predicate holds, so no extraction is needed.
+- Anchor-test sweep: no test hashes or snapshots a file this plan edits. The Primary-navigation control lists that name "a Alerts" are in `test/e2e/menu-page.ts`, `invoices-page.ts`, `sales-page.ts`, `trace-page.ts`, `receiving-page.ts`, and `production-page.ts`, all inside T4's Touches. `test/e2e/invoices.spec.ts` reads every file under `.next/static` for the test key; it keeps passing as long as no key reaches the client bundle.
+- Main-at-start checks, on ca5c891: AC-0127's command prints nothing. AC-0128's list is `src/app/_server/model.ts`, `src/app/_server/session.ts`, `src/privileged-env.ts`.
+- Project-knowledge capture is not attempted at the gates; the store refused captures in earlier sessions. Reusable lessons go to the session memory.
+
+### Assumption trio
+
+- **Touches:** the files each task's `Touches` names, and this ledger.
+- **Done:** each task's `Tests` and `Done when`, with `npm run typecheck`, `npm run build`, and `E2E_PORT=3200 npm test` green after each task (spec Always do).
+- **Not changing:** any file under `supabase/`; any existing read in `src/lib/` beyond exporting `hasExactly` unchanged; the invoice and digest requests in `model.ts`; what any other page shows beyond the Ask link; `package.json` dependencies.
+
+### Declined
+
+- A new read or view for any answer: the spec's Never do forbids a file under `supabase/`, and every answer has a shared read (plan Design table).
+- Importing `stockView` from `src/app/stock-view.ts` into `src/lib/`: AC-0124 forbids an import from `src/app/` in `src/lib/`; the one rule is repeated instead (plan Design).
+- Storing the last answer in the URL or session storage so a reload keeps it: the spec's Never do forbids storing an answer, and AC-0014 wants a reload to clear it.
+- A retry on a failed model request: rung 1, not needed; AC-0068 requires exactly one request.
+- A shared "ask" helper for the three model calls in `model.ts`: rung 1, not needed; `askModel` reuses `buildClient` and `failureOf` and adds only its own parse.
+
+### Resolve-vs-surface record
+
+Opened at PLAN. Each review finding is recorded here with its disposition; it closes at DECIDE.

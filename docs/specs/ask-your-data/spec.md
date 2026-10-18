@@ -1,6 +1,6 @@
 # Spec: ask-your-data
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (the AI never computes a figure), §7 "Answer (ask your data)", §10 (the three AI moments), §11 (boundaries), §12 (AI numbers match the engine; AI features decline or ask rather than guess), §13 item 6; the AI connection in [`docs/architecture/overview.md`](../../architecture/overview.md) and its definitions in [`../invoice-entry/spec.md`](../invoice-entry/spec.md); the header pages, the urgent banner, and the digest's model call in [`../alerts/spec.md`](../alerts/spec.md) and its plan (on `main` once Alerts merges; until then on `origin/feat/alerts`); the pricing advice and its order in [`../menu-pricing/spec.md`](../menu-pricing/spec.md) AC-0064 to AC-0066; Receiving's Recent receipts in [`../receiving/spec.md`](../receiving/spec.md) ("Recent receipts and void"); the sale and trace definitions in [`../sales/spec.md`](../sales/spec.md); the access model and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md)
