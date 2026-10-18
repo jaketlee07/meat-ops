@@ -399,11 +399,9 @@ it("AC-0083: the log line holds the action, the kind, and the status, and nothin
   for (const kind of kinds) expect(askFailureLogLine(kind)).toBe(`askQuestion failed: kind=${kind}`);
   expect(askFailureLogLine("key-refused", 401)).toBe("askQuestion failed: kind=key-refused status=401");
   expect(askFailureLogLine("service-error", 529)).toBe("askQuestion failed: kind=service-error status=529");
-  const key = "sk-ant-sentinel-key";
-  const error = new Error(`${key} How much RAW-TOM do I have? Turkey Drums TOM (raw)`);
-  const line = askFailureLogLine(askFailureKind({ type: "status", status: 500 }), 500);
-  expect(line).toBe("askQuestion failed: kind=service-error status=500");
-  for (const secret of [key, "RAW-TOM", "Turkey Drums TOM (raw)", error.message]) expect(line).not.toContain(secret);
+  expect(askFailureLogLine(askFailureKind({ type: "status", status: 500 }), 500)).toBe(
+    "askQuestion failed: kind=service-error status=500",
+  );
 });
 
 interface Sample {

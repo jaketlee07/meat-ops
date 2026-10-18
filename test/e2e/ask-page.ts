@@ -231,8 +231,12 @@ export async function watchPresses(context: BrowserContext): Promise<PressWatch>
           }
         }
         await route.fulfill({ response });
-      } catch {
-        // The context closed or the fake model was reset while the press was held.
+      } catch (error) {
+        // A watch failure is a test failure: the press is counted and named, so
+        // the afterEach fails instead of the press passing unwatched.
+        watch.presses += 1;
+        const name = error instanceof Error ? error.name : "unknown";
+        watch.changes.push(`press ${watch.presses}: watch failed: ${name}`);
         await route.abort().catch(() => {});
       }
     },

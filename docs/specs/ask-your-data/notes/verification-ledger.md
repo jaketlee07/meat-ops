@@ -172,3 +172,25 @@ The owner chose on 2026-10-18 to copy the `ANTHROPIC_API_KEY` line from `../meat
 ### Final gates (2026-10-18, on the T5 tree)
 
 - `npm run typecheck` exit 0 (AC-0122); `npm run build` exit 0 (AC-0120); `E2E_PORT=3200 npm test` exit 0, Vitest 810 passed (44 files, 33 s) then Playwright 606 passed (9.2 m) (AC-0121); `npm run test:costing` exit 0, 37 passed.
+
+## Review round 1 (2026-10-18, target e8473a3, the whole feature diff against ca5c891)
+
+Post-gates reviewers, dispatched in parallel: `adversarial-reviewer`, `security-reviewer` (with the llm-agent, access-control, exceptional-conditions, and secrets-and-crypto checklist modules inlined), `quality-engineer` (diff and whole-spec coverage), and `frontend-reviewer` (with the 24 captures and the inspection record). `experience-reviewer` is not installed: named skip. Every report went to `finding-adjudicator`; raw reports and adjudications are under the gitignored `.context/reviews/337c2093-a31b-4019-9522-73dac794f0f6/1-post-gates-*`. Recorded as round 1, retry 1 of 5, with 16 sustained fingerprints.
+
+- **Security:** clean after adjudication. Its seven "Not checked" notes (secret scanning, dependency advisories, framework server-action controls, live prompt-injection resistance, view policies, runtime-only behavior, TLS and retention) were refuted: each names no defect, and the ledger, the overview, or the code covers it.
+- **Refuted:** adversarial 4 (a security pass is not recorded: the security reviewer reviewed the same target in this round), adversarial 7 (the spec still reads Implementing: Shipped, Done, and the ticks come at finish), quality 2 (a spare-app check of every AC-0083 kind: the spec closes AC-0083 in the no-database tier, which `test/ask-rules.test.ts` and `test/ask-actions.test.ts` do), quality 3 (a browser check of the AC-0032 tail line: the local-stack tier closes AC-0032).
+
+### Resolve-vs-surface record
+
+| Finding | Severity | Disposition |
+| --- | --- | --- |
+| Adversarial 1, quality 4: page-state checks after only 2 of the 8 answer states | Blocker | repair-the-artifact: `checkPageState` after every catalog answer in the per-query test |
+| Adversarial 2: AC-0026 and AC-0028's plural leads and multi-row order untested | Concern | repair-the-artifact: two-product `pricing_attention` and `sellable_now` cases in `test/ask-answers.test.ts` |
+| Quality 1: the press watch hides its own failures | Concern | repair-the-artifact: a watch failure is counted and recorded, so the `afterEach` fails |
+| Frontend 1: a refusal made with Enter is not announced | Concern | repair-the-artifact: the refusal message has `role="alert"` |
+| Adversarial 3, quality 5 and 10: the 60-second cases do not bound the time and read the log once | Nit | repair-the-artifact: elapsed time from the request bounded to 55 to 75 s; the log line polled |
+| Adversarial 4, quality 7, 8, 9: unit assertions that cannot fail or name the wrong case | Nit | repair-the-artifact: dead sentinel loop removed, the lookup test counts its read, the duplicate test removed |
+| Adversarial 5: the areas map does not name `askModel` | Nit | repair-the-artifact: the `src/app/` row names `readReceipt`, `writeDigest`, and the ask call `askModel` |
+| Quality 6: the AC-0010 examples are compared with the code's own catalog | Nit | repair-the-artifact: the eight examples asserted as literal text |
+| Frontend 2: an old refusal stays on the field while the next Ask is in flight | Nit, effective Concern (changes page behavior) | repair-the-artifact: the refusal shows only when no press is in flight |
+| Frontend 3: Enter before hydration could put the question in the address | Nit, effective Concern (changes page behavior) | repair-the-artifact: the field has no `name` |

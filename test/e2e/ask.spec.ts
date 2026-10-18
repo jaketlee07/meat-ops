@@ -2,7 +2,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { CATALOG, QUERY_IDS } from "../../src/lib/ask";
 import { receiveLot } from "../../src/lib/rpc";
 import {
   callAsOperator,
@@ -258,7 +257,16 @@ test.describe("the page", () => {
     await expect(p.ask).toBeVisible();
     await expect(p.examples.getByRole("heading", { level: 2 })).toHaveText("Questions Ask can answer");
     const examples = (await p.examples.getByRole("listitem").allTextContents()).map((text) => text.trim());
-    expect(examples).toEqual(QUERY_IDS.map((id) => CATALOG[id].example));
+    expect(examples).toEqual([
+      "How much RAW-TOM do I have?",
+      "How much 502 is ready to sell?",
+      "What is my margin on 502?",
+      "Which products need a new price?",
+      "What can I sell right now?",
+      "What did I pay for RAW-TOM lately?",
+      "Which lots went into sale S-20261008-1a2b3c?",
+      "Who bought from lot L-20261001-1a2b3c?",
+    ]);
     expect(examples).toHaveLength(8);
     // First-run: the field, Ask, and the list; no message, no answer, no status text.
     await expect(p.answer).toHaveCount(0);
@@ -283,6 +291,40 @@ test.describe("the page", () => {
       expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
     });
   }
+
+  test("AC-0011, AC-0105: a blank question refused with Enter in the field is announced and keeps focus on the field", async ({
+    page,
+  }) => {
+    const p = await openAsk(page);
+    await p.field.focus();
+    await page.keyboard.press("Enter");
+    await expect(p.error).toHaveText(QUESTION_BLANK);
+    await expect(p.error).toHaveAttribute("role", "alert");
+    await expect(p.field).toBeFocused();
+    expect(await requestCount()).toBe(0);
+  });
+
+  test("AC-0105, AC-0107: a refusal leaves the field once the next valid Ask is in flight", async ({ page }) => {
+    const p = await openAsk(page);
+    await ask(p, "   ");
+    await expect(p.error).toHaveText(QUESTION_BLANK);
+    await model.answer({ hold: true, then: RAW_TOM_ANSWER });
+    await ask(p, "How much RAW-TOM do I have?");
+    await model.waitForRequests(1);
+    await expect(p.status).toHaveText(IN_FLIGHT);
+    await expect(p.error).toHaveCount(0);
+    await expect(p.field).not.toHaveAttribute("aria-invalid");
+    await expect(p.field).not.toHaveAttribute("aria-describedby");
+    await model.release();
+    await expect(p.answer).toBeVisible();
+  });
+
+  test("AC-0011: the field has no name, so an Enter before the page loads cannot put the question in the address", async ({
+    page,
+  }) => {
+    const p = await openAsk(page);
+    await expect(p.field).not.toHaveAttribute("name");
+  });
 
   test("AC-0011, AC-0018: a replayed question counts each CR LF pair once", async ({ page, playwright, baseURL }) => {
     const p = await openAsk(page);
@@ -609,6 +651,11 @@ test.describe("answers on screen", () => {
       });
       expect(await requestCount()).toBe(1);
       await expect(p.field).toHaveValue(want.question);
+      // The margin case holds one urgent alert, so its page carries the See alerts link.
+      const controls = askControls(`a ${want.link.name}`);
+      expect(await checkPageState(page)).toEqual(
+        id === "product_margin" || id === "pricing_attention" ? withSeeAlerts(controls) : controls,
+      );
     });
   }
 
@@ -1348,11 +1395,19 @@ test.describe("an app started without a usable key or address", () => {
           await model.answer(hold);
           await ask(p, HOW_MUCH);
           await model.waitForRequests(1);
+          const sentAt = Date.now();
           await expect(p.status).toHaveText(IN_FLIGHT);
           await expect(p.message).toHaveText(TRY_AGAIN_ASK, { timeout: 90_000 });
+          // The deadline starts when the app sends, a moment before the fake model
+          // records the request; the poll and the render add a little after it. So
+          // the wait must land within 5 seconds below and 15 above 60 seconds.
+          const waited = Date.now() - sentAt;
+          expect(waited).toBeGreaterThanOrEqual(55_000);
+          expect(waited).toBeLessThanOrEqual(75_000);
           await expect(p.message).toBeFocused();
           await expect(p.status).toHaveText("");
           expect(await requestCount()).toBe(1);
+          await expect.poll(() => failedLines(spare.output()).length).toBe(1);
           expect(failedLines(spare.output())).toEqual(["askQuestion failed: kind=no-answer"]);
           expect(await checkPageState(page)).toEqual(ASK_CONTROLS);
         },

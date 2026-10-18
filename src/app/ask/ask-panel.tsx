@@ -75,7 +75,8 @@ export function AskPanel() {
     press({ kind: "ask", question });
   }
 
-  const invalid = state.status === "invalid" ? state.message : null;
+  // An old refusal leaves the field once the next Ask is in flight.
+  const invalid = !pending && state.status === "invalid" ? state.message : null;
   const message =
     state.status === "message" || state.status === "choose" || state.status === "lookup-failed" ? state.message : null;
   const disabled = pending ? true : undefined;
@@ -89,7 +90,6 @@ export function AskPanel() {
           </label>
           <input
             id="ask-question"
-            name={QUESTION_FIELD}
             type="text"
             autoComplete="off"
             value={question}
@@ -99,7 +99,7 @@ export function AskPanel() {
             aria-describedby={invalid ? "ask-question-error" : undefined}
           />
           {invalid && (
-            <p id="ask-question-error" className="mt-1 break-words text-base font-medium text-error">
+            <p id="ask-question-error" role="alert" className="mt-1 break-words text-base font-medium text-error">
               {invalid}
             </p>
           )}

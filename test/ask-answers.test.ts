@@ -156,6 +156,45 @@ it("AC-0026: pricing attention lists the one product that needs a new price", as
   });
 });
 
+// A second finished product, 503 made from a new raw RAW-TKB, the way the browser fixture adds it.
+const RAW_TKB_ID = "88888888-8888-8888-8888-888888888888";
+const PROD_503_ID = "99999999-9999-9999-9999-999999999999";
+async function addProduct503(): Promise<void> {
+  await query(
+    `insert into products(id, code, description, species, kind) values ($1, 'RAW-TKB', 'Turkey Breast (raw)', 'Turkey', 'raw')`,
+    [RAW_TKB_ID],
+  );
+  await query(
+    `insert into products(id, code, description, brand, species, kind, pack_style, lbs_per_pack, raw_product_id, shrink_pct)
+     values ($1, '503', 'Smoked Turkey Breast', 'Prospect Meats', 'Turkey', 'finished', '56cs/pl', 32.5, $2, 0.2300)`,
+    [PROD_503_ID, RAW_TKB_ID],
+  );
+  await query(
+    `insert into product_fees(product_id, fee_type_id, amount_per_lb)
+     select $1, fee_type_id, amount_per_lb from product_fees
+     where product_id = '33333333-3333-3333-3333-333333333333'`,
+    [PROD_503_ID],
+  );
+  await run(receiveCall(RAW_TKB_ID, VENDOR_ID, 2000, 2.1, "2026-10-02"));
+}
+
+it("AC-0026, AC-0064: two products that need a new price read the plural lead, below-target 503 before 502", async () => {
+  await receiveOnly();
+  await addProduct503();
+  // 502 has no list price (needs one, not below target); 503 is below its target.
+  await run({ fn: "set_target_margin", args: { p_product_id: PROD_503_ID, p_target_percent: 20 } });
+  await run({ fn: "set_list_price", args: { p_product_id: PROD_503_ID, p_price_per_lb: 1 } });
+  const answer = await answerFor(operator, { query: "pricing_attention" });
+  expect(answer?.text).toEqual({
+    lead: "2 products need a new price:",
+    items: [
+      "503 Smoked Turkey Breast: Raise list price to $3.98/lb, below your target",
+      "502 Smoked Turkey Drums Tom: Set list price to $2.68/lb",
+    ],
+    tail: null,
+  });
+});
+
 it("AC-0027: pricing attention says no product needs a new price once the list price is 3.29", async () => {
   await receiveOnly();
   await setTarget(20);
@@ -170,6 +209,20 @@ it("AC-0028: sellable now lists 502 with its finished and raw lbs in the sale fi
   expect(answer?.text).toEqual({
     lead: "You can sell 1 product now:",
     items: ["502 Smoked Turkey Drums Tom: 5,390 lbs ready, 1,000 lbs of raw on hand"],
+    tail: null,
+  });
+});
+
+it("AC-0028: two sellable products read the plural lead in code order", async () => {
+  await receiveOnly();
+  await addProduct503();
+  const answer = await answerFor(operator, { query: "sellable_now" });
+  expect(answer?.text).toEqual({
+    lead: "You can sell 2 products now:",
+    items: [
+      "502 Smoked Turkey Drums Tom: 0 lbs ready, 5,000 lbs of raw on hand",
+      "503 Smoked Turkey Breast: 0 lbs ready, 2,000 lbs of raw on hand",
+    ],
     tail: null,
   });
 });
