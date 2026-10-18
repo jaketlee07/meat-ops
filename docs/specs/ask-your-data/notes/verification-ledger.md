@@ -42,3 +42,13 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - Deviation: `askFailureKind` repeats invoice entry's three-line rule, because `failureKind`'s result type holds kinds Ask does not have (`too-long`). Invoice reading is unchanged.
 - Controller fixes: the exported `hasExactly` line regained the space the edit dropped; the question-set test no longer carries AC-0110's id, since AC-0110 is closed only by the live run.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `E2E_PORT=3200 npm test` exit 0, Vitest 763 passed (42 files, 24 s), Playwright 542 passed (5.7 m).
+
+## T2 (2026-10-18)
+
+- Executed by the `implementer` subagent; controller reran every gate.
+- Stub materialized byte-identical at `test/ask-answers.test.ts` (sha256 8002424a…1091b); observed red: `Cannot find module '../src/lib/ask-answers.js'`. The file then grew to 25 cases.
+- Built: `src/lib/ask-answers.ts` (`readProductLists`, `answerFor`, and the `Answer` type). Each query calls the read the plan's Design table names; no shared read, no file under `supabase/`, and `ask.ts` are changed.
+- `listPricing` already sorts "Needs a new price" below target first, then by code (menu-pricing AC-0064), and `getMenu` sorts by code; `v_product_pricing`, and so `v_current_menu`, hold active finished products only (`supabase/migrations/20261009070619_menu_pricing.sql`).
+- Notes: `set_target_margin` takes percent units, so the fixtures pass 20 for a 20% target. In AC-0035's fixture a 100-lb draw from batch 1 takes from both raw lots, so its items list lot A and lot B; the criterion checks only "(No customer)". `pricing_attention` keeps rows that need a new price and carry a price action and a suggested price, as the pricing page's advice does.
+- Controller fix: the test file's second import from `./db.js` now joins the stub's import block.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `E2E_PORT=3200 npm test` exit 0, Vitest 788 passed (43 files, 27 s), Playwright 542 passed (6.4 m).
