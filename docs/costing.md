@@ -9,7 +9,7 @@ missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.t
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
-`record_sale`, `void_receipt`, `void_sale`, and `adjust_lot`, the views
+`record_sale`, `void_receipt`, `void_sale`, `adjust_lot`, and `correct_receipt`, the views
 `v_product_pricing` and `v_sale_summary`, and the function `price_what_if`.
 Nothing in TypeScript computes a cost, an average, or a price.
 
@@ -101,11 +101,12 @@ Golden numbers, for product 502 with RAW-TOM received as 5,000 lbs at 1.68
 value of the lbs still on hand divided by those lbs, rounded to 4 decimals:
 
 ```
-moving_avg_cost = sum(remaining_lbs * unit_cost) / sum(remaining_lbs)
+moving_avg_cost = sum(remaining_lbs * current_unit_cost) / sum(remaining_lbs)
 ```
 
-Every operation recomputes it from the lots, so it always matches the stock that
-is actually on the shelf. Consuming the cheap lot first makes the average rise
+A lot's current cost is its recorded cost until a receipt correction replaces it
+(see correct_receipt below). Every operation recomputes the average from the
+lots, so it always matches the stock that is actually on the shelf. Consuming the cheap lot first makes the average rise
 to the cost of the lots that remain.
 
 ### The zero-stock rule
@@ -143,8 +144,12 @@ can still carry a voided cost.
    2000 * (1 - 0.23) = 1540
    A measured yield above 0 and at most the raw lbs replaces the computed yield.
 
-4. Lot cost is immutable
-   lots.unit_cost is never updated after insert. A database trigger on lots
+4. Recorded cost and weight are immutable
+   lots.unit_cost and lots.weight_lbs, the cost and weight as received, are never
+   updated after insert. A correction writes the lot's corrected_unit_cost and
+   corrected_weight_lbs and a receipt_corrections row instead; the generated
+   current_unit_cost and current_weight_lbs give the corrected value, or the
+   recorded one when the lot has no correction. A database trigger on lots
    (lots_guard, in `supabase/migrations/20261007181933_engine_hardening.sql`)
    refuses any change to unit_cost, weight_lbs, product_id, vendor_id,
    received_date, lot_number, or prior_avg_cost, in every role. Rising costs
@@ -162,9 +167,9 @@ can still carry a voided cost.
 6. Conservation
    For every raw product, inventory_balances.qty_on_hand equals the sum of
    lots.remaining_lbs. Finished lbs_remaining never exceeds lbs_produced. Each
-   non-void lot's remaining lbs equals its received weight minus the lbs
+   non-void lot's remaining lbs equals its current weight minus the lbs
    production consumed minus the lbs removed by adjustments, and never exceeds
-   received weight minus consumed lbs. No void lot has a consumption row or an
+   current weight minus consumed lbs. No void lot has a consumption row or an
    adjustment row. The test suites run this check after every test.
 
 7. Traceability
@@ -182,7 +187,8 @@ bad input and changes nothing when it refuses.
 ### void_receipt
 
 Voids a lot that nothing has touched: no production consumed from it, no
-adjustment row, and remaining lbs equal to the received weight. A void lot has
+adjustment row, and remaining lbs equal to the current weight. A receipt
+corrected to a new weight with nothing else done to it is untouched. A void lot has
 0 lbs remaining and stays in the table.
 
 Example: receive 1,000 lbs at 1.68 and 500 lbs at 1.80. Stock is 1,500 lbs at
@@ -217,6 +223,11 @@ adjustment brings stock above 0 and the stock-on-hand average takes over. The
 [zero-stock average intent](product/intents/zero-stock-average-recompute.md)
 replaces these steps with a recompute from the non-void lots alone.
 
+A correction does not change any lot's prior average either, so a void that
+leaves 0 lbs on hand can bring back a cost a correction replaced: a lot typed at
+18.00 and corrected to 1.80 was on hand when the next lot arrived, so that lot's
+prior average is 18.0000.
+
 ### void_sale
 
 Voids a sale. Each of its lines returns its lbs to the finished lot it came
@@ -226,19 +237,74 @@ refused.
 ### adjust_lot
 
 Sets a lot's remaining lbs to a counted value. The value runs from 0 up to the
-received weight minus the lbs production consumed from the lot. The reason is
+current weight minus the lbs production consumed from the lot. The reason is
 one of count, waste, spoilage, or other. The call records one adjustment row with
 the old lbs, the new lbs, and the reason, and it leaves unit_cost unchanged. A
 void lot cannot be adjusted.
 
 Example: a 1,000 lb lot has 600 lbs consumed, so the cap is 400 lbs. Setting it
 to 250 lbs with reason waste leaves 250 lbs on hand at the same 1.68 average.
-Setting 401 lbs is refused.
+Setting 401 lbs is refused. In the correct_receipt example below, lot B corrected
+to 3,100 lbs can be adjusted to 1,100 lbs and not to 1,100.001.
 
 The average after an adjustment is the stock-on-hand average. Receive 1,000 lbs
 at 1.68 and 1,000 lbs at 1.80, then adjust the second lot to 250 lbs. Stock is
 1,250 lbs and the average is 1.704:
 (1000 * 1.68 + 250 * 1.80) / 1250 = 1.704
+
+### correct_receipt
+
+Corrects a receipt's cost per lb, its weight, or both. The lot keeps what was
+first entered, and a `receipt_corrections` row holds the old and new values and
+the reason. From then on the lot's current cost and weight are the new values,
+and every figure made from the lot follows them. A correction is undone by
+correcting back, which restores every figure.
+
+The cost chain holds for every row: a lot's current cost is the lot cost on each
+of its consumption rows; each batch's raw cost total is the sum of lbs consumed
+times lot cost over its consumption rows, rounded to 4 decimals; the batch's cost
+per finished lb is its finished lot's cost per lb; and that is the cost on each
+sale line from the finished lot. The tests check this chain after every test.
+
+**Restatement rule.** When the cost changes, each batch made from the lot is
+restated, whether or not its finished lbs are sold. The batch keeps the
+processing fees it was costed with. The fee as used is recovered before the rows
+change: the batch's cost per finished lb minus its raw cost total divided by its
+finished lbs out, rounded to 4 decimals. Fees have 4 decimals, so this is exact,
+and a fee changed on the product afterwards does not enter. The restated cost per
+finished lb is the new raw cost total divided by the finished lbs out, rounded to
+4 decimals, plus that fee.
+
+**Weight rule.** The weight change moves the lot's remaining lbs by the same
+amount. The new weight cannot go below the current weight minus the remaining
+lbs, which is what production used and adjustments removed, and it must be above
+0. A cost of 0 is allowed. A correction whose cost and weight, rounded to 4 and 3
+decimals, equal the current ones is refused. A void lot cannot be corrected.
+
+**Zero-stock rule.** The average moves to the stock-on-hand average at current
+cost. When the correction leaves 0 lbs on hand, the stored average keeps its
+value, as the zero-stock rule says above.
+
+Example, in the sale fixture: lot A is 5,000 lbs at 1.68 received Oct 1 and lot B
+is 3,000 lbs at 1.80 received Oct 5. Batch 1 makes 4,620 finished lbs of 502 from
+6,000 raw lbs (5,000 from lot A and 1,000 from lot B), with a raw cost total of
+10200.0000 and a cost per finished lb of 2.6578. Batch 2 makes 770 finished lbs
+from 1,000 raw lbs of lot B, with 1800.0000 and 2.7877. The fee as used is
+0.4500 for both. A 5,000-lb sale then takes 4,620 lbs from batch 1 and 380 from
+batch 2, and RAW-TOM has 1,000 lbs on hand at 1.8000.
+
+- Correct lot A to 1.86: batch 1 becomes 11100.0000 and 2.8526, and batch 2 keeps
+  1800.0000 and 2.7877. Batch 1's finished lot and its sale line take 2.8526.
+  The lbs on hand and the average are unchanged, since lot A is used up.
+- Correct lot B to 1.90: batch 1 becomes 2.6794, batch 2 becomes 2.9175, and the
+  average becomes 1.9000. Correct lot B to 0: 2.2682 and 0.4500.
+- Correct lot A to 1.86, then back to 1.68: every figure returns to its value
+  before.
+- Correct lot B to 3,100 lbs: it has 1,100 lbs remaining and RAW-TOM 1,100 lbs on
+  hand, and no batch, finished lot, or sale line changes. The smallest weight
+  lot B can take is 2,000 lbs, which leaves it 0 lbs remaining and the average at
+  1.8000. Correcting it to 1,999.999 lbs is refused.
+- With lot B adjusted to 900 lbs first, the smallest weight is 2,100 lbs.
 
 ## Rounding note
 

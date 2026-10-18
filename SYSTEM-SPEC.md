@@ -74,23 +74,24 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 ### Inventory and cost state
 
 - inventory_balances: product_id (pk, fk products, raw products only), qty_on_hand (lbs), moving_avg_cost (per lb), updated_at. This is the authoritative rolling average used for forward pricing. It is the stock-on-hand average: the value of the lbs still on hand divided by those lbs, rounded to 4 decimals. When no lbs are on hand it keeps its last value.
-- lots: id, lot_number (unique, human readable), product_id (fk products, a raw product), vendor_id (fk vendors), received_date, weight_lbs (as received), unit_cost (per lb, the true price paid), remaining_lbs (depletes as production consumes it), notes, created_at, receipt_seq (insertion order, breaks ties between lots with the same received_date), prior_avg_cost (the product's moving_avg_cost just before this lot was received), voided_at and void_reason (both set or both empty). A lot is both the cost record and the traceability anchor. vendor_id is required. unit_cost, weight_lbs, product_id, vendor_id, received_date, lot_number, and prior_avg_cost are immutable once written; a database trigger refuses any change to them.
+- lots: id, lot_number (unique, human readable), product_id (fk products, a raw product), vendor_id (fk vendors), received_date, weight_lbs (as received), unit_cost (per lb, the true price paid), remaining_lbs (depletes as production consumes it), notes, created_at, receipt_seq (insertion order, breaks ties between lots with the same received_date), prior_avg_cost (the product's moving_avg_cost just before this lot was received), voided_at and void_reason (both set or both empty), corrected_unit_cost and corrected_weight_lbs (the values of the latest correction, empty on a lot never corrected), and current_unit_cost and current_weight_lbs (generated: the corrected value, or the recorded one when there is none). A lot is both the cost record and the traceability anchor. vendor_id is required. unit_cost, weight_lbs, product_id, vendor_id, received_date, lot_number, and prior_avg_cost are immutable once written; a database trigger refuses any change to them. Remaining lbs run from 0 to current_weight_lbs. Every reader that costs or weighs a lot reads the current columns.
 
 ### Production
 
 - production_batches: id, batch_number (unique), finished_product_id (fk products), production_date, raw_lbs_in, shrink_pct_used, finished_lbs_out, raw_cost_total, cost_per_finished_lb, notes, created_at
-- production_batch_lots: id, batch_id (fk production_batches), lot_id (fk lots), lbs_consumed, lot_unit_cost (snapshot at consumption). Records which raw lots fed a batch. This is the trace link and the specific-identification cost.
+- production_batch_lots: id, batch_id (fk production_batches), lot_id (fk lots), lbs_consumed, lot_unit_cost (the lot's current cost; it follows a receipt correction). Records which raw lots fed a batch. This is the trace link and the specific-identification cost.
 - finished_goods: id, batch_id (fk production_batches), finished_product_id (fk products), lbs_produced, lbs_remaining, cost_per_lb (production cost, raw plus processing), produced_date, produced_seq (insertion order, breaks ties between lots with the same produced_date). Each batch yields one finished lot.
 
 ### Sales
 
 - customers: id, name, notes, created_at
 - sales: id, sale_number (unique), customer_id (fk customers, optional), sale_date, created_at, voided_at and void_reason (both set or both empty)
-- sale_items: id, sale_id (fk sales), finished_goods_id (fk finished_goods, the exact finished lot sold), lbs_sold, price_per_lb, cost_per_lb (snapshot for margin reporting). The link to a finished lot is what makes every sale traceable.
+- sale_items: id, sale_id (fk sales), finished_goods_id (fk finished_goods, the exact finished lot sold), lbs_sold, price_per_lb, cost_per_lb (its finished lot's cost; it follows a receipt correction). The link to a finished lot is what makes every sale traceable.
 
 ### Corrections
 
 - lot_adjustments: id, lot_id (fk lots), old_remaining_lbs, new_remaining_lbs, reason (one of: count, waste, spoilage, other), note, adjusted_at. One row per adjust_lot call. A voided receipt or sale stays in its table, marked with a reason and a time; nothing is deleted.
+- receipt_corrections: id, lot_id (fk lots), old_unit_cost, new_unit_cost, old_weight_lbs, new_weight_lbs, reason, corrected_at, correction_seq (orders corrections; the latest has the highest number). One row per correct_receipt call. The lot keeps what was first entered.
 
 ### AI-support state (new for this scope)
 
@@ -107,18 +108,19 @@ the app is allowed to bypass.
 
 - v_product_pricing: per finished product, the full cost build-up: raw moving-average cost, post-shrink cost, processing fees, target margin, resulting cost per lb, and suggested price per lb, plus the list price, whether the raw input has a cost, the suggested list price, the margin at the list price, the price action (set, raise, or lower), and whether the product needs a new price or is below its target. The pricing page and the AI advisor read this. The what-if function price_what_if works out the same cost, price, and margin for a typed raw cost.
 - v_current_menu: per finished product, its suggested price, its list price, and whether it is sellable now (has finished stock, or has raw available to make it). The menu reads this.
-- v_sale_traceability: per sale line, the full chain: sale, customer name (empty when the sale has no customer), sale line id, finished product, lbs sold and price per lb on the line, batch, production date, raw lot, raw product, vendor, received date, lbs drawn from that lot, and that lot's cost. Void sales do not appear. It also carries the sale, the customer, the raw product's code, and the keys that put batches and lots in the order they were drawn. Both forward trace (sale to origin) and reverse trace (lot to every sale) read this.
+- v_sale_traceability: per sale line, the full chain: sale, customer name (empty when the sale has no customer), sale line id, finished product, lbs sold and price per lb on the line, batch, production date, raw lot, raw product, vendor, received date, lbs drawn from that lot, and that lot's current cost. Void sales do not appear. It also carries the sale, the customer, the raw product's code, and the keys that put batches and lots in the order they were drawn. Both forward trace (sale to origin) and reverse trace (lot to every sale) read this.
 - v_sale_summary: one row per sale, void or not, with its finished product, customer name (empty when the sale has no customer), total lbs sold, price per lb, and the void time and reason. The sales page reads it.
 
 ## 5. The deterministic engine (behavioral contracts, no code)
 
-Six operations are the only way inventory and cost change: receive raw, produce a
-batch, record a sale, void a receipt, void a sale, and adjust a lot. The app and the
-AI call these; nothing writes to lots, inventory_balances, production, finished goods,
-sales, or lot_adjustments directly. Each operation checks that the caller is the
+Seven operations are the only way inventory and cost change: receive raw, produce a
+batch, record a sale, void a receipt, void a sale, adjust a lot, and correct a receipt.
+The app and the AI call these; nothing writes to lots, inventory_balances, production,
+finished goods, sales, lot_adjustments, or receipt_corrections directly. Each operation checks that the caller is the
 owner, refuses invalid arguments before it takes any lock, and changes nothing when
-it refuses. Receive raw, produce a batch, void a receipt, and adjust a lot lock the raw
-product, so they queue one behind another on that product. Record a sale and void a
+it refuses. Receive raw, produce a batch, void a receipt, adjust a lot, and correct a receipt lock the raw
+product, so they queue one behind another on that product. Correct a receipt also locks the
+finished products made from the lot, after the raw product. Record a sale and void a
 sale lock the finished product they draw from, so they queue one behind another on that
 product. Producing a batch and recording a sale on one finished product lock different
 things and do not queue on each other. After it has its lock, an operation reads stock
@@ -175,9 +177,23 @@ It is refused when the sale is already void.
 Input: lot, new remaining lbs, reason (count, waste, spoilage, or other), optional note.
 Behavior: sets the lot's remaining lbs to the counted value and records an
 adjustment row with the old lbs, the new lbs, and the reason. The new value runs from
-0 up to the lot's received weight minus the lbs production has consumed from it. The
+0 up to the lot's current weight minus the lbs production has consumed from it. The
 lot's unit cost does not change, and the product's average moves to the stock-on-hand
 average. It is refused on a void lot.
+
+### Correct a receipt
+
+Input: lot, new cost per lb, new weight in lbs, reason (at least one non-space character).
+Behavior: records a correction row with the old and new cost and weight, and makes the
+new values the lot's current cost and weight. The lot keeps what was first entered, and
+its lot number, vendor, and received date never change. The weight change moves the lot's
+remaining lbs by the same amount. A cost change restates every batch made from the lot,
+keeping the processing fees the batch was costed with: the batch's raw cost total and cost
+per finished lb, its finished lot's cost, and the cost on each sale line from that finished
+lot. The product's average moves to the stock-on-hand average at current cost, and keeps
+its value at 0 lbs on hand. It is refused on a void lot, when neither the cost nor the
+weight changes, when the new weight is below what production used and adjustments
+removed, and for a bad cost, weight, or reason. A correction is undone by correcting back.
 
 ## 6. Costing guarantees (the invariants)
 
@@ -316,8 +332,8 @@ margins, warns you before you lose money, and traces a recall in seconds.
 ## 11. Non-negotiable boundaries (seed these into project rules)
 
 - Never compute cost, price, shrink, average, or margin outside the deterministic engine.
-- Never write to lots, inventory_balances, production, finished goods, sales, or lot_adjustments except through the six operations.
-- Never change a lot's unit cost after it is recorded.
+- Never write to lots, inventory_balances, production, finished goods, sales, lot_adjustments, or receipt_corrections except through the operations in section 5.
+- Never change a lot's unit cost after it is recorded. A correction adds a current cost beside it.
 - Never let the AI answer with a fabricated or freely generated query; answers come only from the typed query catalog over the views and the app's typed reads.
 - Never write AI-extracted data without human confirmation.
 - Never auto-apply a price or purchase; the human approves every action.

@@ -38,7 +38,7 @@ Terms used below:
 - **Ledger tables:** `lots`, `inventory_balances`, `production_batches`, `production_batch_lots`, `finished_goods`, `sales`, `sale_items`, `lot_adjustments`.
 - **Master-data tables:** `vendors`, `customers`, `products`, `fee_types`, `product_fees`.
 - **Operations:** `receive_lot`, `produce_batch`, `record_sale`, `void_receipt`, `void_sale`, `adjust_lot`.
-- **Stock-on-hand average:** for one raw product, the sum of `remaining_lbs × unit_cost` over its lots divided by the sum of their `remaining_lbs`, rounded to 4 decimals.
+- **Stock-on-hand average:** for one raw product, the sum of `remaining_lbs × unit_cost` over its lots divided by the sum of their `remaining_lbs`, rounded to 4 decimals. *Amended (owner-approved 2026-10-18): the corrections spec's AC-0079 states it over each lot's current cost.*
 - **Consumed lbs of a lot:** the sum of `lbs_consumed` over the lot's `production_batch_lots` rows.
 - **Void reason:** text with at least one non-space character.
 - **Prior average of a lot:** the raw product's `moving_avg_cost` just before that lot was received.
@@ -143,11 +143,11 @@ Engine
 - [x] **AC-0025.** `receive_lot` refuses a product that is not raw, and `produce_batch` and `record_sale` each refuse a product that is not finished.
 - [x] **AC-0026.** `produce_batch` consumes only lots received on or before its production date, and `record_sale` consumes only finished goods produced on or before its sale date; each fails with a shortfall when those are not enough.
 - [x] **AC-0027.** Lots that share a received date are consumed in the order they were received, and finished goods that share a produced date are sold in the order they were produced, including two lots received in one transaction and two batches produced in one transaction.
-- [x] **AC-0028.** After any operation that leaves a raw product with more than 0 lbs on hand, its `moving_avg_cost` equals its stock-on-hand average. Golden case: receive 5,000 lbs at 1.68 and 3,000 lbs at 1.80, produce 5,000 raw lbs, and the average is 1.8000.
+- [x] **AC-0028.** After any operation that leaves a raw product with more than 0 lbs on hand, its `moving_avg_cost` equals its stock-on-hand average. Golden case: receive 5,000 lbs at 1.68 and 3,000 lbs at 1.80, produce 5,000 raw lbs, and the average is 1.8000. *Amended (owner-approved 2026-10-18): the corrections spec's AC-0079 states it over each lot's current cost, and its AC-0015 to AC-0017 give the correction cases.*
 - [x] **AC-0029.** When an operation other than `void_receipt` leaves a raw product with 0 lbs on hand, its `moving_avg_cost` keeps the value it had before that operation. Golden case: receive 1,000 lbs at 2.00, produce 1,000 raw lbs, and the average stays 2.0000.
 - [x] **AC-0030.** After any operation, each raw product's `qty_on_hand` equals the sum of its lots' `remaining_lbs`.
-- [x] **AC-0031.** After any operation, each non-void lot's remaining lbs equals its received weight minus its consumed lbs minus the sum of old lbs minus new lbs over its adjustment rows.
-- [x] **AC-0054.** After any operation, each non-void lot's remaining lbs is at most its received weight minus its consumed lbs.
+- [x] **AC-0031.** After any operation, each non-void lot's remaining lbs equals its received weight minus its consumed lbs minus the sum of old lbs minus new lbs over its adjustment rows. *Amended (owner-approved 2026-10-18): the corrections spec's AC-0070 states it over current weight.*
+- [x] **AC-0054.** After any operation, each non-void lot's remaining lbs is at most its received weight minus its consumed lbs. *Amended (owner-approved 2026-10-18): the corrections spec's AC-0069 states it over current weight.*
 - [x] **AC-0032.** After any operation, each finished lot's remaining lbs equals its produced lbs minus the lbs on non-void sale lines drawn from it.
 - [x] **AC-0033.** After any operation, no void lot has a consumption row or an adjustment row.
 
