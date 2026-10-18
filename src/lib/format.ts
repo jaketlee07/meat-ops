@@ -95,3 +95,21 @@ const priceField = new Intl.NumberFormat("en-US", {
 export function priceFieldText(price: number): string {
   return priceField.format(price);
 }
+
+const oneDecimal = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1,
+});
+
+// Days left (alerts AC-0107): 0 to 1 decimals, then "day" when the rounded
+// value is exactly 1 and "days" otherwise.
+export function formatDays(days: number): string {
+  const text = oneDecimal.format(days);
+  return `${text} ${text === "1" ? "day" : "days"}`;
+}
+
+// A cost change or drift (alerts AC-0108): the absolute value as a percent, 0
+// to 2 decimals. The words "up", "down", "above", and "below" carry the sign.
+export function formatChange(fraction: number): string {
+  return `${percent.format(movedPercent(Math.abs(fraction)))}%`;
+}

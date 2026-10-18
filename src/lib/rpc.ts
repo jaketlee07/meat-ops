@@ -176,6 +176,78 @@ export async function setListPrice(
   return data as Product;
 }
 
+export type Alert = Functions["dismiss_alert"]["Returns"];
+
+// What refreshAlerts throws when the watch answers with no row; the watch's log
+// line tells it from a transport failure by this text.
+export const NO_COUNTS_MESSAGE = "refreshAlerts failed: the watch returned no counts";
+
+// One watch (alerts spec): the five rules for the app's today. Returns the
+// open and urgent counts it leaves.
+export async function refreshAlerts(
+  client: TypedClient,
+  today: string,
+): Promise<{ open: number; urgent: number }> {
+  const { data, error } = await client.rpc("refresh_alerts", { p_today: today });
+  if (error) throw rpcError("refreshAlerts", error);
+  const row = data?.[0];
+  if (!row) throw new RpcError(NO_COUNTS_MESSAGE, "");
+  return { open: row.open_count, urgent: row.urgent_count };
+}
+
+export async function dismissAlert(client: TypedClient, alertId: string): Promise<Alert> {
+  const { data, error } = await client.rpc("dismiss_alert", { p_alert_id: alertId });
+  if (error) throw rpcError("dismissAlert", error);
+  return data as Alert;
+}
+
+// Sets the list price of the alert's product through set_list_price and marks
+// the alert actioned. Returns the product row.
+export async function applyAlertPrice(client: TypedClient, alertId: string, pricePerLb: number): Promise<Product> {
+  const { data, error } = await client.rpc("apply_alert_price", { p_alert_id: alertId, p_price_per_lb: pricePerLb });
+  if (error) throw rpcError("applyAlertPrice", error);
+  return data as Product;
+}
+
+export type DigestClaimResult = "none" | "written" | "busy" | "claimed" | "failed" | "stale";
+
+export interface DigestClaim {
+  result: DigestClaimResult;
+  paragraphs: string[] | null;
+  failureKind: string | null;
+}
+
+const CLAIM_RESULTS: readonly string[] = ["none", "written", "busy", "claimed", "failed", "stale"];
+
+// The AC-0065 result for a date and the kind of send. Only "claimed" changes the day's row.
+export async function startDigest(client: TypedClient, date: string, automatic: boolean): Promise<DigestClaim> {
+  const { data, error } = await client.rpc("start_digest", { p_date: date, p_automatic: automatic });
+  if (error) throw rpcError("startDigest", error);
+  const row = data?.[0];
+  if (!row || !CLAIM_RESULTS.includes(row.result)) throw new RpcError("startDigest failed: no result", "");
+  return {
+    result: row.result as DigestClaimResult,
+    paragraphs: row.paragraphs ?? null,
+    failureKind: row.failure_kind ?? null,
+  };
+}
+
+// Finishes a writing day with its paragraphs or with a failure kind, never both.
+export async function finishDigest(
+  client: TypedClient,
+  date: string,
+  outcome: { paragraphs: string[] } | { failureKind: string },
+): Promise<Functions["finish_digest"]["Returns"]> {
+  const { data, error } = await client.rpc("finish_digest", {
+    p_date: date,
+    // The function takes exactly one of the two and null for the other; the generated types omit null.
+    p_paragraphs: ("paragraphs" in outcome ? outcome.paragraphs : null) as string[],
+    p_failure_kind: ("failureKind" in outcome ? outcome.failureKind : null) as string,
+  });
+  if (error) throw rpcError("finishDigest", error);
+  return data as Functions["finish_digest"]["Returns"];
+}
+
 export type ImportDraft = Functions["create_import_draft"]["Returns"];
 
 // One drafted line as create_import_draft takes it. Weight and cost stay text:

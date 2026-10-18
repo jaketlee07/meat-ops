@@ -5,6 +5,7 @@
 
 import { formatDate, formatWeight } from "./format";
 import { readFailureMessage } from "./invoice-reading";
+import { NO_COUNTS_MESSAGE } from "./rpc";
 
 export const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
 export const INACTIVE_PRODUCT = "This product is no longer active.";
@@ -139,6 +140,68 @@ export function changeFailureMessage(error: unknown, stage: FailureStage): strin
   return `${NOT_SAVED_CHANGE} ${refusalReason(error, code)}`;
 }
 
+// Alert dismissals (alerts AC-0117 to AC-0122, AC-0129). A reprice from an alert
+// reuses the change texts above, except that the session text names the alert's reprice.
+export const NOT_DISMISSED = "The alert wasn't dismissed.";
+// AC-0129: the write call got no answer from the database, so the alert may be dismissed.
+export const DISMISS_UNKNOWN = "The alert may have been dismissed. Reload this page to check it.";
+// AC-0117: the session ended after the page loaded.
+export const DISMISS_SIGNED_OUT = "You're signed out. Sign in again to dismiss this alert.";
+
+export function dismissFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_DISMISSED} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return DISMISS_UNKNOWN;
+  return `${NOT_DISMISSED} ${refusalReason(error, code)}`;
+}
+
+// The daily digest (alerts AC-0081, AC-0086 to AC-0090, AC-0124 to AC-0127, AC-0198).
+export const NO_OPEN_ALERTS = "No open alerts.";
+export const DIGEST_WRITING = "Writing today's digest. This can take up to a minute.";
+export const DIGEST_FOOTER = "Written by Claude from the alerts open at the time. Every open alert is listed below.";
+// AC-0089: another write holds today's claim.
+export const DIGEST_BUSY = "Today's digest is being written. Reload this page in a minute.";
+// AC-0124: the session ended after the page loaded.
+export const DIGEST_SIGNED_OUT = "You're signed out. Sign in again to see today's digest.";
+const NOT_WRITTEN = "Today's digest wasn't written.";
+export const DIGEST_NOT_ALLOWED = `${NOT_WRITTEN} ${NOT_ALLOWED}`;
+// AC-0090, AC-0126, AC-0199: every failure but the key and the set-up ones.
+export const DIGEST_TRY_AGAIN = `${NOT_WRITTEN} ${TRY_AGAIN}`;
+// AC-0088: the model service answered 401 or 403.
+export const DIGEST_KEY_REFUSED = `${NOT_WRITTEN} The model service refused the app's key. Check ANTHROPIC_API_KEY in the app's .env file.`;
+// AC-0086, AC-0087.
+export const DIGEST_NOT_SET_UP =
+  "The digest isn't set up. Set ANTHROPIC_API_KEY in the app's .env file, then restart the app.";
+export const DIGEST_ADDRESS_REFUSED =
+  "The digest isn't set up. ANTHROPIC_BASE_URL must be unset, or a loopback address for tests. Fix it, then restart the app.";
+
+// The kinds a failed day can hold and a log line can name (AC-0127), and the two
+// the model connection reports before it sends anything.
+export type DigestFailureKind =
+  | "facts-failed"
+  | "key-refused"
+  | "no-answer"
+  | "service-error"
+  | "declined"
+  | "too-long"
+  | "unreadable"
+  | "unfaithful"
+  | "store-failed"
+  | "not-set-up"
+  | "address-refused";
+
+// AC-0088, AC-0090, AC-0095, AC-0199: the message for a failed day. A kind of
+// null is a claim that went stale, which reads as the general failure.
+export function digestFailureMessage(kind: string | null): string {
+  return kind === "key-refused" ? DIGEST_KEY_REFUSED : DIGEST_TRY_AGAIN;
+}
+
+// AC-0127: the action's name, the kind, and the status when there is one. It
+// takes no error, so no answer text, fact, or key can reach the log.
+export function digestFailureLogLine(kind: DigestFailureKind, status?: number): string {
+  return `writeDigest failed: kind=${kind}${status === undefined ? "" : ` status=${status}`}`;
+}
+
 // Invoice reading (invoice-entry AC-0016, AC-0022, AC-0023, AC-0117, AC-0185, AC-0190).
 // The model failures' texts live in invoice-reading.ts; "Try again" is read from there.
 export const NOT_READ = "The invoice wasn't read.";
@@ -211,7 +274,7 @@ export function draftDiscardFailureMessage(error: unknown, stage: FailureStage):
   return `${NOT_DISCARDED} ${text}`;
 }
 
-// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, readInvoice, saveDraft, and discardDraft.
+// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, the three alert actions, readInvoice, saveDraft, and discardDraft.
 export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
@@ -221,6 +284,9 @@ export type LoggedAction =
   | "saveTargetMargin"
   | "removeTargetMargin"
   | "saveListPrice"
+  | "applyAlertPrice"
+  | "dismissAlert"
+  | "writeDigest"
   | "readInvoice"
   | "saveDraft"
   | "discardDraft";
@@ -246,6 +312,22 @@ export function logMessage(error: unknown): string {
 export function actionFailureLogLine(action: LoggedAction, stage: FailureStage, error: unknown): string {
   const code = codeOf(error);
   return `${action} failed at ${stage}: ${logMessage(error)}${code ? ` (code ${code})` : ""}`;
+}
+
+// The watch's one log line (alerts spec: the header and /alerts watch). It tells
+// four causes apart by a fixed label and reads nothing from the error's message
+// but its kind, so no figure, product, or alert can reach it: an engine refusal
+// (with its SQLSTATE), a request that hit the time limit or was aborted, an
+// answer with no counts, and any other failure to get an answer.
+export function watchFailureLogLine(error: unknown): string {
+  const code = codeOf(error);
+  const message = error instanceof Error ? error.message : "";
+  let cause: string;
+  if (code) cause = `engine refused (code ${code})`;
+  else if (message === NO_COUNTS_MESSAGE) cause = "answer had no counts";
+  else if (/^\w+ failed: (AbortError|TimeoutError)\b/.test(message)) cause = "timed out or aborted";
+  else cause = "no answer";
+  return `runWatch failed: ${cause}`;
 }
 
 // An auth-js error, read for its code and status only. Both are missing or 0

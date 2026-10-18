@@ -48,6 +48,7 @@ export const FORM_CONTROLS = [
   "a Sales",
   "a Trace",
   "a Invoices",
+  "a Alerts",
   "button Sign out",
   "input #invoice-photo",
   "button Read photo",
@@ -87,6 +88,7 @@ export type FakeAnswer =
   | { rawBody: string; status?: number; contentType?: string }
   | { drop: true }
   | { dropAfterHeaders: true }
+  | { stallAfterHeaders: true }
   | { hold: true; then: FakeAnswer };
 
 export interface RecordedRequest {

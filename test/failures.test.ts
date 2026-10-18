@@ -6,9 +6,11 @@ import {
   sessionOutcome,
   signInFailureMessage,
   voidFailureMessage,
+  watchFailureLogLine,
   withTimeout,
 } from "../src/lib/failures.js";
-import { RpcError } from "../src/lib/rpc.js";
+import { NO_COUNTS_MESSAGE, RpcError, refreshAlerts } from "../src/lib/rpc.js";
+import { createClient } from "@supabase/supabase-js";
 
 const NOT_ALLOWED = "This account isn't allowed to use Meat Ops.";
 const SAVE_UNKNOWN =
@@ -120,5 +122,31 @@ describe("caller check: an ended session or a failed lookup", () => {
     expect(sessionOutcome({ claims: null, error: { status: 0 } })).toBe("failed");
     expect(sessionOutcome({ claims: null, error: { status: 429 } })).toBe("failed");
     expect(sessionOutcome({ claims: null, error: { status: 503 } })).toBe("failed");
+  });
+});
+
+describe("the watch's log line", () => {
+  const line = (message: string, code: string) => watchFailureLogLine(new RpcError(message, code));
+
+  it("tells an engine refusal, a timeout, a transport failure, and an empty answer apart, with fixed labels", () => {
+    expect(line("refreshAlerts failed: boom 502 $3.29", "P0001")).toBe("runWatch failed: engine refused (code P0001)");
+    expect(line("refreshAlerts failed: TimeoutError: timed out", "")).toBe("runWatch failed: timed out or aborted");
+    expect(line("refreshAlerts failed: TypeError: fetch failed 502", "")).toBe("runWatch failed: no answer");
+    expect(line(NO_COUNTS_MESSAGE, "")).toBe("runWatch failed: answer had no counts");
+    expect(watchFailureLogLine("not an error")).toBe("runWatch failed: no answer");
+  });
+
+  it("labels the error refreshAlerts throws when its time limit aborts the fetch as timed out or aborted", async () => {
+    const never: typeof fetch = (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    const client = createClient("http://127.0.0.1:1", "anon-key", {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: withTimeout(never, 50) },
+    });
+    const thrown = await refreshAlerts(client, "2026-10-13").catch((error: unknown) => error);
+    expect(thrown).toBeInstanceOf(RpcError);
+    expect(watchFailureLogLine(thrown)).toBe("runWatch failed: timed out or aborted");
   });
 });
