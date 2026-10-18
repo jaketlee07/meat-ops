@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { askFailureKind, parseModelAnswer, type AskModelResult, type askRequest } from "../../lib/ask";
 import { digestRequest, digestVerdict } from "../../lib/digest";
 import {
   failureKind,
@@ -28,6 +29,9 @@ const MODEL_TIMEOUT_MS = 120_000;
 
 // The digest sets a shorter limit on its own request (alerts AC-0090).
 const DIGEST_TIMEOUT_MS = 60_000;
+
+// Ask sets the same limit on its own request (ask-your-data AC-0078).
+const ASK_TIMEOUT_MS = 60_000;
 
 // The only request headers a read sends, with values set here. The SDK adds its
 // own platform headers (operating system, architecture, runtime version, user
@@ -160,6 +164,38 @@ export async function writeDigest(facts: string, codes: readonly string[]): Prom
     }
     const verdict = digestVerdict(parsed, facts, codes);
     return verdict.kind === "digest" ? { ok: true, paragraphs: verdict.paragraphs } : { ok: false, kind: verdict.kind };
+  } catch {
+    return { ok: false, kind: "unreadable" };
+  }
+}
+
+// Ask's one request: no retries, and a 60 second limit on the whole answer, kept
+// the same way as the digest's. The firing of the limit reads as no answer
+// whatever error the SDK throws. The request comes from askRequest and carries
+// the question; no error text leaves this function, so none can reach a log.
+// The answer is parsed here (AC-0077 to AC-0079); only the checked fields leave.
+export async function askModel(request: ReturnType<typeof askRequest>): Promise<AskModelResult> {
+  const built = buildClient();
+  if (!built.ok) return built;
+
+  const deadline = AbortSignal.timeout(ASK_TIMEOUT_MS);
+  let message;
+  try {
+    message = await built.client.messages.create(request, { timeout: ASK_TIMEOUT_MS, signal: deadline });
+  } catch (error) {
+    if (deadline.aborted) return { ok: false, kind: "no-answer" };
+    if (error instanceof SyntaxError) return { ok: false, kind: "unreadable" };
+    const description = describe(error);
+    return {
+      ok: false,
+      kind: askFailureKind(description),
+      ...(description.type === "status" ? { status: description.status } : {}),
+    };
+  }
+
+  try {
+    const parsed = parseModelAnswer(message);
+    return parsed.ok ? { ok: true, answer: parsed.answer } : { ok: false, kind: parsed.kind };
   } catch {
     return { ok: false, kind: "unreadable" };
   }

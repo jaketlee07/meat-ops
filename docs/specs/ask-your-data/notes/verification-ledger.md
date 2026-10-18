@@ -52,3 +52,14 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - Notes: `set_target_margin` takes percent units, so the fixtures pass 20 for a 20% target. In AC-0035's fixture a 100-lb draw from batch 1 takes from both raw lots, so its items list lot A and lot B; the criterion checks only "(No customer)". `pricing_attention` keeps rows that need a new price and carry a price action and a suggested price, as the pricing page's advice does.
 - Controller fix: the test file's second import from `./db.js` now joins the stub's import block.
 - Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `E2E_PORT=3200 npm test` exit 0, Vitest 788 passed (43 files, 27 s), Playwright 542 passed (6.4 m).
+
+## T3 (2026-10-18)
+
+- Executed by the `implementer` subagent; controller reran every gate.
+- Stub materialized byte-identical at `test/ask-actions.test.ts` (sha256 e35573e8…68be1ae); observed red, with `src/app/ask/ask-question.ts` moved aside: `Cannot find module '../src/app/ask/ask-question.js'`. The file then grew to 22 cases.
+- Built: `askModel` in `src/app/_server/model.ts` (the shared `buildClient`, one `messages.create` with `{ timeout: 60_000, signal }` where `signal` is its own `AbortSignal.timeout(60_000)`, no-answer whenever that deadline fired, then `parseModelAnswer`); `src/app/ask/ask-question.ts` (`decideAsk`, `decideLookup`, `AskDeps`, `LookupDeps`, `AskState`); `askQuestion` and `lookUpAnswer` in `LoggedAction`. `readReceipt` and `writeDigest` are unchanged.
+- The deadline follows `writeDigest`'s `AbortSignal.timeout` rather than the plan Design's `AbortController` and timer; both abort the request at 60 seconds, and the rule keys on "the deadline fired", not on the error's class.
+- `LookupDeps` holds only the caller and the read, so a lookup cannot reach the model check, the product lists, or the model. A throw from `askModel` is logged as `askQuestion failed: kind=service-error` only, so no error text can carry the question into the log.
+- AC-0127's command prints nothing.
+- Controller fixes: three test labels named the wrong criterion (now AC-0047, AC-0068, AC-0069); the choose state's `query` is typed as a product query.
+- Controller gates: `npm run typecheck` exit 0; `npm run build` exit 0; `E2E_PORT=3200 npm test` exit 0, Vitest 810 passed (44 files, 32 s), Playwright 542 passed (6.1 m).

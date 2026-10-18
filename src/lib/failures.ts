@@ -274,7 +274,7 @@ export function draftDiscardFailureMessage(error: unknown, stage: FailureStage):
   return `${NOT_DISCARDED} ${text}`;
 }
 
-// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, the three alert actions, readInvoice, saveDraft, and discardDraft.
+// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, the three alert actions, readInvoice, saveDraft, discardDraft, askQuestion, and lookUpAnswer.
 export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
@@ -289,7 +289,9 @@ export type LoggedAction =
   | "writeDigest"
   | "readInvoice"
   | "saveDraft"
-  | "discardDraft";
+  | "discardDraft"
+  | "askQuestion"
+  | "lookUpAnswer";
 
 const LOG_MESSAGE_LIMIT = 200;
 
