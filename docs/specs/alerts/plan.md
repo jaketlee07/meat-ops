@@ -1,7 +1,7 @@
 # Plan: alerts
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:**
   - **Area rules and access model:** `docs/architecture/overview.md`.
   - **Analogous implementations:** the pricing change actions (`src/app/pricing/actions.ts`, decisions in `src/app/pricing/save-change.ts`, tested by `test/save-change.test.ts`) for the reprice and dismiss actions; invoice-entry's read action and `src/app/_server/model.ts` (on `feat/invoice-entry`, tested by `test/read-invoice.test.ts` and `test/e2e/invoices.spec.ts` there) for the digest action and its fake-model tests; `set_list_price` in `supabase/migrations/20261009070619_menu_pricing.sql` for the new functions' shape; `private.operators` in `supabase/migrations/20261007181933_engine_hardening.sql` for a private table.
