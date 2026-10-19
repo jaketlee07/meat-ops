@@ -12,12 +12,22 @@
 -- before anything is granted.
 -- ============================================================
 
--- Every operation locks a raw product's inventory_balances row before it
--- touches batches or adjustments. Taking that table first keeps the same order,
--- so an operation running while this applies waits for it, or it waits for the
--- operation, and the two never deadlock. Plain reads still run. The CLI applies
--- this file as one implicit transaction, not a transaction block, so the lock is
--- taken inside a DO block; it holds until the file commits.
+-- The operations that lock a raw product's inventory_balances row take it
+-- before they touch batches or adjustments, except reverse_batch, which reads
+-- its batch first. Taking that table first keeps their order, so those
+-- operations and this file wait for each other, and a receipt saved while this
+-- applies is still counted. Plain reads of balances still run.
+--
+-- Two calls can still fail while this applies. A reverse_batch that has read
+-- its batch can deadlock with the alter table below, and Postgres then aborts
+-- it or this file. A void_receipt that waited behind this lock resumes in its
+-- old body, which calls the two-argument refresh this file drops. The failed
+-- call, or this file, rolls back whole and can be run again, so apply this
+-- while no operation runs.
+--
+-- The CLI applies this file as one implicit transaction, not a transaction
+-- block, so the lock is taken inside a DO block; it holds until the file
+-- commits.
 do $$
 begin
     lock table public.inventory_balances in exclusive mode;
