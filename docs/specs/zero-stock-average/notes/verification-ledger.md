@@ -26,3 +26,11 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
 - The latest `produce_batch` and `adjust_lot` lock the raw product's `inventory_balances` row before they insert their `production_batches` or `lot_adjustments` row. Neither table has a trigger.
 - Setup: this folder's `supabase/.env` is an exact copy of `supabase/stack-b.env`. `npm ci` exited 0. The folder check listed no folder. `npm run db:reset:stack-b` applied all 13 migrations, and the `.env` was remade from stack B.
 - `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 50 files and 1,001 tests passed, then the browser suite built the app and passed 654 tests in 9.0 minutes.
+
+## T2: the zero-stock rule holds after every operation
+
+- 2026-10-19. The stub materialized into `test/zero-stock.test.ts` with sha256 `d4bbc0cfe674676262690388ea7ccc1cae3663bf619f6339abb55ea0241f00c1`, the plan's digest. Before the migration, `npx vitest run test/zero-stock.test.ts` exited 1 on stack B: both AC-0006 cases read a `moving_avg_cost` of 18 where 1.8 was expected.
+- `supabase migration up` applied `20261019195238_zero_stock_average.sql` to stack B. `npm run gen:types` added `stock_seq` to the `production_batches` and `lot_adjustments` types (8 lines). On the stack, no function calls `private.refresh_balance` with two arguments, and only `private.refresh_balance(uuid)` exists.
+- With the file grown, the AC-0001 check test failed until `averageViolations` in `test/db.ts` gained the zero-stock branch, then passed.
+- Bundled fixes (tier 3, same concern): `test/save-batch.test.ts` builds a `ProductionBatch` row by hand, so it gains `stock_seq: 1` for the regenerated type, as it gained `reversed_at` and `reversal_reason` for corrections. Without it, `npm run typecheck` reported TS2741 there.
+- `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 51 files and 1,029 tests passed, 28 of them in `test/zero-stock.test.ts`, then the browser suite passed 654 tests in 9.6 minutes. The only asserted values that changed are the five the spec's Ask-first item lists.

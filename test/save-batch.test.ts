@@ -75,6 +75,7 @@ const batch = (finishedLbsOut: number): ProductionBatch => ({
   notes: null,
   reversed_at: null,
   reversal_reason: null,
+  stock_seq: 1,
 });
 
 const after: AfterWrite = {

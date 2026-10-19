@@ -159,7 +159,7 @@ describe("void_receipt", () => {
     });
   });
 
-  describe("AC-0053: voiding to zero stock restores the prior average", () => {
+  describe("AC-0053, as amended: voiding to zero stock leaves the zero-stock average", () => {
     // 0 lbs on hand at an average of 1.8000: receive and produce the same lot.
     async function startAtZeroStock(): Promise<void> {
       await receive(1000, 1.8, "2026-05-10");
@@ -167,7 +167,7 @@ describe("void_receipt", () => {
       expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.8 });
     }
 
-    it("a single void returns the average to 1.8000", async () => {
+    it("AC-0002: a single void returns the average to 1.8000", async () => {
       await startAtZeroStock();
       const lot = await receive(1000, 18, "2026-05-12");
       expect((await getInventoryBalance(RAW_TOM_ID))?.moving_avg_cost).toBe(18);
@@ -178,7 +178,7 @@ describe("void_receipt", () => {
     it.each([
       ["first to last", [0, 1]],
       ["last to first", [1, 0]],
-    ])("two lots voided %s end at 1.8000", async (_name, order) => {
+    ])("AC-0003: two lots voided %s end at 1.8000", async (_name, order) => {
       await startAtZeroStock();
       const lots = [await receive(1000, 18, "2026-05-12"), await receive(1000, 18, "2026-05-13")];
       for (const index of order) {
@@ -187,20 +187,20 @@ describe("void_receipt", () => {
       expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.8 });
     });
 
-    it("a void lot followed by a lot adjusted to zero still returns to 1.8000", async () => {
+    it("AC-0004: a void lot followed by a lot adjusted to zero ends at the adjusted lot's 2.0000", async () => {
       await startAtZeroStock();
       const voided = await receive(1000, 18, "2026-05-12");
       const later = await receive(1000, 2, "2026-05-13");
       await adjustLot(client, { lotId: later.id, newRemainingLbs: 0, reason: "count" });
       expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 1000, moving_avg_cost: 18 });
       await voidReceipt(client, voided.id, "entered twice");
-      expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.8 });
+      expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 2 });
     });
 
     it.each([
       ["first to last", [0, 1]],
       ["last to first", [1, 0]],
-    ])("two void lots before a lot adjusted to zero, voided %s, end at 1.8000", async (_name, order) => {
+    ])("AC-0005: two void lots before a lot adjusted to zero, voided %s, end at the adjusted lot's 2.0000", async (_name, order) => {
       await startAtZeroStock();
       const voided = [await receive(1000, 18, "2026-05-12"), await receive(1000, 20, "2026-05-12")];
       const later = await receive(1000, 2, "2026-05-13");
@@ -208,10 +208,10 @@ describe("void_receipt", () => {
       for (const index of order) {
         await voidReceipt(client, voided[index!]!.id, "entered twice");
       }
-      expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.8 });
+      expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 2 });
     });
 
-    it("the search after the last lot production drew from skips an earlier void lot", async () => {
+    it("the last batch, then a later adjustment, sets the average a void leaves, skipping an earlier void lot", async () => {
       await startAtZeroStock();
       await receive(1000, 2, "2026-05-12");
       await produce(1000, "2026-05-12");
@@ -225,7 +225,7 @@ describe("void_receipt", () => {
       const wasted = await receive(1000, 3, "2026-05-14");
       await adjustLot(client, { lotId: wasted.id, newRemainingLbs: 0, reason: "waste" });
       await voidReceipt(client, late.id, "entered twice");
-      expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 2.5 });
+      expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 3 });
     });
 
     it("lots received in one date keep insertion order when two are voided", async () => {

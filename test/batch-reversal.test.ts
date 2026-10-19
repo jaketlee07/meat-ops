@@ -309,7 +309,7 @@ describe("operations after a reversal", () => {
     expect(await remaining(fixture.lotBId)).toBe("2000.000");
   });
 
-  it("AC-0066: voiding receipts after a reversed batch gives the average the last void lot carried", async () => {
+  it("AC-0066, as amended: voiding receipts after a reversed batch gives the average of the lot adjusted last", async () => {
     // RAW-TOM at 0 lbs on hand with an average of 1.8000.
     const first = await ok(receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, 1.8, "2026-10-01"));
     await ok(adjustCall(first, 0, "waste"));
@@ -321,7 +321,7 @@ describe("operations after a reversal", () => {
     await ok(adjustCall(l3, 0, "waste"));
     await ok(voidReceiptCall(l1));
     await ok(voidReceiptCall(l2));
-    expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.8 });
+    expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 2 });
   });
 
   it("AC-0067: void_receipt refuses lot B, which batch 1 still uses, after batch 2 is reversed", async () => {

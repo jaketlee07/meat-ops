@@ -459,6 +459,7 @@ export type Database = {
           note: string | null
           old_remaining_lbs: number
           reason: string
+          stock_seq: number
         }
         Insert: {
           adjusted_at?: string
@@ -468,6 +469,7 @@ export type Database = {
           note?: string | null
           old_remaining_lbs: number
           reason: string
+          stock_seq?: number
         }
         Update: {
           adjusted_at?: string
@@ -477,6 +479,7 @@ export type Database = {
           note?: string | null
           old_remaining_lbs?: number
           reason?: string
+          stock_seq?: number
         }
         Relationships: [
           {
@@ -695,6 +698,7 @@ export type Database = {
           reversal_reason: string | null
           reversed_at: string | null
           shrink_pct_used: number
+          stock_seq: number
         }
         Insert: {
           batch_number: string
@@ -710,6 +714,7 @@ export type Database = {
           reversal_reason?: string | null
           reversed_at?: string | null
           shrink_pct_used: number
+          stock_seq?: number
         }
         Update: {
           batch_number?: string
@@ -725,6 +730,7 @@ export type Database = {
           reversal_reason?: string | null
           reversed_at?: string | null
           shrink_pct_used?: number
+          stock_seq?: number
         }
         Relationships: [
           {
@@ -1428,6 +1434,7 @@ export type Database = {
           reversal_reason: string | null
           reversed_at: string | null
           shrink_pct_used: number
+          stock_seq: number
         }
         SetofOptions: {
           from: "*"
@@ -1521,6 +1528,7 @@ export type Database = {
           reversal_reason: string | null
           reversed_at: string | null
           shrink_pct_used: number
+          stock_seq: number
         }
         SetofOptions: {
           from: "*"

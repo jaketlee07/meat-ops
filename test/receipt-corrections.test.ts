@@ -277,11 +277,11 @@ describe("correct_receipt", () => {
     expect((await lotRow(fixture.lotBId)).remaining_lbs).toBe("0.000");
   });
 
-  it("AC-0025: at 0 lbs on hand a cost correction keeps the average", async () => {
+  it("AC-0025, as amended by the zero-stock-average spec's AC-0011: at 0 lbs on hand a cost correction moves the average to 1.9000", async () => {
     const fixture = await setUp();
     await correct(correctCall(fixture.lotBId, 1.8, 2000));
     await correct(correctCall(fixture.lotBId, 1.9, 2000));
-    expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.8 });
+    expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.9 });
   });
 
   it("AC-0026: a correction that changes nothing after rounding is refused", async () => {
