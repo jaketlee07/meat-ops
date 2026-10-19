@@ -371,7 +371,7 @@ test.describe("a reversal that ends in the list", () => {
     expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(2)]);
   });
 
-  test("AC-0131, AC-0148: pressing Reverse again after the third Escape, while the reversal waits, keeps the sent reason, and the list marks the batch with it", async ({
+  test("AC-0131: pressing Reverse again after the third Escape, while the reversal waits, keeps the sent reason, and the list marks the batch with it", async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -387,6 +387,8 @@ test.describe("a reversal that ends in the list", () => {
       await reverseButton(item2).click();
       await expect(dialog).toBeVisible();
       await expect(dialog.getByLabel("Reason for the reversal")).toHaveValue("entered twice");
+      // The field stays editable while the reversal waits; the mark must still read the sent reason.
+      await dialog.getByLabel("Reason for the reversal").fill("edited while waiting");
       // The product goes inactive, so the action skips the re-render (AC-0148).
       await query("update products set active = false where id = $1", [PROD_502_ID]);
     } finally {

@@ -501,7 +501,7 @@ test.describe("a correction the database refuses", () => {
     expect(await correctionCount()).toBe(1);
   });
 
-  test("AC-0094, AC-0104, AC-0106, AC-0176: pressing Correct again after the third Escape, while the save waits, keeps the sent values and the database's refusal shows beside them", async ({
+  test("AC-0104, AC-0106, AC-0176: pressing Correct again after the third Escape, while the save waits, keeps the sent values and the database's refusal shows beside them", async ({
     page,
   }) => {
     const id = await seedReceipt(1000, 1.68);

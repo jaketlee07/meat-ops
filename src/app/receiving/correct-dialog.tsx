@@ -115,6 +115,10 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
   const [refusal, setRefusal] = useState<Message | null>(null);
   const [corrected, setCorrected] = useState<Corrected | null>(null);
   const [pending, startCorrect] = useTransition();
+  // True from the send until the result is handled. `pending` clears a render
+  // later than the result's own state changes, so it cannot tell a press in that
+  // gap from a press while the save waits.
+  const sentRef = useRef(false);
 
   const errors = invalid?.errors ?? {};
 
@@ -141,9 +145,9 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
   // Every opening starts from what the receipt holds now, with no reason. While
   // a correction is pending, the browser can have closed the dialog on a third
   // Escape and the button is live again: showing the dialog again must keep the
-  // values that were sent.
+  // values that were sent. Once the result is handled, the next opening resets.
   function open() {
-    if (pending) {
+    if (sentRef.current) {
       if (!dialogRef.current?.open) dialogRef.current?.showModal();
       return;
     }
@@ -173,11 +177,14 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
       return;
     }
     setInvalid(null);
+    sentRef.current = true;
     startCorrect(async () => {
       let result: CorrectionState;
       try {
         result = await correctAction(fields);
+        sentRef.current = false;
       } catch {
+        sentRef.current = false;
         // A dropped connection or a server error: the correction may have
         // happened (AC-0116). A rejected action reaches the error boundary,
         // which would unmount the list, so it is answered here like a refusal.
