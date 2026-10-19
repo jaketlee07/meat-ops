@@ -1,11 +1,16 @@
 # Costing reference and golden invariants
 
 This is the source of truth for the costing math. The tests in
-`test/costing.test.ts`, `test/engine.test.ts`, `test/corrections.test.ts`, and
-`test/pricing.test.ts` encode every costing number below. The display formats in the Rounding note are
-asserted by `test/format.test.ts`, `test/production-rules.test.ts`, and
-`test/pricing-rules.test.ts`, and its
-missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, and `test/e2e/trace.spec.ts`, except "Not available" below, which no test asserts. If a change turns any of these red, the change is
+`test/costing.test.ts`, `test/engine.test.ts`, `test/corrections.test.ts`,
+`test/pricing.test.ts`, `test/receipt-corrections.test.ts`,
+`test/batch-reversal.test.ts`, and `test/alerts-corrections.test.ts` encode
+every costing number below. The rules and reads around them are in
+`test/correction-rules.test.ts`, `test/corrections-data.test.ts`, and
+`test/save-correction.test.ts`, and the two pages' end-to-end checks are in
+`test/e2e/correct.spec.ts` and `test/e2e/reverse.spec.ts`. The display formats
+in the Rounding note are asserted by `test/format.test.ts`,
+`test/production-rules.test.ts`, and `test/pricing-rules.test.ts`, and its
+missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, and `test/e2e/trace.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
@@ -396,9 +401,11 @@ Where the database has nothing to show, the screen uses text:
   receipt shows "No price yet".
 - The list price of a finished product with none shows "No list price yet".
 - A sale with no customer shows "No customer", on the sales page and on a trace.
-- A finished product's lbs on hand in the "Sale saved" panel shows "Not available"
-  only when the menu view has no row for the product in the read after the write,
-  as for a product made inactive between the write and that read.
+- A finished product's lbs on hand in the "Sale saved" and "Batch reversed" panels
+  shows "Not available" only when the menu view has no row for the product in the
+  read after the write, as for a product made inactive between the write and that
+  read. `test/e2e/reverse.spec.ts` asserts it for the "Batch reversed" panel; no
+  test asserts it for "Sale saved".
 - The target margin of a finished product with none shows "No target".
 - The raw average cost, cost after shrink, and cost per lb of a finished
   product whose raw product has no non-void receipt show "None yet", whatever
