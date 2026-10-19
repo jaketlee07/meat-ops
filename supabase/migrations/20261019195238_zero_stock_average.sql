@@ -14,16 +14,18 @@
 
 -- The operations that lock a raw product's inventory_balances row take it
 -- before they touch batches or adjustments, except reverse_batch, which reads
--- its batch first. Taking that table first keeps their order, so those
--- operations and this file wait for each other, and a receipt saved while this
--- applies is still counted. Plain reads of balances still run.
+-- its batch first. Taking that table first keeps their order: one side waits
+-- for the other to commit, and a receipt saved while this applies is still
+-- counted. Plain reads of balances still run.
 --
--- Two calls can still fail while this applies. A reverse_batch that has read
--- its batch can deadlock with the alter table below, and Postgres then aborts
--- it or this file. A void_receipt that waited behind this lock resumes in its
--- old body, which calls the two-argument refresh this file drops. The failed
--- call, or this file, rolls back whole and can be run again, so apply this
--- while no operation runs.
+-- A call that is running while this applies can still fail. For example, a
+-- reverse_batch that has read its batch can deadlock with the alter table
+-- below, and Postgres then aborts it or this file; a void_receipt that waited
+-- behind this lock resumes in its old body, which calls the two-argument
+-- refresh this file drops; and a produce_batch that waited returns a row with
+-- the new stock_seq column, which its query did not expect. Because of these
+-- failures, apply this while no operation runs. A failed call, or this file,
+-- rolls back whole and can be run again.
 --
 -- The CLI applies this file as one implicit transaction, not a transaction
 -- block, so the lock is taken inside a DO block; it holds until the file
