@@ -1,6 +1,6 @@
 # Spec: zero-stock-average
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the intent [`docs/product/intents/zero-stock-average-recompute.md`](../../product/intents/zero-stock-average-recompute.md) (its Outcome, as the corrections spec widens it, and its Boundary); the corrections spec [`../corrections/spec.md`](../corrections/spec.md) (its definitions and its operations `correct_receipt` and `reverse_batch`), which reaches `main` before this build starts; [`docs/costing.md`](../../costing.md) (the stock-on-hand average, the zero-stock rule, the seven invariants, the Rounding note); [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §4, §5, §6, and §11; foundation-hardening AC-0029 and AC-0053 ([`../foundation-hardening/spec.md`](../foundation-hardening/spec.md)); `AGENTS.md` "Run two folders' tests at once"

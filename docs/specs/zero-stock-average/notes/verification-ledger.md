@@ -14,3 +14,15 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
 - `lint-contract-item-alignment.py` reports 7 references that resolve to no criterion in this folder: the corrections spec's AC-0025 and AC-0066 and foundation-hardening's AC-0029 and AC-0053, each named beside its spec.
 - This folder ran `npm ci` on 2026-10-18, after `main`'s lockfile added the Anthropic SDK. The T2 stub's red run and the formula probe used stack B, which held `main`'s ten migrations; the probe rolled back.
 - Project-knowledge capture is not attempted at the gates; the store refused captures in earlier sessions (`staged_dual_writer`). Reusable lessons go to the session memory.
+
+## T1: the branch is green on stack B before any change
+
+- 2026-10-19. The build runs on `fix/zero-stock-average-build`, made from `origin/main` at `04bc7f1`. That commit holds the corrections merge (PR #26, `77e7243`) and its close-out (PR #27). PR #25 had already merged this spec and plan, so a new branch from `main` stands in for the plan's rebase.
+- The four corrections facts hold on `main`:
+  - The corrections spec (Status: Shipped) defines current cost and weight as `current_unit_cost` and `current_weight_lbs`, a correction, and a reversed batch as a `production_batches` row with a `reversed_at`. Its AC-0025 and AC-0066 state 1.8000.
+  - The latest migration that defines `void_receipt` is `20261018205556_batch_reversal.sql`, not `20261018053447_receipt_corrections.sql` as the spec's first Assumption says. It still holds the two searches and calls `private.refresh_balance(v_product, coalesce(v_zero_avg, v_lot.prior_avg_cost))`.
+  - `correct_receipt` (`20261018053447_receipt_corrections.sql`) and `reverse_batch` (`20261018205556_batch_reversal.sql`) call `private.refresh_balance` with one argument.
+  - `private.refresh_balance(uuid, numeric default null)` is last defined in `20261018053447_receipt_corrections.sql` and reads `current_unit_cost`.
+- The latest `produce_batch` and `adjust_lot` lock the raw product's `inventory_balances` row before they insert their `production_batches` or `lot_adjustments` row. Neither table has a trigger.
+- Setup: this folder's `supabase/.env` is an exact copy of `supabase/stack-b.env`. `npm ci` exited 0. The folder check listed no folder. `npm run db:reset:stack-b` applied all 13 migrations, and the `.env` was remade from stack B.
+- `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 50 files and 1,001 tests passed, then the browser suite built the app and passed 654 tests in 9.0 minutes.
