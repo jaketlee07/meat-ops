@@ -328,11 +328,13 @@ sale line from the finished lot. The tests check this chain after every test.
 **Restatement rule.** When the cost changes, each batch made from the lot is
 restated, whether or not its finished lbs are sold. The batch keeps the
 processing fees it was costed with. The fee as used is recovered before the rows
-change: the batch's cost per finished lb minus the sum of lbs consumed times lot
-cost, divided by its finished lbs out, rounded to 4 decimals. That sum is not
-rounded first. Fees have 4 decimals, so this is exact, and a fee changed on the
-product afterwards does not enter. The restated cost per finished lb is the same
-quotient over the new lot cost, rounded to 4 decimals, plus that fee.
+change. First take the raw cost per finished lb: the sum of lbs consumed times
+lot cost, divided by the batch's finished lbs out, rounded to 4 decimals. That
+sum is not rounded first. The fee as used is the batch's cost per finished lb
+minus that raw cost per finished lb. Fees have 4 decimals, so this is exact, and
+a fee changed on the product afterwards does not enter. The restated cost per
+finished lb is the new raw cost per finished lb, worked out the same way with
+the new lot cost, plus that fee.
 
 **Weight rule.** The weight change moves the lot's remaining lbs by the same
 amount. The new weight cannot go below the current weight minus the remaining

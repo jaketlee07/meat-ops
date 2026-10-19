@@ -177,8 +177,10 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
 
   return (
     <div className="min-w-0 max-w-full">
-      {/* Until the list shows the reversal (the action skips the re-render for a
-          product made inactive), this control marks its own batch as reversed. */}
+      {/* Until the list shows the reversal, this control marks its own batch as
+          reversed. The action skips the re-render when a read after the write
+          failed, or when no finished lbs on hand come back because the product
+          was made inactive. */}
       {done && !reversed && <p className="break-words font-medium">{`Reversed: ${reason}`}</p>}
       {!reversed && !done && (
         <button
