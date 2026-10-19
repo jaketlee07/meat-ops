@@ -213,3 +213,261 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
 - The quality adjudication returned `ADJUDICATION-INDETERMINATE` on one nit: that a `produce_batch` waiting behind the apply also fails, so the comment's "two calls can still fail" was not complete. It rested on runtime behavior the repository cannot show. A probe on stack B, against the round 3 file (sha256 `5ac1fb02d5f8b0c7415d91968737a465afccfd0252863c894ff2a52211489c66`), settled it. The probe used the round 3 waiting-void layout, with a `produce_batch` of 100 raw lbs called as `select ... from public.produce_batch(...) pgrst_call`, the way PostgREST calls it. The migration applied. The batch call failed with `function return row and query-specified return row do not match`, `Returned row contains 14 attributes, but query expects 13`. Afterwards there was still 1 batch, and the balance equalled the lots at 1,500.000 lbs. The owner ruled the nit sustained on 2026-10-19.
 - The fix changes only the migration's comment. Its first paragraph says one side waits for the other to commit. Its second says a call running while the file applies can still fail, and gives the reversal deadlock, the waiting void, and the waiting batch as examples rather than a complete list. Because of those failures, the file is applied while no operation runs, and a failed call or the file rolls back whole and can be run again. `git diff` of the migration touches comment lines only. The T3 probe was re-run against the new file.
 - Gates, after the folder check listed no folder: `npm run db:reset:stack-b` applied all 14 migrations, and `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 51 files and 1,034 tests passed, then the browser suite passed 655 tests in 8.9 minutes.
+
+## Review round 5 and completion evidence handoff
+
+- 2026-10-19, round 5 (delta `6f08496..09f1f9d`): the adversarial and quality reviewers each returned the byte-exact clean sentinel. `reviewers-clean` moved the loop to the human gate, and the adversarial clean was recorded.
+- **Resolve-vs-surface record, closed at DECIDE:** every finding sustained in rounds 1 to 4 is resolved, and the verdict below lists each one with its commit. The round 4 quality finding was settled by a stack B probe and the owner's ruling, recorded above, and then fixed. No nit is deferred. Refuted findings: none in any round.
+- **Reviewers not warranted:**
+  - `security-reviewer`: no role's access changes. The migration revokes and re-grants exactly the access the replaced functions had, and keeps the new sequence private. AC-0014, AC-0020, and AC-0021 pin this.
+  - `frontend-reviewer` and `experience-reviewer`: no page, style, or script changes; only the number the database stores changes.
+- **Tail triage:** 566 added and 15 deleted lines under `supabase/`, `src/`, and `test/`, across 17 files in all. That is under 2,000 reviewable lines, so no review shape is declared.
+- **Learnings:** project-knowledge capture was not attempted; the store refused captures in earlier sessions (`staged_dual_writer`). Three reusable lessons went to the session memory: the spec hash pins the working-material sections too, the CLI applies a migration as one implicit transaction, and the lock-order probe recipe.
+
+For close-work:
+- **Delivery:** work-loop run `04390e72-bb6f-4404-ae44-9b4ebd36cbc9`, branch `fix/zero-stock-average-build`, made from `main` at `04bc7f1` and built in `~/Developer/meat-ops` on stack B.
+- **Accepted outcome and authority:** `docs/product/intents/zero-stock-average-recompute.md`. The owner approved the spec and plan on 2026-10-18, started the build on 2026-10-19 after the corrections merge (PR #26), and ruled the round 4 quality finding sustained.
+- **Implemented scope and evidence:** T1 to T5, each with its section above, and the gates after each review round. The last gates passed on `09f1f9d`: Vitest 1,034 and browser 655.
+- **Durable outputs:**
+  - `docs/costing.md`: the zero-stock rule, `void_receipt`, `correct_receipt`, and the test list.
+  - `SYSTEM-SPEC.md` §4 and §5.
+  - `docs/architecture/overview.md`: the write path, and "Insertion order and the hosted check".
+  - Amendment notes on foundation-hardening AC-0029 and AC-0053 and on the corrections spec's AC-0025 and AC-0066.
+  - `src/lib/database.types.ts`: `npm run gen:types` left no diff.
+  - This ledger.
+  - The intent closeout and `docs/lifecycle/zero-stock-average.json` are close-work's.
+- **Non-goals and follow-ons:** the spec names none.
+  - For close-out, the spec's Objective sentence on reversed batches and corrected receipts, and its first Assumption's migration file name, are working-material corrections recorded above.
+  - The hosted apply of this migration, under `docs/product/intents/hosted-supabase-rollout.md`, runs while no operation runs, as the migration comment says.
+  - The owner asked that close-out also queue the flaky `test/e2e/ask.spec.ts` AC-0067 timeout, seen once on 2026-10-19.
+- **Unresolved obligations:** the pull request waits on the owner's review and merge. Nothing was applied to the hosted project.
+- **Completion event candidate:** the merge of `fix/zero-stock-average-build` into `main`.
+- **Authority facts:**
+  - The owner is the only source, write, and deletion authority.
+  - No hosted write was made, and no review artifact under `.context/` is committed.
+  - Stack B was reset many times during the build, each after the folder check listed no folder. The `meat-ops-alerts` worktree is configured for stack B, so its rows on stack B are gone.
+  - This folder stays on stack B (`supabase/.env` is a copy of `supabase/stack-b.env`).
+
+### Review verdict
+
+```json review-verdict.v1
+{
+  "schema_version": "review-verdict.v1",
+  "state": "READY",
+  "mode": "full",
+  "review_unit": "zero-stock-average post-gates review, target 09f1f9d against main 04bc7f1",
+  "warranted_reviewers": [
+    {
+      "role": "adversarial-reviewer",
+      "mandatory": true,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/04390e72-bb6f-4404-ae44-9b4ebd36cbc9/5-post-gates-adversarial-reviewer-raw.md"
+    },
+    {
+      "role": "quality-engineer",
+      "mandatory": true,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/04390e72-bb6f-4404-ae44-9b4ebd36cbc9/5-post-gates-quality-engineer-raw.md"
+    }
+  ],
+  "named_skips": [],
+  "findings": [
+    {
+      "id": "r1-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "docs/costing.md:132",
+      "text": "The costing reference claimed the zero-stock average equals a never-entered replay, which fails after a weight correction or a reversal followed by later batches.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The rule section now claims only what the rule gives (cd2b597)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "docs/specs/zero-stock-average/notes/verification-ledger.md:41",
+      "text": "The T3 probe record left out the commands the pinned T3 Tests require.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The T3 entry holds the exact probe SQL and the migration digest (cd2b597), re-run after each later migration change."
+    },
+    {
+      "id": "r1-adversarial-reviewer-3",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/architecture/overview.md:88",
+      "text": "The overview's write-path sentence left out the refresh's zero-stock branch.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The sentence names the zero-stock average at 0 lbs (cd2b597)."
+    },
+    {
+      "id": "r1-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:184",
+      "text": "The backfill refresh ran without the stock lock, so a receipt saved during the apply could be overwritten by stale sums.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Step 4 locked each row (cd2b597); the migration now takes inventory_balances first (2fff3c8), and a receipt-in-flight probe ends with the balance equal to the lots."
+    },
+    {
+      "id": "r1-quality-engineer-2",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:89",
+      "text": "No test checked that the zero-stock search stays within one product.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Two second-product cases, each red when its product filter is removed (cd2b597)."
+    },
+    {
+      "id": "r1-quality-engineer-3",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:98",
+      "text": "No test checked that a count which does not lower a lot is skipped.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Equal-count and raising-count cases, red under <= and with no filter (cd2b597)."
+    },
+    {
+      "id": "r1-quality-engineer-4",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "docs/specs/zero-stock-average/notes/verification-ledger.md:40",
+      "text": "The backfill probe could not be repeated exactly from the ledger.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The T3 entry holds the SQL and digest, re-run against the final file (cd2b597, 09f1f9d)."
+    },
+    {
+      "id": "r1-quality-engineer-5",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:54",
+      "text": "stock_seq has no write guard, unlike the identity order numbers, and no reason was recorded.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Step 1's comment records why a shared plain default needs none (cd2b597)."
+    },
+    {
+      "id": "r1-quality-engineer-6",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/zero-stock.test.ts:191",
+      "text": "The AC-0001 check test could not catch a broken no-change branch.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "A no-change check case, red when coalesce is removed (cd2b597)."
+    },
+    {
+      "id": "r2-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/costing.md:134",
+      "text": "The rule section said a void lot was never drawn, which a lot drawn only by reversed batches contradicts.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Stated as invariant 6 does (2fff3c8)."
+    },
+    {
+      "id": "r2-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "concern",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:188",
+      "text": "Step 4 locked balance rows after step 1's table locks, the reverse of the operations' order, so an in-flight operation could deadlock with the apply.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The migration takes inventory_balances first inside a DO block; a lock-order probe deadlocked before and not after (2fff3c8)."
+    },
+    {
+      "id": "r3-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:15",
+      "text": "The never-deadlock comment was false for reverse_batch and for a void in flight, and no recovery was stated.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The comment names the exception and the failures, reproduced on stack B, with the whole rollback and re-run (6f08496)."
+    },
+    {
+      "id": "r3-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:15",
+      "text": "The comment's lock-order claim did not hold for reverse_batch's read before its balance lock.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same repair as r3-adversarial-reviewer-1 (6f08496)."
+    },
+    {
+      "id": "r4-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:17",
+      "text": "Two linking words in the lock comment misstated the locking.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The safe case reads as one side waiting for the other to commit, and applying while idle follows from the failures (09f1f9d)."
+    },
+    {
+      "id": "r4-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "supabase/migrations/20261019195238_zero_stock_average.sql:21",
+      "text": "The comment's closed list of apply-time failures left out a waiting produce_batch, which a stack B probe showed fails on its row shape.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The adjudication was indeterminate; the owner ruled it sustained on 2026-10-19, and the comment now gives the failures as examples (09f1f9d)."
+    }
+  ],
+  "required_gates": [
+    {
+      "name": "npm run typecheck",
+      "outcome": "passed",
+      "evidence": "exit 0 on 09f1f9d, stack B"
+    },
+    {
+      "name": "E2E_PORT=3200 npm test",
+      "outcome": "passed",
+      "evidence": "Vitest 51 files and 1,034 tests, browser 655 tests in 8.9 min, on 09f1f9d against stack B with all 14 migrations"
+    },
+    {
+      "name": "T3 backfill probe",
+      "outcome": "passed",
+      "evidence": "AC-0015, AC-0017, AC-0018 against migration sha256 8929024393cb6e260b5d36926b914d3c793b5cf5e0c2591de76330f7c494ecad, ledger T3 entry"
+    },
+    {
+      "name": "npm run gen:types",
+      "outcome": "passed",
+      "evidence": "no diff in src/lib/database.types.ts on the migrated stack; later migration changes were comments only"
+    },
+    {
+      "name": "lint-spec-status.py",
+      "outcome": "passed",
+      "evidence": "exit 0, spec metadata clean, 1 warn-only reference to the close-work lifecycle file"
+    }
+  ],
+  "deferrals": [],
+  "blind_spots": [],
+  "human_gate_status": "pending",
+  "non_authoritative_score": null
+}
+```

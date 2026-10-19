@@ -1,7 +1,7 @@
 # Plan: zero-stock-average
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** `docs/costing.md` (the costing math's owner) and `docs/architecture/overview.md` "Insertion order and the hosted check"; analogous implementations: `receipt_seq` and `produced_seq`, numbered for existing rows and then made identities, and `private.refresh_balance`, the one balance refresh, both in `supabase/migrations/20261007181933_engine_hardening.sql`; tests: the AC-0053 block of `test/corrections.test.ts`, and `assertAverageIsStockOnHand` and `inOperatorTransaction` in `test/db.ts`; uncertainty: the bodies of `void_receipt` and `private.refresh_balance` this change replaces, and the corrections names it reads (`current_unit_cost`, `reversed_at`), come from the corrections branch and are confirmed against the merged `main` at T1
 
 > **Plan contract:** this is the implementation strategy. It may change
