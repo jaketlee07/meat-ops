@@ -37,20 +37,117 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
 
 ## T3: rows made before the migration get numbers in the order they were made
 
-- 2026-10-19, on stack B, after the folder check listed no folder. `20261019195238_zero_stock_average.sql` was moved out of `supabase/migrations/`, and `npm run db:reset:stack-b` applied the 13 migrations before it.
-- As `postgres` through `docker exec -i supabase_db_meat-ops-b psql -U postgres -v ON_ERROR_STOP=1`, a script seeded the master data `test/db.ts` seeds and made the spec's probe history, one autocommitted statement per operation. Before the migration, RAW-TOM had 0.000 lbs on hand at an average of 1.8000, the value the old second search gives.
-- The migration was moved back and `supabase migration up` applied it. The four probe-history rows, in the order they were made:
+- 2026-10-19, on stack B, after the folder check listed no folder, against `supabase/migrations/20261019195238_zero_stock_average.sql` with sha256 `87af2f1f54dda067cf08e2a6c0cf5cc28a2fc40f21c53c9c2da9fc2d2740d4f0`. This run replaces an earlier one against the migration before the round 1 review fixes, which gave the same numbers and average.
+- The commands, in order:
+  1. Move the migration file out of `supabase/migrations/`, then run `npm run db:reset:stack-b`, which applies the 13 migrations before it.
+  2. Run part 1 below through `docker exec -i supabase_db_meat-ops-b psql -U postgres -v ON_ERROR_STOP=1 -q < part1.sql`, as `postgres`, which `private.assert_caller` lets through. psql autocommits, so each operation runs in its own transaction.
+  3. Move the migration file back, then run `supabase migration up`, which applies it.
+  4. Run part 2 below the same way.
+  5. Run `npm run db:reset:stack-b` again, which leaves the stack with all 14 migrations for the gates.
+- Part 1, the master data and the probe history:
+
+  ```sql
+  -- T3 probe, part 1: on stack B migrated to 20261018224140, as postgres.
+  -- psql autocommits, so each statement is its own transaction.
+  \set ON_ERROR_STOP on
+  truncate
+    import_draft_lines, import_drafts,
+    sale_items, sales, customers,
+    finished_goods, production_batch_lots, production_batches,
+    lot_adjustments, receipt_corrections, lots, inventory_balances,
+    product_fees, products, fee_types, vendors,
+    private.list_price_changes, alerts, alert_digests
+    restart identity cascade;
+  insert into fee_types(code, name, kind, sort_order) values
+    ('cutting','Cutting','processing',1),('defrosting','Defrosting','processing',2),
+    ('process','Process','processing',3),('direct_material','Direct cost of material','processing',4),
+    ('labor','TP cost of labor','processing',5),('freezing','Cost of freezing','processing',6),
+    ('seasoning','Seasoning','processing',7),('overhead','Belmont overhead','processing',8),
+    ('profit','Profit','margin',9),('broker','Broker commission','margin',10);
+  insert into vendors(id, name) values ('11111111-1111-1111-1111-111111111111', 'Reyes Meats');
+  insert into products(id, code, description, species, kind) values
+    ('22222222-2222-2222-2222-222222222222', 'RAW-TOM', 'Turkey Drums TOM (raw)', 'Turkey', 'raw');
+  insert into products(id, code, description, brand, species, kind, pack_style, lbs_per_pack, raw_product_id, shrink_pct) values
+    ('33333333-3333-3333-3333-333333333333', '502', 'Smoked Turkey Drums Tom', 'Prospect Meats',
+     'Turkey', 'finished', '56cs/pl', 32.5, '22222222-2222-2222-2222-222222222222', 0.2300);
+  insert into product_fees(product_id, fee_type_id, amount_per_lb)
+  select '33333333-3333-3333-3333-333333333333', ft.id, x.amt
+  from (values ('direct_material',0.05),('freezing',0.03),('overhead',0.37),('profit',0.05)) x(code,amt)
+  join fee_types ft on ft.code = x.code;
+
+  -- The probe history.
+  select id as lot_180a from public.receive_lot(p_product_id => '22222222-2222-2222-2222-222222222222', p_vendor_id => '11111111-1111-1111-1111-111111111111', p_weight_lbs => 1000, p_unit_cost => 1.80, p_received => '2026-05-10') \gset
+  select id as batch_1 from public.produce_batch(p_finished_product_id => '33333333-3333-3333-3333-333333333333', p_raw_lbs_in => 1000, p_production_date => '2026-05-10') \gset
+  select id as lot_250 from public.receive_lot(p_product_id => '22222222-2222-2222-2222-222222222222', p_vendor_id => '11111111-1111-1111-1111-111111111111', p_weight_lbs => 1000, p_unit_cost => 2.50, p_received => '2026-05-11') \gset
+  select id as adj_lot from public.adjust_lot(p_lot_id => :'lot_250', p_new_remaining_lbs => 0, p_reason => 'count') \gset
+  select id as lot_180b from public.receive_lot(p_product_id => '22222222-2222-2222-2222-222222222222', p_vendor_id => '11111111-1111-1111-1111-111111111111', p_weight_lbs => 1000, p_unit_cost => 1.80, p_received => '2026-05-12') \gset
+  select id as batch_2 from public.produce_batch(p_finished_product_id => '33333333-3333-3333-3333-333333333333', p_raw_lbs_in => 1000, p_production_date => '2026-05-12') \gset
+  select id as lot_1800 from public.receive_lot(p_product_id => '22222222-2222-2222-2222-222222222222', p_vendor_id => '11111111-1111-1111-1111-111111111111', p_weight_lbs => 1000, p_unit_cost => 18.00, p_received => '2026-05-13') \gset
+  select id as lot_200 from public.receive_lot(p_product_id => '22222222-2222-2222-2222-222222222222', p_vendor_id => '11111111-1111-1111-1111-111111111111', p_weight_lbs => 1000, p_unit_cost => 2.00, p_received => '2026-05-14') \gset
+  select id as adj_lot2 from public.adjust_lot(p_lot_id => :'lot_200', p_new_remaining_lbs => 0, p_reason => 'count') \gset
+  select id as voided from public.void_receipt(p_lot_id => :'lot_1800', p_reason => 'entered twice') \gset
+
+  \echo 'Before the migration, RAW-TOM balance:'
+  select qty_on_hand, moving_avg_cost from public.inventory_balances
+  where product_id = '22222222-2222-2222-2222-222222222222';
+  \echo 'The four changes in the order they were made:'
+  select 'batch' as kind, b.created_at as made_at, l.unit_cost as lot_cost
+  from public.production_batches b
+  join public.production_batch_lots pbl on pbl.batch_id = b.id
+  join public.lots l on l.id = pbl.lot_id
+  union all
+  select 'adjustment', a.adjusted_at, l.unit_cost
+  from public.lot_adjustments a join public.lots l on l.id = a.lot_id
+  order by made_at;
+  ```
+
+- Part 2, the reads and the AC-0018 steps:
+
+  ```sql
+  -- T3 probe, part 2: after `supabase migration up` applies 20261019195238, as postgres.
+  \set ON_ERROR_STOP on
+  \echo 'AC-0015: the four changes in the order they were made, with their numbers:'
+  select 'batch' as kind, b.created_at as made_at, l.unit_cost as lot_cost, b.stock_seq
+  from public.production_batches b
+  join public.production_batch_lots pbl on pbl.batch_id = b.id
+  join public.lots l on l.id = pbl.lot_id
+  union all
+  select 'adjustment', a.adjusted_at, l.unit_cost, a.stock_seq
+  from public.lot_adjustments a join public.lots l on l.id = a.lot_id
+  order by made_at;
+  \echo 'AC-0017: RAW-TOM balance after the migration:'
+  select qty_on_hand, moving_avg_cost from public.inventory_balances
+  where product_id = '22222222-2222-2222-2222-222222222222';
+
+  -- AC-0018: new changes after the migration.
+  select id as lot_300 from public.receive_lot(p_product_id => '22222222-2222-2222-2222-222222222222', p_vendor_id => '11111111-1111-1111-1111-111111111111', p_weight_lbs => 1000, p_unit_cost => 3.00, p_received => '2026-05-15') \gset
+  select id as batch_3 from public.produce_batch(p_finished_product_id => '33333333-3333-3333-3333-333333333333', p_raw_lbs_in => 1000, p_production_date => '2026-05-15') \gset
+  select id as lot_400 from public.receive_lot(p_product_id => '22222222-2222-2222-2222-222222222222', p_vendor_id => '11111111-1111-1111-1111-111111111111', p_weight_lbs => 1000, p_unit_cost => 4.00, p_received => '2026-05-16') \gset
+  select id as adj_lot3 from public.adjust_lot(p_lot_id => :'lot_400', p_new_remaining_lbs => 0, p_reason => 'count') \gset
+  \echo 'AC-0018: the new batch and adjustment, with their numbers:'
+  select 'batch' as kind, stock_seq from public.production_batches where id = :'batch_3'
+  union all
+  select 'adjustment', stock_seq from public.lot_adjustments where lot_id = :'lot_400';
+  \echo 'The highest number among the four probe-history rows:'
+  select max(stock_seq) from (
+      select stock_seq from public.production_batches where id <> :'batch_3'
+      union all
+      select stock_seq from public.lot_adjustments where lot_id <> :'lot_400') old;
+  ```
+
+- Before the migration, RAW-TOM had 0.000 lbs on hand at an average of 1.8000, the value the old second search gives.
+- After the migration, the four probe-history rows, in the order they were made:
 
   | Change | Made at (UTC) | Lot cost | `stock_seq` |
   | --- | --- | ---: | ---: |
-  | batch | 2026-10-19 20:15:28.787134 | 1.8000 | 1 |
-  | adjustment | 2026-10-19 20:15:28.789719 | 2.5000 | 2 |
-  | batch | 2026-10-19 20:15:28.790894 | 1.8000 | 3 |
-  | adjustment | 2026-10-19 20:15:28.791992 | 2.0000 | 4 |
+  | batch | 2026-10-19 20:52:03.847209 | 1.8000 | 1 |
+  | adjustment | 2026-10-19 20:52:03.850545 | 2.5000 | 2 |
+  | batch | 2026-10-19 20:52:03.851770 | 1.8000 | 3 |
+  | adjustment | 2026-10-19 20:52:03.853095 | 2.0000 | 4 |
 
 - AC-0015: the numbers rise in the order the rows were made.
 - AC-0017: after the migration, RAW-TOM had 0.000 lbs on hand at an average of 2.0000, the cost of the 2.00 lot the last adjustment took.
-- AC-0018: receiving a lot at 3.00 received 2026-05-15, producing 1,000 raw lbs on 2026-05-15, receiving a lot at 4.00 received 2026-05-16, and adjusting it to 0 lbs gave the batch `stock_seq` 5 and the adjustment 6, both above the probe history's highest, 4.
+- AC-0018: the AC-0018 batch got `stock_seq` 5 and its adjustment 6, both above the probe history's highest, 4.
 
 ## T4: the docs and the shipped criteria state the rule
 
@@ -69,3 +166,21 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
 
 - 2026-10-19, after the folder check listed no folder: `npm run db:reset:stack-b` applied all 14 migrations, and `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 51 files and 1,029 tests passed, then the browser suite built the app and passed 655 tests in 9.1 minutes.
 - `npm run gen:types` on the migrated stack left no diff in `src/lib/database.types.ts`.
+
+## Review round 1 fixes
+
+- 2026-10-19. Round 1 sustained 9 findings, none refuted, from the adversarial and quality reviewers. The fixes:
+  - The migration's step 4 holds each raw product's `inventory_balances` row before it refreshes the product, as the operations do, so a receipt saved while the migration applies is not overwritten by stale sums.
+  - The migration's step 1 comment says why `stock_seq` is a plain default and not an identity column: one sequence spans two tables, and only the operations write them.
+  - `test/zero-stock.test.ts` gains five cases: a count that leaves a lot as it was, a count that raises a lot, a batch and an adjustment on a second raw product made after RAW-TOM's own last change, and the check reporting a balance at 0 lbs with no stock-lowering change whose average is not 0. The `averageViolations` check is unchanged.
+  - `docs/costing.md` claims only what the rule gives. After voids alone, the average is the one the product would have if the voided receipts had never been entered. A reversal or a weight correction does not re-run the draws of later batches.
+  - `docs/architecture/overview.md`'s write-path sentence says the refresh sets the zero-stock average at 0 lbs on hand.
+  - The T3 entry above holds the probe's exact SQL and the migration digest, from a re-run against the changed migration.
+- Mutation proof, on stack B with `npx vitest run test/zero-stock.test.ts`. Each fault was loaded on its own, then removed by `npm run db:reset:stack-b` or `git checkout -- test/db.ts`:
+  - `<=` in place of `<` in the adjustment filter turned the equal-count case red.
+  - No adjustment filter turned both count cases red.
+  - No product filter in the batch search turned the second-product batch case red.
+  - No product filter in the adjustment search turned the second-product adjustment case red.
+  - `z.avg` in place of `coalesce(z.avg, 0)` in `test/db.ts` turned the no-change check case red.
+- For close-out: the spec's Objective, which is working material, still says the average at 0 lbs is the one the product would have with reversed batches never entered and corrected receipts entered at current values. That holds after voids alone. The ACs' definitions already fix the rule. The approved spec's hash is pinned during the build, so the Objective is corrected at close-out.
+- Gates after the fixes, after the folder check listed no folder: `npm run db:reset:stack-b` applied all 14 migrations, and `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 51 files and 1,034 tests passed, then the browser suite passed 655 tests in 9.9 minutes.

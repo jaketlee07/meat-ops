@@ -129,10 +129,13 @@ product's stock row, so the numbers follow the order the operations ran, inside
 one transaction too. The last change is the one with the highest number. With no
 such change the average is 0, its value before any receipt.
 
-So the average at 0 lbs is the one the product would have if every void receipt
-and every reversed batch had never been entered, and every corrected receipt had
-been entered with its current cost and weight. The order in which receipts are
-voided or corrected never changes it.
+A void receipt and a reversed batch are never stock-lowering changes, and each
+lb is priced at its lot's current cost, so the order in which receipts are
+voided or corrected never changes the average. A void lot was never drawn or
+adjusted, so after voids alone the average is the one the product would have if
+the voided receipts had never been entered. The rule prices the lbs the last
+change actually drew: a reversal or a weight correction does not re-run the
+draws of the batches made after it.
 
 A batch or an adjustment that leaves 0 lbs on hand took every lb on hand, so the
 average it leaves is the one the product had just before it. Example: receive

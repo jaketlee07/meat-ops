@@ -1,10 +1,11 @@
 import { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { TypedClient } from "../src/lib/supabase.js";
-import { correctReceipt, produceBatch, receiveLot, reverseBatch, voidReceipt, type Lot } from "../src/lib/rpc.js";
+import { adjustLot, correctReceipt, produceBatch, receiveLot, reverseBatch, voidReceipt, type Lot } from "../src/lib/rpc.js";
 import { signInOperator } from "./users.js";
 import {
   PROD_502_ID,
+  RAW_CHK_ID,
   RAW_TOM_ID,
   VENDOR_ID,
   adjustCall,
@@ -17,6 +18,7 @@ import {
   produceCall,
   query,
   resetTestData,
+  seedInvoiceFixture,
 } from "./db.js";
 import { resolveStackEnv } from "./env.js";
 
@@ -141,6 +143,65 @@ it("AC-0013: voiding the only lot leaves an average of 0.0000", async () => {
   expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 0 });
 });
 
+it("AC-0001: a count that leaves a lot as it was is not a stock-lowering change", async () => {
+  await zeroStockStart();
+  await receive(2, "2026-05-12");
+  const counted = await receive(3, "2026-05-13");
+  // Draws the whole 2.00 lot and 500 lbs of the 3.00 lot.
+  await produceBatch(client, { finishedProductId: PROD_502_ID, rawLbsIn: 1500, productionDate: "2026-05-13" });
+  await adjustLot(client, { lotId: counted.id, newRemainingLbs: 500, reason: "count" });
+  // The weight floor: 0 lbs remain and the count is the newest adjustment.
+  await correctReceipt(client, { lotId: counted.id, unitCost: 3, weightLbs: 500, reason: "weight ticket" });
+  expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 2.3333 });
+});
+
+it("AC-0001: a count that raises a lot is not a stock-lowering change", async () => {
+  await zeroStockStart();
+  await receive(2, "2026-05-12");
+  const counted = await receive(4, "2026-05-13");
+  await adjustLot(client, { lotId: counted.id, newRemainingLbs: 900, reason: "count" });
+  await produce("2026-05-13"); // draws the 2.00 lot
+  await adjustLot(client, { lotId: counted.id, newRemainingLbs: 950, reason: "count" });
+  // The weight floor: 0 lbs remain and the raising count is the newest change.
+  await correctReceipt(client, { lotId: counted.id, unitCost: 4, weightLbs: 50, reason: "weight ticket" });
+  expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 2 });
+});
+
+describe("another raw product", () => {
+  const CHK_FINISHED_ID = "88888888-8888-8888-8888-888888888888";
+
+  beforeEach(async () => {
+    await seedInvoiceFixture();
+    await query(
+      `insert into products(id, code, description, kind, raw_product_id, shrink_pct)
+       values ($1, 'CHK-1', 'Smoked Chicken Thighs', 'finished', $2, 0.2)`,
+      [CHK_FINISHED_ID, RAW_CHK_ID],
+    );
+  });
+
+  it.each([
+    ["a batch", "batch"],
+    ["an adjustment", "adjustment"],
+  ])("AC-0001: RAW-TOM's zero-stock average ignores %s on another raw product made after its own", async (_name, change) => {
+    await zeroStockStart();
+    const chicken = await receiveLot(client, {
+      productId: RAW_CHK_ID,
+      vendorId: VENDOR_ID,
+      weightLbs: 1000,
+      unitCost: 5,
+      received: "2026-05-11",
+    });
+    if (change === "batch") {
+      await produceBatch(client, { finishedProductId: CHK_FINISHED_ID, rawLbsIn: 500, productionDate: "2026-05-11" });
+    } else {
+      await adjustLot(client, { lotId: chicken.id, newRemainingLbs: 500, reason: "waste" });
+    }
+    const voided = await receive(18, "2026-05-12");
+    await voidReceipt(client, voided.id, "entered twice");
+    expect(await getInventoryBalance(RAW_TOM_ID)).toEqual({ qty_on_hand: 0, moving_avg_cost: 1.8 });
+  });
+});
+
 describe("access", () => {
   const ROLES = ["anon", "authenticated", "service_role"];
 
@@ -188,21 +249,34 @@ describe("the zero-stock check", () => {
     await pool.end();
   });
 
-  it("AC-0001: the check reports a balance at 0 lbs whose average is not its zero-stock average", async () => {
-    await zeroStockStart();
+  // Sets RAW-TOM's balance to 0 lbs at the given average in a transaction it
+  // rolls back, and returns what the check reports inside it.
+  async function reportedAt(average: number): Promise<{ violation: string; subject: string }[]> {
     const session = await pool.connect();
     try {
       await session.query("begin");
       await session.query(
-        `update public.inventory_balances set qty_on_hand = 0, moving_avg_cost = 2.5 where product_id = '${RAW_TOM_ID}'`,
+        `update public.inventory_balances set qty_on_hand = 0, moving_avg_cost = ${average} where product_id = '${RAW_TOM_ID}'`,
       );
-      expect(await averageViolations(session)).toEqual([
-        { violation: "AC-0001 zero-stock average <> average the last change took", subject: RAW_TOM_ID },
-      ]);
+      return await averageViolations(session);
     } finally {
       await session.query("rollback");
       session.release();
     }
+  }
+
+  const REPORTED = [{ violation: "AC-0001 zero-stock average <> average the last change took", subject: RAW_TOM_ID }];
+
+  it("AC-0001: the check reports a balance at 0 lbs whose average is not its zero-stock average", async () => {
+    await zeroStockStart();
+    expect(await reportedAt(2.5)).toEqual(REPORTED);
+    expect(await averageViolations(pool)).toEqual([]);
+  });
+
+  it("AC-0001: the check reports a balance at 0 lbs with no stock-lowering change whose average is not 0", async () => {
+    const lot = await receive(1.68, "2026-05-10");
+    await voidReceipt(client, lot.id, "entered twice");
+    expect(await reportedAt(1.68)).toEqual(REPORTED);
     expect(await averageViolations(pool)).toEqual([]);
   });
 });

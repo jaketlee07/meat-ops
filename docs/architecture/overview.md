@@ -86,7 +86,8 @@ operations. Each one:
 4. Writes the rows. `produce_batch` and `record_sale` then check that the pounds they recorded equal the pounds asked for, and raise a shortfall if not.
 
 `receive_lot`, `produce_batch`, `void_receipt`, `adjust_lot`, `correct_receipt`, and `reverse_batch` then rebuild the
-raw product's stock and stock-on-hand average from its lots (`private.refresh_balance`).
+raw product's stock and stock-on-hand average from its lots (`private.refresh_balance`). At 0 lbs on hand the refresh
+sets the zero-stock average that `docs/costing.md` gives instead.
 `record_sale` and `void_sale` move only finished-lot pounds and do not call it.
 
 A trigger on `lots` refuses any change to a lot's recorded cost and weight, product, vendor,

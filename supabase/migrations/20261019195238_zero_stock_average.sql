@@ -16,6 +16,10 @@
 -- 1. The order number
 -- ------------------------------------------------------------
 
+-- One number spans two tables, so it is a plain default rather than an
+-- identity column, which owns its own sequence. Only the operations write these
+-- tables (SYSTEM-SPEC section 11), and they take the default, so nothing else
+-- sets it.
 create sequence private.stock_change_seq as bigint;
 revoke all on sequence private.stock_change_seq from public, anon, authenticated, service_role;
 
@@ -181,10 +185,19 @@ grant execute on function public.void_receipt(uuid, text) to authenticated;
 -- 4. Balances already at 0 lbs take the rule now
 -- ------------------------------------------------------------
 
+-- Each refresh holds the product's balance row before it reads the lots, as the
+-- operations do, so a receipt saved while this runs is not overwritten.
 do $$
+declare
+    v_product uuid;
 begin
-    perform private.refresh_balance(b.product_id)
-    from public.inventory_balances b
-    join public.products p on p.id = b.product_id
-    where p.kind = 'raw';
+    for v_product in
+        select b.product_id
+        from public.inventory_balances b
+        join public.products p on p.id = b.product_id
+        where p.kind = 'raw'
+    loop
+        perform 1 from public.inventory_balances where product_id = v_product for update;
+        perform private.refresh_balance(v_product);
+    end loop;
 end $$;
