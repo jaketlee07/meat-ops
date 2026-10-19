@@ -36,5 +36,6 @@ open = [
   { path = "docs/product/intents/invoice-entry-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/invoice-entry/notes/verification-ledger.md", revision = "00c3069" }, summary = "Pin the invoice timeout and photo-load-failure paths that only a recorded run or a race covers", needs = [] },
   { path = "docs/product/intents/ask-by-voice.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/ask-your-data/spec.md", revision = "9e90129" }, summary = "Asking a question aloud needs voice input, out of the MVP; the owner decides if and when", needs = [] },
   { path = "docs/product/intents/ask-your-data-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/ask-your-data/notes/verification-ledger.md", revision = "3e7209e" }, summary = "Count the AC-0080 test's read and decide whether the space under Ask stays", needs = [] },
+  { path = "docs/product/intents/revoked-session-write.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/corrections/notes/verification-ledger.md", revision = "b646356" }, summary = "A void was once written after its session was revoked; prove the cause and make every write refuse a revoked session", needs = [] },
 ]
 closed = []
