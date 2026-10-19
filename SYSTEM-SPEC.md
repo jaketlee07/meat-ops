@@ -73,12 +73,12 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 
 ### Inventory and cost state
 
-- inventory_balances: product_id (pk, fk products, raw products only), qty_on_hand (lbs), moving_avg_cost (per lb), updated_at. This is the authoritative rolling average used for forward pricing. It is the stock-on-hand average: the value of the lbs still on hand divided by those lbs, rounded to 4 decimals. When no lbs are on hand it keeps its last value.
+- inventory_balances: product_id (pk, fk products, raw products only), qty_on_hand (lbs), moving_avg_cost (per lb), updated_at. This is the authoritative rolling average used for forward pricing. It is the stock-on-hand average: the value of the lbs still on hand divided by those lbs, rounded to 4 decimals. When no lbs are on hand it is the zero-stock average that docs/costing.md gives.
 - lots: id, lot_number (unique, human readable), product_id (fk products, a raw product), vendor_id (fk vendors), received_date, weight_lbs (as received), unit_cost (per lb, the true price paid), remaining_lbs (depletes as production consumes it), notes, created_at, receipt_seq (insertion order, breaks ties between lots with the same received_date), prior_avg_cost (the product's moving_avg_cost just before this lot was received), voided_at and void_reason (both set or both empty), corrected_unit_cost and corrected_weight_lbs (the values of the latest correction, empty on a lot never corrected), and current_unit_cost and current_weight_lbs (generated: the corrected value, or the recorded one when there is none). A lot is both the cost record and the traceability anchor. vendor_id is required. unit_cost, weight_lbs, product_id, vendor_id, received_date, lot_number, and prior_avg_cost are immutable once written; a database trigger refuses any change to them. Remaining lbs run from 0 to current_weight_lbs. Every reader that costs or weighs a lot reads the current columns.
 
 ### Production
 
-- production_batches: id, batch_number (unique), finished_product_id (fk products), production_date, raw_lbs_in, shrink_pct_used, finished_lbs_out, raw_cost_total, cost_per_finished_lb, notes, created_at, reversed_at and reversal_reason (both set or both empty; a reversed batch stays in the table). A lot's used lbs count only batches that are not reversed.
+- production_batches: id, batch_number (unique), finished_product_id (fk products), production_date, raw_lbs_in, shrink_pct_used, finished_lbs_out, raw_cost_total, cost_per_finished_lb, notes, created_at, stock_seq (the stock-change order number, from the sequence private.stock_change_seq that lot_adjustments shares, taken while the operation holds the raw product's stock row), reversed_at and reversal_reason (both set or both empty; a reversed batch stays in the table). A lot's used lbs count only batches that are not reversed.
 - production_batch_lots: id, batch_id (fk production_batches), lot_id (fk lots), lbs_consumed, lot_unit_cost (the lot's current cost; it follows a receipt correction). Records which raw lots fed a batch. This is the trace link and the specific-identification cost.
 - finished_goods: id, batch_id (fk production_batches), finished_product_id (fk products), lbs_produced, lbs_remaining, cost_per_lb (production cost, raw plus processing), produced_date, produced_seq (insertion order, breaks ties between lots with the same produced_date). Each batch yields one finished lot.
 
@@ -90,7 +90,7 @@ processing fees (cutting, freezing, overhead, and so on) remain per-lb.
 
 ### Corrections
 
-- lot_adjustments: id, lot_id (fk lots), old_remaining_lbs, new_remaining_lbs, reason (one of: count, waste, spoilage, other), note, adjusted_at. One row per adjust_lot call. A voided receipt or sale stays in its table, marked with a reason and a time; nothing is deleted.
+- lot_adjustments: id, lot_id (fk lots), old_remaining_lbs, new_remaining_lbs, reason (one of: count, waste, spoilage, other), note, adjusted_at, stock_seq (the stock-change order number production_batches also takes). One row per adjust_lot call. A voided receipt or sale stays in its table, marked with a reason and a time; nothing is deleted.
 - receipt_corrections: id, lot_id (fk lots), old_unit_cost, new_unit_cost, old_weight_lbs, new_weight_lbs, reason, corrected_at, correction_seq (orders corrections; the latest has the highest number). One row per correct_receipt call. The lot keeps what was first entered.
 
 ### AI-support state (new for this scope)
@@ -163,8 +163,8 @@ Behavior: marks a receipt that nothing has touched as void, with the reason and 
 time, and takes its lbs out of stock. The lot stays in the table with 0 lbs
 remaining. It is refused when a batch that is not reversed has consumed from the lot, when
 the lot has an adjustment, or when it is already void. When the void leaves a raw product
-with no lbs on hand, the average goes back to a value from before the voided
-receipts; docs/costing.md gives the exact rule and its known limit.
+with no lbs on hand, the average is recomputed as the zero-stock average that
+docs/costing.md gives, as if the voided receipts had never been entered.
 Otherwise the average is the stock-on-hand average of the lots still held.
 
 ### Void a sale
@@ -193,8 +193,8 @@ its lot number, vendor, and received date never change. The weight change moves 
 remaining lbs by the same amount. A cost change restates every batch made from the lot,
 keeping the processing fees the batch was costed with: the batch's raw cost total and cost
 per finished lb, its finished lot's cost, and the cost on each sale line from that finished
-lot. The product's average moves to the stock-on-hand average at current cost, and keeps
-its value at 0 lbs on hand. It is refused on a void lot, when neither the cost nor the
+lot. The product's average moves to the stock-on-hand average at current cost, and at
+0 lbs on hand it is recomputed as the zero-stock average that docs/costing.md gives. It is refused on a void lot, when neither the cost nor the
 weight changes, when the new weight is below what production used and adjustments
 removed, and for a bad cost, weight, or reason. A correction is undone by correcting back.
 

@@ -175,7 +175,7 @@ Correcting a receipt
 - [x] **AC-0022.** In the sale fixture, correcting lot B to 2,000 lbs gives it 0 lbs remaining and leaves RAW-TOM at 0 lbs on hand with an average of 1.8000.
 - [x] **AC-0023.** In the sale fixture, correcting lot B to 1,999.999 lbs is refused and changes nothing.
 - [x] **AC-0024.** In the sale fixture with lot B adjusted to 900 lbs, the smallest weight it can be corrected to is 2,100 lbs: 2,099.999 lbs is refused and changes nothing, and 2,100 lbs leaves it 0 lbs remaining.
-- [x] **AC-0025.** In the sale fixture after lot B is corrected to 2,000 lbs, correcting lot B to 1.90 per lb leaves RAW-TOM's average at 1.8000.
+- [x] **AC-0025.** In the sale fixture after lot B is corrected to 2,000 lbs, correcting lot B to 1.90 per lb leaves RAW-TOM's average at 1.8000. *Amended (owner-approved 2026-10-18): the zero-stock-average spec's AC-0011 gives 1.9000 for this case.*
 - [x] **AC-0026.** A correction whose cost, rounded to 4 decimals, and weight, rounded to 3, both equal the lot's current ones is refused and changes nothing.
 - [x] **AC-0027.** A correction of a void receipt is refused and changes nothing.
 - [x] **AC-0028.** A correction whose reason is null, empty, or only spaces, tabs, and line breaks is refused and changes nothing.
@@ -218,7 +218,7 @@ Operations that change with corrections and reversals
 - [x] **AC-0063.** In the sale fixture with lot B corrected to 3,100 lbs, `adjust_lot` accepts lot B at 1,100 lbs and refuses 1,100.001 lbs.
 - [x] **AC-0064.** In the sale fixture with lot B corrected to 1.90 per lb, a batch of 500 raw lbs of 502 produced 2026-10-08 has a raw cost total of 950.0000 and its `production_batch_lots` row a lot cost of 1.9000.
 - [x] **AC-0065.** In the sale fixture with lot B corrected to 1.90 per lb and the 5,000-lb sale, the trace view gives 1.9000 as the raw lot cost per lb on every row for lot B.
-- [x] **AC-0066.** With RAW-TOM at 0 lbs on hand and an average of 1.8000, receive lot L1 of 1,000 lbs at 18.00 received 2026-10-02, L2 of 1,000 lbs at 20.00 received 2026-10-03, and L3 of 1,000 lbs at 2.00 received 2026-10-04; produce 2,500 raw lbs of 502 on 2026-10-05 and reverse that batch; adjust L3 to 0 lbs as waste; then void L1 and then L2. RAW-TOM's average is 1.8000.
+- [x] **AC-0066.** With RAW-TOM at 0 lbs on hand and an average of 1.8000, receive lot L1 of 1,000 lbs at 18.00 received 2026-10-02, L2 of 1,000 lbs at 20.00 received 2026-10-03, and L3 of 1,000 lbs at 2.00 received 2026-10-04; produce 2,500 raw lbs of 502 on 2026-10-05 and reverse that batch; adjust L3 to 0 lbs as waste; then void L1 and then L2. RAW-TOM's average is 1.8000. *Amended (owner-approved 2026-10-18): under the zero-stock-average spec's AC-0001 the average is 2.0000, the cost of L3, the lot adjusted last.*
 - [x] **AC-0067.** In the sale fixture, `void_receipt` refuses lot B, which batch 1 still uses, after batch 2 is reversed.
 
 Invariants

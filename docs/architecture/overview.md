@@ -142,6 +142,18 @@ engine migration numbers rows that already exist by the old keys (lots by
 received date, `created_at`, id; finished lots by produced date, id) before
 identity takes over, and the sequence continues above the highest number given.
 
+Production batches and lot adjustments share a third number, `stock_seq`, from
+the sequence `private.stock_change_seq`. It orders the changes that lower a raw
+product's stock, and the zero-stock average in `docs/costing.md` reads the
+highest. Each operation takes it on insert while it holds the product's
+`inventory_balances` row, so it follows the order the operations ran, inside one
+transaction too. The zero-stock-average migration numbers rows that already
+exist by the time they were made (`production_batches.created_at`,
+`lot_adjustments.adjusted_at`). At equal times, which only one transaction
+gives, a batch comes before an adjustment, then batches follow their finished
+lot's `produced_seq` and adjustments their id. The sequence continues above the
+highest number given.
+
 After the migrations reach a database that already holds lots (the hosted
 follow-on), run this read-only query. It must return no rows. Each row it
 returns is a pair of same-day lots of one product whose insertion numbers
