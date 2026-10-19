@@ -7,12 +7,17 @@ import type { SaveState } from "./save-batch";
 // The live region is in the page before it has content, so a screen reader
 // announces what is put into it. After a save the form moves focus to the heading.
 // Lots used are a stacked list, not a table, so a long lot number fits 320 px.
+// Once the batches list shows the saved batch as reversed, the lots and stock
+// give way to a line saying so: they describe a batch that no longer counts
+// (corrections AC-0142).
 export function ResultPanel({
   state,
   headingRef,
+  reversed,
 }: {
   state: SaveState;
   headingRef: Ref<HTMLHeadingElement>;
+  reversed: boolean;
 }) {
   const view = state.status === "saved" ? resultView(state) : null;
   return (
@@ -23,8 +28,9 @@ export function ResultPanel({
             {view.heading}
           </h2>
           <Facts rows={view.lines.map((line) => [line.label, line.value] as const)} />
-          {view.notice && <p>{view.notice}</p>}
-          {view.sections && (
+          {reversed && <p>This batch was reversed.</p>}
+          {!reversed && view.notice && <p>{view.notice}</p>}
+          {!reversed && view.sections && (
             <>
               <h3 className="text-lg font-semibold">Lots used</h3>
               <ol className="space-y-3">

@@ -26,6 +26,8 @@ interface Props {
   regionCode: string | null;
   // The chosen product and its raw input's stock, rendered on the server.
   region: ReactNode;
+  // The batch numbers the recent batches list shows as reversed.
+  reversedBatches: string[];
 }
 
 const FIELD_IDS: Record<BatchField, string> = {
@@ -39,6 +41,8 @@ const FIELD_IDS: Record<BatchField, string> = {
 const IDLE: SaveState = { status: "idle" };
 const NO_ERRORS: Partial<Record<BatchField, string>> = {};
 
+const NO_BATCHES: readonly string[] = [];
+
 const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
@@ -48,13 +52,23 @@ function deviceToday(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+// Remembers every batch number the list has shown as reversed. The state is set
+// during render, as React allows, so the panel never shows a frame without the
+// latest batch.
+function useSeen(batches: string[]): (batch: string) => boolean {
+  const [seen, setSeen] = useState(NO_BATCHES);
+  const unseen = batches.filter((batch) => !seen.includes(batch));
+  if (unseen.length > 0) setSeen([...seen, ...unseen]);
+  return (batch) => batches.includes(batch) || seen.includes(batch);
+}
+
 interface Check {
   fields: BatchFields;
   input: BatchInput;
   product: CheckedProduct;
 }
 
-export function ProductionForm({ products, urlCode, regionCode, region }: Props) {
+export function ProductionForm({ products, urlCode, regionCode, region, reversedBatches }: Props) {
   const router = useRouter();
   const [regionPending, startRegion] = useTransition();
 
@@ -187,6 +201,12 @@ export function ProductionForm({ products, urlCode, regionCode, region }: Props)
 
   const code = productCode.trim();
   const chosen = known.get(code);
+
+  // Once the list has shown the saved batch as reversed, the panel keeps saying
+  // so, even when the owner then chooses another product and the list no longer
+  // holds it.
+  const seenReversed = useSeen(reversedBatches);
+  const batchReversed = state.status === "saved" && seenReversed(state.batch.batchNumber);
 
   // A known code in the field that the URL's ?product= does not name (the page
   // was reached again without it, as the current-page nav link does, or a late
@@ -369,7 +389,7 @@ export function ProductionForm({ products, urlCode, regionCode, region }: Props)
         />
       )}
 
-      <ResultPanel state={state} headingRef={headingRef} />
+      <ResultPanel state={state} headingRef={headingRef} reversed={batchReversed} />
 
       <div id="product-region" aria-busy={regionPending} className="mt-6 space-y-4">
         {chosen && chosen.code === regionCode ? region : null}

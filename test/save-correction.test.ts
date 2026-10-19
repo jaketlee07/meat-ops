@@ -255,13 +255,6 @@ it("AC-0096: a correction returns the lot number and the figures before and afte
 });
 
 const reversalBefore: ReversalBefore = {
-  preview: {
-    batchNumber: "B-2",
-    productionDate: "2026-10-07",
-    finishedLbs: 4230,
-    lots: [{ lotNumber: "L-2", lbs: 1000 }],
-    sales: [],
-  },
   stock: { raw: { balance: { qtyOnHand: 1000, movingAvgCost: 1.8 }, nonVoidReceipts: 2 }, finishedLbs: 390 },
 };
 const reversalAfter: ReversalAfter = {
@@ -328,7 +321,7 @@ it("AC-0143: a read before the write fails, so nothing is written", async () => 
   let wrote = false;
   const state = await decideReversal("batch-b", "entered twice", reversalDeps({
     readBefore: async () => {
-      throw new Error("getReversalPreview failed: fetch failed");
+      throw new Error("getStock failed: fetch failed");
     },
     write: async () => {
       wrote = true;

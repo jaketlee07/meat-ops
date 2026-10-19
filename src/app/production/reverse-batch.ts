@@ -11,7 +11,6 @@ import {
   reversalFailureMessage,
   type FailureStage,
 } from "../../lib/failures";
-import type { ReversalPreview } from "../../lib/production";
 import type { ProductStock } from "../../lib/receiving";
 import type { ProductionBatch } from "../../lib/rpc";
 import type { SaleSummary } from "../../lib/sales";
@@ -23,8 +22,9 @@ export interface ReversalStock {
   finishedLbs: number | null;
 }
 
+// Only the stock is read before the write. The sales a reversal would void are
+// read after it, by the reversal's time, so the figures cannot be a prediction.
 export interface ReversalBefore {
-  preview: ReversalPreview;
   stock: ReversalStock;
 }
 

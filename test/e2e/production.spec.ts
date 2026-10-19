@@ -305,7 +305,7 @@ test.describe("refused forms", () => {
 });
 
 test.describe("the check step", () => {
-  test("AC-0013, AC-0014, AC-0016: the check step names the batch and says it can't be undone", async ({ page }) => {
+  test("AC-0013, AC-0014, AC-0016: the check step names the batch and warns that a reversal voids sales", async ({ page }) => {
     await seed502Fixture();
     const f = await openForm(page);
     await fillBatch(f, {});
@@ -317,7 +317,11 @@ test.describe("the check step", () => {
     await expect(factValue(dialog, "Raw lbs")).toHaveText("2,000 lbs");
     await expect(factValue(dialog, "Production date")).toHaveText("Oct 6, 2026");
     await expect(factValue(dialog, "Finished lbs")).toHaveText("From shrink (23%)");
-    await expect(dialog.getByText("A batch can't be undone.", { exact: true })).toBeVisible();
+    // Corrections AC-0151 replaced production AC-0014's sentence.
+    await expect(
+      dialog.getByText("Check it before you save. Reversing a batch later voids every sale made from it.", { exact: true }),
+    ).toBeVisible();
+    await expect(dialog.getByText("A batch can't be undone.")).toHaveCount(0);
     // AC-0016: the description holds the code, the raw lbs, and the date.
     await expect(dialog).toHaveAccessibleDescription(/502.*2,000 lbs.*Oct 6, 2026/);
     // Go back is first and takes the initial focus.
@@ -532,7 +536,8 @@ test.describe("the batch result", () => {
     await expect(f.finished).toHaveValue("");
     await expect(f.notes).toHaveValue("");
 
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    // The saved batch is listed with its Reverse button.
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Reverse"]);
   });
 
   test("AC-0021, AC-0027: a batch of 6,000 raw lbs draws lot A, then lot B", async ({ page }) => {

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { listActiveFinishedProducts, listRecentBatches } from "../../lib/production";
+import { getReversalPreview, listActiveFinishedProducts, listRecentBatches } from "../../lib/production";
 import { getStock } from "../../lib/receiving";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
@@ -29,12 +29,24 @@ export default async function ProductionPage({
   const selected = products.find((product) => product.code === requested);
 
   let region = null;
+  let reversedBatches: string[] = [];
   if (selected) {
     const [stock, recent] = await Promise.all([
       selected.raw ? getStock(supabase, selected.raw.id) : null,
       listRecentBatches(supabase, selected.id),
     ]);
-    region = <ProductRegion product={selected} stock={stock} recent={recent} />;
+    // What each batch that is not reversed would do, for its Reverse confirmation.
+    const open = recent.batches.filter((batch) => batch.reversedAt === null);
+    const previews = Object.fromEntries(
+      await Promise.all(
+        open.map(async (batch) => {
+          const { lots, sales } = await getReversalPreview(supabase, batch.id);
+          return [batch.id, { lots, sales }] as const;
+        }),
+      ),
+    );
+    region = <ProductRegion product={selected} stock={stock} recent={recent} previews={previews} />;
+    reversedBatches = recent.batches.filter((batch) => batch.reversedAt !== null).map((batch) => batch.batchNumber);
   }
 
   return (
@@ -45,6 +57,7 @@ export default async function ProductionPage({
         urlCode={requested}
         regionCode={selected?.code ?? null}
         region={region}
+        reversedBatches={reversedBatches}
       />
     </main>
   );
