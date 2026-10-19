@@ -112,8 +112,8 @@ export async function reverseBatch(batchId: string, finishedProductId: string, r
   // and lose the panel, so revalidate only once the details loaded. A product
   // made inactive since the page loaded has no finished lbs on hand (the menu
   // has no row for it), and the page leaves an inactive product out, so a render
-  // would drop the region that holds the panel; the panel stays and the list
-  // updates on the next load.
+  // would drop the region that holds the panel; the panel stays, the control
+  // marks its batch reversed, and the list updates on the next load.
   if (state.status === "reversed" && state.details && state.details.after.stock.finishedLbs !== null) {
     revalidatePath("/production");
   }
