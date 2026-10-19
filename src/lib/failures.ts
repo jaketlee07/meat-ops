@@ -62,10 +62,7 @@ export function voidFailureMessage(error: unknown, stage: FailureStage): string 
   if (stage === "before-write") return `${NOT_VOIDED} ${TRY_AGAIN}`;
   const code = codeOf(error);
   if (code === "") return VOID_UNKNOWN;
-  if (code === "42501") return `${NOT_VOIDED} ${NOT_ALLOWED}`;
-  // The engine's text has no closing period; the reload hint is a sentence of its own.
-  const reason = refusalReason(error, code);
-  return `${NOT_VOIDED} ${/[.!?]$/.test(reason) ? reason : `${reason}.`} ${RELOAD_STOCK}`;
+  return refusalMessage(NOT_VOIDED, error, code);
 }
 
 // The lead sentence of every not-saved batch message, shared with the batch action.
