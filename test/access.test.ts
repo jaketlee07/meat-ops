@@ -643,6 +643,7 @@ describe("Access model", () => {
     await masterRound(operator);
   });
 
+  // Two snapshots per ledger table and role, so the time grows with each ledger table.
   it("AC-0006, AC-0007, AC-0009: direct writes to ledger tables are refused for every role", async () => {
     const roles: [string, Loose][] = [
       ["anon", anon],
@@ -668,7 +669,7 @@ describe("Access model", () => {
         expect(await snapshot(), `${role} left ${t.name} unchanged`).toEqual(before);
       }
     }
-  });
+  }, 30_000);
 
   it("AC-0006, AC-0007, AC-0009: master-data writes are refused to anon and non-operators, and deletes to every role", async () => {
     const [cutting] = await query<{ id: string }>("select id from fee_types where code = 'cutting'");
