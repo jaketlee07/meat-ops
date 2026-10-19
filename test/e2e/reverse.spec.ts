@@ -371,6 +371,34 @@ test.describe("a reversal that ends in the list", () => {
     expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(2)]);
   });
 
+  test("AC-0131, AC-0148: pressing Reverse again after the third Escape, while the reversal waits, keeps the sent reason, and the list marks the batch with it", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    const { fixture, batch2, item2 } = await openFixture(page, false);
+    const dialog = await openReversal(page, item2, batch2, "entered twice");
+
+    const lock = await holdStockLock();
+    try {
+      await dialog.getByRole("button", { name: "Reverse batch", exact: true }).click();
+      await lock.waiting("reverse_batch");
+      for (let i = 0; i < 3; i++) await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await reverseButton(item2).click();
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByLabel("Reason for the reversal")).toHaveValue("entered twice");
+      // The product goes inactive, so the action skips the re-render (AC-0148).
+      await query("update products set active = false where id = $1", [PROD_502_ID]);
+    } finally {
+      await lock.release();
+    }
+
+    await expect(reversePanel(item2).getByRole("heading", { name: "Batch reversed" })).toBeVisible();
+    await expect(item2.getByText("Reversed: entered twice", { exact: true })).toHaveCount(1);
+    await expect(reverseButton(item2)).toHaveCount(0);
+    expect(await reversalState(fixture.batch2Id)).toMatchObject({ reversed: true });
+  });
+
   test("AC-0141, AC-0177: with the session ended, the confirmation closes and says the user is signed out", async ({
     page,
   }) => {

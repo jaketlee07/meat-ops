@@ -138,8 +138,15 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
     (first ? (first[1] as typeof costRef) : formMessageRef).current?.focus();
   }, [invalid]);
 
-  // Every opening starts from what the receipt holds now, with no reason.
+  // Every opening starts from what the receipt holds now, with no reason. While
+  // a correction is pending, the browser can have closed the dialog on a third
+  // Escape and the button is live again: showing the dialog again must keep the
+  // values that were sent.
   function open() {
+    if (pending) {
+      if (!dialogRef.current?.open) dialogRef.current?.showModal();
+      return;
+    }
     setRefusal(null);
     setCorrected(null);
     setCost(costText);

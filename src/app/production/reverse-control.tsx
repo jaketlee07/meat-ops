@@ -120,6 +120,8 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
   const [invalid, setInvalid] = useState<Message | null>(null);
   const [refusal, setRefusal] = useState<Message | null>(null);
   const [done, setDone] = useState<Reversed | null>(null);
+  // The reason as sent, which the control's own "Reversed" mark shows.
+  const [sentReason, setSentReason] = useState("");
   const [pending, startReverse] = useTransition();
 
   // A closing refusal puts its message in the list, where it takes focus
@@ -136,7 +138,14 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
     if (invalid) reasonRef.current?.focus();
   }, [invalid]);
 
+  // While a reversal is pending, the browser can have closed the dialog on a
+  // third Escape and the button is live again: showing the dialog again must
+  // keep the reason that was sent.
   function open() {
+    if (pending) {
+      if (!dialogRef.current?.open) dialogRef.current?.showModal();
+      return;
+    }
     setRefusal(null);
     setDone(null);
     setReason("");
@@ -155,6 +164,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
       return;
     }
     setInvalid(null);
+    setSentReason(reason);
     startReverse(async () => {
       let result: ReversalState;
       try {
@@ -181,7 +191,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
           reversed. The action skips the re-render when a read after the write
           failed, or when no finished lbs on hand come back because the product
           was made inactive. */}
-      {done && !reversed && <p className="break-words font-medium">{`Reversed: ${reason}`}</p>}
+      {done && !reversed && <p className="break-words font-medium">{`Reversed: ${sentReason}`}</p>}
       {!reversed && !done && (
         <button
           type="button"
