@@ -263,7 +263,7 @@ export async function correctedState(id: string) {
 const lockPool = new Pool({ connectionString: resolveStackEnv().dbUrl, max: 3 });
 
 export interface StockLock {
-  // Waits until another backend is stuck on a lock, which is the app's call.
+  // Waits until the app's correct_receipt call is stuck behind this lock holder.
   waiting(): Promise<void>;
   // Runs correct_receipt as the operator inside the lock holder's transaction.
   correctInside(lotId: string, cost: string, weight: string, reason: string): Promise<void>;
@@ -284,7 +284,7 @@ export async function holdStockLock(): Promise<StockLock> {
           async () =>
             (
               await query(
-                "select 1 from pg_stat_activity where wait_event_type = 'Lock' and pid <> $1 and datname = current_database()",
+                "select 1 from pg_stat_activity where wait_event_type = 'Lock' and pid <> $1 and datname = current_database() and query like '%correct_receipt%' and $1 = any(pg_blocking_pids(pid))",
                 [pid],
               )
             ).length,
