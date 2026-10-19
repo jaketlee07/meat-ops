@@ -336,15 +336,19 @@ describe("correct_receipt", () => {
 
   it("AC-0032: a lot corrected twice holds two corrections and the second's values", async () => {
     const fixture = await setUp();
-    await correct(correctCall(fixture.lotAId, 1.86, 5000, "first"));
+    await correct(correctCall(fixture.lotAId, 1.86, 5200, "first"));
     await correct(correctCall(fixture.lotAId, 1.9, 5000, "second"));
-    const rows = await query(
-      "select new_unit_cost::text as cost, reason from public.receipt_corrections order by correction_seq",
+    const rows = await query<Record<string, string>>(
+      `select new_unit_cost::text as cost, reason, old_unit_cost::text as old_cost, old_weight_lbs::text as old_weight,
+              new_unit_cost::text as new_cost, new_weight_lbs::text as new_weight
+         from public.receipt_corrections order by correction_seq`,
     );
-    expect(rows).toEqual([
+    expect(rows.map(({ cost, reason }) => ({ cost, reason }))).toEqual([
       { cost: "1.8600", reason: "first" },
       { cost: "1.9000", reason: "second" },
     ]);
+    // The second correction starts from what the first left, not from what was first recorded.
+    expect(rows[1]).toMatchObject({ old_cost: rows[0]!.new_cost, old_weight: rows[0]!.new_weight });
     expect(await lotRow(fixture.lotAId)).toMatchObject({ current_unit_cost: "1.9000" });
   });
 
