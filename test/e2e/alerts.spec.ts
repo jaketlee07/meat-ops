@@ -93,7 +93,7 @@ const FRAMING = {
 };
 
 const COST_NEXT_STEP =
-  "Check it against the invoice. If the cost is wrong, void the receipt on Receiving before production uses it.";
+  "Check it against the invoice. If the cost is wrong, correct the receipt on Receiving.";
 const ALL_PAGES = [...HEADER_PAGES, "/alerts"] as const;
 
 // A dismissed alert's replacement of an action: presses the first button named so.

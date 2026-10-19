@@ -73,6 +73,8 @@ const batch = (finishedLbsOut: number): ProductionBatch => ({
   finished_product_id: "fp",
   created_at: "2026-10-08T00:00:00Z",
   notes: null,
+  reversed_at: null,
+  reversal_reason: null,
 });
 
 const after: AfterWrite = {

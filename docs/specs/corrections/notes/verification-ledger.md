@@ -1,0 +1,683 @@
+# Verification ledger: corrections
+
+Execution observations, newest last. Each entry names the task, the command, and the observed result.
+
+## Before EXECUTE (2026-10-18)
+
+- `feat/corrections` rebased onto `origin/main` at ca5c891 (Alerts merged, PR #22) with no conflict, and pushed with upstream `origin/feat/corrections`. Invoice entry and Alerts are both on `main`, so the spec's Alerts links resolve.
+- Stack A set up by the `AGENTS.md` steps: `npm ci` (0 vulnerabilities; the lockfile changed with the rebase); `supabase start` (already running, project `meat-ops`); the running-folder check listed only `meat-ops-ask`, whose `supabase/.env` is an exact copy of `supabase/stack-b.env`, so no stack A folder was running; `supabase_migrations.schema_migrations` held exactly `main`'s ten migrations, the same as this folder; `supabase db reset` applied them; `.env` written from `supabase status`.
+- Setup step 5 on the rebased tree: the folder check listed no stack A folder; `npm test` exit 0, Vitest 734 passed (41 files, 34 s), Playwright 542 passed (6.4 min).
+- Canonical preflight: `workspace.toml` registers no spec, so `workspace-status` has empty `ready` and `active` sets; the owner's request names this spec, so the build uses it. `check-base-freshness` reported the head current. Resumption: `loop-engine status` read `SPEC-PLAN-APPROVED` after `plan-approved`; `loop-cohort identity` passed; `approve-plan` was a no-op; `schedule` persisted six waves (T1; T2; T3, T4, T5; T6; T7, T8; T9); `plan-locked` moved the engine to `CODE-IMPLEMENTATION`; `plan check-current --require-schedule` passed.
+- T3's discovery predicate on the rebased tree: the only Alerts function that reads `unit_cost` or the batch tables is `public.refresh_alerts(p_today date)` in `supabase/migrations/20261016204845_alerts.sql` (cost rule at about lines 190 to 245, yield rule at about 253 to 266, stock rule at about 319 to 320). The old next-step sentence lives in `src/lib/alert-text.ts:114`, `test/alert-text.test.ts:151`, and `test/e2e/alerts.spec.ts:96`.
+- Anchor-test sweep: no test hashes or counts the content of a file this plan edits. The receiving and production browser helpers' Tab-order lists are in T7's and T8's Touches. The Alerts browser suite walks `/receiving` only with no product chosen, so no Recent receipts list, and no Correct button, joins its control lists.
+- Observation: since the spec was written, `test/invoice-costing.test.ts`, `test/invoice-data.test.ts`, and `test/invoices-data.test.ts` also register `assertLedgerInvariants`, so 13 existing suites register it, not the 10 the Testing Strategy lists as "today". The listed suites still register it, and the extra three run the new checks too.
+- Observation: the `meat-ops` folder is on `fix/zero-stock-average`, which works the zero-stock intent this spec's Follow-on names. Both branches replace `void_receipt`; whichever merges second rebases and carries the other's change into its replacement.
+
+### Assumption trio
+
+- **Touches:** the files each task's `Touches` names, and this ledger.
+- **Done:** each task's `Tests` and `Done when`, with `npm run typecheck`, `npm run build`, and `npm test` green after each task (spec Always do).
+- **Not changing:** `receive_lot`, `record_sale`, `void_sale`, the pricing functions, `v_product_pricing`, `v_current_menu`, `v_sale_summary`, the columns `lots_guard` freezes, the numbers asserted in the four golden suites, and any page beyond the current values and the alert outcomes the spec names.
+
+### Declined
+
+- A restatement history table per batch: rung 1, not needed; the correction rows reproduce every old figure (plan Design).
+- A trigger that ties the corrected columns to the latest correction: rung 1; the AC-0078 check after every test covers it, and the security review refuted the need.
+- A shared confirmation dialog for void, correct, and reverse: an explicit requirement forbids it (`docs/product/intents/shared-display-parts.md` owns shared parts; the plan names the copies as a deviation).
+- A preview function that computes a correction's effects before saving: the spec's Never do forbids computing a "before" figure, and the correction is undone by correcting back.
+- A new Corrections page: the owner chose the existing lists.
+
+### Resolve-vs-surface record
+
+Opened at PLAN. Each review finding is recorded here with its disposition; it closes at DECIDE.
+
+## T1 (2026-10-18)
+
+- **Stub:** extracted from `plan.md` lines 198 to 240, sha256 `07a17a44839cbdee91a990864e0d72a77d050cdbef1ac776e50dacd16c26e667`, matching the plan. Harness first: `correctCall`, `reverseCall`, the `correct_receipt` and `reverse_batch` members of `OperationName`, and `p_batch_id` in `test/db.ts` (commit `dfefb09`).
+- **Red:** `vitest run test/receipt-corrections.test.ts` exited 1 in 1.64 s with `Could not find the function public.correct_receipt(p_lot_id, p_reason, p_unit_cost, p_weight_lbs) in the schema cache`, after `saleFixture` succeeded.
+- **Green:** `supabase migration new receipt_corrections` made `20261018053447_receipt_corrections.sql`; `supabase migration up` applied it to stack A (the folder check was empty); `npm run gen:types` rewrote `src/lib/database.types.ts` (106 added lines). The stub passed, 1 of 1.
+- **Replaced functions** were copied from their latest definitions (`refresh_balance` and `produce_batch` from `20261007181933_engine_hardening.sql`; `void_receipt` and `adjust_lot` from `20261007183252_corrections.sql`; `v_sale_traceability` from `20261013155724_sales_trace.sql`, 22 columns in the same order) with only the current-cost and current-weight reads changed. `create or replace` keeps the grants and `proconfig`. A catalog read after the migration showed all four functions still `prosecdef` with `search_path=""`, EXECUTE for `authenticated` on the three public ones, and none for `private.refresh_balance`.
+- **Weight-floor refusal text,** recorded for the T4 stub: `correct_receipt: invalid weight 1999.999, must be at least 2000.000 lbs` (and `invalid weight 2099.999, must be at least 2100.000 lbs` after lot B is adjusted to 900). The weight prints as the rounded value and the floor with 3 decimals.
+- **Golden numbers measured by the engine,** all matching the spec: batch 1 11100.0000 and 2.8526 with batch 2 unchanged at 1800.0000 and 2.7877 (lot A to 1.86); 2.6794 and 2.9175 with RAW-TOM at 1.9 (lot B to 1.90); 2.2682 and 0.4500 (lot B to 0); 950.0000 and 1.9000 for a later 500-lb batch; the average 1.9 to 2.0 on lot C; and a fee changed to 0.50 after both batches leaving 2.8526. Correcting back returns every figure.
+- **Suites:** `test/receipt-corrections.test.ts` holds 42 tests (AC-0001 correct half, AC-0010 to AC-0037, AC-0061, AC-0063 to AC-0065, AC-0204, a prior-average test for the costing known limit, and eight rolled-back violation tests for AC-0069, AC-0070, AC-0074, AC-0075, AC-0076, AC-0077, AC-0078, AC-0079). `test/access.test.ts` has the `correct_receipt` fixture and `validArgs` entry, reads `anon` as well as `service_role` EXECUTE, and registers `assertLedgerInvariants`. 12 of 12 passed. `ledgerViolations(run, includeAverage)` joins AC-0079 only when asked, so the ten suites that register `assertLedgerInvariants` do not start checking the average.
+- **Gates at `2a51dc7`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff; Vitest 42 files and 776 tests passed in three full runs. Playwright passed 541 or 540 of 542 in the three full runs: the failures were all in `test/e2e/alerts.spec.ts` and are described next.
+- **Alerts browser failures, caused by stack A catalog bloat:** `pg_class` held 274,753 dead rows at the second full run and 353,060 at the third, with the Realtime slot's `catalog_xmin` 30,155 transactions back, and a one-row catalog lookup took 30 to 36 ms (the local-stack note on slot bloat). Opening 23 tables in `resetTestData`'s TRUNCATE then takes long enough that a page read of `v_alerts` from the previous test overlaps it: the Postgres log shows the truncate holding `lots` and waiting on `products` while the read holds `products` and waits on `lots`, and the error is `deadlock detected` at `test/db.ts:82` in "reprice and dismiss" tests (673, 697, and 598 in different runs). A second test, `AC-0003, AC-0118, AC-0120, AC-0122`, failed 5 of 6 isolated runs with `alerts_one_live`, because the page's background watch inserted a new open alert between the test's price restore and its reopen. Neither test or file is in T1's Touches. The first full run of the day, before the bloat, failed only 1 test of 542 for the same deadlock cause; the setup run on the rebased tree passed 542 of 542.
+- **Table left to the cascade:** `receipt_corrections` has a foreign key to `lots`, so an unlisted `TRUNCATE ... CASCADE` would lock it after every listed table. It is listed before `lots` in `MASTER_DATA_SQL` (commit `8558c61`). Dropping the foreign key for a trial made 3 of 3 runs of the "reprice and dismiss" group pass and listing the table made 3 of 3 pass, at about 275,000 dead rows; at 353,000 the deadlock came back with the table listed, so the listing narrows the window and the slot terminate closes it. The foreign key was put back with the same name and definition (`convalidated` true).
+- **Remedy, owner-approved 2026-10-18:** with the folder check empty, `pg_class` held 352,973 dead rows and the slot `cainophile_mv8cg4tj` was 38,588 transactions behind. Its backend was terminated as `supabase_admin`, Realtime made `cainophile_zjbitx9u` at once (7 transactions behind), and `vacuum pg_class` left 0 dead rows.
+- **Controller gates at `5929599`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff. The first `npm test` after the vacuum passed Vitest 776 of 776 but failed 130 of 542 browser tests: the fake model service on port 3101 stopped during the digest test "AC-0090: no answer within 60 seconds", and every later request to it ended `fetch failed`. No file T1 touches is on that path, and the only other running folder, `meat-ops-ask`, was on stack B with ports 3200 and 3201. The rerun, after the folder check, exited 0: Vitest 42 files and 776 tests passed (109 s), and Playwright 542 of 542 passed (9.3 min).
+
+## T2 (2026-10-18)
+
+- **Stub:** extracted from `plan.md` lines 264 to 309, sha256 `451788056d41b02cdecde99dd48664badb261442ca9b8844bbbb80dc4dcb8db9`, matching the plan. The harness (`reverseCall`, the `reverse_batch` member of `OperationName`, `p_batch_id`) was already in `test/db.ts` from T1.
+- **Red:** `vitest run test/batch-reversal.test.ts` exited 1 in 1.17 s of test time (3.33 s total) with `Could not find the function public.reverse_batch(p_batch_id, p_reason) in the schema cache`, after `saleFixture` succeeded.
+- **Green:** `supabase migration new batch_reversal` made `20261018205556_batch_reversal.sql`; `supabase migration up` applied it to stack A (the folder check was empty); `npm run gen:types` rewrote `src/lib/database.types.ts` (32 added lines: the two columns on three `production_batches` shapes and `reverse_batch`). The first run of the stub then failed in `afterEach`, because the ledger check still counted the reversed batch's finished lot (0 lbs against 4,620 produced) under the old conservation rule; the rewrite of `ledgerViolations` below made it pass.
+- **Replaced functions** were copied from the latest definitions in `20261018053447_receipt_corrections.sql` (`void_receipt`, `adjust_lot`) and changed only in the used-lbs reads: `void_receipt`'s consumed test and its zero-stock step 2 join `production_batches` with `reversed_at is null`, and `adjust_lot`'s consumed sum does too. `correct_receipt` is not replaced: its weight floor is the current weight minus the remaining lbs, and a reversal already returned the lbs, so the floor counts only batches that are not reversed with no change.
+- **Catalog check** (before and after the migration, from `pg_proc`): `void_receipt`, `adjust_lot`, and `correct_receipt` keep `prosecdef` true, `proconfig` `{search_path=""}`, and ACL `{postgres=X/postgres,authenticated=X/postgres}`; `reverse_batch` has the same three.
+- **Golden numbers measured by the engine,** all matching the spec: reversing batch 2 gives lot B 2,000 lbs, batch 2's finished lot 0, 502 4,620 finished lbs on hand; reversing batch 1 gives lot A 5,000, lot B 2,000, RAW-TOM 7,000 lbs at an average of 1.7143; with the 5,000-lb sale, reversing batch 2 voids it with `Reversed with batch <number>: entered twice` at the batch's reversal time and batch 1's finished lot returns to 4,620; after a 4,700-lb sale races a reversal, the sale is voided (reversal second) or refused for a shortfall (sale second); a 1,500-lb batch after the reversal draws 1,500 lbs from lot B; AC-0066's final average is 1.8000.
+- **Suites:** `test/batch-reversal.test.ts` holds 62 tests (AC-0001 reverse half, AC-0038 as 30 ordered pairs, AC-0039 and AC-0055 for both operations through `pg_locks`, AC-0040 to AC-0054, AC-0060, AC-0062, AC-0066, AC-0067, AC-0202, and six rolled-back violation tests for AC-0068, AC-0071, AC-0072, AC-0073). `ledgerViolations` counts used lbs through non-reversed batches (AC-0069, AC-0070, AC-0071), checks finished-lot conservation only for non-reversed batches (labelled AC-0068, was AC-0032), labels the void-lot check AC-0071 (was AC-0033), and gains AC-0072 and AC-0073. `test/access.test.ts` produces one batch and reverses it so the operation is exercised, and leaves another as `validArgs.reverse_batch`.
+- **Typed fixture:** `test/save-batch.test.ts` builds a `ProductionBatch` literal, so the regenerated type needed `reversed_at: null` and `reversal_reason: null` there (outside T2's Touches; the only edit to that file).
+- **Gates at `dd2af2f`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff once the types were committed. `npx vitest run` ran 43 files: 837 of 838 tests passed in two full runs (200 s and 242 s). The one failure was `test/access.test.ts` "AC-0006, AC-0007, AC-0009: direct writes to ledger tables are refused for every role" at the 5,000 ms limit; with `--testTimeout=60000` it passed in 5.4 s and all 12 tests passed. Playwright `npm run test:e2e` passed 540 of 542 (12.1 min); the two failures are in `test/e2e/alerts.spec.ts` (`alerts_one_live` in the replayed-action test, and `deadlock detected` in `resetTestData` in the "reprice and dismiss" test), neither file in T2's Touches.
+- **Cause, stack A catalog bloat, as in T1:** with the folder check empty, `pg_class` held 209,426 dead rows before the first full run, 246,227 after it, and 293,475 after the browser run; the Realtime slot `cainophile_zjbitx9u` was 22,093 transactions back at the start and 31,227 at the end; a one-row `pg_class` lookup took 47.7 ms with 2,410 heap fetches. The access test does about 60 table-fingerprint passes, each a catalog query, so it sits just above its 5 s limit at this bloat. The remedy T1 recorded (terminate the slot's backend as `supabase_admin`, then `vacuum pg_class`) needs the owner's approval and was not run.
+- **Deviations:** the `save-batch.test.ts` edit above; the shipped check labels AC-0032 and AC-0033 in `ledgerViolations` became AC-0068 and AC-0071 so each rolled-back test can name its criterion.
+- **Standing remedy, owner-approved 2026-10-18 for this build until its PR is open:** before each gate run in this folder, when the folder check lists no other stack A folder and `pg_class` has more than 100,000 dead rows, terminate the Realtime slot's backend as `supabase_admin` and `vacuum pg_class`, and record the counts here. First use: 293,475 dead rows and `cainophile_zjbitx9u` 34,173 transactions back, then 0 dead rows and `cainophile_5kl9q0sc` 4 back.
+- **Controller gates at `638edbb`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff; after the folder check, `npm test` exit 0: Vitest 43 files and 838 tests passed (94 s), Playwright 542 of 542 passed (7.5 min). The run left 83,875 dead `pg_class` rows.
+
+## T3 (2026-10-18)
+
+- **Stub:** none; the plan marks T3 implementation-discovered (TDD against the local stack).
+- **Discovery,** run on the tree at `3e5cd8a` over every Alerts migration. `rg` for `unit_cost`, `weight_lbs`, `production_batch_lots`, and `production_batches` in `supabase/migrations/20261016204845_alerts.sql` (the only migration that defines or mentions `refresh_alerts` or `v_alerts`) found one function, `public.refresh_alerts(p_today date)`: the cost rule (candidate lots and reference lots read `unit_cost`), the yield rule (candidates and references read `production_batches`), and the stock rule (`production_batch_lots` joined to `production_batches`, summing `lbs_consumed`). The stock rule reads no lot weight (its on-hand figure is `inventory_balances.qty_on_hand`, already current-weight and reversal aware), so only the batch filter changed there. `v_alerts` joins `production_batches` only to show a batch's number and reads no cost; it is unchanged, and the other two alert functions (`dismiss`/`reprice`) read none of the four names. The sentence "void the receipt on Receiving before production uses it" is held by `src/lib/alert-text.ts`, `test/alert-text.test.ts` (twice: AC-0102 and the AC-0192 `endsWith` check), `test/e2e/alerts.spec.ts`, `docs/specs/alerts/spec.md` AC-0102, and the closed Alerts ledger `docs/specs/alerts/notes/verification-ledger.md` (a record of past output, left as written).
+- **Red,** `vitest run test/alerts-corrections.test.ts` before the migration: 6 of 6 failed, each for the expected reason. AC-0080, AC-0081, and AC-0083 and AC-0085 saw the alert still `open` where `cleared` was expected; AC-0082 saw no cost alert where one at 1.9000 and 1.6600 was expected; AC-0084 saw the open yield alert (shrink 0.2100, usual 0.2500) the reversed batch should have removed from the references. None passed early. A first run of the file failed on a harness slip (`correct_receipt` needs the weight, so the tests pass 1000) before it reached the alert rules.
+- **Green:** `supabase migration new alerts_corrections` made `20261018224140_alerts_corrections.sql`; `supabase migration up` applied it to stack A (the folder check was empty). `refresh_alerts` was copied from `20261016204845_alerts.sql` with five reads changed: the cost candidate and each reference read `current_unit_cost` (aliased `unit_cost`), and the yield candidates, yield references, and stock draws gain `reversed_at is null`. `npm run gen:types` left no diff (no column or signature changed). The six tests passed.
+- **Catalog check** (`pg_proc`, before and after): `refresh_alerts(date)` keeps `prosecdef` true, `proconfig` `{search_path=""}`, and ACL `{postgres=X/postgres,authenticated=X/postgres}`; a diff of the two reads was empty.
+- **Next step text:** now "Check it against the invoice. If the cost is wrong, correct the receipt on Receiving." in `src/lib/alert-text.ts`; `test/alert-text.test.ts` and `test/e2e/alerts.spec.ts` assert it, and the AC-0192 line-ending check follows. The Alerts spec carries the amended AC-0102 and the Cost, Yield, and Stock rule definitions, each with an owner-approved note citing the corrections spec; `SYSTEM-SPEC.md` §7 says the cost rule reads current cost and the yield and stock rules leave reversed batches out.
+- **Suites:** `test/alerts-corrections.test.ts` holds 6 tests (AC-0080 to AC-0085), registers `assertLedgerInvariants` in `afterEach`, and copies the cost, yield, and stock fixture helpers from `test/alerts-watch.test.ts` because that file keeps them private. The Alerts Vitest files (alerts-watch, alerts-data, alert-text, alert-actions, alerts-corrections) passed 116 of 116.
+- **Gates at the T3 commit:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` no diff; after the folder check, `npm test` exit 0 in 10 min 5 s: Vitest 44 files and 844 tests passed (115 s), Playwright 542 of 542 passed (8.1 min). The bloat script found 94,315 dead `pg_class` rows, at or below 100,000, and took no action.
+- **Deviations:** `test/alert-text.test.ts` AC-0192's `endsWith("production uses it.")` became `endsWith("correct the receipt on Receiving.")` (the same file, the same sentence). AC-0102's amendment note also says why the step changed.
+
+## T4 (2026-10-18)
+
+- **Stub:** extracted from `plan.md` lines 349 to 360, sha256 `b04120ad6da619590dce26b9188ab1f67ce8bdbd4ec92e85f53ceee7fdaf6a2e`, matching the plan.
+- **Red:** `vitest run test/correction-rules.test.ts` exited 1 in 1.33 s with `Error: Cannot find module '../src/lib/correction-input.js' imported from .../test/correction-rules.test.ts`; no tests ran.
+- **Green:** `src/lib/correction-input.ts` (new) and the corrections block in `src/lib/failures.ts` made the stub pass (1 of 1, 1.29 s).
+- **Reuse:** a search of `src/lib/` found `costError` and `weightError` in `receipt-input.ts` (the AC-0010 Weight and Cost per lb rows, already shared with invoice reading) and `voidFailureMessage`'s shape in `failures.ts`; both are reused, so no row text is written twice. The unchanged rule compares the typed number with the current text's number: a typed value has at most 4 (cost) or 3 (weight) decimals, so it equals the engine's rounded value exactly when the numbers are equal.
+- **Coverage:** `test/correction-rules.test.ts` holds 43 tests, no database: the Weight and Cost per lb rows with first match per field (AC-0102); a blank, spaces-only, and tab reason for the correction (AC-0103) and the reversal (AC-0139); unchanged figures in other spellings, one figure changed, and the blank reason shown with the form message (AC-0104); the engine's AC-0026 text `correct_receipt: invalid, nothing to correct` giving the AC-0104 form message; the AC-0023 text `correct_receipt: invalid weight 1999.999, must be at least 2000.000 lbs` giving "The weight can't be less than 2,000 lbs. Production used or adjustments removed that much of this receipt." (`formatWeight(2000)` prints "2,000 lbs") and a fractional floor; `correctionFailureMessage` and `reversalFailureMessage` for before-write, no answer, 42501, a named refusal, and a timeout; both signed-out texts; and the two new `LoggedAction` names through `actionFailureLogLine`.
+- **Gates:** `npm run typecheck` exit 0; `npm run build` exit 0; after the folder check, the bloat script found 178,625 dead `pg_class` rows and slot `cainophile_5kl9q0sc` 18,905 back, and acted (0 dead rows, new slot `cainophile_bp2ufl6e` 1 back); `npm test` exit 0 in 7 min 40 s: Vitest 45 files and 887 tests passed (55 s), Playwright 542 of 542 passed (6.7 min).
+- **Deviations:** `correctionFailureMessage` returns a string, as named. Because AC-0105 needs a weight-field error and AC-0104 a form message, `failures.ts` also exports `correctionFieldErrors(error): CorrectionErrors | null`, which returns those two as `{ weight }` or `{ form }` and null otherwise; `correctionFailureMessage` returns the same text for them. `CorrectionErrors` and `NOTHING_TO_CORRECT` live in `correction-input.ts`, which `failures.ts` imports. The test file's imports grew from the stub's; its stub test is unchanged.
+
+## T5 (2026-10-18)
+
+- **Stub:** extracted from `plan.md` lines 380 to 422 (the code between the fences, one terminal newline), sha256 `27d7b5a9f27bc0891ab8fac14ac7e9df94de52d90d72289549fe0444e011e6ba`, matching the plan.
+- **Red:** with the folder check empty, `vitest run test/corrections-data.test.ts` exited 1 at 18:15:01 in 1.76 s with `TypeError: listBatchesMadeFrom is not a function` after `saleFixture` succeeded.
+- **Green:** `listBatchesMadeFrom` and `getLotFigures` in `src/lib/receiving.ts`, `getReversalPreview` and `listSalesVoidedBy` in `src/lib/production.ts`, `correctReceipt` and `reverseBatch` in `src/lib/rpc.ts`, and the current-figure reads in `trace.ts` made the stub pass; the file then grew to 11 tests, all green (4.9 s).
+- **Reuse:** a search of `src/lib/` found `required` and `saleSummary` and `SUMMARY_COLUMNS` (`sales.ts`), `readAllPages` (`trace.ts`), `listLotsUsed` (`production.ts`), and the `::text` select idiom (`invoices.ts`); all are reused. `listLotsUsed` gives the preview's lots in draw order, and `readAllPages` pages the batch's sale lines past `max_rows`. The summary read of those sales goes in chunks of 100 ids.
+- **Design:** `RecentReceipt.costText` and `weightText` are the database's own text (`1.6800`, `1000.000`), not trimmed, because the correction form's unchanged rule compares typed numbers with them. The latest correction's reason is the row with the highest `correction_seq` of the embedded `receipt_corrections`. `listBatchesMadeFrom` reads `finished_goods` (ordered by `produced_date`, `produced_seq`) with an inner embed of the batch and its lots, so a lot's batches come in draw order in one read. `listSalesVoidedBy` compares each sale's `voided_at` with the batch's `reversed_at` as the database prints them; the test proves they are equal for a sale a reversal voided.
+- **Coverage:** `test/corrections-data.test.ts` has the AC-0097 stub; AC-0118 (batch 2 marked reversed); AC-0160 (lot A cost 1.86 on the lot trace and in the 5,000-lb sale's trace); AC-0161 and AC-0162 (lot B at 3,100 lbs in the trace and the lot finder); AC-0115 (current and recorded values, texts, the latest reason after two corrections, and both batches reversed leaving both receipts untouched); `getLotFigures` after a correction and for no lot; `listRecentBatches` reversal marks; `getReversalPreview` over the 5,000-lb sale (batch 2: 770 finished lbs, lot B 1,000 lbs, one sale; and a batch with no sale); `listSalesVoidedBy` after a reversal, leaving out a sale voided earlier. `test/receiving-data-extra.test.ts` gains the new `RecentReceipt` fields in its first assertion.
+- **Gates:** `npm run typecheck` exit 0; `npm run build` exit 0; the bloat script found 88,399 dead `pg_class` rows (slot `cainophile_bp2ufl6e` 8,875 back) and took no action; `npm test` exit 0 in 10 min 6 s: Vitest 46 files and 898 tests passed (113 s), Playwright 542 of 542 passed (8.2 min).
+- **Deviations:** `getLotFigures` returns null when no lot has the id (the plan did not say; this matches `getSaleSummary` and `getLotTrace`). `reverseBatch` returns the existing `ProductionBatch` type, which is the same row, instead of a new `Batch` alias. No file outside T5's Touches changed.
+
+## Wave 3 gates: T3, T4, T5 (2026-10-18)
+
+- **Controller gates at `765a7ae`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff. The standing remedy acted first: 173,666 dead `pg_class` rows and `cainophile_bp2ufl6e` 17,578 transactions back, then 0 and `cainophile_k9pladxb` 3 back.
+- **First `npm test`:** Vitest 46 files and 898 tests passed; Playwright failed 2 of 542, `test/e2e/production.spec.ts` "AC-0042: after a save, the saved batch is first in the list" and "AC-0030, AC-0036, AC-0037, AC-0055: a shortfall is refused". Both were `saveBatch failed at write: produceBatch failed: An invalid response was received from the upstream server`: the gateway logged `502` for `POST /rest/v1/rpc/produce_batch` at 23:37:03 and 23:37:14 UTC with "upstream prematurely closed connection" and "Connection reset by peer" from PostgREST, and the database logged neither call. The gateway logged the same closed-connection error on reads at 23:12 and 23:26 UTC without a test failure. No task in this wave changed `produce_batch` or the batch save path.
+- **Rerun,** after the folder check (the remedy found 85,267 dead rows and took no action): `npm test` exit 0, Vitest 46 files and 898 tests passed (129 s), Playwright 542 of 542 passed (8.2 min).
+
+## T6 (2026-10-18)
+
+- **Stub:** extracted from `plan.md` lines 442 to 467 (the code between the fences, one terminal newline), sha256 `33a27b6d1012be194334e6b081f6f2d19cf942d00f0b338016c14106f714b65c`, matching the plan.
+- **Red:** with the folder check empty, `vitest run test/save-correction.test.ts` exited 1 in 1.56 s with a failed load of `../src/app/receiving/correct-receipt.js` (import at line 2 of the test file); no tests ran.
+- **Green:** `src/app/receiving/correct-receipt.ts` and `src/app/production/reverse-batch.ts` (new) made the stub pass (1 of 1, 1.23 s); the file then grew to 25 tests, all green (1.35 s), and `npm run typecheck` exit 0.
+- **Reuse:** a search of `src/app/` found `decideSaleSave`, `decideSaleVoid`, and `CallerOutcome` in `sales/save-sale.ts`; the two decisions copy their order and idiom and import `CallerOutcome` from it. Types come from `LotFigures`, `BatchMadeFrom`, `ProductStock`, `FinishedPrice`, `ReversalPreview`, and `SaleSummary`; the form rules and texts come from `correction-input.ts` and `failures.ts`. Nothing is duplicated.
+- **Branches covered, both decisions, no database:** ended session (AC-0005, AC-0006), not an operator (AC-0007), a caller check that failed, invalid fields (AC-0103, AC-0139), unchanged figures found by the page (AC-0104), the weight-floor refusal as a weight-field error (AC-0105), the database's nothing-to-correct refusal as the form message (AC-0104), a refused write (AC-0107, AC-0140), a 42501 write, a write with no answer and a write that resolves with no row (AC-0110, AC-0144), a failed read before the write (AC-0109, AC-0143), a lot not found, a failed read after the write (AC-0111, AC-0145), and success with the figures before and after (AC-0096, AC-0135).
+- **Design:** the weight-floor and nothing-to-correct refusals from the write return `invalid` (the confirmation stays open, AC-0106) and log through `actionFailureLogLine`; every other write failure returns `refused`. `getLotFigures` returning null (no lot) throws inside the read-before step, so it reads as "The receipt wasn't corrected. Try again in a moment." The reversal checks its reason before the read, as `decideSaleVoid` does; the correction reads first because the unchanged rule needs the current text. The `corrected` and `reversed` states carry `details: { before, after } | null`. The correction's `after` also holds the reason read from the new correction row (the read AC-0111's revoke reaches); the reversal's `after` holds the sales voided (the read AC-0145's revoke reaches).
+- **Gates:** `npm run typecheck` exit 0; `npm run build` exit 0; the bloat script found 170,534 dead `pg_class` rows (slot `cainophile_k9pladxb` 17,601 back) and acted (0 dead rows, new slot `cainophile_gxvycms3` 1 back); `npm test` exit 0 in 7 min 29 s: Vitest 47 files and 923 tests passed (49 s), Playwright 542 of 542 passed (6.6 min).
+- **Deviations:** none from the task body. The actions (T7, T8) supply the `readBefore`, `write`, and `readAfter` bodies over the T5 reads.
+
+## Wave 4 gates: T6 (2026-10-18)
+
+- **Controller gates at `3ac3519`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff; the standing remedy found 85,354 dead `pg_class` rows and took no action. `npm test` exit 1: Vitest failed 1 of 923, `test/access.test.ts` "AC-0006, AC-0007, AC-0009: direct writes to ledger tables are refused for every role" at 5,025 ms against the 5,000 ms default. Engine `gates-failed` (seq 21), `record-attempt` (implementation retry 1).
+- **Cause, in scope:** the test takes two table-fingerprint snapshots for each ledger table and role, and both counts come from the catalog. T1 added `receipt_corrections`, one more ledger table and one more fingerprinted table, so the test does more work than on `main`. Alone it took 3,364 ms; in the full run, beside the other suites, it passed the limit. T2's run saw the same test at 5,076 to 5,413 ms.
+- **Fix:** that test alone gets a 30-second timeout, as `test/sales-data.test.ts` gives its AC-0135 test, with a one-line comment on why it grows. No assertion changed. `test/access.test.ts` then passed 12 of 12 (10.7 s).
+- **Gates at `8743636`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff. The standing remedy acted: 123,199 dead `pg_class` rows and `cainophile_gxvycms3` 13,089 back, then 0 and `cainophile_jvr8hdu9` 4 back. `npm test` exit 1: Vitest failed 1 of 923, `test/alerts-watch.test.ts` "AC-0031: the cost rule opens a cost alert exactly at its band" at the 5,000 ms default. Alone it took 1,410 ms and the file passed 52 of 52 in 11.2 s. The machine's load average was 9.2 (an Android emulator, Steam, and Chrome were running), and no task in this build changed that file or its fixtures.
+- **Rerun,** after the folder check (the remedy found 51,852 dead rows and took no action; load average 9.7 at the start and 5.1 at the end): `npm test` exit 0, Vitest 47 files and 923 tests passed (117 s), Playwright 542 of 542 passed (7.7 min).
+
+## T7 (2026-10-18)
+
+- **Built:** Correct on `/receiving`. `correct-dialog.tsx` (new client component: the Correct button, the native `<dialog>` with Cancel first, the cost, weight, and reason fields, the form and refusal messages, and the "Receipt corrected" panel with the receipt, stock, suggested price, and "Batches restated" tables, or "No batch cost changed."). `actions.ts` gains `correctReceipt(lotId, fields)`, which hands `decideCorrection` the caller, the four T5 reads before the write, `correctReceipt` from `rpc.ts`, and the same reads after the write plus the correction's reason; it revalidates `/receiving` only when the reads after the write loaded. `recent-receipts.tsx` shows Correct beside Void or "In use" on every receipt that is not void, and the "Received as" and "Corrected:" lines. `page.tsx` and `receipt-form.tsx` pass the corrected lots as the voided ones are passed, and `result-panel.tsx` says "This receipt was corrected." (AC-0101). `totals.ts` holds `priceChanges`, moved out of `actions.ts` so the panel reuses it and `TotalsView`.
+- **Reuse:** a search of `src/app/receiving/` and `src/app/` found `VoidDialog` (its pattern is copied, as the plan names), `BeforeAfter`, `Facts`, `TotalsView`, `priceChanges`, `stockView` (all reused), and the `caller` adapter in `sales/actions.ts` (a `"use server"` file cannot export it, so the 4-line adapter is repeated). The ladder stopped at rung 2 (reuse) for every table; the dialog is the minimum new code.
+- **Spec tests:** `test/e2e/correct.spec.ts`, 22 tests: AC-0090, AC-0114; AC-0115; AC-0091 to AC-0093; AC-0094, AC-0095, AC-0179; AC-0113, AC-0178; AC-0096 to AC-0098, AC-0100, AC-0174; AC-0118; AC-0099; AC-0101; AC-0173; AC-0102, AC-0103, AC-0106, AC-0175, AC-0182; AC-0104 (page half) and AC-0176; AC-0105; AC-0104 (database half: a `pg` transaction holds RAW-TOM's `inventory_balances` row while the page's call waits, corrects the lot to the typed values through `correct_receipt` in the same transaction, and commits); AC-0107; AC-0117 (the held lock runs past the 8-second statement timeout); AC-0112 (a forced click and Enter on the aria-disabled Save while the call waits: one POST, one correction); AC-0108; AC-0116; AC-0111 (SELECT on `receipt_corrections` revoked from `authenticated` after the page loads, granted back in a `finally`); AC-0087 over the Alerts cost fixture (banner gone without a reload, a `window` flag survives); the replayed correct request for AC-0004, AC-0005, AC-0007 (no session, a non-operator, then the operator as a control). `checkPageState` runs (axe, 320 px scroll width, 44 px targets, outline style, width, and contrast: AC-0170 to AC-0172, AC-0180, AC-0181) in the list with Correct on an untouched, an in-use, and a void receipt; the list with a corrected receipt; the open correction; the correction after AC-0102, AC-0103, AC-0104, and AC-0105 refusals; the panel with batches restated; the panel with "No batch cost changed."; the list after AC-0107 and AC-0117 refusals (and AC-0116); the "Receipt corrected" panel with the unloaded figures; the "Receipt saved" panel after AC-0101. Focus is asserted for AC-0174 to AC-0178. AC-0109 and AC-0110 stay T9's recorded manual run; AC-0110's text is asserted through AC-0116.
+- **Existing tests changed:** `test/e2e/receiving.spec.ts` (Tab-order lists gain "button Correct" after each Void and for each in-use receipt; the four void messages are found through `voidMessage(item)`, because each list item now holds a second `role="alert"` region). `test/e2e/receiving-page.ts` scopes the form's weight and cost fields to the "New receipt" form, because the Correct confirmations carry fields with the same labels.
+- **Gates:** `npm run typecheck` exit 0; `npm run build` exit 0; the folder check was empty; the bloat script found 152,609 dead `pg_class` rows (slot `cainophile_jvr8hdu9` 15,734 back) and acted (0 dead rows, new slot `cainophile_vqxyijs5` 2 back); `npm test` exit 0 in 8 min 2 s (load average 4.2 at the start): Vitest 47 files and 923 tests passed (53 s), Playwright 564 of 564 passed (7.1 min; the 22 new tests added to the earlier 542).
+- **Deviations:** (1) `getLatestCorrectionReason` is new in `src/lib/receiving.ts` (outside `src/app/receiving/*`): the read after the write needs the correction row's reason, and the data layer owns reads. (2) The Correct button's accessible name is "Correct lot <number>", as the Void button's is "Void lot <number>", so it contains the AC-0090 name and each button in the list is distinct. (3) The panel's price table and stock table are the receiving "Receipt saved" panel's `TotalsView`, exported from `result-panel.tsx`. (4) The dialog's fields are wrapped in their labels, as the void dialog's reason field is, so the Tab-order helper labels them by name (`input cost`, `input weight`, `textarea reason`). (5) "Batches restated" lists every batch made from the receipt when the lot's cost changed and at least one batch exists; otherwise the panel says "No batch cost changed." The change is read from the database's before and after cost figures.
+
+## T8 (2026-10-18)
+
+- **Built:** Reverse on `/production`. `reverse-control.tsx` (new client component: the Reverse button while the batch is not reversed, the native `<dialog>` with Cancel first and the reason field, the closing-refusal message, and the "Batch reversed" panel with the raw stock, finished stock, and "Sales voided" or "No sale was voided."). `actions.ts` gains `reverseBatch(batchId, finishedProductId, reason)`, which hands `decideReversal` the caller, the stock read before the write, `reverseBatch` from `rpc.ts`, and the stock plus `listSalesVoidedBy` after it. `recent-batches.tsx` keeps one control mounted per batch and shows "Reversed: <reason>"; `page.tsx` reads `getReversalPreview` for each batch that is not reversed and passes the lots and sales through `product-region.tsx` to the control; `production-form.tsx` and `result-panel.tsx` turn the "Batch saved" lots and stock into "This batch was reversed." once the list shows the batch as reversed (AC-0142). `check-step.tsx` carries AC-0151's sentence, and production AC-0014 has the owner-approved note.
+- **Reuse:** a search of `src/app/` found the T7 `CorrectDialog` and the void dialogs (their pattern is copied, as the plan names; no shared dialog), `BeforeAfter`, `Facts`, `stockView` with `showOnHand` and `showAverage`, the 4-line `caller` adapter (repeated, since a `"use server"` file cannot export it), `listFinishedProducts`, `getStock`, and `getFinishedOnHand`; all reused. The `useSeen` hook of `receipt-form.tsx` is not exported and sits under `src/app/receiving/`, which T8 may not touch, so `production-form.tsx` holds a 6-line copy.
+- **Spec tests:** `test/e2e/reverse.spec.ts`, 20 tests: AC-0130, AC-0131; AC-0132 to AC-0134; AC-0133 (no sale); AC-0147, AC-0178; AC-0135, AC-0136, AC-0138, AC-0174; AC-0137; AC-0142; AC-0173; AC-0146 (a 4,700-lb sale written through a `pg` operator session after the page loads); AC-0148 (502 set inactive through `pg`); AC-0139, AC-0175, AC-0182; AC-0140 (the batch reversed through `pg` after the list loads); AC-0150 (a `pg` lock on RAW-TOM's `inventory_balances` row until the message shows, ending with the 8-second statement timeout); AC-0141; AC-0149 (the action request aborted through `page.route`); AC-0145 (SELECT on `sale_items` revoked from `authenticated` after the confirmation opens, granted back in a `finally`); AC-0151; the replayed reverse request for AC-0004, AC-0006, AC-0007 (no session, a non-operator, then the operator as a control); AC-0160 (lot A at 1.86 on its trace and under batch 1 of the 5,000-lb sale's trace); AC-0161 and AC-0162 (lot B at 3,100 lbs on its trace and in the lot finder). `checkPageState` (axe, 320 px scroll width, 44 px targets, outline style, width, and contrast: AC-0170 to AC-0172, AC-0180, AC-0181) runs in the list with a Reverse button; the list with a reversed batch; the open reversal with sales and with none; the reversal after the AC-0139 refusal; the panel with sales voided; the panel with "No sale was voided."; the list after the AC-0140, AC-0150, and AC-0149 outcomes; the panel with the unloaded figures; the "Batch saved" panel after AC-0142. Focus is asserted for AC-0174 to AC-0178. AC-0143 and AC-0144 stay T9's recorded run; AC-0144's text is asserted through AC-0149.
+- **Existing tests changed:** `test/e2e/production.spec.ts` (the check-step test asserts AC-0151's sentence and that "A batch can't be undone." is gone; the one Tab-order list that shows a saved batch gains "button Reverse"). `test/save-correction.test.ts` (see the deviation below).
+- **Gates at `4828140`:** `npm run typecheck` exit 0; `npm run build` exit 0; the folder check was empty; the bloat script found 99,455 dead `pg_class` rows (slot `cainophile_vqxyijs5` 10,869 back) and took no action; `npm test` exit 0 in 12 min 10 s (load average 9.1 at the start): Vitest 47 files and 923 tests passed (139 s), Playwright 584 of 584 passed (9.8 min; the earlier 564 plus the 20 new tests).
+- **Deviations:** (1) The plan and the brief had `readBefore` call `getReversalPreview`, which reads `sale_items`; AC-0145 revokes that read after the confirmation opens and expects the reversal to go through with only the read after it failing, so a preview read before the write would refuse the reversal as "The batch wasn't reversed". `ReversalBefore` in `reverse-batch.ts` (T6) now holds only `stock`, and `test/save-correction.test.ts` loses the unused `preview` fixture lines (its tests and counts are unchanged, 25). The confirmation's lots and sales come from `getReversalPreview`, read when the page renders, so they can be stale; AC-0146 shows the result still lists a sale written after that. (2) The action takes the batch's finished product id as a bound argument beside the batch id: the stock to read before the write needs it, and no read of the batch's product exists in `src/app/production/`. It only chooses which stock the panel shows; the engine decides the reversal. (3) The action skips `revalidatePath` when the finished lbs on hand after are null (the menu has no row, so the product is inactive): the page leaves an inactive product out, and the render would drop the region that holds the panel (AC-0148). The list then updates on the next load. (4) The Reverse button's accessible name is "Reverse batch <number>", as Correct's is "Correct lot <number>". (5) `useSeen` is copied, as above.
+
+## Wave 5 gates: T7, T8 (2026-10-18)
+
+- **Controller gates at `4b4d5ff`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff. The standing remedy acted: 188,380 dead `pg_class` rows and `cainophile_vqxyijs5` 20,044 back, then 0 and `cainophile_8z04gl1j` 2 back. After the folder check, `npm test` exit 0: Vitest 47 files and 923 tests passed (54 s), Playwright 584 of 584 passed (7.8 min).
+- **T8 design change, accepted for review:** `decideReversal`'s read before the write holds only the stock; the confirmation's lots and sales come from `getReversalPreview` at page render. AC-0145 revokes the operator's SELECT on `sale_items` after the confirmation opens and still expects the reversal to be written, so a `sale_items` read before the write would refuse it.
+- **Before T9:** `origin/main` gained Ask (PRs #23 and #24) with no migration. Ask's lot and sale answers use `getLotTrace` and `getSaleTrace`, which read current values after T5, and its Primary navigation link joins the Tab-order lists the T7 and T8 suites check.
+
+## T9 (2026-10-18)
+
+- **Controller facts, before T9:** the branch was rebased onto `origin/main` at `830fcc3` (Ask merged, no new migration): 23 commits applied, and two conflicts resolved keeping both sides, `SYSTEM-SPEC.md` §11 (Ask's "and the app's typed reads" with this branch's `receipt_corrections` and current-cost wording) and `src/lib/failures.ts` (Ask's `askQuestion` and `lookUpAnswer` with this branch's corrections block; the `LoggedAction` comment names both). After the rebase: `npm ci` exit 0, `npm run typecheck` exit 0, `npm run build` exit 0, `supabase_migrations.schema_migrations` equal to this branch's migration list, `npm run gen:types` no diff, and `npm test` exit 0 (Vitest 50 files and 1,000 tests in 137 s, Playwright 651 of 651 in 13.0 min).
+- **Commit ids above this section are from before the rebase onto `830fcc3`:** `d5aab7f` is `fe67327`; `4794112` is `584d8c0`; `dfefb09` is `40c21e1`; `5e6a319` is `3838795`; `a01e9f0` is `e327221`; `8558c61` is `879358c`; `2a51dc7` is `988f7f5`; `5929599` is `b2f91c5`; `cc23479` is `c72aedf`; `dd2af2f` is `25e4f76`; `638edbb` is `1f7f4eb`; `3e5cd8a` is `60dddc6`; `cdd3f60` is `466a7ce`; `f55d3ab` is `a810fe1`; `765a7ae` is `a212fb5`; `346eb79` is `1c77360`; `3ac3519` is `7d41e3b`; `8743636` is `7f7de29`; `ef26f36` is `8017faf`; `eda2ff2` is `d60237a`; `4828140` is `295c883`; `4b4d5ff` is `f9f1518`; `e7ad207` is `0ce336e`.
+- **Goal-based commands** (merge base with `main` is `830fcc3`; the pipe checks give each stage's exit code):
+  - AC-0189 `git diff 830fcc3 -- test/costing.test.ts test/engine.test.ts test/corrections.test.ts test/pricing.test.ts`: exit 0, printed nothing.
+  - AC-0190 `npm run build`: exit 0 (run again after the docs, at the end).
+  - AC-0191 `npm test`: exit 0 at the end of T9: Vitest 50 files and 1,000 tests passed (50.9 s), Playwright 651 of 651 passed (10.8 min). The first run, after the rebase, is in the controller facts.
+  - AC-0192 `npm run gen:types`: exit 0, `git status` showed `src/lib/database.types.ts` unchanged.
+  - AC-0193 `npm run typecheck`: exit 0.
+  - AC-0194 `grep -rnE "\.(insert|update|upsert|delete)\(" src/`: printed nothing (grep exit 1).
+  - AC-0195 `grep -rnE "from ['\"][^'\"]*app/" src/lib/`: printed nothing (grep exit 1).
+  - AC-0196 `npm audit --omit=dev --audit-level=high`: exit 0, "found 0 vulnerabilities"; the Advisory waivers list stays "none".
+  - AC-0197 `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/`: printed nothing (grep exit 1).
+  - AC-0198 the three greps: each printed nothing (the first pipe's `grep -v` exit 1, the other two grep exit 1).
+  - AC-0199 `git diff 830fcc3 -- package.json src/ | grep -iE '^\+.*(anthropic|openai|@ai-sdk|langchain)'`: printed nothing (git exit 0, grep exit 1).
+- **Catalog comparison** (AC-0200, AC-0201, AC-0202, AC-0203, AC-0204). Before each reset the folder check printed nothing and `supabase_migrations.schema_migrations` held only `main`'s migrations and this branch's; the scratch copy's `config.toml` names project `meat-ops` (stack A) and no `supabase/.env` was copied. First `supabase db reset --workdir <scratch>` over `git archive origin/main supabase` (exit 0), the read; then `supabase db reset` in this worktree (exit 0, 13 migrations), the read; the two files were diffed. The read has the columns (table, kind, column, type, position) of every `public` table and view, the `public` function list, and `prosecdef`, `proconfig`, `proacl`, and `has_function_privilege` EXECUTE for `anon`, `authenticated`, and `service_role` of the seven functions, plus the view's `reloptions` and `has_sequence_privilege` for the identity sequence. Files are in the scratchpad `t9/catalog_main.txt`, `catalog_branch.txt`, and `catalog.diff`.
+  - AC-0200: the diff holds only added lines in the column list (no line removed or changed), so every column of the baseline keeps its name, type, and position.
+  - AC-0201: the added columns are `lots.corrected_unit_cost` (position 15), `corrected_weight_lbs` (16), `current_unit_cost` (17), `current_weight_lbs` (18), and `production_batches.reversed_at` (12) and `reversal_reason` (13); the one added table is `receipt_corrections` (9 columns); the added functions are `correct_receipt(uuid,numeric,numeric,text)` and `reverse_batch(uuid,text)` (18 to 20 `public` functions). No other line differs.
+  - AC-0202: `public.correct_receipt` and `public.reverse_batch` read `prosecdef` t and `proconfig` `{search_path=""}`; EXECUTE for `authenticated` only (`proacl` `{postgres=X/postgres,authenticated=X/postgres}`).
+  - AC-0203: the seven-function read is identical on both databases for `private.refresh_balance` (t, `{search_path=""}`, no EXECUTE for the three roles), `adjust_lot`, `produce_batch`, `refresh_alerts`, and `void_receipt` (each t, `{search_path=""}`, EXECUTE for `authenticated` only); the diff shows only the two added rows. `v_sale_traceability` reads `reloptions` `{security_invoker=true}` on both.
+  - AC-0204: on this branch's database `has_sequence_privilege` USAGE, SELECT, and UPDATE are false for `anon`, `authenticated`, and `service_role` on `receipt_corrections_correction_seq_seq`, whose ACL is `{postgres=rwU/postgres}`; the baseline has no such sequence.
+  - After the last reset, stack A holds this branch's 13 migrations; `npx vitest run test/access.test.ts` exit 0 (12 of 12) recreated the test users. The two resets deleted every row on stack A, so the other stack A folders (`meat-ops`, `meat-ops-alerts`) lost their rows.
+- **Recorded manual run** against `npm run start` (a build from this branch's code, two instances on `127.0.0.1` ports 3400 and 3401, stopped by PID afterwards), driven by a scratch Playwright script, signed in as `operator@meat-ops.test`, over the sale fixture (`saleFixture` with the 5,000-lb sale and the list price, through the operations). The folder check printed nothing before each run. The correction changed the cost of the first Correct button (lot B) to 1.9000 with a reason; the reversal reversed the first Reverse button (batch 2). A stopped service shows after 10.4 s in every case.
+  - AC-0109, REST stopped after the page loaded (`docker stop supabase_rest_meat-ops`, started again right after): message "The receipt wasn't corrected. Try again in a moment." after 10.4 s; focus on the message itself (a `div` with `role="alert"` and `tabindex="-1"`, AC-0177); a `pg` read before and after showed 0 corrections and lots 1.6800/5000.000 and 1.8000/3000.000 both times.
+  - AC-0143, same method: "The batch wasn't reversed. Try again in a moment." after 10.4 s; focus on the message (the same `role="alert"` `div`); 0 batches reversed before and after, lots unchanged.
+  - AC-0110, the app's `SUPABASE_URL` set to a forwarder in scratch (`127.0.0.1:54399` only, passes everything to `127.0.0.1:54321` and holds `/rpc/correct_receipt` for 14 s): message "The receipt may not have been corrected. Reload this page to see whether it was." after 10.4 s; focus on the message. Two forwarder modes: when the held call is dropped once the app has given up, the `pg` read showed no correction (0 rows, lots unchanged); when the held call is forwarded anyway, the `pg` read 6 s later showed 1 correction and lot B at 1.9000/3000.000. The message is right in both: it says the correction may not have happened.
+  - AC-0144, same forwarder on `/rpc/reverse_batch`: "The batch may not have been reversed. Reload this page to see whether it was." after 10.4 s; focus on the message. Dropped: 0 batches reversed. Forwarded anyway: 1 batch reversed.
+  - Outputs are the scratchpad `t9/run-correct-rest.json`, `run-reverse-rest.json`, `run-correct-hold-drop.json`, `run-correct-hold-forward.json`, `run-reverse-hold-drop.json`, and `run-reverse-hold-forward.json`, with a screenshot of each outcome as `t9/captures/manual-<flow>-<scenario>.png`. Nothing else ran tests or the app in this folder.
+- **Rendered-page inspection for the `frontend-reviewer`** (no `frontend-engineering` skill is installed, so this is the named fallback: full-page PNG screenshots from headless Chromium at 375 and 1280 px wide over the sale fixture with the 5,000-lb sale, with computed metrics from the page; the dialogs' backdrop in a full-page capture stops at the viewport height, so a capture of a dialog is cut at the viewport's bottom edge by the capture, not by the page). All in `/private/tmp/claude-501/-Users-jakelee-Developer-meat-ops-corrections/6604128c-7426-4e69-a347-8d3fde31d838/scratchpad/t9/captures/`; metrics in `../capture-metrics.json`.
+  - `receiving-dialog-narrow.png` (375 px, 800 px tall viewport): the dialog fills the width with 1 px margins, the title wraps onto two lines ("Correct receipt L-20261005-" then the rest of the number), Cancel comes first and sits under the title, the intro text wraps in four lines, and the cost, weight, and reason fields and Save correction each run the full width. No horizontal scroll (scroll width 375 of 375). Every control is at least 44 by 44 px. The reason field shows a blue focus ring.
+  - `receiving-dialog-wide.png` (1280 px): the dialog is about 446 px wide and centered, the title on one line; the page behind shows through the dimmed backdrop. No horizontal scroll.
+  - `receiving-panel-narrow.png`: the green "Receipt corrected" heading and the lot number, reason, and the Receipt, Stock, Suggested price, and "Batches restated" tables sit in the list item under the receipt's Correct button. The suggested-price row name ("502 Smoked Turkey Drums Tom") and the batch names ("B-20261006-12b7df, 502, Oct 6, 2026") wrap onto two or three lines, with Before and After columns kept to the right; no overflow, no horizontal scroll. The figures are $1.8000 to $1.9000 per lb and the average cost $1.8000 to $1.9000 per lb.
+  - `receiving-panel-wide.png`: the same panel with each table in one line per row; no wrapping.
+  - `production-dialog-narrow.png`: the dialog is 762 px tall in an 800 px viewport, so its content (823 px) scrolls inside the dialog (`overflow-y: auto`, max height 100% less 38 px); Reverse batch is below the fold until the dialog is scrolled (reachable, checked with `scrollIntoViewIfNeeded`). It lists the batch, raw lbs that go back, finished lbs that leave stock, the sale to be voided (S-5000, Oct 8, Fulton Market Deli, 5,000 lbs), and the reason field. No horizontal scroll; every control at least 44 px.
+  - `production-dialog-wide.png`: the dialog is about 446 px wide, fully visible with the red Reverse batch button; no scroll.
+  - `production-panel-narrow.png` and `production-panel-wide.png`: the green "Batch reversed" heading, the Raw stock (1,000 to 2,000 lbs), Finished stock (390 to 4,620 lbs), and "Sales voided" tables, then "Record these sales again on Sales." No horizontal scroll at either width. The list item also shows "Reversed: entered twice by mistake" above the panel; the batch's Reverse button is gone (only the other batch keeps one, a red-outlined button).
+  - Focus: Tab through each open dialog moved to the cost, weight, reason, and confirm controls (and Cancel, the first), each with a 2 px solid outline in rgb(29, 78, 216) offset 2 px, a contrast of 6.7 to 1 against the white behind it. One Tab stop per cycle lands on `body` (outline style none, no control): the browser's own step out of a modal dialog, not a control.
+  - Target sizes: no control in an open dialog was smaller than 44 by 44 px at either width (the `small` list is empty in all four dialog and panel reads).
+  - Contrast: text is dark gray on white, headings near-black, and the confirm buttons are white on blue (Save correction) and white on red (Reverse batch); no contrast concern seen. The green "Receipt corrected" and "Batch reversed" headings are legible on white. Only the headings carry the green, and the text under them says what happened.
+  - Concerns for the reviewer: (1) at 375 px the correction dialog's title wraps in the middle of the lot number; (2) the narrow reversal dialog needs a scroll to reach Reverse batch at an 800 px viewport, and shorter viewports need more; (3) the panels sit after the receipt's or batch's own rows and below the Correct button, so a long list can leave a result far below the fold, though focus moves to the panel's message when it fails.
+- **Docs:** `docs/architecture/overview.md` (eight operations in the opening, the migrations and `src/lib/` and `src/app/` and `test/` and `test/e2e/` rows, the ledger table list, the access-model paragraph for `receipt_corrections` and the two functions, the write path's list, locks, rebuild, `lots` trigger sentence and app calls, and the failure notes, where "For a batch, which cannot be undone" is replaced) and `docs/costing.md` (the opening names `test/receipt-corrections.test.ts`, `test/batch-reversal.test.ts`, `test/alerts-corrections.test.ts`, `test/correction-rules.test.ts`, `test/corrections-data.test.ts`, `test/save-correction.test.ts`, `test/e2e/correct.spec.ts`, and `test/e2e/reverse.spec.ts`; the "Not available" note names the "Batch reversed" panel and `test/e2e/reverse.spec.ts`, so the opening no longer says no test asserts it). `SYSTEM-SPEC.md` §5 reads "Eight operations" after the rebase merge and Ask's text and this branch's agree; the "Foundation: the schema and the six operations" line in its build-order list is a history line and was left.
+- **Final gates after the docs:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff; the bloat script found 1,044 dead `pg_class` rows and took no action; `npm test` exit 0 (see AC-0191).
+- **Deviations:** (1) AC-0201's fixed list gives the new `lots` columns in the spec's order; the database positions are 15 to 18. (2) No `frontend-engineering` skill: the fallback above. (3) The 14-second hold and the two forwarder modes were chosen to show both outcomes of "may not have been"; the plan names only the hold.
+
+## Final gates (2026-10-18)
+
+- **Controller gates at `a63965f`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` exit 0 with no diff; the standing remedy found 99,201 dead `pg_class` rows and took no action. `npm test` exit 1: Vitest 50 files and 1,000 tests passed; Playwright failed 2 of 651. Engine `gates-failed` (seq 27), `record-attempt` (implementation retry 2).
+- **`test/e2e/alerts.spec.ts` "while a Dismiss is held, the card's reprice button carries aria-disabled":** `deadlock detected` in `resetTestData` (`test/db.ts:82`), the truncate against a page read the previous test left running, as T1 recorded. The diff touches `test/db.ts`, so it is in scope. Fix: `resetTestData` runs the reset once more when Postgres ends the truncate with `40P01`.
+- **`test/e2e/production.spec.ts` "the form after an AC-0010 refusal of a blank raw lbs meets the page-state checks":** axe reported `document-title: html`. Alone it failed 1 of 15 and then 2 of 30 on this branch; a scratch worktree of `origin/main` passed 30 of 30. A probe that logs every title change showed both builds drop the page title for 1 to 2 ms (up to 6 ms on `main`) when the product region's load commits, 25 to 60 ms after the raw lbs error shows, which is when the test's checks run. The race is the same on `main`; the diff touches the file, so it is in scope. Fix: the test waits for the region's Shrink fact before Save. It then passed 45 of 45.
+- **Rerun at `b646356`:** `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the standing remedy acted (207,711 dead rows and `cainophile_6vkhrbf0` 22,069 back, then 0 and `cainophile_y9f7nrgl` 2 back). `npm test` exit 1: Vitest 1,000 of 1,000 passed; Playwright failed 1 of 651, `test/e2e/receiving.spec.ts` "AC-0043 and AC-0057: an expired access token refreshes and voids, and a revoked session is refused". After the logout returned 204, the second void was written although the app logged two refused refreshes (`refresh_token_not_found`). The test passed 30 of 30 repeats alone. The diff changes neither `src/proxy.ts`, `src/app/_server/caller.ts`, nor `voidReceipt`; the diff's only change to that file is its Tab-order lists and the `voidMessage` lookup, which the failure did not reach. It is recorded for the owner as `docs/product/intents/revoked-session-write.md` in `[backlog].open`, since the fix belongs to the access model, outside this spec.
+- **Second rerun,** after the folder check (the remedy acted: 100,767 dead rows and `cainophile_y9f7nrgl` 10,663 back, then 0 and `cainophile_kqc27nm3` 5 back): `npm test` exit 0, Vitest 50 files and 1,000 tests passed (68 s), Playwright 651 of 651 passed (11.6 min).
+
+## Review round 1 fixes (2026-10-18)
+
+- **Finding 1, restatement rule:** `docs/costing.md` now recovers the fee as the cost per finished lb minus the unrounded sum of lbs consumed times lot cost, divided by finished lbs out, rounded to 4 decimals, and restates over the same quotient with the new lot cost. It matches `plan.md` Design and the migration. Code unchanged; no test applies.
+- **Finding 2, AC-0138 in the AC-0148 state:** `ReverseControl` (`src/app/production/reverse-control.tsx`) shows its own batch as reversed after a successful reversal (the "Reversed: <reason>" line, no Reverse button) only when the server list has not caught up (`done && !reversed`), so the line never shows twice. Proof: the `test/e2e/reverse.spec.ts` AC-0148 test now reverses with "entered twice" and asserts the line appears once and the batch has no Reverse button, without a reload; the AC-0138 test still asserts it once when the list re-renders.
+- **Finding 3, AC-0001 sweeps:** `test/receipt-corrections.test.ts` adds the `""` and `" \t\r\n "` reason cases and NaN cost and NaN weight cases sent through a pg session with the non-operator's claims (each expects 42501 and unchanged table fingerprints); `test/batch-reversal.test.ts` adds the two reason cases. The comment about JSON and NaN is replaced.
+- **Finding 4, "Not available" note:** `docs/costing.md` says a column shows it when its own read finds no menu row, and names the product made inactive before the reversal that `test/e2e/reverse.spec.ts` asserts in both columns.
+- **Finding 5, weight check before the lock:** `correct_receipt` rounds the weight and refuses a rounded weight of 0 with the other argument checks, before the `inventory_balances` lock. Signature, grants, SECURITY DEFINER, `search_path=""`, and every refusal text are unchanged. Proof: the new test "argument checks before the lock" holds the `inventory_balances` row, sets `lock_timeout` to 1 s, sends weight 0.0004, and gets `correct_receipt: invalid weight, must be above 0` (a call that waited would get a lock timeout).
+- **Finding 6, dialog sentence:** `src/app/receiving/correct-dialog.tsx` now says "a change of cost restates every batch made from it", keeping lot number, vendor, and weight. No test asserted the old sentence.
+- **Finding 7:** `src/lib/rpc.ts` header says "the eight costing RPCs".
+- **Stack A reset:** `stack_a_runners.sh` printed nothing; the migration versions in `supabase_migrations.schema_migrations` matched `supabase/migrations` (13 files, 0001 plus 12 dated). `supabase db reset` ran; `npm run gen:types` showed no diff; `test/access.test.ts` 12 of 12 re-created the test users. `pg_proc` for `correct_receipt`: `prosecdef` true, `proconfig` `{search_path=""}`, ACL `postgres=X, authenticated=X` (anon and public have no EXECUTE) (AC-0202).
+- **Gates at `f34ea59`:** `npm run typecheck` exit 0; `npm run build` exit 0; `npm run gen:types` no diff. The standing remedy found 10,429 dead rows and took no action. `npm test` exit 0: Vitest 50 files and 1,001 tests passed (69 s; the one added test is the lock test), Playwright 651 of 651 passed (12.2 min).
+- **Controller red check for finding 5:** the old `correct_receipt` body (from `29b63b3`, differing only in where the rounded-weight check sits) was applied to stack A with `create or replace`; "a weight above 0 that rounds to 0 is refused without waiting on the raw product's stock row" then failed with `canceling statement due to lock timeout` in 1.4 s. The current body was applied again and the test passed. `pg_proc` then showed `prosecdef` true, `{search_path=""}`, and `{postgres=X/postgres,authenticated=X/postgres}`.
+- **Controller gates at `831abbe`:** `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the standing remedy acted (107,816 dead rows, then 0; Realtime made `cainophile_l87mp0y3` a moment later). After the folder check, `npm test` exit 0: Vitest 50 files and 1,001 tests passed (62 s), Playwright 651 of 651 passed (10.2 min).
+
+## Review round 2 fixes (2026-10-18)
+
+- Round 2 (delta over `29b63b3..56bdb9c`): 3 nits raised; 2 sustained, 1 refuted (the moved weight check is already recorded in the round 1 fixes section). Engine `findings-remain` (seq 33), recorded as round 2.
+- **Finding 1:** `docs/costing.md`'s restatement rule now names the raw cost per finished lb as its own quantity (the unrounded sum of lbs consumed times lot cost, divided by finished lbs out, rounded to 4 decimals), so the fee as used and the restated cost each admit only `plan.md`'s formula. The worked example and the code are unchanged.
+- **Finding 2:** the comment on `ReverseControl`'s own reversed mark names both cases where the action skips the re-render: a read after the write that failed (AC-0145), and no finished lbs on hand after because the product was made inactive (AC-0148). No code change.
+- **Gates at `7dee729`** (which also brings the matching comment in `src/app/production/actions.ts` in line): `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the standing remedy found 91,545 dead rows and took no action. After the folder check, `npm test` exit 0: Vitest 50 files and 1,001 tests passed (107 s), Playwright 651 of 651 passed (12.1 min).
+
+## Review round 3: adversarial delta and specialists (2026-10-18 to 2026-10-19)
+
+- **Adversarial, round 3** (delta over `56bdb9c..88b193c`): `Clean — ready to commit.` (raw classification `clean`).
+- **Security** (access control, exceptional conditions, injection, STRIDE and LINDDUN over the whole branch diff): `Clean — ready to commit.` (raw classification `clean`).
+- **Experience reviewer:** named skip; no `experience-reviewer` agent is installed.
+- **Frontend:** the captures were taken again from the build at `88b193c` before the pass (the earlier set is kept as `captures-pre-review`). Two findings. Finding 2 (no visible edge between a result panel and the next list item) was refuted: no governing line asks for one, and the existing "Receipt saved" panel has the same shape. Finding 1 (a repeated Escape while a correction or reversal is saving closes the dialog, so a later field refusal lands in a closed dialog) came back indeterminate, since it rests on browser behavior. A probe in the suite's Chromium 156 settled it: on a `<dialog>` whose `cancel` handler calls `preventDefault`, after one click, the first two Escapes were cancelable and the dialog stayed open, and the third was not cancelable and closed it. The repository has no evidence-gate catalog, so the owner ruled on 2026-10-19: fix it in this build, in both dialogs, with a browser test.
+- **Quality engineer** (with the state-and-idempotency and drift-and-rollback modules): eight findings. Sustained: 3 (Concern: no test checks that a later correction's old cost and weight equal the earlier correction's new ones), and four nits: 1 (a run killed inside AC-0111 leaves `receipt_corrections` SELECT withdrawn, since `test/global-setup.ts` heals only `production_batch_lots` and `sale_items`), 4 (the decisions' failure log lines are not asserted), 5 (once any correction or reversal exists, a code-only revert would show recorded cost and weight and no reversed mark while the engine uses current values, so recovery is forward-fix only; recorded here because the plan is pinned), and 8 (`voidFailureMessage` repeats `refusalMessage`'s steps). Refuted: 2 (the per-batch preview reads; no budget or isolation rule applies and the ledger records the design) and 6 (deleting the caller-failed branch fails typecheck). Indeterminate: 7 (the AC-0104 database-half wait resolves on any backend in a Lock wait, not only the app's `correct_receipt` call); the owner ruled on 2026-10-19: tighten the wait in this build.
+- **Recovery after first use (quality finding 5):** reverting the code alone is safe only while no correction or reversal exists. After one, the previous app would read `unit_cost` and `weight_lbs` (recorded values) on corrected receipts and show no reversed mark on reversed batches, while the restated batch, finished-lot, and sale-line costs stay as restated and keep no earlier value outside `receipt_corrections`. Recovery is then forward-fix only.
+- Both indeterminate adjudications were charged to the review budget with their validated SHA-256 digests (engine `findings-remain`, seq 36; recorded as round 3).
+
+## Review round 3 fixes (2026-10-19)
+
+- **Item 1, Escape while saving (frontend 1):** `CorrectDialog` (`src/app/receiving/correct-dialog.tsx`) opens the dialog again with `showModal()` when an `invalid` result (the database's nothing-to-correct refusal, or the weight floor) arrives and the dialog is no longer open. `open()` is not called on that path, so the typed fields stay, and the existing focus effect sends focus to the first error or the form message. Proof: the new `test/e2e/correct.spec.ts` test "the browser closes the confirmation on a third Escape while the save waits, and the database's refusal opens it again with the typed fields" holds RAW-TOM's `inventory_balances` lock, saves, presses Escape three times, asserts the dialog is hidden, lands the same correction inside the lock holder, releases, then asserts the dialog is open, the form message is visible and focused, and cost and reason are as typed. Repeated 10 times (`--repeat-each=10`): 10 of 10 passed (12 of 12 with the two setup tests). `ReverseControl` is unchanged: its `invalid` result comes only from a blank reason, which the client check has already refused with the same `parseReversalReason` before the action is called, so an `invalid` result cannot arrive after the dialog closed. No reversal test.
+- **Item 2, lock-wait helper (quality 7):** `waiting()` in `test/e2e/receiving-page.ts` now resolves only for a backend in a `Lock` wait whose query names `correct_receipt` and whose `pg_blocking_pids` contains the holder's pid. `test/e2e/production-page.ts` has no such helper (the reversal spec never calls `waiting()`), so nothing else changed. Proof: the AC-0104 database-half test, the AC-0112 test, and the new Escape test pass with it.
+- **Item 3, later correction's old values (quality 3):** the AC-0032 test in `test/receipt-corrections.test.ts` now makes the first correction change cost (1.86) and weight (5200) and asserts the second row's `old_unit_cost` and `old_weight_lbs` equal the first row's `new_unit_cost` and `new_weight_lbs`. It passes with the current engine. It catches an engine that writes the lot's recorded `unit_cost` and `weight_lbs` as the old values: those would read the first-entered cost and 5000, not 1.8600 and 5200.000. I did not apply such a slip to stack A; the claim follows from the values differing.
+- **Item 4, killed-run heal (quality 1):** `test/global-setup.ts` now checks `has_table_privilege('authenticated', 'public.receipt_corrections', 'select')` and grants only when it is missing, like the other two tables; the comment names AC-0111.
+- **Item 5, log lines (quality 4):** every failure case of `decideCorrection` and `decideReversal` in `test/save-correction.test.ts` (16 cases: 10 correction cases and 6 reversal cases, AC-0109 included) asserts the spy was called once with the exact text (`correctReceipt failed at <stage>: ...`, `reverseBatch failed at <stage>: ...`, or the read-after line).
+- **Item 6, one refusal shape (quality 8):** `voidFailureMessage` in `src/lib/failures.ts` returns `refusalMessage(NOT_VOIDED, error, code)` after its before-write and no-answer steps. Void messages are unchanged: `test/failures.test.ts` and `test/failures-extra.test.ts` pin them and passed in the full Vitest gates recorded below.
+- **Deviations:** `test/global-setup.ts` is outside T7's Touches; item 4 edits it as the review's Fix says.
+- **Gates at `d08e175`:** `npm run typecheck`, `npm run build` exit 0; `npm run gen:types` no diff. `stack_a_runners.sh` printed nothing. `npm test`: Vitest 50 files and 1,001 tests passed (66 s); Playwright 651 passed and 1 failed (10.4 min): `test/e2e/alerts.spec.ts:182` (AC-0003, AC-0118, AC-0120, AC-0122) hit `duplicate key value violates unique constraint "alerts_one_live"` in the test's own reset query, a race with the alerts watch that is not in the known signatures and is not touched by this round. The whole `alerts.spec.ts` was run again: 58 of 58 passed (2.8 min).
+- **Controller mutation check for item 3:** a `correct_receipt` that wrote the recorded `unit_cost` and `weight_lbs` as the old values (one line changed in the `receipt_corrections` insert) was applied to stack A; "AC-0032: a lot corrected twice holds two corrections and the second's values" then failed (`expected { cost: '1.9000', ... } to match object { old_cost: '1.8600', ... }`). The current body was applied again and the test passed; `pg_proc` showed `prosecdef` true, `{search_path=""}`, and `{postgres=X/postgres,authenticated=X/postgres}`.
+- **Controller gates at `715027c`:** `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the standing remedy acted (104,945 dead rows and `cainophile_y98ud3wc` 11,007 back, then 0 and `cainophile_v9tawjqk` 3 back). After the folder check, `npm test` exit 0: Vitest 50 files and 1,001 tests passed (50 s), Playwright 652 of 652 passed (10.3 min).
+
+## Review round 4 fixes (2026-10-19)
+
+- **Finding 1, a reopen while a save is pending (adversarial 1, frontend):** `open()` in `CorrectDialog` (`src/app/receiving/correct-dialog.tsx`) and `ReverseControl` (`src/app/production/reverse-control.tsx`) now, while the save is pending, only shows the dialog again if it is closed and returns: cost, weight, reason, and errors are left as sent. With nothing pending, `open()` is unchanged (AC-0094). The existing focus effects then put the `invalid` result beside the sent fields. `ReverseControl` also keeps the reason as sent (`sentReason`, set at submit) and its own "Reversed: <reason>" mark shows that value. `waiting()` in `test/e2e/receiving-page.ts` takes an optional routine name (default `correct_receipt`) so the reversal test can wait for `reverse_batch`.
+- **New test, correction:** "AC-0104, AC-0106, AC-0176: pressing Correct again after the third Escape, while the save waits, keeps the sent values and the database's refusal shows beside them" (`test/e2e/correct.spec.ts`). It holds RAW-TOM's lock, saves, presses Escape three times (dialog hidden), presses Correct (dialog visible, cost, weight, and reason as sent), lands the same correction inside the lock holder, releases, and asserts the form message is visible and focused with the sent values. Repeated 10 times: 10 of 10 passed. Red without the fix (both components checked out from `16c499f`): `Expected: "1.90"`, `Received: "1.6800"`.
+- **New test, reversal:** "AC-0131: pressing Reverse again after the third Escape, while the reversal waits, keeps the sent reason, and the list marks the batch with it" (`test/e2e/reverse.spec.ts`). It holds the lock, confirms, presses Escape three times, presses Reverse, asserts the reason field, sets 502 inactive through `pg`, releases, then asserts "Batch reversed", exactly one "Reversed: entered twice" line, and no Reverse button. Repeated 10 times: 10 of 10 passed (22 passed with the two setup tests, 28.9 s for both). Red without the fix: `Expected: "entered twice"`, `Received: ""`. The red proves the reopen reset. The reason field stays editable while the reversal waits, so the `sentReason` change needed its own red, recorded in round 5.
+- **Finding 2, ledger:** round 3 items 5 and 6 are corrected where they stand (16 cases, 10 correction and 6 reversal; void messages pinned by `test/failures.test.ts` and `test/failures-extra.test.ts`).
+- **Gates at `39d254b`:** `npm run typecheck` and `npm run build` exit 0; `npm run gen:types` no diff. `stack_a_runners.sh` printed nothing. `clear_stack_a_bloat.sh` printed: `before: pg_class dead rows 100245; slot cainophile_v9tawjqk 10931`, `VACUUM`, `after: pg_class dead rows 0; slot cainophile_ozavlqcy 1`. `npm test` exit 0: Vitest 50 files and 1,001 tests passed (45 s), Playwright 654 of 654 passed (10.2 min); no known environmental signature appeared, so no second run.
+- **Controller gates at `4fe26ea`:** `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the standing remedy found 98,505 dead rows and took no action. After the folder check, `npm test` exit 0: Vitest 50 files and 1,001 tests passed (116 s), Playwright 654 of 654 passed (12.1 min).
+
+## Review round 5 fixes (2026-10-19)
+
+- **Change A, the sent-reason mark:** in the round 4 reversal test, after the check that the reopened reason field reads "entered twice", the test now fills the field with "edited while waiting" before the lock is released, and still asserts exactly one "Reversed: entered twice" line. The reason field stays editable while the reversal waits, so the earlier round 4 sentence that no input could change it was false; it is corrected where it stands. Red: with line 194 of `src/app/production/reverse-control.tsx` reading `reason` instead of `sentReason`, the test failed at the mark (`Error: expect(locator).toHaveCount(expected) failed`, `Expected: 1`, `Received: 0`). With `sentReason` restored it passed, and `--repeat-each=10` passed 12 of 12 (10 runs plus 2 setup tests). The temporary change was not committed.
+- **Change B, titles:** `AC-0148` is gone from the reversal test's title (it checks AC-0131's mark and the AC-0138 list outcome) and `AC-0094` from the correction test's title (it asserts the sent values). Both copies in the round 4 section match.
+- **Change C, a press after the result arrives (`src/app/receiving/correct-dialog.tsx`):** `open()` kept the sent values on `pending`, but with react-dom 19.3.0 the post-await `close()` and state setters commit before the transition clears `pending` (assumption from the review; not reproduced, since the gap is one task boundary and not reliably reachable in a browser test, so no test was added). `CorrectDialog` now holds `sentRef`, set true when the save is sent and set false at the start of result handling (after the await, and in the catch), before `close()` and the setters. `open()` keeps the sent values only while `sentRef` is true; every other press takes the AC-0094 reset. `pending` still drives "Saving…" and the disabled Cancel. `ReverseControl` is unchanged. Proof the existing behavior holds: `test/e2e/correct.spec.ts` in full 26 of 26 passed; the round 3 test (third Escape, refusal reopens with typed fields) and the round 4 test (Correct after the third Escape keeps the sent values) with `--repeat-each=10`: 22 of 22 passed (20 runs plus 2 setup tests).
+- **Gates:** `npm run typecheck` and `npm run build` exit 0; `npm run gen:types` no diff. `stack_a_runners.sh` printed nothing before each run. `clear_stack_a_bloat.sh` printed: `before: pg_class dead rows 201884; slot cainophile_ozavlqcy 21833`, `VACUUM`, `after: pg_class dead rows 0; slot cainophile_n9jloxmc 0`. `npm test` exit 0: Vitest 50 files and 1,001 tests passed (44 s), Playwright 654 of 654 passed (10.2 min); no known environmental signature appeared, so no second run.
+- **Controller gates at `e96e323`:** `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the standing remedy found 98,505 dead rows and took no action. After the folder check, `npm test` exit 0: Vitest 50 files and 1,001 tests passed (114 s), Playwright 654 of 654 passed (12.2 min). Round 5 was recorded as review retry 5 of 5 (engine `findings-remain`, seq 42), so the next review round must come back clean.
+
+## Review round 6 and completion evidence handoff (2026-10-19)
+
+- **Round 6** (delta `7aeca3c..8a626f4`, adversarial, frontend, quality): no Blocker or Concern was sustained. Three nits were sustained, all on `src/app/receiving/correct-dialog.tsx:185`: a Correct press between the "Receipt corrected" commit and the revalidated list commit opens with the figures from before the correction (adversarial and frontend, read from the installed Next 16.4.0 and React 19.3.0 sources, not reproduced), and no test presses Correct again after a handled result (quality). The review retry budget was spent at round 5 (5 of 5), and every fix in this dialog over rounds 3 to 6 drew a new edge, so the owner deferred the three nits on 2026-10-19. They are tracked in `docs/product/intents/corrections-review-nits.md`, listed in `[backlog].open`.
+- **Resolve-vs-surface record, closed at DECIDE:** every sustained Blocker and Concern from rounds 1 to 6 is resolved (the verdict below lists each with its commit); the two indeterminate findings of round 3 were settled by owner rulings recorded above and then fixed; the three round 6 nits are deferred with their citations. Refuted findings stay in the paired audit artifacts under `.context/reviews/`, which are not committed.
+- **Tail triage:** the branch adds 6,763 lines under `src/`, `test/`, and `supabase/` (47 files), so its review shape is DEEP and MIXED; the plan's nine tasks are its dependency-ordered layers, each with its own commits and wave gates (T1 database corrections, T2 batch reversal, T3 alerts, T4 form rules, T5 reads, T6 decisions, T7 `/receiving`, T8 `/production`, T9 docs and checks), followed by the review fix commits. One review unit covered them.
+- **Learnings:** project-knowledge capture was not attempted; the store refused captures in earlier sessions. Reusable lessons went to the session memory.
+
+For close-work:
+- **Delivery:** work-loop run `198cab70-47f3-49be-9a3d-16a38fbfa7e1`, branch `feat/corrections`, built in `~/Developer/meat-ops-corrections` on stack A, rebased onto `main` at `830fcc3`.
+- **Accepted outcome and authority:** `docs/product/intents/corrections-consumed-receipts.md` (correct a consumed receipt and reverse a production batch, restating every figure made from them); spec and plan approved by the owner; the owner directed the rebase, the push, the stack A setup, and the build.
+- **Implemented scope and evidence:** T1 to T9, each with its section above and its wave's gates; the recorded run, the catalog comparison, and the rendered-page inspection under T9; review rounds 1 to 6.
+- **Durable outputs:** `SYSTEM-SPEC.md` §4, §5 (eight operations), §7, §11; `docs/costing.md` (the `correct_receipt` and `reverse_batch` sections, invariant 6, the restatement and weight rules, the known limit, the new suites); `docs/architecture/overview.md` (operations, access model, write path); amendment notes in `docs/specs/alerts/spec.md`, `docs/specs/production/spec.md`, and `docs/specs/foundation-hardening/spec.md`; the zero-stock intent's extended Outcome; three migrations under `supabase/migrations/`.
+- **Non-goals and follow-ons:** the spec's Follow-on (the zero-stock average recompute, `docs/product/intents/zero-stock-average-recompute.md`, worked on `fix/zero-stock-average`); the hosted rollout (`docs/product/intents/hosted-supabase-rollout.md`); the three deferred nits (`docs/product/intents/corrections-review-nits.md`); and the pre-existing revoked-session observation (`docs/product/intents/revoked-session-write.md`).
+- **Unresolved obligations:** the pull request waits on the owner's review and merge; nothing has been applied to the hosted project. Recovery once any correction or reversal exists is forward-fix only (quality finding 5, above).
+- **Completion event candidate:** the merge of `feat/corrections` into `main`.
+- **Authority facts:** the owner is the only source, write, and deletion authority; no hosted write was made, and no review artifact under `.context/` is committed. Stack A was reset three times during the build (T9 twice, the round 1 migration edit once), each after the folder check and the migration check passed; the other stack A folders lost their rows each time and need no `supabase migration up`.
+
+### Review verdict
+
+```json review-verdict.v1
+{
+  "schema_version": "review-verdict.v1",
+  "state": "READY_WITH_RESIDUAL_RISK",
+  "mode": "full",
+  "review_unit": "corrections post-gates review, target 8a626f4 against main 830fcc3",
+  "warranted_reviewers": [
+    {
+      "role": "adversarial-reviewer",
+      "mandatory": true,
+      "outcome": "findings",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/6-post-gates-adversarial-reviewer-adjudication.md"
+    },
+    {
+      "role": "security-reviewer",
+      "mandatory": true,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/3-post-gates-security-reviewer-raw.md"
+    },
+    {
+      "role": "quality-engineer",
+      "mandatory": true,
+      "outcome": "findings",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/6-post-gates-quality-engineer-adjudication.md"
+    },
+    {
+      "role": "frontend-reviewer",
+      "mandatory": false,
+      "outcome": "findings",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/6-post-gates-frontend-reviewer-adjudication.md"
+    }
+  ],
+  "named_skips": [
+    {
+      "code": "experience-reviewer-absent",
+      "category": "non-mandatory reviewer not installed",
+      "reason": "The experience-reviewer agent is not installed in this repository.",
+      "residual_eligible": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "r1-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "docs/costing.md:330",
+      "text": "The restatement rule in the costing reference divides the rounded raw cost total, but the engine divides the unrounded sum.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Restatement rule restated over the unrounded sum (eda68a3)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/production/actions.ts:117",
+      "text": "In the AC-0148 state, Recent batches does not show the reversed batch as reversed, and the recorded deviation does not name AC-0138.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The control marks its own batch reversed when the action skips the re-render; AC-0148 test asserts it (0f5579b)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-3",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/receipt-corrections.test.ts:482",
+      "text": "The non-operator AC-0001 sweeps leave out argument cases that AC-0028, AC-0029, and AC-0049 list.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "NaN and blank-reason non-operator cases added to both sweeps (bfce975)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-4",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/costing.md:404",
+      "text": "The \"Not available\" note ties the text to the read after the write, but the test it cites shows it in the before column too.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "\"Not available\" note covers a product made inactive before the reversal (eda68a3)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-5",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "supabase/migrations/20261018053447_receipt_corrections.sql:411",
+      "text": "correct_receipt refuses a weight that rounds to 0 only after it has locked the stock row and the lot.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Rounded-weight check moved before the stock lock; lock test proven red on the old body (bfce975)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-6",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:257",
+      "text": "The correction dialog says every batch made from the receipt is restated, which a weight-only correction does not do.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Dialog says a change of cost restates every batch (f34ea59)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-7",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/lib/rpc.ts:4",
+      "text": "The rpc.ts header still counts six costing RPCs.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Header says eight costing RPCs (f34ea59)."
+    },
+    {
+      "id": "r2-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/costing.md:331",
+      "text": "The repaired restatement rule's sentences admit a second grouping.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Rule names the raw cost per finished lb as its own step (1485556)."
+    },
+    {
+      "id": "r2-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/production/reverse-control.tsx:180",
+      "text": "The comment on the control's own reversed mark names only one of the two cases that skip the re-render.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Comments name both skipped re-render cases (1485556, 7dee729)."
+    },
+    {
+      "id": "r3-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "src/app/receiving/correct-dialog.tsx:179",
+      "text": "A third Escape while a correction saves closes the dialog, so a later field refusal lands in a closed dialog.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Indeterminate at adjudication; a Chromium 156 probe proved the close; the owner ruled fix on 2026-10-19; the dialog reopens on a field refusal (7c0952b)."
+    },
+    {
+      "id": "r3-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/correct.spec.ts:603",
+      "text": "A killed run leaves the corrections read withdrawn.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "receipt_corrections added to the global-setup grant heal (19ff4d2)."
+    },
+    {
+      "id": "r3-quality-engineer-3",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "test/receipt-corrections.test.ts:337",
+      "text": "A later correction's old values are never checked.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "AC-0032 test checks the second row starts from the first row new values; proven red on a mutated engine (c2e443c)."
+    },
+    {
+      "id": "r3-quality-engineer-4",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/save-correction.test.ts:70",
+      "text": "The decisions' failure log lines are unpinned.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "All 16 decision failure cases assert their log line (3d7e695)."
+    },
+    {
+      "id": "r3-quality-engineer-5",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/corrections/plan.md:527",
+      "text": "The Rollout omits what a code revert does after first use.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Forward-fix-only recovery after first use recorded in the ledger; the plan is pinned (d5850ba)."
+    },
+    {
+      "id": "r3-quality-engineer-7",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/receiving-page.ts:281",
+      "text": "The AC-0104 database-half wait resolves on any backend in a Lock wait.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Indeterminate at adjudication; the owner ruled fix on 2026-10-19; the wait requires the app correct_receipt call blocked by the holder (4926e7b)."
+    },
+    {
+      "id": "r3-quality-engineer-8",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/lib/failures.ts:307",
+      "text": "The receipt refusal shape is written twice.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "voidFailureMessage reuses refusalMessage; void messages unchanged (4fd03f9)."
+    },
+    {
+      "id": "r4-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "src/app/receiving/correct-dialog.tsx:142",
+      "text": "Pressing Correct during a pending save still wipes the typed fields.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "open() while pending keeps the sent values in both controls; browser tests proven red (39d254b)."
+    },
+    {
+      "id": "r4-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/corrections/notes/verification-ledger.md:237",
+      "text": "Ledger items 5 and 6 misstate their proof.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Ledger counts and proof suites corrected (4fe26ea)."
+    },
+    {
+      "id": "r4-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "src/app/receiving/correct-dialog.tsx:142",
+      "text": "Pressing Correct while a save is pending resets the typed fields, so a later refusal shows its errors beside values it did not refuse.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r4-adversarial-1 (39d254b)."
+    },
+    {
+      "id": "r4-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/corrections/notes/verification-ledger.md:237",
+      "text": "The ledger's proof for items 5 and 6 is misstated.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r4-adversarial-2 (4fe26ea)."
+    },
+    {
+      "id": "r5-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/production/reverse-control.tsx:194",
+      "text": "The sent-reason mark has no test, and the ledger says it cannot have one.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Reversal test edits the reason while waiting; proven red against the live field (e96e323)."
+    },
+    {
+      "id": "r5-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:146",
+      "text": "A press just after the result can still take the pending branch.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "sentRef replaces pending for keeping sent values (e96e323)."
+    },
+    {
+      "id": "r5-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/reverse.spec.ts:389",
+      "text": "The reversal test passes without `sentReason`, and the ledger wrongly says the sent reason cannot change.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r5-adversarial-1 (e96e323)."
+    },
+    {
+      "id": "r5-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "docs/specs/corrections/notes/verification-ledger.md:248",
+      "text": "The ledger gives a false reason for having no test of sentReason.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r5-adversarial-1, ledger sentence corrected (e96e323)."
+    },
+    {
+      "id": "r5-quality-engineer-2",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/reverse.spec.ts:374",
+      "text": "The new reversal test claims AC-0148 but never checks its outcome.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Titles name only the criteria they check (e96e323)."
+    },
+    {
+      "id": "r6-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:185",
+      "text": "A Correct press just after a successful correction opens with the figures from before it.",
+      "status": "deferred",
+      "response": "accept-as-proportionate",
+      "reason": "Owner deferred on 2026-10-19 after round 6, the last review round; tracked in docs/product/intents/corrections-review-nits.md."
+    },
+    {
+      "id": "r6-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:185",
+      "text": "A Correct press after the result can reset the dialog to the old figures.",
+      "status": "deferred",
+      "response": "accept-as-proportionate",
+      "reason": "Owner deferred on 2026-10-19 after round 6, the last review round; tracked in docs/product/intents/corrections-review-nits.md."
+    },
+    {
+      "id": "r6-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:185",
+      "text": "No test fails if the new sentRef flag is never cleared.",
+      "status": "deferred",
+      "response": "accept-as-proportionate",
+      "reason": "Owner deferred on 2026-10-19 after round 6, the last review round; tracked in docs/product/intents/corrections-review-nits.md."
+    }
+  ],
+  "required_gates": [
+    {
+      "name": "npm run typecheck",
+      "outcome": "passed",
+      "evidence": "exit 0 at e96e323 (verification ledger, Review round 5 fixes)"
+    },
+    {
+      "name": "npm run build",
+      "outcome": "passed",
+      "evidence": "exit 0 at e96e323"
+    },
+    {
+      "name": "npm run gen:types",
+      "outcome": "passed",
+      "evidence": "no diff at e96e323"
+    },
+    {
+      "name": "npm test",
+      "outcome": "passed",
+      "evidence": "Vitest 1,001 of 1,001 in 50 files and Playwright 654 of 654 at e96e323, controller run"
+    },
+    {
+      "name": "goal-based checks AC-0189 to AC-0204",
+      "outcome": "passed",
+      "evidence": "verification ledger T9 section, catalog comparison against main"
+    }
+  ],
+  "deferrals": [
+    {
+      "slug": "corrections-review-nits",
+      "reason": "Three round 6 nits on the Correct dialog's state after a saved correction; the review retry budget was spent.",
+      "accepted_by": "jaketlee07 (owner), 2026-10-19",
+      "residual_eligible": true
+    }
+  ],
+  "blind_spots": [
+    {
+      "surface": "The post-correction press window in CorrectDialog",
+      "reason": "Found by reading the installed Next and React sources; a commit gap this short cannot be driven by a browser test.",
+      "evidence_limit": "Not reproduced at runtime; window length not measured.",
+      "accepted_by": "jaketlee07 (owner), 2026-10-19",
+      "residual_eligible": true
+    }
+  ],
+  "human_gate_status": "pending",
+  "non_authoritative_score": null
+}
+```
+
+## Rebase onto main at dfd00f2 (2026-10-19)
+
+- Before the pull request, `main` gained the zero-stock-average spec, plan, and ledger (PR #25, `dfd00f2`), docs only and touching no file this branch changes. `feat/corrections` was rebased onto it with no conflict (54 commits); the pre-rebase history is kept on the local branch `backup/corrections-pre-rebase-2-2026-10-19`. Commit ids in this ledger above this section are from before this rebase (the first rebase map is in the T9 section): `fe67327` is `9ea4ad3`; `584d8c0` is `9d65b3f`; `40c21e1` is `a134299`; `3838795` is `f8e8729`; `e327221` is `d601ed9`; `879358c` is `21b6fc2`; `988f7f5` is `5848c64`; `b2f91c5` is `3339c70`; `c72aedf` is `ec557b4`; `25e4f76` is `13118f7`; `1f7f4eb` is `31186ca`; `60dddc6` is `d0654e4`; `466a7ce` is `aab6716`; `a810fe1` is `c79f038`; `a212fb5` is `4f086d7`; `1c77360` is `bbbd1aa`; `7d41e3b` is `f4e6a1a`; `7f7de29` is `3ffcc1c`; `8017faf` is `2c2a721`; `d60237a` is `d156759`; `295c883` is `57025ff`; `f9f1518` is `75541b8`; `0ce336e` is `ef7ae13`; `a63965f` is `5ee000b`; `b646356` is `a12256f`; `29b63b3` is `3c6f3ad`; `eda68a3` is `eed6959`; `0f5579b` is `6b20dc9`; `bfce975` is `53666ce`; `f34ea59` is `c48cfaa`; `c562245` is `7e91c60`; `831abbe` is `d210822`; `56bdb9c` is `cb63eb8`; `1485556` is `e25ee22`; `7dee729` is `6dba573`; `88b193c` is `da2b653`; `6982209` is `eb34e99`; `d5850ba` is `747d3aa`; `7c0952b` is `ce0ac32`; `4926e7b` is `52f70fd`; `c2e443c` is `694fb77`; `19ff4d2` is `e92e880`; `3d7e695` is `3b673b7`; `4fd03f9` is `285a8e4`; `d08e175` is `77444a8`; `74ae7eb` is `bd61a6e`; `715027c` is `6aa9bfe`; `16c499f` is `a6ee5b9`; `39d254b` is `2823178`; `4fe26ea` is `ca3a4e5`; `7aeca3c` is `b416d13`; `e96e323` is `a7bb425`; `8a626f4` is `6a7c855`; `9a39db3` is `e7a54c3`. The revision fields of `docs/product/intents/revoked-session-write.md` and `docs/product/intents/corrections-review-nits.md` and their `workspace.toml` entries now name the rebased commits.
+- **Gates on the rebased branch at `00fd1d3`:** `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the spec status lint is clean (its one warning is in `docs/specs/zero-stock-average/spec.md`); the standing remedy acted (197,010 dead rows and `cainophile_n9jloxmc` 44,188 back, then 0 and `cainophile_zo1bt36s` 1 back). After the folder check, `npm test` exit 0: Vitest 50 files and 1,001 tests passed (51 s), Playwright 654 of 654 passed (12.1 min).
+- **Pull request:** #26 (https://github.com/jaketlee07/meat-ops/pull/26), opened on 2026-10-19 at the owner's direction after a lease-guarded force push of the rebased branch (`d5aab7f` to `b9cf607`); its Review verdict section is byte-identical to the block above. It waits on the owner's review and merge, the human gate. The standing stack A remedy ends here, as approved.

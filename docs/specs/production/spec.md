@@ -163,7 +163,7 @@ Production form
 Check step
 
 - [x] **AC-0013.** With every field valid, Save opens a check step that names the product code and description, the raw lbs, the production date, and the finished lbs typed or, when that field is blank, "From shrink" and the shrink in the AC-0045 format. Weights show in the Rounding note's weight format and the date in its date format: raw lbs typed as 2000 show as "2,000 lbs", and 2026-10-06 shows as "Oct 6, 2026".
-- [x] **AC-0014.** The check step says "A batch can't be undone."
+- [x] **AC-0014.** The check step says "A batch can't be undone." *Amended (owner-approved 2026-10-18): the corrections spec (`docs/specs/corrections/spec.md`, AC-0151) replaces this sentence with "Check it before you save. Reversing a batch later voids every sale made from it.", since a batch can now be reversed.*
 - [x] **AC-0015.** Choosing Go back in the check step closes it.
 - [x] **AC-0070.** Choosing Go back in the check step writes no batch.
 - [x] **AC-0071.** After Go back in the check step, every field keeps its value.

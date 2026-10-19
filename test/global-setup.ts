@@ -58,7 +58,7 @@ export default async function setup(): Promise<void> {
   const pg = new Client({ connectionString: env.dbUrl });
   await pg.connect();
   try {
-    // Heals a run killed inside the AC-0029/AC-0073 browser test or the AC-0047 sales tests, which withdraw these grants.
+    // Heals a run killed inside the AC-0029/AC-0073 browser test or the AC-0047 sales tests or the AC-0111 correction tests, which withdraw these grants.
     // Only when one is missing: a GRANT makes PostgREST reload its schema cache, which slows the next suite.
     const { rows } = await pg.query<{ granted: boolean }>(
       "select has_table_privilege('authenticated', 'public.production_batch_lots', 'select') as granted",
@@ -68,6 +68,10 @@ export default async function setup(): Promise<void> {
       "select has_table_privilege('authenticated', 'public.sale_items', 'select') as granted",
     );
     if (!items.rows[0]?.granted) await pg.query("grant select on table public.sale_items to authenticated");
+    const corrections = await pg.query<{ granted: boolean }>(
+      "select has_table_privilege('authenticated', 'public.receipt_corrections', 'select') as granted",
+    );
+    if (!corrections.rows[0]?.granted) await pg.query("grant select on table public.receipt_corrections to authenticated");
     await pg.query(
       "insert into private.operators(user_id) select unnest($1::uuid[]) on conflict (user_id) do nothing",
       [[operatorId, passwordOperatorId]],

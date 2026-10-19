@@ -1,4 +1,6 @@
+import { saleSummary, SUMMARY_COLUMNS, type SaleSummary } from "./sales";
 import type { TypedClient } from "./supabase.js";
+import { readAllPages } from "./trace";
 
 // Typed reads for the production screen. Like receiving.ts, every read throws on
 // error and returns rows as the database delivered them. Nothing here writes or
@@ -40,6 +42,19 @@ export interface RecentBatch {
   rawLbsIn: number;
   finishedLbsOut: number;
   costPerFinishedLb: number;
+  // Both null on a batch that is not reversed.
+  reversedAt: string | null;
+  reversalReason: string | null;
+}
+
+export interface ReversalPreview {
+  batchNumber: string;
+  productionDate: string;
+  finishedLbs: number;
+  // The lots the batch drew from and the lbs that go back to each, in draw order.
+  lots: { lotNumber: string; lbs: number }[];
+  // The sales that are not void and have a line on the batch's finished lot.
+  sales: SaleSummary[];
 }
 
 export interface RecentBatches {
@@ -131,7 +146,7 @@ export async function listRecentBatches(
   const { data, error, count } = await client
     .from("finished_goods")
     .select(
-      "batch_id, production_batches(batch_number, production_date, raw_lbs_in, finished_lbs_out, cost_per_finished_lb)",
+      "batch_id, production_batches(batch_number, production_date, raw_lbs_in, finished_lbs_out, cost_per_finished_lb, reversed_at, reversal_reason)",
       { count: "exact" },
     )
     .eq("finished_product_id", finishedProductId)
@@ -146,6 +161,81 @@ export async function listRecentBatches(
     rawLbsIn: row.production_batches.raw_lbs_in,
     finishedLbsOut: row.production_batches.finished_lbs_out,
     costPerFinishedLb: row.production_batches.cost_per_finished_lb,
+    reversedAt: row.production_batches.reversed_at,
+    reversalReason: row.production_batches.reversal_reason,
   }));
   return { batches, total: count };
+}
+
+// How many sale ids one summary read takes, so its URL and its rows stay small.
+const SALE_ID_CHUNK = 100;
+
+// Every sale, void or not, with a line on the batch's finished lot, oldest first.
+async function listSalesOnBatch(client: TypedClient, batchId: string, what: string): Promise<SaleSummary[]> {
+  const finished = await client.from("finished_goods").select("id").eq("batch_id", batchId).single();
+  if (finished.error) throw new Error(`${what} failed: ${finished.error.message}`);
+  let lines;
+  try {
+    lines = await readAllPages(async (from, to) => {
+      const { data, error, count } = await client
+        .from("sale_items")
+        .select("sale_item_id:id, sale_id", { count: "exact" })
+        .eq("finished_goods_id", finished.data.id)
+        .order("id")
+        .range(from, to);
+      if (error) throw new Error(error.message);
+      if (count === null) throw new Error("the database sent no count");
+      return { rows: data, count };
+    });
+  } catch (error) {
+    throw new Error(`${what} failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const saleIds = [...new Set(lines.map((line) => line.sale_id))];
+  const sales: SaleSummary[] = [];
+  for (let at = 0; at < saleIds.length; at += SALE_ID_CHUNK) {
+    const { data, error } = await client
+      .from("v_sale_summary")
+      .select(SUMMARY_COLUMNS)
+      .in("sale_id", saleIds.slice(at, at + SALE_ID_CHUNK));
+    if (error) throw new Error(`${what} failed: ${error.message}`);
+    sales.push(...data.map((row) => saleSummary(row, what)));
+  }
+  return sales.sort(
+    (a, b) => a.saleDate.localeCompare(b.saleDate) || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+  );
+}
+
+// What reversing the batch would do: the lots that get lbs back, the finished
+// lbs that leave stock, and the sales it would void.
+export async function getReversalPreview(client: TypedClient, batchId: string): Promise<ReversalPreview> {
+  const { data, error } = await client
+    .from("production_batches")
+    .select("batch_number, production_date, finished_lbs_out")
+    .eq("id", batchId)
+    .single();
+  if (error) throw new Error(`getReversalPreview failed: ${error.message}`);
+  const [lots, sales] = await Promise.all([
+    listLotsUsed(client, batchId),
+    listSalesOnBatch(client, batchId, "getReversalPreview"),
+  ]);
+  return {
+    batchNumber: data.batch_number,
+    productionDate: data.production_date,
+    finishedLbs: data.finished_lbs_out,
+    lots: lots.map((lot) => ({ lotNumber: lot.lotNumber, lbs: lot.lbsDrawn })),
+    sales: sales.filter((sale) => sale.voidedAt === null),
+  };
+}
+
+// The sales the batch's reversal voided: those voided at the batch's reversal time.
+export async function listSalesVoidedBy(client: TypedClient, batchId: string): Promise<SaleSummary[]> {
+  const { data, error } = await client
+    .from("production_batches")
+    .select("reversed_at")
+    .eq("id", batchId)
+    .single();
+  if (error) throw new Error(`listSalesVoidedBy failed: ${error.message}`);
+  if (data.reversed_at === null) return [];
+  const sales = await listSalesOnBatch(client, batchId, "listSalesVoidedBy");
+  return sales.filter((sale) => sale.voidedAt === data.reversed_at);
 }

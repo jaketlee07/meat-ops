@@ -5,7 +5,7 @@ import { Facts } from "../facts";
 import { NO_FINISHED, showAverage, showOnHand, showPrice } from "../stock-view";
 import type { SaveState, Totals } from "./actions";
 
-function TotalsView({ totals }: { totals: Totals }) {
+export function TotalsView({ totals }: { totals: Totals }) {
   const { stock, prices } = totals;
   return (
     <>
@@ -34,16 +34,19 @@ function TotalsView({ totals }: { totals: Totals }) {
 
 // The live region is in the page before it has content, so a screen reader
 // announces what is put into it. After a save the form moves focus to the heading.
-// Once the receipts list shows the saved lot as void, the totals give way to a
-// line saying so: they describe a receipt that no longer counts.
+// Once the receipts list shows the saved lot as void or as corrected, the totals
+// give way to a line saying so: they describe a receipt that no longer counts as
+// saved, or figures that a correction has since changed (corrections AC-0101).
 export function ResultPanel({
   state,
   headingRef,
   voided,
+  corrected,
 }: {
   state: SaveState;
   headingRef: Ref<HTMLHeadingElement>;
   voided: boolean;
+  corrected: boolean;
 }) {
   return (
     <div role="status" aria-label="Receipt result" className="mt-6 space-y-4">
@@ -64,6 +67,8 @@ export function ResultPanel({
           />
           {voided ? (
             <p>This receipt was voided.</p>
+          ) : corrected ? (
+            <p>This receipt was corrected.</p>
           ) : state.totals ? (
             <TotalsView totals={state.totals} />
           ) : (

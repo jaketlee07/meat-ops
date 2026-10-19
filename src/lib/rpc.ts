@@ -1,7 +1,7 @@
 import type { Database } from "./database.types.js";
 import type { TypedClient } from "./supabase.js";
 
-// Thin, typed wrappers over the six costing RPCs. These do no math: they map
+// Thin, typed wrappers over the eight costing RPCs. These do no math: they map
 // friendly argument names to the SQL parameter names, call the function, and
 // return the typed row. All cost and inventory logic lives in Postgres.
 
@@ -117,6 +117,30 @@ export async function voidSale(
   const { data, error } = await client.rpc("void_sale", { p_sale_id: saleId, p_reason: reason });
   if (error) throw rpcError("voidSale", error);
   return data as VoidedSale;
+}
+
+export interface CorrectReceiptInput {
+  lotId: string;
+  unitCost: number;
+  weightLbs: number;
+  reason: string;
+}
+
+export async function correctReceipt(client: TypedClient, input: CorrectReceiptInput): Promise<Lot> {
+  const { data, error } = await client.rpc("correct_receipt", {
+    p_lot_id: input.lotId,
+    p_unit_cost: input.unitCost,
+    p_weight_lbs: input.weightLbs,
+    p_reason: input.reason,
+  });
+  if (error) throw rpcError("correctReceipt", error);
+  return data as Lot;
+}
+
+export async function reverseBatch(client: TypedClient, batchId: string, reason: string): Promise<ProductionBatch> {
+  const { data, error } = await client.rpc("reverse_batch", { p_batch_id: batchId, p_reason: reason });
+  if (error) throw rpcError("reverseBatch", error);
+  return data as ProductionBatch;
 }
 
 export interface AdjustLotInput {

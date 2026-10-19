@@ -83,7 +83,7 @@ export function CheckStep({ input, product, saving, onClose, onConfirm }: Props)
           />
         </div>
         <p id={warningId} className="text-base font-medium">
-          A batch can&apos;t be undone.
+          Check it before you save. Reversing a batch later voids every sale made from it.
         </p>
 
         <button

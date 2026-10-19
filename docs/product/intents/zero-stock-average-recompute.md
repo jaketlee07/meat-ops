@@ -5,7 +5,7 @@
 
 ## Outcome
 
-When voids leave a raw product with 0 lbs on hand, its average equals what it would be had the voided receipts never been entered, whatever order they were voided in.
+When voids leave a raw product with 0 lbs on hand, its average equals what it would be had the voided receipts never been entered, whatever order they were voided in. The same holds when a cost correction leaves 0 lbs on hand, where the average keeps its stored value today, and when a void's zero-stock value carries a corrected receipt's cost through a lot's prior average.
 
 ## Boundary
 

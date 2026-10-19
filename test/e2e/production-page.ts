@@ -177,3 +177,79 @@ export async function lotSnapshot() {
     "select id, remaining_lbs::float8 from lots order by receipt_seq",
   );
 }
+
+// ---- Reverse (corrections AC-0130 to AC-0151) ----
+
+export const REVERSE_SIGNED_OUT = "You're signed out. Sign in again to reverse this batch.";
+export const NOT_REVERSED = "The batch wasn't reversed.";
+// AC-0144 and AC-0149: the write call got no answer, so the reversal may have happened.
+export const REVERSAL_UNKNOWN = "The batch may not have been reversed. Reload this page to see whether it was.";
+export const NOT_LOADED = "The new figures couldn't be loaded. Reload to see them.";
+export const REASON_REFUSAL = "Enter a reason for the reversal.";
+
+// What Tab reaches inside an open reversal, in order.
+export const REVERSE_DIALOG_CONTROLS = ["button Cancel", "textarea reason", "button Reverse batch"];
+
+// The list item of one batch in Recent batches, found by its batch number.
+export function batchItem(page: Page, batchNumber: string): Locator {
+  return page
+    .locator("#product-region")
+    .getByRole("listitem")
+    .filter({ has: page.locator("dd", { hasText: new RegExp(`^${batchNumber}$`) }) });
+}
+
+// The Reverse button of a batch. Its name carries the batch number, so each is distinct.
+export function reverseButton(item: Locator): Locator {
+  return item.getByRole("button", { name: /^Reverse batch / });
+}
+
+export function reverseDialog(page: Page, batchNumber: string): Locator {
+  return page.getByRole("dialog", { name: `Reverse batch ${batchNumber}` });
+}
+
+// The message a closing refusal leaves in a list item: the reversal's alert region, found by its text.
+export function reverseMessage(item: Locator): Locator {
+  return item.getByRole("alert").filter({ hasText: /reverse/i });
+}
+
+// The "Batch reversed" panel of one list item.
+export function reversePanel(item: Locator): Locator {
+  return item.getByRole("status", { name: /^Reversal of batch / });
+}
+
+// Opens the confirmation and types the reason. It does not press Reverse batch.
+export async function openReversal(page: Page, item: Locator, batchNumber: string, reason?: string): Promise<Locator> {
+  await reverseButton(item).click();
+  const dialog = reverseDialog(page, batchNumber);
+  if (reason !== undefined) await dialog.getByLabel("Reason for the reversal").fill(reason);
+  return dialog;
+}
+
+export async function reverseThrough(page: Page, item: Locator, batchNumber: string, reason = "entered twice"): Promise<Locator> {
+  const dialog = await openReversal(page, item, batchNumber, reason);
+  await dialog.getByRole("button", { name: "Reverse batch", exact: true }).click();
+  return dialog;
+}
+
+export async function batchNumberOf(id: string): Promise<string> {
+  const [row] = await query<{ n: string }>("select batch_number as n from production_batches where id = $1", [id]);
+  return row?.n ?? "missing";
+}
+
+export async function reversedCount(): Promise<number> {
+  const [row] = await query<{ n: number }>("select count(*)::int as n from production_batches where reversed_at is not null");
+  return row?.n ?? -1;
+}
+
+// What a batch, its finished lot, and the sales hold in the ledger, to show a refused or missing reversal changed none of it.
+export async function reversalState(batchId: string) {
+  const [row] = await query<{ reversed: boolean; reason: string | null; finished: string; voided: number; lots: string }>(
+    `select b.reversed_at is not null as reversed, b.reversal_reason as reason,
+            g.lbs_remaining::text as finished,
+            (select count(*)::int from sales where voided_at is not null) as voided,
+            (select string_agg(remaining_lbs::text, ',' order by receipt_seq) from lots) as lots
+     from production_batches b join finished_goods g on g.batch_id = b.id where b.id = $1`,
+    [batchId],
+  );
+  return row;
+}

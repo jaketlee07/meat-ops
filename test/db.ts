@@ -9,15 +9,17 @@ import { OPERATOR_EMAIL } from "./users.js";
 // It resets state between tests and reads back raw tables to check invariants
 // (conservation, lot immutability). It NEVER writes to the protected
 // transactional tables (lots, inventory_balances, production_batches,
-// production_batch_lots, finished_goods, sale_items, sales, lot_adjustments). Those are
-// populated exclusively through the costing RPCs under test. resetTestData only
+// production_batch_lots, finished_goods, sale_items, sales, lot_adjustments,
+// receipt_corrections). Those are populated exclusively through the costing RPCs under test. resetTestData only
 // truncates and re-seeds MASTER data (fee_types, vendors, products, fees),
 // which mirrors the top of supabase/seed.sql.
 //
 // Sessions that call the operations (callAsOperator, raceCalls) take
 // `set local role authenticated` and operator JWT claims, so they pass the same
 // caller check as the app. The only other ledger writes a test may attempt are
-// ones a criterion requires to be refused.
+// ones a criterion requires to be refused, and the check tests of AC-0068 to
+// AC-0079, which each write one violating row through pg inside a transaction
+// they roll back.
 
 const env = resolveStackEnv();
 const pool = new Pool({ connectionString: env.dbUrl });
@@ -40,7 +42,7 @@ truncate
   import_draft_lines, import_drafts,
   sale_items, sales, customers,
   finished_goods, production_batch_lots, production_batches,
-  lot_adjustments, lots, inventory_balances,
+  lot_adjustments, receipt_corrections, lots, inventory_balances,
   product_fees, products, fee_types, vendors,
   private.list_price_changes, alerts, alert_digests
   restart identity cascade;
@@ -76,8 +78,16 @@ from (values ('direct_material',0.05),('freezing',0.03),('overhead',0.37),('prof
 join fee_types ft on ft.code = x.code;
 `;
 
+// A page read the last browser test left running can deadlock with the
+// truncate. Postgres then ends one side, and if it ended the truncate, the reset
+// runs once more.
 export async function resetTestData(): Promise<void> {
-  await pool.query(MASTER_DATA_SQL);
+  try {
+    await pool.query(MASTER_DATA_SQL);
+  } catch (error) {
+    if ((error as { code?: string }).code !== "40P01") throw error;
+    await pool.query(MASTER_DATA_SQL);
+  }
 }
 
 // The invoice fixture: the master data above plus an active raw product, an
@@ -125,6 +135,8 @@ export type OperationName =
   | "void_receipt"
   | "void_sale"
   | "adjust_lot"
+  | "correct_receipt"
+  | "reverse_batch"
   | "set_target_margin"
   | "set_list_price"
   | "price_what_if"
@@ -157,6 +169,7 @@ const PARAM_TYPES: Record<string, string> = {
   p_sale_date: "date",
   p_lot_id: "uuid",
   p_sale_id: "uuid",
+  p_batch_id: "uuid",
   p_reason: "text",
   p_new_remaining_lbs: "numeric",
   p_target_percent: "numeric",
@@ -235,6 +248,21 @@ export const voidSaleCall = (saleId: string, reason: string | null = "wrong cust
 export const adjustCall = (lotId: string, newLbs: Arg, reason: string | null = "count"): OpCall => ({
   fn: "adjust_lot",
   args: { p_lot_id: lotId, p_new_remaining_lbs: newLbs, p_reason: reason },
+});
+
+export const correctCall = (
+  lotId: string,
+  cost: Arg,
+  weight: Arg,
+  reason: string | null = "invoice price",
+): OpCall => ({
+  fn: "correct_receipt",
+  args: { p_lot_id: lotId, p_unit_cost: cost, p_weight_lbs: weight, p_reason: reason },
+});
+
+export const reverseCall = (batchId: string, reason: string | null = "entered twice"): OpCall => ({
+  fn: "reverse_batch",
+  args: { p_batch_id: batchId, p_reason: reason },
 });
 
 export interface SqlCall {
@@ -588,12 +616,23 @@ export async function tableFingerprints(): Promise<Record<string, string>> {
   return out;
 }
 
-// AC-0030, AC-0031, AC-0054, AC-0032, AC-0033 for every raw product, lot, and
-// finished lot. Void lots and void sales are excluded from the remaining-lbs
-// equalities and checked for AC-0033 instead.
-export async function assertLedgerInvariants(): Promise<void> {
-  const expect = await loadExpect();
-  const { rows } = await pool.query(`
+// The checks run against any querier, so a test can write one violating row
+// inside a transaction it rolls back and see the check name it.
+export interface Querier {
+  query(text: string): Promise<{ rows: unknown[] }>;
+}
+
+// AC-0030 and the corrections spec's AC-0068 to AC-0078 for every raw product,
+// lot, batch, finished lot, and sale line. Used lbs and finished-lot
+// conservation count only batches that are not reversed; reversed batches are
+// checked by AC-0072 and AC-0073. Void lots and void sales are excluded from
+// the remaining-lbs equalities and checked for AC-0071 instead. AC-0079 joins
+// when `includeAverage` is set.
+export async function ledgerViolations(
+  run: Querier,
+  includeAverage = false,
+): Promise<{ violation: string; subject: string }[]> {
+  const { rows } = await run.query(`
     select 'AC-0030 qty_on_hand <> sum(remaining)' as violation, p.id::text as subject
     from products p
     left join inventory_balances b on b.product_id = p.id
@@ -601,24 +640,29 @@ export async function assertLedgerInvariants(): Promise<void> {
            on l.product_id = p.id
     where p.kind = 'raw' and coalesce(b.qty_on_hand, 0) <> coalesce(l.s, 0)
     union all
-    select 'AC-0031 remaining <> weight - consumed - adjusted', l.id::text
+    select 'AC-0070 remaining <> current weight - used - adjusted', l.id::text
     from lots l
-    left join (select lot_id, sum(lbs_consumed) c from production_batch_lots group by lot_id) c
+    left join (select pbl.lot_id, sum(pbl.lbs_consumed) c
+               from production_batch_lots pbl join production_batches b on b.id = pbl.batch_id
+               where b.reversed_at is null group by pbl.lot_id) c
            on c.lot_id = l.id
     left join (select lot_id, sum(old_remaining_lbs - new_remaining_lbs) a
                from lot_adjustments group by lot_id) a
            on a.lot_id = l.id
     where l.voided_at is null
-      and l.remaining_lbs <> l.weight_lbs - coalesce(c.c, 0) - coalesce(a.a, 0)
+      and l.remaining_lbs <> l.current_weight_lbs - coalesce(c.c, 0) - coalesce(a.a, 0)
     union all
-    select 'AC-0054 remaining > weight - consumed', l.id::text
+    select 'AC-0069 remaining > current weight - used', l.id::text
     from lots l
-    left join (select lot_id, sum(lbs_consumed) c from production_batch_lots group by lot_id) c
+    left join (select pbl.lot_id, sum(pbl.lbs_consumed) c
+               from production_batch_lots pbl join production_batches b on b.id = pbl.batch_id
+               where b.reversed_at is null group by pbl.lot_id) c
            on c.lot_id = l.id
-    where l.voided_at is null and l.remaining_lbs > l.weight_lbs - coalesce(c.c, 0)
+    where l.voided_at is null and l.remaining_lbs > l.current_weight_lbs - coalesce(c.c, 0)
     union all
-    select 'AC-0032 remaining <> produced - sold', f.id::text
+    select 'AC-0068 remaining <> produced - sold', f.id::text
     from finished_goods f
+    join production_batches fb on fb.id = f.batch_id and fb.reversed_at is null
     left join (select si.finished_goods_id, sum(si.lbs_sold) s
                from sale_items si join sales s on s.id = si.sale_id
                where s.voided_at is null
@@ -626,32 +670,82 @@ export async function assertLedgerInvariants(): Promise<void> {
            on s.finished_goods_id = f.id
     where f.lbs_remaining <> f.lbs_produced - coalesce(s.s, 0)
     union all
-    select 'AC-0033 void lot has a consumption row', l.id::text
+    select 'AC-0071 void lot has a consumption row', l.id::text
     from lots l
     where l.voided_at is not null
-      and exists (select 1 from production_batch_lots pbl where pbl.lot_id = l.id)
+      and exists (select 1 from production_batch_lots pbl
+                  join production_batches b on b.id = pbl.batch_id
+                  where pbl.lot_id = l.id and b.reversed_at is null)
     union all
-    select 'AC-0033 void lot has an adjustment row', l.id::text
+    select 'AC-0071 void lot has an adjustment row', l.id::text
     from lots l
     where l.voided_at is not null
       and exists (select 1 from lot_adjustments a where a.lot_id = l.id)
+    union all
+    select 'AC-0072 reversed batch finished lot has lbs', f.id::text
+    from finished_goods f join production_batches b on b.id = f.batch_id
+    where b.reversed_at is not null and f.lbs_remaining <> 0
+    union all
+    select 'AC-0073 reversed batch finished lot has a live sale line', si.id::text
+    from sale_items si
+    join sales s on s.id = si.sale_id
+    join finished_goods f on f.id = si.finished_goods_id
+    join production_batches b on b.id = f.batch_id
+    where b.reversed_at is not null and s.voided_at is null
+    union all
+    select 'AC-0074 consumption lot cost <> lot current cost', pbl.id::text
+    from production_batch_lots pbl join lots l on l.id = pbl.lot_id
+    where pbl.lot_unit_cost <> l.current_unit_cost
+    union all
+    select 'AC-0075 finished lot cost <> batch cost', f.id::text
+    from finished_goods f join production_batches b on b.id = f.batch_id
+    where f.cost_per_lb <> b.cost_per_finished_lb
+    union all
+    select 'AC-0076 sale line cost <> finished lot cost', si.id::text
+    from sale_items si join finished_goods f on f.id = si.finished_goods_id
+    where si.cost_per_lb <> f.cost_per_lb
+    union all
+    select 'AC-0077 batch raw cost total <> sum of consumption', b.id::text
+    from production_batches b
+    left join (select batch_id, sum(lbs_consumed * lot_unit_cost) t
+               from production_batch_lots group by batch_id) c on c.batch_id = b.id
+    where b.raw_cost_total <> round(coalesce(c.t, 0), 4)
+    union all
+    select 'AC-0078 current cost or weight <> latest correction', l.id::text
+    from lots l
+    left join lateral (select rc.new_unit_cost, rc.new_weight_lbs
+                       from receipt_corrections rc where rc.lot_id = l.id
+                       order by rc.correction_seq desc limit 1) rc on true
+    where l.current_unit_cost is distinct from coalesce(rc.new_unit_cost, l.unit_cost)
+       or l.current_weight_lbs is distinct from coalesce(rc.new_weight_lbs, l.weight_lbs)
   `);
-  expect(rows).toEqual([]);
+  const out = rows as { violation: string; subject: string }[];
+  return includeAverage ? [...out, ...(await averageViolations(run))] : out;
 }
 
-// AC-0028: every raw product with lbs on hand carries its stock-on-hand
-// average. The average is computed in SQL, never in TypeScript.
-export async function assertAverageIsStockOnHand(): Promise<void> {
+export async function assertLedgerInvariants(): Promise<void> {
   const expect = await loadExpect();
-  const { rows } = await pool.query(`
-    select b.product_id, b.moving_avg_cost::float8 as stored, round(l.v / l.q, 4)::float8 as expected
+  expect(await ledgerViolations(pool)).toEqual([]);
+}
+
+// AC-0028 and AC-0079: every raw product with lbs on hand carries its
+// stock-on-hand average at current cost. The average is computed in SQL, never
+// in TypeScript.
+export async function averageViolations(run: Querier): Promise<{ violation: string; subject: string }[]> {
+  const { rows } = await run.query(`
+    select 'AC-0079 average <> stock-on-hand average' as violation, b.product_id::text as subject
     from inventory_balances b
-    join (select product_id, sum(remaining_lbs) q, sum(remaining_lbs * unit_cost) v
+    join (select product_id, sum(remaining_lbs) q, sum(remaining_lbs * current_unit_cost) v
           from lots group by product_id having sum(remaining_lbs) > 0) l
       on l.product_id = b.product_id
     where b.moving_avg_cost <> round(l.v / l.q, 4)
   `);
-  expect(rows).toEqual([]);
+  return rows as { violation: string; subject: string }[];
+}
+
+export async function assertAverageIsStockOnHand(): Promise<void> {
+  const expect = await loadExpect();
+  expect(await averageViolations(pool)).toEqual([]);
 }
 
 // ---- Raw read helpers (assertions only, never cost math) ----

@@ -36,6 +36,8 @@ interface Props {
   region: ReactNode;
   // The lot numbers the recent receipts list shows as void.
   voidedLots: string[];
+  // The lot numbers the recent receipts list shows as corrected.
+  correctedLots: string[];
 }
 
 const FIELD_IDS: Record<ReceiptField, string> = {
@@ -60,7 +62,16 @@ function deviceToday(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-export function ReceiptForm({ products, vendors, urlCode, regionCode, region, voidedLots }: Props) {
+// Remembers every lot number the list has shown. The state is set during
+// render, as React allows, so the panel never shows a frame without the latest lot.
+function useSeen(lots: string[]): (lot: string) => boolean {
+  const [seen, setSeen] = useState(NO_LOTS);
+  const unseen = lots.filter((lot) => !seen.includes(lot));
+  if (unseen.length > 0) setSeen([...seen, ...unseen]);
+  return (lot) => lots.includes(lot) || seen.includes(lot);
+}
+
+export function ReceiptForm({ products, vendors, urlCode, regionCode, region, voidedLots, correctedLots }: Props) {
   const router = useRouter();
   const [regionPending, startRegion] = useTransition();
 
@@ -176,14 +187,13 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
   }, [code, urlCode, regionCode, regionPending, products]);
   const recheckCode = code !== "" && !chosen;
 
-  // Once the list has shown a saved lot as void, the panel keeps saying so, even
-  // when the owner then chooses another product and the list no longer holds it.
-  const [voidedSeen, setVoidedSeen] = useState(NO_LOTS);
-  const unseen = voidedLots.filter((lot) => !voidedSeen.includes(lot));
-  if (unseen.length > 0) setVoidedSeen([...voidedSeen, ...unseen]);
-  const lotVoided =
-    state.status === "saved" &&
-    (voidedLots.includes(state.lot.lotNumber) || voidedSeen.includes(state.lot.lotNumber));
+  // Once the list has shown a saved lot as void or corrected, the panel keeps
+  // saying so, even when the owner then chooses another product and the list no
+  // longer holds it.
+  const seenVoided = useSeen(voidedLots);
+  const seenCorrected = useSeen(correctedLots);
+  const lotVoided = state.status === "saved" && seenVoided(state.lot.lotNumber);
+  const lotCorrected = state.status === "saved" && seenCorrected(state.lot.lotNumber);
 
   // An exact code loads that product's stock into the page through the URL.
   function changeProduct(value: string) {
@@ -378,7 +388,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         </button>
       </form>
 
-      <ResultPanel state={state} headingRef={headingRef} voided={lotVoided} />
+      <ResultPanel state={state} headingRef={headingRef} voided={lotVoided} corrected={lotCorrected} />
 
       <div id="product-region" aria-busy={regionPending} className="mt-6 space-y-4">
         {chosen && chosen.code === regionCode ? region : null}

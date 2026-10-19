@@ -3,6 +3,7 @@
 // components import the texts below. An error's PostgREST code is read from the
 // error itself (src/lib/rpc.ts RpcError), not by importing that class.
 
+import { NOTHING_TO_CORRECT, type CorrectionErrors } from "./correction-input";
 import { formatDate, formatWeight } from "./format";
 import { readFailureMessage } from "./invoice-reading";
 import { NO_COUNTS_MESSAGE } from "./rpc";
@@ -61,10 +62,7 @@ export function voidFailureMessage(error: unknown, stage: FailureStage): string 
   if (stage === "before-write") return `${NOT_VOIDED} ${TRY_AGAIN}`;
   const code = codeOf(error);
   if (code === "") return VOID_UNKNOWN;
-  if (code === "42501") return `${NOT_VOIDED} ${NOT_ALLOWED}`;
-  // The engine's text has no closing period; the reload hint is a sentence of its own.
-  const reason = refusalReason(error, code);
-  return `${NOT_VOIDED} ${/[.!?]$/.test(reason) ? reason : `${reason}.`} ${RELOAD_STOCK}`;
+  return refusalMessage(NOT_VOIDED, error, code);
 }
 
 // The lead sentence of every not-saved batch message, shared with the batch action.
@@ -274,10 +272,64 @@ export function draftDiscardFailureMessage(error: unknown, stage: FailureStage):
   return `${NOT_DISCARDED} ${text}`;
 }
 
-// Every server action whose failures are logged: the receiving actions, saveBatch, the sale actions, the three pricing change actions, the three alert actions, readInvoice, saveDraft, discardDraft, askQuestion, and lookUpAnswer.
+// Corrections and reversals (corrections AC-0104, AC-0105, AC-0107 to AC-0110,
+// AC-0117, AC-0140 to AC-0144, AC-0150).
+export const NOT_CORRECTED = "The receipt wasn't corrected.";
+// AC-0110: the write call got no answer from the engine, so the correction may have happened.
+export const CORRECTION_UNKNOWN = "The receipt may not have been corrected. Reload this page to see whether it was.";
+// AC-0108: the session ended after the list loaded.
+export const CORRECTION_SIGNED_OUT = "You're signed out. Sign in again to correct this receipt.";
+export const NOT_REVERSED = "The batch wasn't reversed.";
+// AC-0144: the same for a reversal.
+export const REVERSAL_UNKNOWN = "The batch may not have been reversed. Reload this page to see whether it was.";
+// AC-0141: the session ended after the list loaded.
+export const REVERSAL_SIGNED_OUT = "You're signed out. Sign in again to reverse this batch.";
+const NOTHING_TO_CORRECT_TEXT = /^invalid, nothing to correct$/;
+const WEIGHT_FLOOR = /^invalid weight \d+(?:\.\d+)?, must be at least (\d+(?:\.\d+)?) lbs$/;
+
+// The two refusals that keep the confirmation open, as the messages they show:
+// AC-0104 on the form and AC-0105 beside the weight. Null for any other error.
+export function correctionFieldErrors(error: unknown): CorrectionErrors | null {
+  const text = engineText(error);
+  if (NOTHING_TO_CORRECT_TEXT.test(text)) return { form: NOTHING_TO_CORRECT };
+  const floor = WEIGHT_FLOOR.exec(text);
+  if (floor) {
+    return {
+      weight: `The weight can't be less than ${formatWeight(Number(floor[1]))}. Production used or adjustments removed that much of this receipt.`,
+    };
+  }
+  return null;
+}
+
+function refusalMessage(lead: string, error: unknown, code: string): string {
+  if (code === "42501") return `${lead} ${NOT_ALLOWED}`;
+  // The engine's text has no closing period; the reload hint is a sentence of its own.
+  const reason = refusalReason(error, code);
+  return `${lead} ${/[.!?]$/.test(reason) ? reason : `${reason}.`} ${RELOAD_STOCK}`;
+}
+
+export function correctionFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_CORRECTED} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return CORRECTION_UNKNOWN;
+  const fieldErrors = code === "42501" ? null : correctionFieldErrors(error);
+  if (fieldErrors) return fieldErrors.weight ?? fieldErrors.form ?? "";
+  return refusalMessage(NOT_CORRECTED, error, code);
+}
+
+export function reversalFailureMessage(error: unknown, stage: FailureStage): string {
+  if (stage === "before-write") return `${NOT_REVERSED} ${TRY_AGAIN}`;
+  const code = codeOf(error);
+  if (code === "") return REVERSAL_UNKNOWN;
+  return refusalMessage(NOT_REVERSED, error, code);
+}
+
+// Every server action whose failures are logged: the receiving actions, the correction and reversal actions, saveBatch, the sale actions, the three pricing change actions, the three alert actions, readInvoice, saveDraft, discardDraft, askQuestion, and lookUpAnswer.
 export type LoggedAction =
   | "saveReceipt"
   | "voidReceipt"
+  | "correctReceipt"
+  | "reverseBatch"
   | "saveBatch"
   | "saveSale"
   | "voidSale"

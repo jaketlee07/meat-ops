@@ -162,7 +162,7 @@ export async function findLots(
 
   let query = client
     .from("lots")
-    .select("lot_number, received_date, weight_lbs, vendors(name)", { count: "exact" })
+    .select("lot_number, received_date, current_weight_lbs, vendors(name)", { count: "exact" })
     .eq("product_id", product.data.id)
     .is("voided_at", null);
   if (received === undefined) {
@@ -182,7 +182,7 @@ export async function findLots(
       lotNumber: lot.lot_number,
       receivedDate: lot.received_date,
       vendor: lot.vendors.name,
-      weightLbs: lot.weight_lbs,
+      weightLbs: required(lot.current_weight_lbs, "findLots"),
     })),
     total: count,
   };
@@ -225,7 +225,7 @@ export async function getLotTrace(client: TypedClient, lotNumber: string): Promi
   const lotRead = await client
     .from("lots")
     .select(
-      "id, lot_number, received_date, weight_lbs, unit_cost, remaining_lbs, voided_at, void_reason, products(code, description), vendors(name)",
+      "id, lot_number, received_date, current_weight_lbs, current_unit_cost, remaining_lbs, voided_at, void_reason, products(code, description), vendors(name)",
     )
     .eq("lot_number", lotNumber)
     .maybeSingle();
@@ -302,8 +302,8 @@ export async function getLotTrace(client: TypedClient, lotNumber: string): Promi
       rawProduct: lot.products.description,
       vendor: lot.vendors.name,
       receivedDate: lot.received_date,
-      weightLbs: lot.weight_lbs,
-      costPerLb: lot.unit_cost,
+      weightLbs: required(lot.current_weight_lbs, "getLotTrace"),
+      costPerLb: required(lot.current_unit_cost, "getLotTrace"),
       remainingLbs: lot.remaining_lbs,
       voidedAt: lot.voided_at,
       voidReason: lot.void_reason,

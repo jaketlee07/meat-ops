@@ -490,7 +490,11 @@ export type Database = {
       }
       lots: {
         Row: {
+          corrected_unit_cost: number | null
+          corrected_weight_lbs: number | null
           created_at: string
+          current_unit_cost: number | null
+          current_weight_lbs: number | null
           id: string
           lot_number: string
           notes: string | null
@@ -506,7 +510,11 @@ export type Database = {
           weight_lbs: number
         }
         Insert: {
+          corrected_unit_cost?: number | null
+          corrected_weight_lbs?: number | null
           created_at?: string
+          current_unit_cost?: number | null
+          current_weight_lbs?: number | null
           id?: string
           lot_number: string
           notes?: string | null
@@ -522,7 +530,11 @@ export type Database = {
           weight_lbs: number
         }
         Update: {
+          corrected_unit_cost?: number | null
+          corrected_weight_lbs?: number | null
           created_at?: string
+          current_unit_cost?: number | null
+          current_weight_lbs?: number | null
           id?: string
           lot_number?: string
           notes?: string | null
@@ -680,6 +692,8 @@ export type Database = {
           production_date: string
           raw_cost_total: number
           raw_lbs_in: number
+          reversal_reason: string | null
+          reversed_at: string | null
           shrink_pct_used: number
         }
         Insert: {
@@ -693,6 +707,8 @@ export type Database = {
           production_date?: string
           raw_cost_total: number
           raw_lbs_in: number
+          reversal_reason?: string | null
+          reversed_at?: string | null
           shrink_pct_used: number
         }
         Update: {
@@ -706,6 +722,8 @@ export type Database = {
           production_date?: string
           raw_cost_total?: number
           raw_lbs_in?: number
+          reversal_reason?: string | null
+          reversed_at?: string | null
           shrink_pct_used?: number
         }
         Relationships: [
@@ -816,6 +834,50 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
+          },
+        ]
+      }
+      receipt_corrections: {
+        Row: {
+          corrected_at: string
+          correction_seq: number
+          id: string
+          lot_id: string
+          new_unit_cost: number
+          new_weight_lbs: number
+          old_unit_cost: number
+          old_weight_lbs: number
+          reason: string
+        }
+        Insert: {
+          corrected_at?: string
+          correction_seq?: never
+          id?: string
+          lot_id: string
+          new_unit_cost: number
+          new_weight_lbs: number
+          old_unit_cost: number
+          old_weight_lbs: number
+          reason: string
+        }
+        Update: {
+          corrected_at?: string
+          correction_seq?: never
+          id?: string
+          lot_id?: string
+          new_unit_cost?: number
+          new_weight_lbs?: number
+          old_unit_cost?: number
+          old_weight_lbs?: number
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_corrections_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1123,7 +1185,11 @@ export type Database = {
           p_reason: string
         }
         Returns: {
+          corrected_unit_cost: number | null
+          corrected_weight_lbs: number | null
           created_at: string
+          current_unit_cost: number | null
+          current_weight_lbs: number | null
           id: string
           lot_number: string
           notes: string | null
@@ -1174,7 +1240,11 @@ export type Database = {
       confirm_import_draft: {
         Args: { p_draft_id: string; p_lines: Json }
         Returns: {
+          corrected_unit_cost: number | null
+          corrected_weight_lbs: number | null
           created_at: string
+          current_unit_cost: number | null
+          current_weight_lbs: number | null
           id: string
           lot_number: string
           notes: string | null
@@ -1194,6 +1264,40 @@ export type Database = {
           to: "lots"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      correct_receipt: {
+        Args: {
+          p_lot_id: string
+          p_reason: string
+          p_unit_cost: number
+          p_weight_lbs: number
+        }
+        Returns: {
+          corrected_unit_cost: number | null
+          corrected_weight_lbs: number | null
+          created_at: string
+          current_unit_cost: number | null
+          current_weight_lbs: number | null
+          id: string
+          lot_number: string
+          notes: string | null
+          prior_avg_cost: number | null
+          product_id: string
+          receipt_seq: number
+          received_date: string
+          remaining_lbs: number
+          unit_cost: number
+          vendor_id: string
+          void_reason: string | null
+          voided_at: string | null
+          weight_lbs: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lots"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       create_import_draft: {
@@ -1321,6 +1425,8 @@ export type Database = {
           production_date: string
           raw_cost_total: number
           raw_lbs_in: number
+          reversal_reason: string | null
+          reversed_at: string | null
           shrink_pct_used: number
         }
         SetofOptions: {
@@ -1341,7 +1447,11 @@ export type Database = {
           p_weight_lbs: number
         }
         Returns: {
+          corrected_unit_cost: number | null
+          corrected_weight_lbs: number | null
           created_at: string
+          current_unit_cost: number | null
+          current_weight_lbs: number | null
           id: string
           lot_number: string
           notes: string | null
@@ -1394,6 +1504,30 @@ export type Database = {
           open_count: number
           urgent_count: number
         }[]
+      }
+      reverse_batch: {
+        Args: { p_batch_id: string; p_reason: string }
+        Returns: {
+          batch_number: string
+          cost_per_finished_lb: number
+          created_at: string
+          finished_lbs_out: number
+          finished_product_id: string
+          id: string
+          notes: string | null
+          production_date: string
+          raw_cost_total: number
+          raw_lbs_in: number
+          reversal_reason: string | null
+          reversed_at: string | null
+          shrink_pct_used: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "production_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_list_price: {
         Args: { p_price_per_lb: number; p_product_id: string }
@@ -1456,7 +1590,11 @@ export type Database = {
       void_receipt: {
         Args: { p_lot_id: string; p_reason: string }
         Returns: {
+          corrected_unit_cost: number | null
+          corrected_weight_lbs: number | null
           created_at: string
+          current_unit_cost: number | null
+          current_weight_lbs: number | null
           id: string
           lot_number: string
           notes: string | null

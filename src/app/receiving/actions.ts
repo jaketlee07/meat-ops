@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { CorrectionFields } from "../../lib/correction-input";
 import {
   actionFailureLogLine,
+  correctionFailureMessage,
   NOT_ALLOWED,
   NOT_SAVED,
   NOT_VOIDED,
@@ -12,19 +14,25 @@ import {
 } from "../../lib/failures";
 import { parseReceiptForm, parseVoidReason, type ReceiptField } from "../../lib/receipt-input";
 import {
+  getLatestCorrectionReason,
+  getLotFigures,
   getStock,
   listActiveRawProducts,
+  listBatchesMadeFrom,
   listFinishedPrices,
   listRawProducts,
   listVendors,
-  type FinishedPrice,
-  type ProductStock,
 } from "../../lib/receiving";
-import { receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
+import { correctReceipt as correctReceiptCall, receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
 import type { TypedClient } from "../../lib/supabase";
 import { checkCaller } from "../_server/caller";
-import { priceView, stockView, type StockView } from "../stock-view";
+import { type CallerOutcome } from "../sales/save-sale";
+import { stockView, type StockView } from "../stock-view";
+import { decideCorrection, type CorrectionSnapshot, type CorrectionState } from "./correct-receipt";
 import { readFields, readRecheck } from "./form-fields";
+import { priceChanges } from "./totals";
+
+export type { CorrectionState } from "./correct-receipt";
 
 export interface SavedLot {
   lotNumber: string;
@@ -82,21 +90,6 @@ function saveFailed(error: unknown, stage: FailureStage): SaveState {
 function voidFailed(error: unknown, stage: FailureStage): VoidState {
   console.error(actionFailureLogLine("voidReceipt", stage, error));
   return { status: "refused", message: voidFailureMessage(error, stage) };
-}
-
-function priceChanges(
-  before: { stock: ProductStock; prices: FinishedPrice[] },
-  after: { stock: ProductStock; prices: FinishedPrice[] },
-): PriceChange[] {
-  return after.prices.map((row) => ({
-    code: row.code,
-    description: row.description,
-    before: priceView(
-      before.prices.find((candidate) => candidate.productId === row.productId),
-      before.stock,
-    ),
-    after: priceView(row, after.stock),
-  }));
 }
 
 // Everything a save reads before its write call, in one place so a single catch
@@ -229,4 +222,61 @@ export async function voidReceipt(lotId: string, reason: string): Promise<VoidSt
 
   revalidatePath("/receiving");
   return { status: "voided" };
+}
+
+async function caller(): Promise<CallerOutcome<TypedClient>> {
+  const outcome = await checkCaller();
+  return outcome.status === "operator" ? { status: "operator", client: outcome.supabase } : outcome;
+}
+
+async function snapshot(client: TypedClient, productId: string, lotId: string): Promise<Omit<CorrectionSnapshot, "lot">> {
+  const [stock, prices, batches] = await Promise.all([
+    getStock(client, productId),
+    listFinishedPrices(client, productId),
+    listBatchesMadeFrom(client, lotId),
+  ]);
+  return { stock, prices, batches };
+}
+
+// Corrects one receipt. The lot id is bound to the action where the list
+// renders and the fields come from the dialog; a request can carry any value
+// for either, so both are caller input. The decision (correct-receipt.ts)
+// settles the caller first, reads the figures, runs the form rules, calls
+// correct_receipt, and reads the figures again; every figure is the database's.
+// Nothing here may reject: a rejected action would unmount the list.
+export async function correctReceipt(lotId: string, fields: CorrectionFields): Promise<CorrectionState> {
+  const text = (value: unknown) => (typeof value === "string" ? value : "");
+  let state: CorrectionState;
+  try {
+    state = await decideCorrection(
+      text(lotId),
+      { cost: text(fields?.cost), weight: text(fields?.weight), reason: text(fields?.reason) },
+      {
+        caller,
+        readBefore: async (client, id) => {
+          const lot = await getLotFigures(client, id);
+          return lot ? { lot, ...(await snapshot(client, lot.productId, id)) } : null;
+        },
+        write: (client, id, input) =>
+          correctReceiptCall(client, { lotId: id, unitCost: input.unitCost, weightLbs: input.weightLbs, reason: input.reason }),
+        readAfter: async (client, written) => {
+          const [lot, rest, reason] = await Promise.all([
+            getLotFigures(client, written.id),
+            snapshot(client, written.product_id, written.id),
+            getLatestCorrectionReason(client, written.id),
+          ]);
+          if (!lot) throw new Error("getLotFigures found no row for the corrected lot");
+          if (reason === null) throw new Error("getLatestCorrectionReason found no row for the corrected lot");
+          return { lot, ...rest, reason };
+        },
+      },
+    );
+  } catch (error) {
+    console.error(actionFailureLogLine("correctReceipt", "before-write", error));
+    return { status: "refused", message: correctionFailureMessage(error, "before-write") };
+  }
+  // A render that follows a failed read would swap the list for the error page
+  // and lose the panel, so revalidate only once the details loaded.
+  if (state.status === "corrected" && state.details) revalidatePath("/receiving");
+  return state;
 }
