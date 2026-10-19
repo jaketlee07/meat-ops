@@ -471,6 +471,36 @@ test.describe("a correction the database refuses", () => {
     expect(await correctionCount()).toBe(1);
   });
 
+  test("AC-0104, AC-0106, AC-0176: the browser closes the confirmation on a third Escape while the save waits, and the database's refusal opens it again with the typed fields", async ({
+    page,
+  }) => {
+    const id = await seedReceipt(1000, 1.68);
+    const lotNumber = await lotNumberOf(id);
+    await openForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, lotNumber);
+    const dialog = await openCorrection(page, item, lotNumber, { cost: "1.90", reason: "invoice price" });
+
+    const lock = await holdStockLock();
+    try {
+      await dialog.getByRole("button", { name: "Save correction" }).click();
+      await lock.waiting();
+      // Chromium lets the first two Escapes be cancelled, so the third closes the dialog mid-save.
+      for (let i = 0; i < 3; i++) await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await lock.correctInside(id, "1.90", "1000", "invoice price");
+    } finally {
+      await lock.release();
+    }
+
+    const message = dialog.getByText(NOTHING_TO_CORRECT, { exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(message).toBeVisible();
+    await expect(message).toBeFocused();
+    await expect(dialog.getByLabel("Cost per lb ($)")).toHaveValue("1.90");
+    await expect(dialog.getByLabel("Reason for the correction")).toHaveValue("invoice price");
+    expect(await correctionCount()).toBe(1);
+  });
+
   test("AC-0107, AC-0177, AC-0170 to AC-0172, AC-0180, AC-0181: a receipt voided after the list loaded closes the confirmation and says so in the list", async ({
     page,
   }) => {

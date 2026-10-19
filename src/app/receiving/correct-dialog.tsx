@@ -177,6 +177,10 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
         result = { status: "refused", message: CORRECTION_UNKNOWN };
       }
       if (result.status === "invalid") {
+        // The browser can close the dialog on a third Escape while the save is
+        // pending. The errors belong in the dialog with the typed fields, so
+        // it opens again; nothing here resets the fields.
+        if (!dialogRef.current?.open) dialogRef.current?.showModal();
         setInvalid({ errors: result.errors });
         return;
       }
