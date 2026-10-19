@@ -297,6 +297,8 @@ test.describe("refused forms", () => {
   test("the form after an AC-0010 refusal of a blank raw lbs meets the page-state checks", async ({ page }) => {
     const f = await openForm(page);
     await fillBatch(f, { raw: "" });
+    // Loading the region swaps the page title for a moment, so the checks wait for it.
+    await expect(factValue(f.region, "Shrink")).toHaveText("23%");
     await f.save.click();
     await expect(page.locator("#raw-lbs-error")).toHaveText(RAW_FORMAT);
     await expect(f.raw).toBeFocused();

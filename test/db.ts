@@ -78,8 +78,16 @@ from (values ('direct_material',0.05),('freezing',0.03),('overhead',0.37),('prof
 join fee_types ft on ft.code = x.code;
 `;
 
+// A page read the last browser test left running can deadlock with the
+// truncate. Postgres then ends one side, and if it ended the truncate, the reset
+// runs once more.
 export async function resetTestData(): Promise<void> {
-  await pool.query(MASTER_DATA_SQL);
+  try {
+    await pool.query(MASTER_DATA_SQL);
+  } catch (error) {
+    if ((error as { code?: string }).code !== "40P01") throw error;
+    await pool.query(MASTER_DATA_SQL);
+  }
 }
 
 // The invoice fixture: the master data above plus an active raw product, an
