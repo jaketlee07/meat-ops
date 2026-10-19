@@ -40,6 +40,7 @@ import {
   voidButton,
   voidDialog,
   voidMarks,
+  voidMessage,
   voidThrough,
 } from "./receiving-page";
 import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
@@ -386,8 +387,8 @@ test.describe("saving", () => {
     await expect(f.cost).toHaveValue("");
     await expect(f.notes).toHaveValue("");
 
-    // Both receipts are untouched, so the list adds a Void button for each.
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Void"]);
+    // Both receipts are untouched, so the list adds a Void and a Correct button for each.
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct", "button Void", "button Correct"]);
   });
 
   test("AC-0014 and AC-0067: a first receipt shows 0 lbs, None yet, and No price yet before", async ({ page }) => {
@@ -464,7 +465,7 @@ test.describe("saving", () => {
 
     await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
     await expect(beforeAfter(f.result, /^On hand/)).toHaveText(["100,000.125 lbs", "300,000.375 lbs"]);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Void"]);
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct", "button Void", "button Correct"]);
   });
 
   test("AC-0018: pressing Save again while a save is pending writes no second lot", async ({ page }) => {
@@ -723,8 +724,14 @@ test.describe("recent receipts", () => {
     await expect(voidButton(voidItem)).toHaveCount(0);
     await expect(voidItem.getByText("In use")).toHaveCount(0);
 
-    // Four receipts at phone width: no sideways scroll, and one Void button to reach.
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void"]);
+    // Four receipts at phone width: no sideways scroll, one Void button, and a Correct button on each receipt that is not void.
+    expect(await checkPageState(page)).toEqual([
+      ...FORM_CONTROLS,
+      "button Void",
+      "button Correct",
+      "button Correct",
+      "button Correct",
+    ]);
   });
 });
 
@@ -909,7 +916,7 @@ test.describe("voiding", () => {
     await voidThrough(page, item, "keyed twice");
 
     // AC-0077: the engine's reason, then the hint to reload for the latest stock.
-    const message = item.getByRole("alert");
+    const message = voidMessage(item);
     await expect(message).toHaveText(
       new RegExp(`^${NOT_VOIDED} invalid, lot [0-9a-f-]{36} has been consumed\\. Reload to see the latest stock\\.$`),
     );
@@ -920,7 +927,7 @@ test.describe("voiding", () => {
     await expect(item.getByText(/^Void: /)).toHaveCount(0);
 
     // The list after the refusal: the message is in the page, the dialog is closed.
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void"]);
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct"]);
   });
 });
 
@@ -935,7 +942,7 @@ test.describe("voiding when the connection drops", () => {
 
     await voidThrough(page, item, "keyed twice");
 
-    const message = item.getByRole("alert");
+    const message = voidMessage(item);
     await expect(message).toHaveText(VOID_UNKNOWN);
     await expect(message).toBeFocused();
     // The void request never reached the server, the dialog is closed, and the
@@ -946,7 +953,7 @@ test.describe("voiding when the connection drops", () => {
     await expect(factValue(f.region, "On hand")).toHaveText("1,000 lbs");
     expect(await lotState(id)).toEqual(before);
     expect(await voidMarks()).toBe(0);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void"]);
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct"]);
   });
 });
 
@@ -963,7 +970,7 @@ test.describe("voiding after the session ended", () => {
     await page.context().clearCookies();
     await voidThrough(page, item, "keyed twice");
 
-    const message = item.getByRole("alert");
+    const message = voidMessage(item);
     await expect(message).toHaveText(VOID_SIGNED_OUT);
     await expect(message).toBeFocused();
     expect(await lotState(id)).toEqual(before);
@@ -1008,7 +1015,7 @@ test.describe("voiding after the session ended", () => {
       await context.addCookies(withExpiredAccessToken(cookies));
 
       await voidThrough(page, secondItem, "wrong price");
-      const message = secondItem.getByRole("alert");
+      const message = voidMessage(secondItem);
       await expect(message).toHaveText(VOID_SIGNED_OUT);
       await expect(message).toBeFocused();
       expect(await lotState(second)).toEqual(secondBefore);

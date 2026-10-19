@@ -39,6 +39,7 @@ export default async function ReceivingPage({
 
   let region = null;
   let voidedLots: string[] = [];
+  let correctedLots: string[] = [];
   if (selected) {
     const [stock, prices, recent] = await Promise.all([
       getStock(supabase, selected.id),
@@ -48,6 +49,9 @@ export default async function ReceivingPage({
     region = <ProductRegion stock={stock} prices={prices} recent={recent} />;
     voidedLots = recent.receipts
       .filter((receipt) => receipt.status === "void")
+      .map((receipt) => receipt.lotNumber);
+    correctedLots = recent.receipts
+      .filter((receipt) => receipt.correctedReason !== null)
       .map((receipt) => receipt.lotNumber);
   }
 
@@ -61,6 +65,7 @@ export default async function ReceivingPage({
         regionCode={selected?.code ?? null}
         region={region}
         voidedLots={voidedLots}
+        correctedLots={correctedLots}
       />
     </main>
   );

@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { callAsOperator, idOf, query, RAW_TOM_ID, receiveCall, VENDOR_ID } from "../db";
+import { Pool, type PoolClient } from "pg";
+import { callAsOperator, getOperatorId, idOf, query, RAW_TOM_ID, receiveCall, VENDOR_ID } from "../db";
+import { resolveStackEnv } from "../env";
 
 // What the receiving specs share: how to find the form's parts, fill it, and
 // read raw tables through pg. The pg pool stays open: every spec in this worker
@@ -46,8 +48,9 @@ export function fields(page: Page) {
   return {
     code: page.getByLabel("Product code"),
     vendor: page.getByLabel("Vendor", { exact: true }),
-    weight: page.getByLabel("Weight (lbs)"),
-    cost: page.getByLabel("Cost per lb ($)"),
+    // Scoped to the form: the Correct confirmations in the list carry fields with the same labels.
+    weight: page.getByRole("form", { name: RECEIVING_FORM }).getByLabel("Weight (lbs)"),
+    cost: page.getByRole("form", { name: RECEIVING_FORM }).getByLabel("Cost per lb ($)"),
     date: page.getByLabel("Received date"),
     notes: page.getByLabel("Notes (optional)"),
     save: page.getByRole("button", { name: "Save" }),
@@ -172,6 +175,137 @@ export async function voidThrough(page: Page, item: Locator, reason: string): Pr
   const dialog = voidDialog(page);
   await dialog.getByLabel("Reason for the void").fill(reason);
   await dialog.getByRole("button", { name: "Void receipt" }).click();
+}
+
+// The message a void leaves in a list item. Correct leaves its own alert region
+// in the same item, so the void's is found by its text: every void message says "void".
+export function voidMessage(item: Locator): Locator {
+  return item.getByRole("alert").filter({ hasText: /void/i });
+}
+
+// ---- Correct (corrections AC-0090 to AC-0118) ----
+
+export const CORRECT_SIGNED_OUT = "You're signed out. Sign in again to correct this receipt.";
+export const NOT_CORRECTED = "The receipt wasn't corrected.";
+// AC-0110 and AC-0116: the write call got no answer, so the correction may have happened.
+export const CORRECTION_UNKNOWN = "The receipt may not have been corrected. Reload this page to see whether it was.";
+export const NOTHING_TO_CORRECT = "Change the cost or the weight to correct this receipt.";
+export const NOT_LOADED = "The new figures couldn't be loaded. Reload to see them.";
+
+// The Correct button of a receipt. Its name carries the lot number, so each is distinct.
+export function correctButton(item: Locator): Locator {
+  return item.getByRole("button", { name: /^Correct lot / });
+}
+
+export function correctDialog(page: Page, lotNumber: string): Locator {
+  return page.getByRole("dialog", { name: `Correct receipt ${lotNumber}` });
+}
+
+// The message a closing refusal leaves in a list item: the correction's alert region, found by its text.
+export function correctMessage(item: Locator): Locator {
+  return item.getByRole("alert").filter({ hasText: /correct/i });
+}
+
+// The "Receipt corrected" panel of one list item.
+export function correctPanel(item: Locator): Locator {
+  return item.getByRole("status", { name: /^Correction of lot / });
+}
+
+export interface CorrectionValues {
+  cost?: string;
+  weight?: string;
+  reason?: string;
+}
+
+// Opens the confirmation and types the values; empty strings clear a field and
+// an omitted one keeps what the dialog opened with. It does not press Save.
+export async function openCorrection(
+  page: Page,
+  item: Locator,
+  lotNumber: string,
+  values: CorrectionValues,
+): Promise<Locator> {
+  await correctButton(item).click();
+  const dialog = correctDialog(page, lotNumber);
+  if (values.cost !== undefined) await dialog.getByLabel("Cost per lb ($)").fill(values.cost);
+  if (values.weight !== undefined) await dialog.getByLabel("Weight (lbs)").fill(values.weight);
+  if (values.reason !== undefined) await dialog.getByLabel("Reason for the correction").fill(values.reason);
+  return dialog;
+}
+
+export async function correctThrough(
+  page: Page,
+  item: Locator,
+  lotNumber: string,
+  values: CorrectionValues,
+): Promise<Locator> {
+  const dialog = await openCorrection(page, item, lotNumber, { reason: "invoice price", ...values });
+  await dialog.getByRole("button", { name: "Save correction" }).click();
+  return dialog;
+}
+
+export async function correctionCount(): Promise<number> {
+  const [row] = await query<{ n: number }>("select count(*)::int as n from receipt_corrections");
+  return row?.n ?? -1;
+}
+
+// What a lot holds in the ledger after a refused or missing correction.
+export async function correctedState(id: string) {
+  const [row] = await query<{ cost: string; weight: string; remaining: string }>(
+    "select current_unit_cost::text as cost, current_weight_lbs::text as weight, remaining_lbs::text as remaining from lots where id = $1",
+    [id],
+  );
+  return row;
+}
+
+// A pg session that holds RAW-TOM's inventory_balances row, which every
+// correct_receipt on it queues behind. Sessions are the caller's to release.
+const lockPool = new Pool({ connectionString: resolveStackEnv().dbUrl, max: 3 });
+
+export interface StockLock {
+  // Waits until another backend is stuck on a lock, which is the app's call.
+  waiting(): Promise<void>;
+  // Runs correct_receipt as the operator inside the lock holder's transaction.
+  correctInside(lotId: string, cost: string, weight: string, reason: string): Promise<void>;
+  // Commits and lets the waiting call go on. Safe to call twice.
+  release(): Promise<void>;
+}
+
+export async function holdStockLock(): Promise<StockLock> {
+  const client: PoolClient = await lockPool.connect();
+  let open = true;
+  await client.query("begin");
+  await client.query("select 1 from public.inventory_balances where product_id = $1 for update", [RAW_TOM_ID]);
+  const pid = Number((await client.query("select pg_backend_pid() as pid")).rows[0].pid);
+  return {
+    async waiting() {
+      await expect
+        .poll(
+          async () =>
+            (
+              await query(
+                "select 1 from pg_stat_activity where wait_event_type = 'Lock' and pid <> $1 and datname = current_database()",
+                [pid],
+              )
+            ).length,
+          { timeout: 10_000 },
+        )
+        .toBeGreaterThan(0);
+    },
+    async correctInside(lotId, cost, weight, reason) {
+      await client.query("set local role authenticated");
+      await client.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ role: "authenticated", sub: await getOperatorId() }),
+      ]);
+      await client.query("select * from public.correct_receipt($1, $2, $3, $4)", [lotId, cost, weight, reason]);
+    },
+    async release() {
+      if (!open) return;
+      open = false;
+      await client.query("commit").catch(() => undefined);
+      client.release();
+    },
+  };
 }
 
 // The value cell that follows a label in a list of facts.

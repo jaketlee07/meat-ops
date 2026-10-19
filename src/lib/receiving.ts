@@ -157,6 +157,19 @@ export async function getLotFigures(client: TypedClient, lotId: string): Promise
   };
 }
 
+// The reason of the lot's latest correction (the highest correction_seq), or null
+// when the lot has none. Read after a correction, so the panel shows what was written.
+export async function getLatestCorrectionReason(client: TypedClient, lotId: string): Promise<string | null> {
+  const { data, error } = await client
+    .from("receipt_corrections")
+    .select("reason")
+    .eq("lot_id", lotId)
+    .order("correction_seq", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`getLatestCorrectionReason failed: ${error.message}`);
+  return data[0]?.reason ?? null;
+}
+
 // Every batch made from the lot, reversed or not, in draw order. A lot feeds a
 // few batches, so the 1,000-row cap never applies.
 export async function listBatchesMadeFrom(client: TypedClient, lotId: string): Promise<BatchMadeFrom[]> {
