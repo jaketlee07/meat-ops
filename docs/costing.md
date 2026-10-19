@@ -328,11 +328,11 @@ sale line from the finished lot. The tests check this chain after every test.
 **Restatement rule.** When the cost changes, each batch made from the lot is
 restated, whether or not its finished lbs are sold. The batch keeps the
 processing fees it was costed with. The fee as used is recovered before the rows
-change: the batch's cost per finished lb minus its raw cost total divided by its
-finished lbs out, rounded to 4 decimals. Fees have 4 decimals, so this is exact,
-and a fee changed on the product afterwards does not enter. The restated cost per
-finished lb is the new raw cost total divided by the finished lbs out, rounded to
-4 decimals, plus that fee.
+change: the batch's cost per finished lb minus the sum of lbs consumed times lot
+cost, divided by its finished lbs out, rounded to 4 decimals. That sum is not
+rounded first. Fees have 4 decimals, so this is exact, and a fee changed on the
+product afterwards does not enter. The restated cost per finished lb is the same
+quotient over the new lot cost, rounded to 4 decimals, plus that fee.
 
 **Weight rule.** The weight change moves the lot's remaining lbs by the same
 amount. The new weight cannot go below the current weight minus the remaining
@@ -402,10 +402,11 @@ Where the database has nothing to show, the screen uses text:
 - The list price of a finished product with none shows "No list price yet".
 - A sale with no customer shows "No customer", on the sales page and on a trace.
 - A finished product's lbs on hand in the "Sale saved" and "Batch reversed" panels
-  shows "Not available" only when the menu view has no row for the product in the
-  read after the write, as for a product made inactive between the write and that
-  read. `test/e2e/reverse.spec.ts` asserts it for the "Batch reversed" panel; no
-  test asserts it for "Sale saved".
+  shows "Not available" in a column when that column's own read finds no menu row
+  for the product, as for a product made inactive. `test/e2e/reverse.spec.ts`
+  makes the product inactive before the reversal and asserts "Not available" in
+  both the before and the after column of the "Batch reversed" panel; no test
+  asserts it for "Sale saved".
 - The target margin of a finished product with none shows "No target".
 - The raw average cost, cost after shrink, and cost per lb of a finished
   product whose raw product has no non-void receipt show "None yet", whatever
