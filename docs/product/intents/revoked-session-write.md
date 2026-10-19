@@ -30,5 +30,5 @@ A write sent after the owner's session is revoked at the auth server is always r
 
 - Mode: repo-origin
 - Locator: docs/specs/corrections/notes/verification-ledger.md
-- Revision: b646356
+- Revision: a12256f
 - Authority: repo-origin

@@ -31,5 +31,5 @@ A Correct press on `/receiving` right after a correction is saved opens with the
 
 - Mode: repo-origin
 - Locator: docs/specs/corrections/notes/verification-ledger.md
-- Revision: 8a626f4
+- Revision: 6a7c855
 - Authority: repo-origin
