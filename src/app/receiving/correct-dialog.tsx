@@ -254,7 +254,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
             </button>
           </div>
 
-          <p id={sentenceId} className="break-words text-base">{`Lot ${lotNumber}, from ${vendor}, now ${weight}. The receipt keeps what was first entered, and every batch made from it is restated.`}</p>
+          <p id={sentenceId} className="break-words text-base">{`Lot ${lotNumber}, from ${vendor}, now ${weight}. The receipt keeps what was first entered, and a change of cost restates every batch made from it.`}</p>
 
           <div>
             <label className="block text-base font-medium">

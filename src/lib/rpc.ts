@@ -1,7 +1,7 @@
 import type { Database } from "./database.types.js";
 import type { TypedClient } from "./supabase.js";
 
-// Thin, typed wrappers over the six costing RPCs. These do no math: they map
+// Thin, typed wrappers over the eight costing RPCs. These do no math: they map
 // friendly argument names to the SQL parameter names, call the function, and
 // return the typed row. All cost and inventory logic lives in Postgres.
 
