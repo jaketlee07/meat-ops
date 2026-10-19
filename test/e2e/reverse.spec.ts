@@ -288,12 +288,15 @@ test.describe("reversing", () => {
     const { batch2, item2 } = await openFixture(page, false);
     await query("update products set active = false where id = $1", [PROD_502_ID]);
 
-    await reverseThrough(page, item2, batch2);
+    await reverseThrough(page, item2, batch2, "entered twice");
 
     const panel = reversePanel(item2);
     await expect(panel.getByRole("heading", { name: "Batch reversed" })).toBeVisible();
     await expect(beforeAfter(panel, /^502 finished lbs on hand/)).toHaveText(["Not available", "Not available"]);
     await expect(beforeAfter(panel, /^On hand/)).toHaveText(["1,000 lbs", "2,000 lbs"]);
+    // AC-0138 in this state: the list shows the batch reversed without a reload.
+    await expect(item2.getByText("Reversed: entered twice", { exact: true })).toHaveCount(1);
+    await expect(reverseButton(item2)).toHaveCount(0);
     expect(await reversedCount()).toBe(1);
   });
 });
