@@ -19,6 +19,7 @@ async function unreachable(): Promise<never> {
 
 // STUB: AC-0109
 it("AC-0109: a read before the write fails, so nothing is written", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
   let wrote = false;
   const deps: CorrectionDeps<null> = {
     caller: async () => ({ status: "operator", client: null }),
@@ -35,6 +36,9 @@ it("AC-0109: a read before the write fails, so nothing is written", async () => 
     await decideCorrection("lot-a", { cost: "1.86", weight: "5000", reason: "invoice price" }, deps),
   ).toEqual({ status: "refused", message: "The receipt wasn't corrected. Try again in a moment." });
   expect(wrote).toBe(false);
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at before-write: getLotFigures failed: fetch failed");
+  log.mockRestore();
 });
 
 const fields = { cost: "1.90", weight: "3000", reason: "invoice price" };
@@ -107,6 +111,8 @@ it("a caller check that failed reads as a failure before the write", async () =>
     write: neverCalled,
   }));
   expect(state).toEqual({ status: "refused", message: "The receipt wasn't corrected. Try again in a moment." });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at before-write: getUser failed: fetch failed");
   log.mockRestore();
 });
 
@@ -117,6 +123,8 @@ it("a lot that is not found is refused before the write", async () => {
     write: neverCalled,
   }));
   expect(state).toEqual({ status: "refused", message: "The receipt wasn't corrected. Try again in a moment." });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at before-write: the lot was not found");
   log.mockRestore();
 });
 
@@ -151,6 +159,8 @@ it("AC-0105: the weight-floor refusal is a weight-field error and keeps the conf
         "The weight can't be less than 2,000 lbs. Production used or adjustments removed that much of this receipt.",
     },
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at write: correctReceipt failed: correct_receipt: invalid weight 1999.999, must be at least 2000.000 lbs (code P0001)");
   log.mockRestore();
 });
 
@@ -165,6 +175,8 @@ it("AC-0104: the database finds the cost and weight unchanged and shows the form
     status: "invalid",
     errors: { form: "Change the cost or the weight to correct this receipt." },
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at write: correctReceipt failed: correct_receipt: invalid, nothing to correct (code P0001)");
   log.mockRestore();
 });
 
@@ -179,6 +191,8 @@ it("AC-0107: a refused write closes with the refusal and the reload hint", async
     status: "refused",
     message: "The receipt wasn't corrected. lot lot-a is already void. Reload to see the latest stock.",
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at write: correctReceipt failed: correct_receipt: lot lot-a is already void (code P0001)");
   log.mockRestore();
 });
 
@@ -193,6 +207,8 @@ it("a write the account may not make is refused with the account message", async
     status: "refused",
     message: "The receipt wasn't corrected. This account isn't allowed to use Meat Ops.",
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at write: correctReceipt failed: permission denied (code 42501)");
   log.mockRestore();
 });
 
@@ -207,6 +223,8 @@ it("AC-0110: a write that gets no answer says the receipt may not have been corr
     status: "refused",
     message: "The receipt may not have been corrected. Reload this page to see whether it was.",
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at write: correctReceipt failed: fetch failed");
   log.mockRestore();
 });
 
@@ -219,6 +237,8 @@ it("AC-0110: a write that resolves with no row is a write with no answer", async
     status: "refused",
     message: "The receipt may not have been corrected. Reload this page to see whether it was.",
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt failed at write: the write returned no lot");
   log.mockRestore();
 });
 
@@ -230,6 +250,8 @@ it("AC-0111: a read after the write fails, so the lot is corrected with no detai
     },
   }));
   expect(state).toEqual({ status: "corrected", lotNumber: "L-2", details: null });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("correctReceipt: reading the details after the write failed: getLotFigures failed: fetch failed");
   log.mockRestore();
 });
 
@@ -305,6 +327,8 @@ it("a caller check that failed reads as a failure before the write", async () =>
     write: neverCalled,
   }));
   expect(state).toEqual({ status: "refused", message: "The batch wasn't reversed. Try again in a moment." });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("reverseBatch failed at before-write: getUser failed: fetch failed");
   log.mockRestore();
 });
 
@@ -330,6 +354,8 @@ it("AC-0143: a read before the write fails, so nothing is written", async () => 
   }));
   expect(state).toEqual({ status: "refused", message: "The batch wasn't reversed. Try again in a moment." });
   expect(wrote).toBe(false);
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("reverseBatch failed at before-write: getStock failed: fetch failed");
   log.mockRestore();
 });
 
@@ -344,6 +370,8 @@ it("AC-0140: a refused write closes with the refusal and the reload hint", async
     status: "refused",
     message: "The batch wasn't reversed. batch batch-b is already reversed. Reload to see the latest stock.",
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("reverseBatch failed at write: reverseBatch failed: reverse_batch: batch batch-b is already reversed (code P0001)");
   log.mockRestore();
 });
 
@@ -358,6 +386,8 @@ it("AC-0144: a write that gets no answer says the batch may not have been revers
     status: "refused",
     message: "The batch may not have been reversed. Reload this page to see whether it was.",
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("reverseBatch failed at write: reverseBatch failed: fetch failed");
   log.mockRestore();
 });
 
@@ -370,6 +400,8 @@ it("AC-0144: a write that resolves with no row is a write with no answer", async
     status: "refused",
     message: "The batch may not have been reversed. Reload this page to see whether it was.",
   });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("reverseBatch failed at write: the write returned no batch");
   log.mockRestore();
 });
 
@@ -381,6 +413,8 @@ it("AC-0145: a read after the write fails, so the batch is reversed with no deta
     },
   }));
   expect(state).toEqual({ status: "reversed", batchNumber: "B-2", details: null });
+  expect(log).toHaveBeenCalledTimes(1);
+  expect(log).toHaveBeenCalledWith("reverseBatch: reading the details after the write failed: listSalesVoidedBy failed: permission denied");
   log.mockRestore();
 });
 
