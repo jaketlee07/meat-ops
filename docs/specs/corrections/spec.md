@@ -1,6 +1,6 @@
 # Spec: corrections
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §2 (deterministic engine), §4 (lots, production, sales, corrections), §5 (the engine's operations), §6 invariants 4, 6, and 7, §11 (boundaries); [`docs/costing.md`](../../costing.md) (the average rule, the zero-stock rule, the void_receipt and adjust_lot rules, the seven invariants, the Rounding note); the sale rules in [`../sales/spec.md`](../sales/spec.md) (a sale is undone only by a void with a reason); the alert rules in [`../alerts/spec.md`](../alerts/spec.md) (on `main` once Alerts merges); the access model, the write path, the `supabase/migrations/` change guidance, and the app trust boundary in [`docs/architecture/overview.md`](../../architecture/overview.md); the intent [`docs/product/intents/corrections-consumed-receipts.md`](../../product/intents/corrections-consumed-receipts.md)
@@ -150,202 +150,202 @@ Definitions used by these criteria:
 
 Access
 
-- [ ] **AC-0001.** Called by a non-operator, `correct_receipt` and `reverse_batch` each fail with SQLSTATE `42501` and change nothing, with arguments an operator's call would accept and with each argument and lot or batch state that AC-0023, AC-0024, AC-0026, AC-0027, AC-0028, AC-0029, AC-0030, AC-0048, and AC-0049 refuse from an operator.
-- [ ] **AC-0002.** The `anon` and `service_role` roles hold no EXECUTE on `correct_receipt` or on `reverse_batch`.
-- [ ] **AC-0003.** A non-operator reads 0 rows from `receipt_corrections` and `anon` is refused a read of it, in a fixture where an operator reads at least one row.
-- [ ] **AC-0004.** A correct or reverse action request replayed with no session, or with a non-operator's session, changes nothing.
-- [ ] **AC-0005.** A correct action request replayed with no session returns "You're signed out. Sign in again to correct this receipt."
-- [ ] **AC-0006.** A reverse action request replayed with no session returns "You're signed out. Sign in again to reverse this batch."
-- [ ] **AC-0007.** A correct or reverse action request replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
+- [x] **AC-0001.** Called by a non-operator, `correct_receipt` and `reverse_batch` each fail with SQLSTATE `42501` and change nothing, with arguments an operator's call would accept and with each argument and lot or batch state that AC-0023, AC-0024, AC-0026, AC-0027, AC-0028, AC-0029, AC-0030, AC-0048, and AC-0049 refuse from an operator.
+- [x] **AC-0002.** The `anon` and `service_role` roles hold no EXECUTE on `correct_receipt` or on `reverse_batch`.
+- [x] **AC-0003.** A non-operator reads 0 rows from `receipt_corrections` and `anon` is refused a read of it, in a fixture where an operator reads at least one row.
+- [x] **AC-0004.** A correct or reverse action request replayed with no session, or with a non-operator's session, changes nothing.
+- [x] **AC-0005.** A correct action request replayed with no session returns "You're signed out. Sign in again to correct this receipt."
+- [x] **AC-0006.** A reverse action request replayed with no session returns "You're signed out. Sign in again to reverse this batch."
+- [x] **AC-0007.** A correct or reverse action request replayed with a non-operator's session returns a message containing "This account isn't allowed to use Meat Ops."
 
 Correcting a receipt
 
-- [ ] **AC-0010.** In the sale fixture with the 5,000-lb sale, correcting lot A to 1.86 per lb with the reason "invoice price" writes one correction holding lot A, old cost 1.6800, new cost 1.8600, old weight 5000.000, new weight 5000.000, that reason, and a time.
-- [ ] **AC-0011.** After the AC-0010 correction, lot A's recorded cost is 1.6800 and its current cost is 1.8600.
-- [ ] **AC-0012.** After the AC-0010 correction, batch 1's raw cost total is 11100.0000 and its cost per finished lb is 2.8526, and batch 2 keeps 1800.0000 and 2.7877.
-- [ ] **AC-0013.** After the AC-0010 correction, batch 1's finished lot and the 5,000-lb sale's line from batch 1 each have a cost per lb of 2.8526, and its line from batch 2 keeps 2.7877.
-- [ ] **AC-0014.** After the AC-0010 correction, every `production_batch_lots` row on lot A has a lot cost of 1.8600.
-- [ ] **AC-0015.** After the AC-0010 correction, RAW-TOM has 1,000 lbs on hand at an average of 1.8000.
-- [ ] **AC-0016.** In the sale fixture with the 5,000-lb sale, correcting lot B to 1.90 per lb makes batch 1's cost per finished lb 2.6794 and batch 2's 2.9175.
-- [ ] **AC-0017.** After the AC-0016 correction, RAW-TOM's average is 1.9000.
-- [ ] **AC-0018.** A restated batch keeps the processing fees it was costed with: in the sale fixture with 502's overhead fee changed from 0.37 to 0.50 after both batches, correcting lot A to 1.86 per lb makes batch 1's cost per finished lb 2.8526.
-- [ ] **AC-0019.** Correcting lot A back to 1.68 per lb after the AC-0010 correction returns every batch's raw cost total and cost per finished lb, every finished lot's and sale line's cost per lb, every `production_batch_lots` lot cost, and RAW-TOM's on hand and average to their values before AC-0010.
-- [ ] **AC-0020.** In the sale fixture, correcting lot B to 3,100 lbs gives lot B 1,100 lbs remaining and RAW-TOM 1,100 lbs on hand.
-- [ ] **AC-0021.** In the sale fixture with the 5,000-lb sale, correcting lot B to 3,100 lbs changes no batch, finished lot, sale line, or `production_batch_lots` row.
-- [ ] **AC-0022.** In the sale fixture, correcting lot B to 2,000 lbs gives it 0 lbs remaining and leaves RAW-TOM at 0 lbs on hand with an average of 1.8000.
-- [ ] **AC-0023.** In the sale fixture, correcting lot B to 1,999.999 lbs is refused and changes nothing.
-- [ ] **AC-0024.** In the sale fixture with lot B adjusted to 900 lbs, the smallest weight it can be corrected to is 2,100 lbs: 2,099.999 lbs is refused and changes nothing, and 2,100 lbs leaves it 0 lbs remaining.
-- [ ] **AC-0025.** In the sale fixture after lot B is corrected to 2,000 lbs, correcting lot B to 1.90 per lb leaves RAW-TOM's average at 1.8000.
-- [ ] **AC-0026.** A correction whose cost, rounded to 4 decimals, and weight, rounded to 3, both equal the lot's current ones is refused and changes nothing.
-- [ ] **AC-0027.** A correction of a void receipt is refused and changes nothing.
-- [ ] **AC-0028.** A correction whose reason is null, empty, or only spaces, tabs, and line breaks is refused and changes nothing.
-- [ ] **AC-0029.** A correction whose cost is null, NaN, or below 0, or whose weight is null, NaN, or not above 0, is refused and changes nothing.
-- [ ] **AC-0030.** A correction of a lot id that does not exist is refused and changes nothing.
-- [ ] **AC-0031.** A cost of 0 is accepted: in the sale fixture, correcting lot B to 0 per lb makes batch 1's cost per finished lb 2.2682 and batch 2's 0.4500.
-- [ ] **AC-0032.** A lot corrected twice holds two corrections, and its current cost and weight are the second's.
-- [ ] **AC-0033.** In the sale fixture with a third RAW-TOM receipt, lot C, of 1,000 lbs at 2.00 received 2026-10-07, correcting lot C to 2.20 per lb moves RAW-TOM's average from 1.9000 to 2.0000.
-- [ ] **AC-0034.** A receipt of an inactive raw product can be corrected: in the sale fixture with RAW-TOM made inactive, correcting lot B to 1.90 per lb makes batch 2's cost per finished lb 2.9175.
-- [ ] **AC-0035.** With a correction of lot B to 1.90 per lb holding its transaction open, a 100-lb sale of 502 dated 2026-10-08 waits on a lock; once the correction commits, the sale's line carries a cost per lb of 2.9175. The fixture is the sale fixture with the 5,000-lb sale.
-- [ ] **AC-0036.** With that 100-lb sale holding its transaction open, the correction of lot B to 1.90 per lb waits on a lock; once both commit, the sale's line carries a cost per lb of 2.9175.
-- [ ] **AC-0037.** In the sale fixture, with a correction of lot B to 1.90 per lb holding its transaction open, a batch of 500 raw lbs of 502 produced 2026-10-08 waits on a lock; once the correction commits, the batch's `production_batch_lots` row carries a lot cost of 1.9000.
-- [ ] **AC-0038.** For each pair of calls on one raw product and its finished product, where one is `correct_receipt` or `reverse_batch`, the other is `receive_lot`, `produce_batch`, `void_receipt`, `adjust_lot`, `record_sale`, `void_sale`, `correct_receipt`, or `reverse_batch`, and each would succeed alone, starting the second call while the first call's transaction is still open, in each order, leaves AC-0068 to AC-0079 holding once both finish.
-- [ ] **AC-0039.** `correct_receipt` and `reverse_batch` each take the raw product's stock row before they lock or write any other row: in the sale fixture with the 5,000-lb sale, while a `pg` session holds RAW-TOM's `inventory_balances` row `FOR UPDATE`, a correction of lot B to 1.90 per lb and a reversal of batch 2 each wait on that row, and while each waits, `pg_locks` shows its backend holding a `RowShareLock` or `RowExclusiveLock` relation lock on no table or index other than `inventory_balances` and its primary key.
-- [ ] **AC-0055.** `correct_receipt` and `reverse_batch` each take the finished product's `products` row before they lock or write any `production_batches`, `finished_goods`, `sales`, or `sale_items` row: in the sale fixture with the 5,000-lb sale, while a `pg` session holds 502's `products` row `FOR NO KEY UPDATE`, a correction of lot B to 1.90 per lb and a reversal of batch 2 each wait on that row, and while each waits, `pg_locks` shows its backend holding no `RowShareLock` or `RowExclusiveLock` relation lock on `production_batches`, `finished_goods`, `sales`, or `sale_items`.
+- [x] **AC-0010.** In the sale fixture with the 5,000-lb sale, correcting lot A to 1.86 per lb with the reason "invoice price" writes one correction holding lot A, old cost 1.6800, new cost 1.8600, old weight 5000.000, new weight 5000.000, that reason, and a time.
+- [x] **AC-0011.** After the AC-0010 correction, lot A's recorded cost is 1.6800 and its current cost is 1.8600.
+- [x] **AC-0012.** After the AC-0010 correction, batch 1's raw cost total is 11100.0000 and its cost per finished lb is 2.8526, and batch 2 keeps 1800.0000 and 2.7877.
+- [x] **AC-0013.** After the AC-0010 correction, batch 1's finished lot and the 5,000-lb sale's line from batch 1 each have a cost per lb of 2.8526, and its line from batch 2 keeps 2.7877.
+- [x] **AC-0014.** After the AC-0010 correction, every `production_batch_lots` row on lot A has a lot cost of 1.8600.
+- [x] **AC-0015.** After the AC-0010 correction, RAW-TOM has 1,000 lbs on hand at an average of 1.8000.
+- [x] **AC-0016.** In the sale fixture with the 5,000-lb sale, correcting lot B to 1.90 per lb makes batch 1's cost per finished lb 2.6794 and batch 2's 2.9175.
+- [x] **AC-0017.** After the AC-0016 correction, RAW-TOM's average is 1.9000.
+- [x] **AC-0018.** A restated batch keeps the processing fees it was costed with: in the sale fixture with 502's overhead fee changed from 0.37 to 0.50 after both batches, correcting lot A to 1.86 per lb makes batch 1's cost per finished lb 2.8526.
+- [x] **AC-0019.** Correcting lot A back to 1.68 per lb after the AC-0010 correction returns every batch's raw cost total and cost per finished lb, every finished lot's and sale line's cost per lb, every `production_batch_lots` lot cost, and RAW-TOM's on hand and average to their values before AC-0010.
+- [x] **AC-0020.** In the sale fixture, correcting lot B to 3,100 lbs gives lot B 1,100 lbs remaining and RAW-TOM 1,100 lbs on hand.
+- [x] **AC-0021.** In the sale fixture with the 5,000-lb sale, correcting lot B to 3,100 lbs changes no batch, finished lot, sale line, or `production_batch_lots` row.
+- [x] **AC-0022.** In the sale fixture, correcting lot B to 2,000 lbs gives it 0 lbs remaining and leaves RAW-TOM at 0 lbs on hand with an average of 1.8000.
+- [x] **AC-0023.** In the sale fixture, correcting lot B to 1,999.999 lbs is refused and changes nothing.
+- [x] **AC-0024.** In the sale fixture with lot B adjusted to 900 lbs, the smallest weight it can be corrected to is 2,100 lbs: 2,099.999 lbs is refused and changes nothing, and 2,100 lbs leaves it 0 lbs remaining.
+- [x] **AC-0025.** In the sale fixture after lot B is corrected to 2,000 lbs, correcting lot B to 1.90 per lb leaves RAW-TOM's average at 1.8000.
+- [x] **AC-0026.** A correction whose cost, rounded to 4 decimals, and weight, rounded to 3, both equal the lot's current ones is refused and changes nothing.
+- [x] **AC-0027.** A correction of a void receipt is refused and changes nothing.
+- [x] **AC-0028.** A correction whose reason is null, empty, or only spaces, tabs, and line breaks is refused and changes nothing.
+- [x] **AC-0029.** A correction whose cost is null, NaN, or below 0, or whose weight is null, NaN, or not above 0, is refused and changes nothing.
+- [x] **AC-0030.** A correction of a lot id that does not exist is refused and changes nothing.
+- [x] **AC-0031.** A cost of 0 is accepted: in the sale fixture, correcting lot B to 0 per lb makes batch 1's cost per finished lb 2.2682 and batch 2's 0.4500.
+- [x] **AC-0032.** A lot corrected twice holds two corrections, and its current cost and weight are the second's.
+- [x] **AC-0033.** In the sale fixture with a third RAW-TOM receipt, lot C, of 1,000 lbs at 2.00 received 2026-10-07, correcting lot C to 2.20 per lb moves RAW-TOM's average from 1.9000 to 2.0000.
+- [x] **AC-0034.** A receipt of an inactive raw product can be corrected: in the sale fixture with RAW-TOM made inactive, correcting lot B to 1.90 per lb makes batch 2's cost per finished lb 2.9175.
+- [x] **AC-0035.** With a correction of lot B to 1.90 per lb holding its transaction open, a 100-lb sale of 502 dated 2026-10-08 waits on a lock; once the correction commits, the sale's line carries a cost per lb of 2.9175. The fixture is the sale fixture with the 5,000-lb sale.
+- [x] **AC-0036.** With that 100-lb sale holding its transaction open, the correction of lot B to 1.90 per lb waits on a lock; once both commit, the sale's line carries a cost per lb of 2.9175.
+- [x] **AC-0037.** In the sale fixture, with a correction of lot B to 1.90 per lb holding its transaction open, a batch of 500 raw lbs of 502 produced 2026-10-08 waits on a lock; once the correction commits, the batch's `production_batch_lots` row carries a lot cost of 1.9000.
+- [x] **AC-0038.** For each pair of calls on one raw product and its finished product, where one is `correct_receipt` or `reverse_batch`, the other is `receive_lot`, `produce_batch`, `void_receipt`, `adjust_lot`, `record_sale`, `void_sale`, `correct_receipt`, or `reverse_batch`, and each would succeed alone, starting the second call while the first call's transaction is still open, in each order, leaves AC-0068 to AC-0079 holding once both finish.
+- [x] **AC-0039.** `correct_receipt` and `reverse_batch` each take the raw product's stock row before they lock or write any other row: in the sale fixture with the 5,000-lb sale, while a `pg` session holds RAW-TOM's `inventory_balances` row `FOR UPDATE`, a correction of lot B to 1.90 per lb and a reversal of batch 2 each wait on that row, and while each waits, `pg_locks` shows its backend holding a `RowShareLock` or `RowExclusiveLock` relation lock on no table or index other than `inventory_balances` and its primary key.
+- [x] **AC-0055.** `correct_receipt` and `reverse_batch` each take the finished product's `products` row before they lock or write any `production_batches`, `finished_goods`, `sales`, or `sale_items` row: in the sale fixture with the 5,000-lb sale, while a `pg` session holds 502's `products` row `FOR NO KEY UPDATE`, a correction of lot B to 1.90 per lb and a reversal of batch 2 each wait on that row, and while each waits, `pg_locks` shows its backend holding no `RowShareLock` or `RowExclusiveLock` relation lock on `production_batches`, `finished_goods`, `sales`, or `sale_items`.
 
 Reversing a batch
 
-- [ ] **AC-0040.** In the sale fixture, reversing batch 2 with the reason "entered twice" marks it reversed with that reason and a time.
-- [ ] **AC-0041.** After the AC-0040 reversal, lot B has 2,000 lbs remaining.
-- [ ] **AC-0042.** After the AC-0040 reversal, batch 2's finished lot has 0 lbs remaining and 502 has 4,620 finished lbs on hand.
-- [ ] **AC-0043.** In the sale fixture, reversing batch 1 leaves lot A with 5,000 lbs and lot B with 2,000 lbs remaining.
-- [ ] **AC-0052.** After the AC-0043 reversal, RAW-TOM's average is 1.7143.
-- [ ] **AC-0044.** In the sale fixture with the 5,000-lb sale, reversing batch 2 with the reason "entered twice" voids that sale with the reason "Reversed with batch <batch 2's number>: entered twice" and the batch's reversal time.
-- [ ] **AC-0045.** After the AC-0044 reversal, batch 1's finished lot has 4,620 lbs remaining, batch 2's has 0, and 502 has 4,620 finished lbs on hand.
-- [ ] **AC-0046.** A sale that was already void when a batch it drew from is reversed keeps its own void reason and time.
-- [ ] **AC-0047.** A sale with no line on the reversed batch's finished lot is not voided: in the sale fixture with a 1,000-lb sale of 502 dated 2026-10-06, reversing batch 2 leaves that sale not void.
-- [ ] **AC-0048.** Reversing a reversed batch is refused and changes nothing.
-- [ ] **AC-0049.** A reversal whose reason is null, empty, or only spaces, tabs, and line breaks, or whose batch id does not exist, is refused and changes nothing.
-- [ ] **AC-0050.** In the sale fixture, with a 4,700-lb sale of 502 dated 2026-10-08 holding its transaction open, reversing batch 2 waits on a lock; once the sale commits, the reversal voids it.
-- [ ] **AC-0051.** In the sale fixture, with the reversal of batch 2 holding its transaction open, a 4,700-lb sale of 502 dated 2026-10-08 waits on a lock; once the reversal commits, the sale is refused for a shortfall.
-- [ ] **AC-0053.** In the sale fixture, with the reversal of batch 2 holding its transaction open, a batch of 1,500 raw lbs of 502 produced 2026-10-08 waits on a lock; once the reversal commits, that batch is written and draws 1,500 lbs from lot B.
-- [ ] **AC-0054.** A batch of an inactive finished product can be reversed: in the sale fixture with 502 made inactive, reversing batch 2 marks it reversed and leaves lot B with 2,000 lbs remaining.
+- [x] **AC-0040.** In the sale fixture, reversing batch 2 with the reason "entered twice" marks it reversed with that reason and a time.
+- [x] **AC-0041.** After the AC-0040 reversal, lot B has 2,000 lbs remaining.
+- [x] **AC-0042.** After the AC-0040 reversal, batch 2's finished lot has 0 lbs remaining and 502 has 4,620 finished lbs on hand.
+- [x] **AC-0043.** In the sale fixture, reversing batch 1 leaves lot A with 5,000 lbs and lot B with 2,000 lbs remaining.
+- [x] **AC-0052.** After the AC-0043 reversal, RAW-TOM's average is 1.7143.
+- [x] **AC-0044.** In the sale fixture with the 5,000-lb sale, reversing batch 2 with the reason "entered twice" voids that sale with the reason "Reversed with batch <batch 2's number>: entered twice" and the batch's reversal time.
+- [x] **AC-0045.** After the AC-0044 reversal, batch 1's finished lot has 4,620 lbs remaining, batch 2's has 0, and 502 has 4,620 finished lbs on hand.
+- [x] **AC-0046.** A sale that was already void when a batch it drew from is reversed keeps its own void reason and time.
+- [x] **AC-0047.** A sale with no line on the reversed batch's finished lot is not voided: in the sale fixture with a 1,000-lb sale of 502 dated 2026-10-06, reversing batch 2 leaves that sale not void.
+- [x] **AC-0048.** Reversing a reversed batch is refused and changes nothing.
+- [x] **AC-0049.** A reversal whose reason is null, empty, or only spaces, tabs, and line breaks, or whose batch id does not exist, is refused and changes nothing.
+- [x] **AC-0050.** In the sale fixture, with a 4,700-lb sale of 502 dated 2026-10-08 holding its transaction open, reversing batch 2 waits on a lock; once the sale commits, the reversal voids it.
+- [x] **AC-0051.** In the sale fixture, with the reversal of batch 2 holding its transaction open, a 4,700-lb sale of 502 dated 2026-10-08 waits on a lock; once the reversal commits, the sale is refused for a shortfall.
+- [x] **AC-0053.** In the sale fixture, with the reversal of batch 2 holding its transaction open, a batch of 1,500 raw lbs of 502 produced 2026-10-08 waits on a lock; once the reversal commits, that batch is written and draws 1,500 lbs from lot B.
+- [x] **AC-0054.** A batch of an inactive finished product can be reversed: in the sale fixture with 502 made inactive, reversing batch 2 marks it reversed and leaves lot B with 2,000 lbs remaining.
 
 Operations that change with corrections and reversals
 
-- [ ] **AC-0060.** A receipt whose only `production_batch_lots` rows belong to reversed batches can be voided: with RAW-TOM's only receipt of 1,000 lbs at 1.68 received 2026-10-01, a batch of 1,000 raw lbs produced 2026-10-02 and then reversed, voiding that receipt marks it void with 0 lbs remaining.
-- [ ] **AC-0061.** An untouched receipt corrected to 1,100 lbs from 1,000 can be voided, which leaves it 0 lbs remaining.
-- [ ] **AC-0062.** In the sale fixture after the AC-0040 reversal, `adjust_lot` accepts lot B at 2,000 lbs and refuses 2,000.001 lbs.
-- [ ] **AC-0063.** In the sale fixture with lot B corrected to 3,100 lbs, `adjust_lot` accepts lot B at 1,100 lbs and refuses 1,100.001 lbs.
-- [ ] **AC-0064.** In the sale fixture with lot B corrected to 1.90 per lb, a batch of 500 raw lbs of 502 produced 2026-10-08 has a raw cost total of 950.0000 and its `production_batch_lots` row a lot cost of 1.9000.
-- [ ] **AC-0065.** In the sale fixture with lot B corrected to 1.90 per lb and the 5,000-lb sale, the trace view gives 1.9000 as the raw lot cost per lb on every row for lot B.
-- [ ] **AC-0066.** With RAW-TOM at 0 lbs on hand and an average of 1.8000, receive lot L1 of 1,000 lbs at 18.00 received 2026-10-02, L2 of 1,000 lbs at 20.00 received 2026-10-03, and L3 of 1,000 lbs at 2.00 received 2026-10-04; produce 2,500 raw lbs of 502 on 2026-10-05 and reverse that batch; adjust L3 to 0 lbs as waste; then void L1 and then L2. RAW-TOM's average is 1.8000.
-- [ ] **AC-0067.** In the sale fixture, `void_receipt` refuses lot B, which batch 1 still uses, after batch 2 is reversed.
+- [x] **AC-0060.** A receipt whose only `production_batch_lots` rows belong to reversed batches can be voided: with RAW-TOM's only receipt of 1,000 lbs at 1.68 received 2026-10-01, a batch of 1,000 raw lbs produced 2026-10-02 and then reversed, voiding that receipt marks it void with 0 lbs remaining.
+- [x] **AC-0061.** An untouched receipt corrected to 1,100 lbs from 1,000 can be voided, which leaves it 0 lbs remaining.
+- [x] **AC-0062.** In the sale fixture after the AC-0040 reversal, `adjust_lot` accepts lot B at 2,000 lbs and refuses 2,000.001 lbs.
+- [x] **AC-0063.** In the sale fixture with lot B corrected to 3,100 lbs, `adjust_lot` accepts lot B at 1,100 lbs and refuses 1,100.001 lbs.
+- [x] **AC-0064.** In the sale fixture with lot B corrected to 1.90 per lb, a batch of 500 raw lbs of 502 produced 2026-10-08 has a raw cost total of 950.0000 and its `production_batch_lots` row a lot cost of 1.9000.
+- [x] **AC-0065.** In the sale fixture with lot B corrected to 1.90 per lb and the 5,000-lb sale, the trace view gives 1.9000 as the raw lot cost per lb on every row for lot B.
+- [x] **AC-0066.** With RAW-TOM at 0 lbs on hand and an average of 1.8000, receive lot L1 of 1,000 lbs at 18.00 received 2026-10-02, L2 of 1,000 lbs at 20.00 received 2026-10-03, and L3 of 1,000 lbs at 2.00 received 2026-10-04; produce 2,500 raw lbs of 502 on 2026-10-05 and reverse that batch; adjust L3 to 0 lbs as waste; then void L1 and then L2. RAW-TOM's average is 1.8000.
+- [x] **AC-0067.** In the sale fixture, `void_receipt` refuses lot B, which batch 1 still uses, after batch 2 is reversed.
 
 Invariants
 
-- [ ] **AC-0068.** Each finished lot of a batch that is not reversed has remaining lbs equal to its produced lbs minus the lbs on lines of non-void sales drawn from it.
-- [ ] **AC-0069.** Each non-void lot's remaining lbs is at most its current weight minus its used lbs.
-- [ ] **AC-0070.** Each non-void lot's remaining lbs equals its current weight minus its used lbs minus its lbs removed by adjustments.
-- [ ] **AC-0071.** No void lot has an adjustment row, or a `production_batch_lots` row whose batch is not reversed.
-- [ ] **AC-0072.** Each reversed batch's finished lot has 0 lbs remaining.
-- [ ] **AC-0073.** No reversed batch's finished lot has a line of a non-void sale.
-- [ ] **AC-0074.** Each `production_batch_lots` row's lot cost equals its lot's current cost.
-- [ ] **AC-0075.** Each finished lot's cost per lb equals its batch's cost per finished lb.
-- [ ] **AC-0076.** Each sale line's cost per lb equals its finished lot's cost per lb.
-- [ ] **AC-0077.** Each batch's raw cost total equals the sum of lbs consumed times lot cost over its `production_batch_lots` rows, rounded to 4 decimals.
-- [ ] **AC-0078.** Each lot's current cost and weight equal its latest correction's new cost and weight, or its recorded cost and weight when it has no correction.
-- [ ] **AC-0079.** Each raw product with lbs on hand has an average equal to the sum of its lots' remaining lbs times current cost, divided by its lbs on hand, rounded to 4 decimals.
+- [x] **AC-0068.** Each finished lot of a batch that is not reversed has remaining lbs equal to its produced lbs minus the lbs on lines of non-void sales drawn from it.
+- [x] **AC-0069.** Each non-void lot's remaining lbs is at most its current weight minus its used lbs.
+- [x] **AC-0070.** Each non-void lot's remaining lbs equals its current weight minus its used lbs minus its lbs removed by adjustments.
+- [x] **AC-0071.** No void lot has an adjustment row, or a `production_batch_lots` row whose batch is not reversed.
+- [x] **AC-0072.** Each reversed batch's finished lot has 0 lbs remaining.
+- [x] **AC-0073.** No reversed batch's finished lot has a line of a non-void sale.
+- [x] **AC-0074.** Each `production_batch_lots` row's lot cost equals its lot's current cost.
+- [x] **AC-0075.** Each finished lot's cost per lb equals its batch's cost per finished lb.
+- [x] **AC-0076.** Each sale line's cost per lb equals its finished lot's cost per lb.
+- [x] **AC-0077.** Each batch's raw cost total equals the sum of lbs consumed times lot cost over its `production_batch_lots` rows, rounded to 4 decimals.
+- [x] **AC-0078.** Each lot's current cost and weight equal its latest correction's new cost and weight, or its recorded cost and weight when it has no correction.
+- [x] **AC-0079.** Each raw product with lbs on hand has an average equal to the sum of its lots' remaining lbs times current cost, divided by its lbs on hand, rounded to 4 decimals.
 
 Alerts
 
-- [ ] **AC-0080.** In the cost fixture with a fifth receipt at 1.90 and its open cost alert, correcting that lot to 1.66 per lb and running a watch marks the alert cleared.
-- [ ] **AC-0081.** In the cost fixture with a fifth receipt at 1.90 and its open cost alert, correcting each of the four earlier receipts to 1.90 per lb and running a watch marks the alert cleared.
-- [ ] **AC-0082.** In the cost fixture with a fifth receipt at 1.66, correcting that lot to 1.90 per lb and running a watch opens a cost alert for it whose figures give a cost of 1.9000 and a usual cost of 1.6600.
-- [ ] **AC-0083.** In the yield fixture with a batch of 700 finished lbs and its open yield alert, reversing that batch and running a watch marks the alert cleared.
-- [ ] **AC-0084.** In the yield fixture with three earlier batches of 750 finished lbs, reversing one of them before the watch leaves a fourth batch of 790 finished lbs with no yield alert.
-- [ ] **AC-0085.** In the stock fixture with its open low-stock alert, reversing the 2,100-lb batch produced 2026-10-13, then adjusting the 6,000-lb receipt to 800 lbs as waste, and running a watch marks the alert cleared.
-- [ ] **AC-0087.** In the cost fixture with a fifth receipt at 1.90 whose cost alert is the only open urgent alert, correcting that lot to 1.66 per lb on `/receiving` shows the "Receipt corrected" panel with no urgent banner, without a reload.
+- [x] **AC-0080.** In the cost fixture with a fifth receipt at 1.90 and its open cost alert, correcting that lot to 1.66 per lb and running a watch marks the alert cleared.
+- [x] **AC-0081.** In the cost fixture with a fifth receipt at 1.90 and its open cost alert, correcting each of the four earlier receipts to 1.90 per lb and running a watch marks the alert cleared.
+- [x] **AC-0082.** In the cost fixture with a fifth receipt at 1.66, correcting that lot to 1.90 per lb and running a watch opens a cost alert for it whose figures give a cost of 1.9000 and a usual cost of 1.6600.
+- [x] **AC-0083.** In the yield fixture with a batch of 700 finished lbs and its open yield alert, reversing that batch and running a watch marks the alert cleared.
+- [x] **AC-0084.** In the yield fixture with three earlier batches of 750 finished lbs, reversing one of them before the watch leaves a fourth batch of 790 finished lbs with no yield alert.
+- [x] **AC-0085.** In the stock fixture with its open low-stock alert, reversing the 2,100-lb batch produced 2026-10-13, then adjusting the 6,000-lb receipt to 800 lbs as waste, and running a watch marks the alert cleared.
+- [x] **AC-0087.** In the cost fixture with a fifth receipt at 1.90 whose cost alert is the only open urgent alert, correcting that lot to 1.66 per lb on `/receiving` shows the "Receipt corrected" panel with no urgent banner, without a reload.
 
 Correct on `/receiving`
 
-- [ ] **AC-0090.** In Recent receipts, each non-void receipt shows a button named "Correct", and a void receipt shows none.
-- [ ] **AC-0091.** Each listed receipt shows its current weight and current cost per lb: after the AC-0010 correction, lot A shows "$1.8600/lb".
-- [ ] **AC-0092.** A corrected receipt also shows "Received as <recorded weight> at <recorded cost per lb>.", such as "Received as 5,000 lbs at $1.6800/lb."
-- [ ] **AC-0093.** A corrected receipt also shows "Corrected: <its latest correction's reason>".
-- [ ] **AC-0094.** Pressing Correct opens a confirmation named "Correct receipt <lot number>" whose cost per lb field holds the receipt's current cost with 4 decimals, such as "1.6800", whose weight field holds its current weight with 3 decimals, such as "5000.000", and whose reason field is empty.
-- [ ] **AC-0095.** The confirmation's accessible description contains the lot number, the vendor, and the current weight in the AC-0091 format.
-- [ ] **AC-0096.** In the sale fixture with the 5,000-lb sale, confirming lot B at 1.90 per lb and 3,000 lbs with a reason shows a "Receipt corrected" heading with lot B's number, and before-and-after rows of cost per lb $1.8000/lb to $1.9000/lb, weight 3,000 lbs to 3,000 lbs, remaining 1,000 lbs to 1,000 lbs, on hand 1,000 lbs to 1,000 lbs, and average cost $1.8000/lb to $1.9000/lb.
-- [ ] **AC-0097.** In the AC-0096 case, the panel lists under "Batches restated", in draw order, batch 1 with 502, Oct 6, 2026, and cost per finished lb $2.6578/lb to $2.6794/lb, then batch 2 with 502, Oct 7, 2026, and $2.7877/lb to $2.9175/lb.
-- [ ] **AC-0118.** In the AC-0096 case with batch 2 reversed before the correction, the "Batches restated" list shows batch 2 marked "Reversed".
-- [ ] **AC-0098.** In the AC-0096 case, the panel lists 502 Smoked Turkey Drums Tom with suggested price before $2.84/lb and after $2.97/lb.
-- [ ] **AC-0099.** When a correction changes only the weight, or no batch is made from the receipt, the panel says "No batch cost changed." in place of the "Batches restated" list.
-- [ ] **AC-0100.** After a correction, Recent receipts shows the receipt's new values, without a reload.
-- [ ] **AC-0101.** After the receipt shown in the "Receipt saved" panel is corrected from this page's Recent receipts, that panel says "This receipt was corrected." and no longer shows its before-and-after totals.
-- [ ] **AC-0102.** Confirming a cost or weight that matches a Weight or Cost per lb row of the receiving spec's AC-0010 table shows that row's message beside the field and changes nothing.
-- [ ] **AC-0103.** Confirming with a blank or spaces-only reason shows "Enter a reason for the correction." beside the reason field and changes nothing.
-- [ ] **AC-0104.** Confirming the cost and weight the receipt already has, whether the page or the database finds them unchanged, shows "Change the cost or the weight to correct this receipt." and changes nothing.
-- [ ] **AC-0105.** In the sale fixture, confirming lot B at 1,999.999 lbs shows "The weight can't be less than 2,000 lbs. Production used or adjustments removed that much of this receipt." beside the weight field and changes nothing.
-- [ ] **AC-0106.** After an AC-0102, AC-0103, AC-0104, or AC-0105 refusal, the confirmation stays open with every field as the owner typed it.
-- [ ] **AC-0107.** When the receipt was voided after the list loaded, confirming a correction closes the confirmation and shows, in Recent receipts, a message that starts "The receipt wasn't corrected." and contains "Reload to see the latest stock.", and changes nothing.
-- [ ] **AC-0108.** When the session has ended after the list loaded, confirming a correction closes the confirmation, shows "You're signed out. Sign in again to correct this receipt." in Recent receipts, and changes nothing.
-- [ ] **AC-0109.** When a call the correction makes before its write call fails or gets no answer within the 10-second limit, Recent receipts shows a message that starts "The receipt wasn't corrected." and nothing changes.
-- [ ] **AC-0110.** When the `correct_receipt` call gets no answer within the 10-second limit, Recent receipts shows "The receipt may not have been corrected. Reload this page to see whether it was."
-- [ ] **AC-0116.** When the connection to the app drops while a correction is in flight, Recent receipts shows the AC-0110 message.
-- [ ] **AC-0111.** When `correct_receipt` returns and a read after it fails, the page shows the "Receipt corrected" heading with the lot number and "The new figures couldn't be loaded. Reload to see them." in place of the rows.
-- [ ] **AC-0112.** While a correction has not returned, pressing Save correction again writes no second correction.
-- [ ] **AC-0113.** Cancel closes the confirmation and changes nothing.
-- [ ] **AC-0114.** An untouched receipt shows both Void and Correct, and an in-use receipt shows "In use" and Correct.
-- [ ] **AC-0115.** A receipt whose only batch is reversed, and an untouched receipt whose weight was corrected, each show a Void button.
-- [ ] **AC-0117.** When `correct_receipt` is refused for a reason AC-0104, AC-0105, and AC-0107 do not name, such as the statement timeout that a lock held for more than 8 seconds on the raw product's stock row causes, confirming closes the confirmation, shows in Recent receipts a message that starts "The receipt wasn't corrected.", and changes nothing.
+- [x] **AC-0090.** In Recent receipts, each non-void receipt shows a button named "Correct", and a void receipt shows none.
+- [x] **AC-0091.** Each listed receipt shows its current weight and current cost per lb: after the AC-0010 correction, lot A shows "$1.8600/lb".
+- [x] **AC-0092.** A corrected receipt also shows "Received as <recorded weight> at <recorded cost per lb>.", such as "Received as 5,000 lbs at $1.6800/lb."
+- [x] **AC-0093.** A corrected receipt also shows "Corrected: <its latest correction's reason>".
+- [x] **AC-0094.** Pressing Correct opens a confirmation named "Correct receipt <lot number>" whose cost per lb field holds the receipt's current cost with 4 decimals, such as "1.6800", whose weight field holds its current weight with 3 decimals, such as "5000.000", and whose reason field is empty.
+- [x] **AC-0095.** The confirmation's accessible description contains the lot number, the vendor, and the current weight in the AC-0091 format.
+- [x] **AC-0096.** In the sale fixture with the 5,000-lb sale, confirming lot B at 1.90 per lb and 3,000 lbs with a reason shows a "Receipt corrected" heading with lot B's number, and before-and-after rows of cost per lb $1.8000/lb to $1.9000/lb, weight 3,000 lbs to 3,000 lbs, remaining 1,000 lbs to 1,000 lbs, on hand 1,000 lbs to 1,000 lbs, and average cost $1.8000/lb to $1.9000/lb.
+- [x] **AC-0097.** In the AC-0096 case, the panel lists under "Batches restated", in draw order, batch 1 with 502, Oct 6, 2026, and cost per finished lb $2.6578/lb to $2.6794/lb, then batch 2 with 502, Oct 7, 2026, and $2.7877/lb to $2.9175/lb.
+- [x] **AC-0118.** In the AC-0096 case with batch 2 reversed before the correction, the "Batches restated" list shows batch 2 marked "Reversed".
+- [x] **AC-0098.** In the AC-0096 case, the panel lists 502 Smoked Turkey Drums Tom with suggested price before $2.84/lb and after $2.97/lb.
+- [x] **AC-0099.** When a correction changes only the weight, or no batch is made from the receipt, the panel says "No batch cost changed." in place of the "Batches restated" list.
+- [x] **AC-0100.** After a correction, Recent receipts shows the receipt's new values, without a reload.
+- [x] **AC-0101.** After the receipt shown in the "Receipt saved" panel is corrected from this page's Recent receipts, that panel says "This receipt was corrected." and no longer shows its before-and-after totals.
+- [x] **AC-0102.** Confirming a cost or weight that matches a Weight or Cost per lb row of the receiving spec's AC-0010 table shows that row's message beside the field and changes nothing.
+- [x] **AC-0103.** Confirming with a blank or spaces-only reason shows "Enter a reason for the correction." beside the reason field and changes nothing.
+- [x] **AC-0104.** Confirming the cost and weight the receipt already has, whether the page or the database finds them unchanged, shows "Change the cost or the weight to correct this receipt." and changes nothing.
+- [x] **AC-0105.** In the sale fixture, confirming lot B at 1,999.999 lbs shows "The weight can't be less than 2,000 lbs. Production used or adjustments removed that much of this receipt." beside the weight field and changes nothing.
+- [x] **AC-0106.** After an AC-0102, AC-0103, AC-0104, or AC-0105 refusal, the confirmation stays open with every field as the owner typed it.
+- [x] **AC-0107.** When the receipt was voided after the list loaded, confirming a correction closes the confirmation and shows, in Recent receipts, a message that starts "The receipt wasn't corrected." and contains "Reload to see the latest stock.", and changes nothing.
+- [x] **AC-0108.** When the session has ended after the list loaded, confirming a correction closes the confirmation, shows "You're signed out. Sign in again to correct this receipt." in Recent receipts, and changes nothing.
+- [x] **AC-0109.** When a call the correction makes before its write call fails or gets no answer within the 10-second limit, Recent receipts shows a message that starts "The receipt wasn't corrected." and nothing changes.
+- [x] **AC-0110.** When the `correct_receipt` call gets no answer within the 10-second limit, Recent receipts shows "The receipt may not have been corrected. Reload this page to see whether it was."
+- [x] **AC-0116.** When the connection to the app drops while a correction is in flight, Recent receipts shows the AC-0110 message.
+- [x] **AC-0111.** When `correct_receipt` returns and a read after it fails, the page shows the "Receipt corrected" heading with the lot number and "The new figures couldn't be loaded. Reload to see them." in place of the rows.
+- [x] **AC-0112.** While a correction has not returned, pressing Save correction again writes no second correction.
+- [x] **AC-0113.** Cancel closes the confirmation and changes nothing.
+- [x] **AC-0114.** An untouched receipt shows both Void and Correct, and an in-use receipt shows "In use" and Correct.
+- [x] **AC-0115.** A receipt whose only batch is reversed, and an untouched receipt whose weight was corrected, each show a Void button.
+- [x] **AC-0117.** When `correct_receipt` is refused for a reason AC-0104, AC-0105, and AC-0107 do not name, such as the statement timeout that a lock held for more than 8 seconds on the raw product's stock row causes, confirming closes the confirmation, shows in Recent receipts a message that starts "The receipt wasn't corrected.", and changes nothing.
 
 Reverse on `/production`
 
-- [ ] **AC-0130.** In Recent batches, each batch that is not reversed shows a button named "Reverse".
-- [ ] **AC-0131.** A reversed batch shows "Reversed: <reason>" and no Reverse button.
-- [ ] **AC-0132.** Pressing Reverse opens a confirmation named "Reverse batch <batch number>" that lists each lot the batch drew from, with its lot number and the lbs that go back to it, and the batch's finished lbs, as lbs that leave stock.
-- [ ] **AC-0133.** The confirmation lists under "Sales to be voided" each non-void sale with a line on the batch's finished lot, with its sale number, sale date, customer or "No customer", and lbs, or says "No sale drew from this batch."
-- [ ] **AC-0134.** The confirmation's accessible description contains the batch number, its production date, and its finished lbs.
-- [ ] **AC-0135.** In the sale fixture with the 5,000-lb sale, confirming the reversal of batch 2 with the reason "entered twice" shows a "Batch reversed" heading with batch 2's number, and before-and-after rows of RAW-TOM on hand 1,000 lbs to 2,000 lbs, average cost $1.8000/lb to $1.8000/lb, and 502 finished lbs on hand 390 lbs to 4,620 lbs.
-- [ ] **AC-0136.** In the AC-0135 case, the panel lists under "Sales voided" the 5,000-lb sale with its sale number, Oct 8, 2026, Fulton Market Deli, 5,000 lbs, and $3.29/lb, and says "Record these sales again on Sales."
-- [ ] **AC-0137.** When the reversal voids no sale, the panel says "No sale was voided." in place of the "Sales voided" list.
-- [ ] **AC-0138.** After a reversal, Recent batches shows the batch as reversed, without a reload.
-- [ ] **AC-0139.** Confirming with a blank or spaces-only reason shows "Enter a reason for the reversal." beside the reason field, keeps the confirmation open, and changes nothing.
-- [ ] **AC-0140.** When the batch was reversed after the list loaded, confirming closes the confirmation and shows, in Recent batches, a message that starts "The batch wasn't reversed." and contains "Reload to see the latest stock.", and changes nothing.
-- [ ] **AC-0141.** When the session has ended after the list loaded, confirming a reversal closes the confirmation, shows "You're signed out. Sign in again to reverse this batch." in Recent batches, and changes nothing.
-- [ ] **AC-0142.** After the batch shown in the batch result panel is reversed from this page's Recent batches, that panel says "This batch was reversed." and no longer shows its lots used, finished stock, or raw stock.
-- [ ] **AC-0143.** When a call the reversal makes before its write call fails or gets no answer within the 10-second limit, Recent batches shows a message that starts "The batch wasn't reversed." and nothing changes.
-- [ ] **AC-0144.** When the `reverse_batch` call gets no answer within the 10-second limit, Recent batches shows "The batch may not have been reversed. Reload this page to see whether it was."
-- [ ] **AC-0149.** When the connection to the app drops while a reversal is in flight, Recent batches shows the AC-0144 message.
-- [ ] **AC-0145.** When `reverse_batch` returns and a read after it fails, the page shows the "Batch reversed" heading with the batch number and "The new figures couldn't be loaded. Reload to see them." in place of the rows.
-- [ ] **AC-0146.** In the sale fixture, a 4,700-lb sale of 502 written through `pg` after `/production` loads, then the reversal of batch 2 confirmed on the page, lists that sale under "Sales voided".
-- [ ] **AC-0147.** Cancel closes the confirmation and changes nothing.
-- [ ] **AC-0148.** When 502 is made inactive after `/production` loads, the "Batch reversed" panel shows its finished lbs on hand after as "Not available".
-- [ ] **AC-0150.** When `reverse_batch` is refused for a reason AC-0140 does not name, such as the statement timeout that a lock held for more than 8 seconds on the raw product's stock row causes, confirming closes the confirmation, shows in Recent batches a message that starts "The batch wasn't reversed.", and changes nothing.
-- [ ] **AC-0151.** The check step says "Check it before you save. Reversing a batch later voids every sale made from it." and does not say "A batch can't be undone."
+- [x] **AC-0130.** In Recent batches, each batch that is not reversed shows a button named "Reverse".
+- [x] **AC-0131.** A reversed batch shows "Reversed: <reason>" and no Reverse button.
+- [x] **AC-0132.** Pressing Reverse opens a confirmation named "Reverse batch <batch number>" that lists each lot the batch drew from, with its lot number and the lbs that go back to it, and the batch's finished lbs, as lbs that leave stock.
+- [x] **AC-0133.** The confirmation lists under "Sales to be voided" each non-void sale with a line on the batch's finished lot, with its sale number, sale date, customer or "No customer", and lbs, or says "No sale drew from this batch."
+- [x] **AC-0134.** The confirmation's accessible description contains the batch number, its production date, and its finished lbs.
+- [x] **AC-0135.** In the sale fixture with the 5,000-lb sale, confirming the reversal of batch 2 with the reason "entered twice" shows a "Batch reversed" heading with batch 2's number, and before-and-after rows of RAW-TOM on hand 1,000 lbs to 2,000 lbs, average cost $1.8000/lb to $1.8000/lb, and 502 finished lbs on hand 390 lbs to 4,620 lbs.
+- [x] **AC-0136.** In the AC-0135 case, the panel lists under "Sales voided" the 5,000-lb sale with its sale number, Oct 8, 2026, Fulton Market Deli, 5,000 lbs, and $3.29/lb, and says "Record these sales again on Sales."
+- [x] **AC-0137.** When the reversal voids no sale, the panel says "No sale was voided." in place of the "Sales voided" list.
+- [x] **AC-0138.** After a reversal, Recent batches shows the batch as reversed, without a reload.
+- [x] **AC-0139.** Confirming with a blank or spaces-only reason shows "Enter a reason for the reversal." beside the reason field, keeps the confirmation open, and changes nothing.
+- [x] **AC-0140.** When the batch was reversed after the list loaded, confirming closes the confirmation and shows, in Recent batches, a message that starts "The batch wasn't reversed." and contains "Reload to see the latest stock.", and changes nothing.
+- [x] **AC-0141.** When the session has ended after the list loaded, confirming a reversal closes the confirmation, shows "You're signed out. Sign in again to reverse this batch." in Recent batches, and changes nothing.
+- [x] **AC-0142.** After the batch shown in the batch result panel is reversed from this page's Recent batches, that panel says "This batch was reversed." and no longer shows its lots used, finished stock, or raw stock.
+- [x] **AC-0143.** When a call the reversal makes before its write call fails or gets no answer within the 10-second limit, Recent batches shows a message that starts "The batch wasn't reversed." and nothing changes.
+- [x] **AC-0144.** When the `reverse_batch` call gets no answer within the 10-second limit, Recent batches shows "The batch may not have been reversed. Reload this page to see whether it was."
+- [x] **AC-0149.** When the connection to the app drops while a reversal is in flight, Recent batches shows the AC-0144 message.
+- [x] **AC-0145.** When `reverse_batch` returns and a read after it fails, the page shows the "Batch reversed" heading with the batch number and "The new figures couldn't be loaded. Reload to see them." in place of the rows.
+- [x] **AC-0146.** In the sale fixture, a 4,700-lb sale of 502 written through `pg` after `/production` loads, then the reversal of batch 2 confirmed on the page, lists that sale under "Sales voided".
+- [x] **AC-0147.** Cancel closes the confirmation and changes nothing.
+- [x] **AC-0148.** When 502 is made inactive after `/production` loads, the "Batch reversed" panel shows its finished lbs on hand after as "Not available".
+- [x] **AC-0150.** When `reverse_batch` is refused for a reason AC-0140 does not name, such as the statement timeout that a lock held for more than 8 seconds on the raw product's stock row causes, confirming closes the confirmation, shows in Recent batches a message that starts "The batch wasn't reversed.", and changes nothing.
+- [x] **AC-0151.** The check step says "Check it before you save. Reversing a batch later voids every sale made from it." and does not say "A batch can't be undone."
 
 Current values on other pages
 
-- [ ] **AC-0160.** After the AC-0010 correction, lot A's cost per lb shows as $1.8600/lb on lot A's trace page and under batch 1 on the 5,000-lb sale's trace page.
-- [ ] **AC-0161.** After lot B is corrected to 3,100 lbs, lot B's trace page shows its weight received as 3,100 lbs.
-- [ ] **AC-0162.** After lot B is corrected to 3,100 lbs, the lot finder's list for RAW-TOM shows lot B's weight as 3,100 lbs.
+- [x] **AC-0160.** After the AC-0010 correction, lot A's cost per lb shows as $1.8600/lb on lot A's trace page and under batch 1 on the 5,000-lb sale's trace page.
+- [x] **AC-0161.** After lot B is corrected to 3,100 lbs, lot B's trace page shows its weight received as 3,100 lbs.
+- [x] **AC-0162.** After lot B is corrected to 3,100 lbs, the lot finder's list for RAW-TOM shows lot B's weight as 3,100 lbs.
 
 Accessibility and phone width
 
-- [ ] **AC-0170.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
-- [ ] **AC-0171.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
-- [ ] **AC-0172.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
-- [ ] **AC-0173.** Correcting a receipt and reversing a batch can each be completed with the keyboard alone.
-- [ ] **AC-0174.** After a correction, keyboard focus is on the "Receipt corrected" heading, and after a reversal, on the "Batch reversed" heading.
-- [ ] **AC-0175.** After an AC-0102, AC-0103, AC-0105, or AC-0139 refusal, keyboard focus is on the first field with an error.
-- [ ] **AC-0176.** After an AC-0104 refusal, keyboard focus is on the message that states it.
-- [ ] **AC-0177.** After an AC-0107, AC-0108, AC-0109, AC-0110, AC-0116, AC-0117, AC-0140, AC-0141, AC-0143, AC-0144, AC-0149, or AC-0150 outcome, keyboard focus is on the message that states it.
-- [ ] **AC-0178.** After Cancel in either confirmation, keyboard focus is on the button that opened it.
-- [ ] **AC-0179.** The accessible name of the correction's cost field contains "per lb", and that of its weight field contains "lbs".
-- [ ] **AC-0180.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
-- [ ] **AC-0181.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
-- [ ] **AC-0182.** After an AC-0102, AC-0103, AC-0105, or AC-0139 refusal, the `aria-describedby` of every field with an error points to that field's message.
+- [x] **AC-0170.** axe-core reports zero violations for the WCAG tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` in each page state.
+- [x] **AC-0171.** At a 320 × 640 CSS px viewport, in each page state, the page's scroll width is at most 320 CSS px.
+- [x] **AC-0172.** At a 320 × 640 CSS px viewport, in each page state, every focusable control is at least 44 CSS px tall and 44 CSS px wide.
+- [x] **AC-0173.** Correcting a receipt and reversing a batch can each be completed with the keyboard alone.
+- [x] **AC-0174.** After a correction, keyboard focus is on the "Receipt corrected" heading, and after a reversal, on the "Batch reversed" heading.
+- [x] **AC-0175.** After an AC-0102, AC-0103, AC-0105, or AC-0139 refusal, keyboard focus is on the first field with an error.
+- [x] **AC-0176.** After an AC-0104 refusal, keyboard focus is on the message that states it.
+- [x] **AC-0177.** After an AC-0107, AC-0108, AC-0109, AC-0110, AC-0116, AC-0117, AC-0140, AC-0141, AC-0143, AC-0144, AC-0149, or AC-0150 outcome, keyboard focus is on the message that states it.
+- [x] **AC-0178.** After Cancel in either confirmation, keyboard focus is on the button that opened it.
+- [x] **AC-0179.** The accessible name of the correction's cost field contains "per lb", and that of its weight field contains "lbs".
+- [x] **AC-0180.** In each page state, every focusable control, when focused from the keyboard, has a computed outline style other than `none` and an outline width of at least 2 CSS px.
+- [x] **AC-0181.** In each page state, every focusable control, when focused from the keyboard, has a contrast ratio of at least 3:1 between its computed outline color and the background color behind it.
+- [x] **AC-0182.** After an AC-0102, AC-0103, AC-0105, or AC-0139 refusal, the `aria-describedby` of every field with an error points to that field's message.
 
 Build and repository checks
 
-- [ ] **AC-0189.** `git diff <merge base with main> -- test/costing.test.ts test/engine.test.ts test/corrections.test.ts test/pricing.test.ts` prints nothing.
-- [ ] **AC-0190.** `npm run build` exits 0.
-- [ ] **AC-0191.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
-- [ ] **AC-0192.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
-- [ ] **AC-0193.** `npm run typecheck` exits 0.
-- [ ] **AC-0194.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
-- [ ] **AC-0195.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
-- [ ] **AC-0196.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
-- [ ] **AC-0197.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
-- [ ] **AC-0198.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
+- [x] **AC-0189.** `git diff <merge base with main> -- test/costing.test.ts test/engine.test.ts test/corrections.test.ts test/pricing.test.ts` prints nothing.
+- [x] **AC-0190.** `npm run build` exits 0.
+- [x] **AC-0191.** `npm test` runs the Vitest suites and then the Playwright suite, and exits 0.
+- [x] **AC-0192.** Running `npm run gen:types` leaves `src/lib/database.types.ts` with no diff.
+- [x] **AC-0193.** `npm run typecheck` exits 0.
+- [x] **AC-0194.** `grep -rnE "\.(insert|update|upsert|delete)\(" src/` prints nothing.
+- [x] **AC-0195.** `grep -rnE "from ['\"][^'\"]*app/" src/lib/` prints nothing.
+- [x] **AC-0196.** `npm audit --omit=dev --audit-level=high` exits 0, or every high or critical advisory it reports appears in the Advisory waivers list above.
+- [x] **AC-0197.** `grep -rnE "['\"]pg(-pool)?(/[^'\"]*)?['\"]" src/` prints nothing.
+- [x] **AC-0198.** No code under `src/` reads a privileged variable, except `src/privileged-env.ts`, which reads no environment value at all. Each of these prints nothing:
   - `grep -rniE "env(\.|\[['\"])[a-z0-9_]*(service_role|secret|jwt|db_url|database_url|postgres)" src/ | grep -v '^src/privileged-env.ts:'`
   - `grep -rnE "\}\s*=\s*process\.env" src/`
   - `grep -nE "process\.env(\.|\[)" src/privileged-env.ts`
-- [ ] **AC-0199.** `git diff <merge base with main> -- package.json src/ | grep -iE '^\+.*(anthropic|openai|@ai-sdk|langchain)'` prints nothing.
-- [ ] **AC-0200.** Compared with the local database built from the merge base with `main`, every base table and view in `public` keeps every column it had, with the same name, type, and position.
-- [ ] **AC-0201.** Compared with the local database built from the merge base with `main`, the only table or view in `public` this branch adds is the table `receipt_corrections`, the only tables that gain columns are `lots` (`corrected_unit_cost`, `corrected_weight_lbs`, `current_unit_cost`, `current_weight_lbs`) and `production_batches` (`reversed_at`, `reversal_reason`), and the only functions it adds in `public` are `correct_receipt` and `reverse_batch`.
-- [ ] **AC-0202.** `correct_receipt` and `reverse_batch` are SECURITY DEFINER, and each has `proconfig` exactly `{search_path=""}`, as a `pg_proc` read shows.
-- [ ] **AC-0203.** Every function this branch replaces keeps the security mode, `proconfig`, and EXECUTE grants it had on the local database built from the merge base with `main`, as two `pg_proc` and `has_function_privilege` reads compared show.
-- [ ] **AC-0204.** `anon`, `authenticated`, and `service_role` each hold no privilege on the identity sequence of `receipt_corrections`.
+- [x] **AC-0199.** `git diff <merge base with main> -- package.json src/ | grep -iE '^\+.*(anthropic|openai|@ai-sdk|langchain)'` prints nothing.
+- [x] **AC-0200.** Compared with the local database built from the merge base with `main`, every base table and view in `public` keeps every column it had, with the same name, type, and position.
+- [x] **AC-0201.** Compared with the local database built from the merge base with `main`, the only table or view in `public` this branch adds is the table `receipt_corrections`, the only tables that gain columns are `lots` (`corrected_unit_cost`, `corrected_weight_lbs`, `current_unit_cost`, `current_weight_lbs`) and `production_batches` (`reversed_at`, `reversal_reason`), and the only functions it adds in `public` are `correct_receipt` and `reverse_batch`.
+- [x] **AC-0202.** `correct_receipt` and `reverse_batch` are SECURITY DEFINER, and each has `proconfig` exactly `{search_path=""}`, as a `pg_proc` read shows.
+- [x] **AC-0203.** Every function this branch replaces keeps the security mode, `proconfig`, and EXECUTE grants it had on the local database built from the merge base with `main`, as two `pg_proc` and `has_function_privilege` reads compared show.
+- [x] **AC-0204.** `anon`, `authenticated`, and `service_role` each hold no privilege on the identity sequence of `receipt_corrections`.
 
 ## Follow-ons
 

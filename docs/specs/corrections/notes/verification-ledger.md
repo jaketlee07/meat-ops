@@ -257,3 +257,421 @@ Opened at PLAN. Each review finding is recorded here with its disposition; it cl
 - **Change C, a press after the result arrives (`src/app/receiving/correct-dialog.tsx`):** `open()` kept the sent values on `pending`, but with react-dom 19.3.0 the post-await `close()` and state setters commit before the transition clears `pending` (assumption from the review; not reproduced, since the gap is one task boundary and not reliably reachable in a browser test, so no test was added). `CorrectDialog` now holds `sentRef`, set true when the save is sent and set false at the start of result handling (after the await, and in the catch), before `close()` and the setters. `open()` keeps the sent values only while `sentRef` is true; every other press takes the AC-0094 reset. `pending` still drives "Saving…" and the disabled Cancel. `ReverseControl` is unchanged. Proof the existing behavior holds: `test/e2e/correct.spec.ts` in full 26 of 26 passed; the round 3 test (third Escape, refusal reopens with typed fields) and the round 4 test (Correct after the third Escape keeps the sent values) with `--repeat-each=10`: 22 of 22 passed (20 runs plus 2 setup tests).
 - **Gates:** `npm run typecheck` and `npm run build` exit 0; `npm run gen:types` no diff. `stack_a_runners.sh` printed nothing before each run. `clear_stack_a_bloat.sh` printed: `before: pg_class dead rows 201884; slot cainophile_ozavlqcy 21833`, `VACUUM`, `after: pg_class dead rows 0; slot cainophile_n9jloxmc 0`. `npm test` exit 0: Vitest 50 files and 1,001 tests passed (44 s), Playwright 654 of 654 passed (10.2 min); no known environmental signature appeared, so no second run.
 - **Controller gates at `e96e323`:** `npm run typecheck`, `npm run build`, and `npm run gen:types` exit 0 with no diff; the standing remedy found 98,505 dead rows and took no action. After the folder check, `npm test` exit 0: Vitest 50 files and 1,001 tests passed (114 s), Playwright 654 of 654 passed (12.2 min). Round 5 was recorded as review retry 5 of 5 (engine `findings-remain`, seq 42), so the next review round must come back clean.
+
+## Review round 6 and completion evidence handoff (2026-10-19)
+
+- **Round 6** (delta `7aeca3c..8a626f4`, adversarial, frontend, quality): no Blocker or Concern was sustained. Three nits were sustained, all on `src/app/receiving/correct-dialog.tsx:185`: a Correct press between the "Receipt corrected" commit and the revalidated list commit opens with the figures from before the correction (adversarial and frontend, read from the installed Next 16.4.0 and React 19.3.0 sources, not reproduced), and no test presses Correct again after a handled result (quality). The review retry budget was spent at round 5 (5 of 5), and every fix in this dialog over rounds 3 to 6 drew a new edge, so the owner deferred the three nits on 2026-10-19. They are tracked in `docs/product/intents/corrections-review-nits.md`, listed in `[backlog].open`.
+- **Resolve-vs-surface record, closed at DECIDE:** every sustained Blocker and Concern from rounds 1 to 6 is resolved (the verdict below lists each with its commit); the two indeterminate findings of round 3 were settled by owner rulings recorded above and then fixed; the three round 6 nits are deferred with their citations. Refuted findings stay in the paired audit artifacts under `.context/reviews/`, which are not committed.
+- **Tail triage:** the branch adds 6,763 lines under `src/`, `test/`, and `supabase/` (47 files), so its review shape is DEEP and MIXED; the plan's nine tasks are its dependency-ordered layers, each with its own commits and wave gates (T1 database corrections, T2 batch reversal, T3 alerts, T4 form rules, T5 reads, T6 decisions, T7 `/receiving`, T8 `/production`, T9 docs and checks), followed by the review fix commits. One review unit covered them.
+- **Learnings:** project-knowledge capture was not attempted; the store refused captures in earlier sessions. Reusable lessons went to the session memory.
+
+For close-work:
+- **Delivery:** work-loop run `198cab70-47f3-49be-9a3d-16a38fbfa7e1`, branch `feat/corrections`, built in `~/Developer/meat-ops-corrections` on stack A, rebased onto `main` at `830fcc3`.
+- **Accepted outcome and authority:** `docs/product/intents/corrections-consumed-receipts.md` (correct a consumed receipt and reverse a production batch, restating every figure made from them); spec and plan approved by the owner; the owner directed the rebase, the push, the stack A setup, and the build.
+- **Implemented scope and evidence:** T1 to T9, each with its section above and its wave's gates; the recorded run, the catalog comparison, and the rendered-page inspection under T9; review rounds 1 to 6.
+- **Durable outputs:** `SYSTEM-SPEC.md` §4, §5 (eight operations), §7, §11; `docs/costing.md` (the `correct_receipt` and `reverse_batch` sections, invariant 6, the restatement and weight rules, the known limit, the new suites); `docs/architecture/overview.md` (operations, access model, write path); amendment notes in `docs/specs/alerts/spec.md`, `docs/specs/production/spec.md`, and `docs/specs/foundation-hardening/spec.md`; the zero-stock intent's extended Outcome; three migrations under `supabase/migrations/`.
+- **Non-goals and follow-ons:** the spec's Follow-on (the zero-stock average recompute, `docs/product/intents/zero-stock-average-recompute.md`, worked on `fix/zero-stock-average`); the hosted rollout (`docs/product/intents/hosted-supabase-rollout.md`); the three deferred nits (`docs/product/intents/corrections-review-nits.md`); and the pre-existing revoked-session observation (`docs/product/intents/revoked-session-write.md`).
+- **Unresolved obligations:** the pull request waits on the owner's review and merge; nothing has been applied to the hosted project. Recovery once any correction or reversal exists is forward-fix only (quality finding 5, above).
+- **Completion event candidate:** the merge of `feat/corrections` into `main`.
+- **Authority facts:** the owner is the only source, write, and deletion authority; no hosted write was made, and no review artifact under `.context/` is committed. Stack A was reset three times during the build (T9 twice, the round 1 migration edit once), each after the folder check and the migration check passed; the other stack A folders lost their rows each time and need no `supabase migration up`.
+
+### Review verdict
+
+```json review-verdict.v1
+{
+  "schema_version": "review-verdict.v1",
+  "state": "READY_WITH_RESIDUAL_RISK",
+  "mode": "full",
+  "review_unit": "corrections post-gates review, target 8a626f4 against main 830fcc3",
+  "warranted_reviewers": [
+    {
+      "role": "adversarial-reviewer",
+      "mandatory": true,
+      "outcome": "findings",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/6-post-gates-adversarial-reviewer-adjudication.md"
+    },
+    {
+      "role": "security-reviewer",
+      "mandatory": true,
+      "outcome": "clean",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/3-post-gates-security-reviewer-raw.md"
+    },
+    {
+      "role": "quality-engineer",
+      "mandatory": true,
+      "outcome": "findings",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/6-post-gates-quality-engineer-adjudication.md"
+    },
+    {
+      "role": "frontend-reviewer",
+      "mandatory": false,
+      "outcome": "findings",
+      "report_ref": ".context/reviews/198cab70-47f3-49be-9a3d-16a38fbfa7e1/6-post-gates-frontend-reviewer-adjudication.md"
+    }
+  ],
+  "named_skips": [
+    {
+      "code": "experience-reviewer-absent",
+      "category": "non-mandatory reviewer not installed",
+      "reason": "The experience-reviewer agent is not installed in this repository.",
+      "residual_eligible": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "r1-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "docs/costing.md:330",
+      "text": "The restatement rule in the costing reference divides the rounded raw cost total, but the engine divides the unrounded sum.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Restatement rule restated over the unrounded sum (eda68a3)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/production/actions.ts:117",
+      "text": "In the AC-0148 state, Recent batches does not show the reversed batch as reversed, and the recorded deviation does not name AC-0138.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "The control marks its own batch reversed when the action skips the re-render; AC-0148 test asserts it (0f5579b)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-3",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/receipt-corrections.test.ts:482",
+      "text": "The non-operator AC-0001 sweeps leave out argument cases that AC-0028, AC-0029, and AC-0049 list.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "NaN and blank-reason non-operator cases added to both sweeps (bfce975)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-4",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/costing.md:404",
+      "text": "The \"Not available\" note ties the text to the read after the write, but the test it cites shows it in the before column too.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "\"Not available\" note covers a product made inactive before the reversal (eda68a3)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-5",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "supabase/migrations/20261018053447_receipt_corrections.sql:411",
+      "text": "correct_receipt refuses a weight that rounds to 0 only after it has locked the stock row and the lot.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Rounded-weight check moved before the stock lock; lock test proven red on the old body (bfce975)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-6",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:257",
+      "text": "The correction dialog says every batch made from the receipt is restated, which a weight-only correction does not do.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Dialog says a change of cost restates every batch (f34ea59)."
+    },
+    {
+      "id": "r1-adversarial-reviewer-7",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/lib/rpc.ts:4",
+      "text": "The rpc.ts header still counts six costing RPCs.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Header says eight costing RPCs (f34ea59)."
+    },
+    {
+      "id": "r2-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/costing.md:331",
+      "text": "The repaired restatement rule's sentences admit a second grouping.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Rule names the raw cost per finished lb as its own step (1485556)."
+    },
+    {
+      "id": "r2-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/production/reverse-control.tsx:180",
+      "text": "The comment on the control's own reversed mark names only one of the two cases that skip the re-render.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Comments name both skipped re-render cases (1485556, 7dee729)."
+    },
+    {
+      "id": "r3-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "src/app/receiving/correct-dialog.tsx:179",
+      "text": "A third Escape while a correction saves closes the dialog, so a later field refusal lands in a closed dialog.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Indeterminate at adjudication; a Chromium 156 probe proved the close; the owner ruled fix on 2026-10-19; the dialog reopens on a field refusal (7c0952b)."
+    },
+    {
+      "id": "r3-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/correct.spec.ts:603",
+      "text": "A killed run leaves the corrections read withdrawn.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "receipt_corrections added to the global-setup grant heal (19ff4d2)."
+    },
+    {
+      "id": "r3-quality-engineer-3",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "test/receipt-corrections.test.ts:337",
+      "text": "A later correction's old values are never checked.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "AC-0032 test checks the second row starts from the first row new values; proven red on a mutated engine (c2e443c)."
+    },
+    {
+      "id": "r3-quality-engineer-4",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/save-correction.test.ts:70",
+      "text": "The decisions' failure log lines are unpinned.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "All 16 decision failure cases assert their log line (3d7e695)."
+    },
+    {
+      "id": "r3-quality-engineer-5",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/corrections/plan.md:527",
+      "text": "The Rollout omits what a code revert does after first use.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Forward-fix-only recovery after first use recorded in the ledger; the plan is pinned (d5850ba)."
+    },
+    {
+      "id": "r3-quality-engineer-7",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/receiving-page.ts:281",
+      "text": "The AC-0104 database-half wait resolves on any backend in a Lock wait.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Indeterminate at adjudication; the owner ruled fix on 2026-10-19; the wait requires the app correct_receipt call blocked by the holder (4926e7b)."
+    },
+    {
+      "id": "r3-quality-engineer-8",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/lib/failures.ts:307",
+      "text": "The receipt refusal shape is written twice.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "voidFailureMessage reuses refusalMessage; void messages unchanged (4fd03f9)."
+    },
+    {
+      "id": "r4-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "src/app/receiving/correct-dialog.tsx:142",
+      "text": "Pressing Correct during a pending save still wipes the typed fields.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "open() while pending keeps the sent values in both controls; browser tests proven red (39d254b)."
+    },
+    {
+      "id": "r4-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/corrections/notes/verification-ledger.md:237",
+      "text": "Ledger items 5 and 6 misstate their proof.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Ledger counts and proof suites corrected (4fe26ea)."
+    },
+    {
+      "id": "r4-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "src/app/receiving/correct-dialog.tsx:142",
+      "text": "Pressing Correct while a save is pending resets the typed fields, so a later refusal shows its errors beside values it did not refuse.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r4-adversarial-1 (39d254b)."
+    },
+    {
+      "id": "r4-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "docs/specs/corrections/notes/verification-ledger.md:237",
+      "text": "The ledger's proof for items 5 and 6 is misstated.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r4-adversarial-2 (4fe26ea)."
+    },
+    {
+      "id": "r5-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/production/reverse-control.tsx:194",
+      "text": "The sent-reason mark has no test, and the ledger says it cannot have one.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Reversal test edits the reason while waiting; proven red against the live field (e96e323)."
+    },
+    {
+      "id": "r5-adversarial-reviewer-2",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:146",
+      "text": "A press just after the result can still take the pending branch.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "sentRef replaces pending for keeping sent values (e96e323)."
+    },
+    {
+      "id": "r5-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/reverse.spec.ts:389",
+      "text": "The reversal test passes without `sentReason`, and the ledger wrongly says the sent reason cannot change.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r5-adversarial-1 (e96e323)."
+    },
+    {
+      "id": "r5-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "concern",
+      "effective_severity": "concern",
+      "citation": "docs/specs/corrections/notes/verification-ledger.md:248",
+      "text": "The ledger gives a false reason for having no test of sentReason.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Same fix as r5-adversarial-1, ledger sentence corrected (e96e323)."
+    },
+    {
+      "id": "r5-quality-engineer-2",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "test/e2e/reverse.spec.ts:374",
+      "text": "The new reversal test claims AC-0148 but never checks its outcome.",
+      "status": "resolved",
+      "response": "repair-the-artifact",
+      "reason": "Titles name only the criteria they check (e96e323)."
+    },
+    {
+      "id": "r6-adversarial-reviewer-1",
+      "source_role": "adversarial-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:185",
+      "text": "A Correct press just after a successful correction opens with the figures from before it.",
+      "status": "deferred",
+      "response": "accept-as-proportionate",
+      "reason": "Owner deferred on 2026-10-19 after round 6, the last review round; tracked in docs/product/intents/corrections-review-nits.md."
+    },
+    {
+      "id": "r6-frontend-reviewer-1",
+      "source_role": "frontend-reviewer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:185",
+      "text": "A Correct press after the result can reset the dialog to the old figures.",
+      "status": "deferred",
+      "response": "accept-as-proportionate",
+      "reason": "Owner deferred on 2026-10-19 after round 6, the last review round; tracked in docs/product/intents/corrections-review-nits.md."
+    },
+    {
+      "id": "r6-quality-engineer-1",
+      "source_role": "quality-engineer",
+      "severity": "nit",
+      "effective_severity": "nit",
+      "citation": "src/app/receiving/correct-dialog.tsx:185",
+      "text": "No test fails if the new sentRef flag is never cleared.",
+      "status": "deferred",
+      "response": "accept-as-proportionate",
+      "reason": "Owner deferred on 2026-10-19 after round 6, the last review round; tracked in docs/product/intents/corrections-review-nits.md."
+    }
+  ],
+  "required_gates": [
+    {
+      "name": "npm run typecheck",
+      "outcome": "passed",
+      "evidence": "exit 0 at e96e323 (verification ledger, Review round 5 fixes)"
+    },
+    {
+      "name": "npm run build",
+      "outcome": "passed",
+      "evidence": "exit 0 at e96e323"
+    },
+    {
+      "name": "npm run gen:types",
+      "outcome": "passed",
+      "evidence": "no diff at e96e323"
+    },
+    {
+      "name": "npm test",
+      "outcome": "passed",
+      "evidence": "Vitest 1,001 of 1,001 in 50 files and Playwright 654 of 654 at e96e323, controller run"
+    },
+    {
+      "name": "goal-based checks AC-0189 to AC-0204",
+      "outcome": "passed",
+      "evidence": "verification ledger T9 section, catalog comparison against main"
+    }
+  ],
+  "deferrals": [
+    {
+      "slug": "corrections-review-nits",
+      "reason": "Three round 6 nits on the Correct dialog's state after a saved correction; the review retry budget was spent.",
+      "accepted_by": "jaketlee07 (owner), 2026-10-19",
+      "residual_eligible": true
+    }
+  ],
+  "blind_spots": [
+    {
+      "surface": "The post-correction press window in CorrectDialog",
+      "reason": "Found by reading the installed Next and React sources; a commit gap this short cannot be driven by a browser test.",
+      "evidence_limit": "Not reproduced at runtime; window length not measured.",
+      "accepted_by": "jaketlee07 (owner), 2026-10-19",
+      "residual_eligible": true
+    }
+  ],
+  "human_gate_status": "pending",
+  "non_authoritative_score": null
+}
+```
