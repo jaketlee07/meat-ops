@@ -12,6 +12,17 @@
 -- before anything is granted.
 -- ============================================================
 
+-- Every operation locks a raw product's inventory_balances row before it
+-- touches batches or adjustments. Taking that table first keeps the same order,
+-- so an operation running while this applies waits for it, or it waits for the
+-- operation, and the two never deadlock. Plain reads still run. The CLI applies
+-- this file as one implicit transaction, not a transaction block, so the lock is
+-- taken inside a DO block; it holds until the file commits.
+do $$
+begin
+    lock table public.inventory_balances in exclusive mode;
+end $$;
+
 -- ------------------------------------------------------------
 -- 1. The order number
 -- ------------------------------------------------------------
@@ -185,19 +196,12 @@ grant execute on function public.void_receipt(uuid, text) to authenticated;
 -- 4. Balances already at 0 lbs take the rule now
 -- ------------------------------------------------------------
 
--- Each refresh holds the product's balance row before it reads the lots, as the
--- operations do, so a receipt saved while this runs is not overwritten.
+-- The table lock at the top keeps every operation out until this commits, so
+-- no receipt changes the lots a refresh reads.
 do $$
-declare
-    v_product uuid;
 begin
-    for v_product in
-        select b.product_id
-        from public.inventory_balances b
-        join public.products p on p.id = b.product_id
-        where p.kind = 'raw'
-    loop
-        perform 1 from public.inventory_balances where product_id = v_product for update;
-        perform private.refresh_balance(v_product);
-    end loop;
+    perform private.refresh_balance(b.product_id)
+    from public.inventory_balances b
+    join public.products p on p.id = b.product_id
+    where p.kind = 'raw';
 end $$;

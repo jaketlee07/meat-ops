@@ -37,7 +37,7 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
 
 ## T3: rows made before the migration get numbers in the order they were made
 
-- 2026-10-19, on stack B, after the folder check listed no folder, against `supabase/migrations/20261019195238_zero_stock_average.sql` with sha256 `87af2f1f54dda067cf08e2a6c0cf5cc28a2fc40f21c53c9c2da9fc2d2740d4f0`. This run replaces an earlier one against the migration before the round 1 review fixes, which gave the same numbers and average.
+- 2026-10-19, on stack B, after the folder check listed no folder, against `supabase/migrations/20261019195238_zero_stock_average.sql` with sha256 `0e3145cb3f2741bb347c9e0554ea4fc9fbd935abf27c48c676d1daed1c897038`, the file after the round 2 review fixes. Two earlier runs, against the file before the round 1 fixes and before the round 2 fixes, gave the same numbers and average.
 - The commands, in order:
   1. Move the migration file out of `supabase/migrations/`, then run `npm run db:reset:stack-b`, which applies the 13 migrations before it.
   2. Run part 1 below through `docker exec -i supabase_db_meat-ops-b psql -U postgres -v ON_ERROR_STOP=1 -q < part1.sql`, as `postgres`, which `private.assert_caller` lets through. psql autocommits, so each operation runs in its own transaction.
@@ -140,10 +140,10 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
 
   | Change | Made at (UTC) | Lot cost | `stock_seq` |
   | --- | --- | ---: | ---: |
-  | batch | 2026-10-19 20:52:03.847209 | 1.8000 | 1 |
-  | adjustment | 2026-10-19 20:52:03.850545 | 2.5000 | 2 |
-  | batch | 2026-10-19 20:52:03.851770 | 1.8000 | 3 |
-  | adjustment | 2026-10-19 20:52:03.853095 | 2.0000 | 4 |
+  | batch | 2026-10-19 21:21:10.780578 | 1.8000 | 1 |
+  | adjustment | 2026-10-19 21:21:10.782737 | 2.5000 | 2 |
+  | batch | 2026-10-19 21:21:10.783849 | 1.8000 | 3 |
+  | adjustment | 2026-10-19 21:21:10.784957 | 2.0000 | 4 |
 
 - AC-0015: the numbers rise in the order the rows were made.
 - AC-0017: after the migration, RAW-TOM had 0.000 lbs on hand at an average of 2.0000, the cost of the 2.00 lot the last adjustment took.
@@ -184,3 +184,17 @@ and the observed result. Work runs in the `meat-ops` folder on this Mac
   - `z.avg` in place of `coalesce(z.avg, 0)` in `test/db.ts` turned the no-change check case red.
 - For close-out: the spec's Objective, which is working material, still says the average at 0 lbs is the one the product would have with reversed batches never entered and corrected receipts entered at current values. That holds after voids alone. The ACs' definitions already fix the rule. The approved spec's hash is pinned during the build, so the Objective is corrected at close-out.
 - Gates after the fixes, after the folder check listed no folder: `npm run db:reset:stack-b` applied all 14 migrations, and `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 51 files and 1,034 tests passed, then the browser suite passed 655 tests in 9.9 minutes.
+
+## Review round 2 fixes
+
+- 2026-10-19. Round 2 sustained 2 nits, none refuted. Both were fixed.
+  - The deadlock fix is graded a concern, since it changes the migration's locking.
+- `docs/costing.md` no longer says a void lot was never drawn. It says, as invariant 6 does, that a void lot has no adjustment row and no consumption row of a batch that is not reversed.
+- The migration first takes `inventory_balances` in `exclusive` mode, inside a `DO` block, and step 4 is back to one set-based refresh.
+  - Every operation locks the raw product's balance row before it touches batches or adjustments, so the migration now takes its locks in the same order.
+  - A top-level `lock table` failed under `supabase migration up` with `LOCK TABLE can only be used in transaction blocks (SQLSTATE 25P01)`. The CLI applies the file as one implicit transaction, not a transaction block. That failed apply left no `stock_seq` column and no `schema_migrations` row.
+- Lock-order probe on stack B. Each run had the 13 earlier migrations, one RAW-TOM receipt, and a second session that held RAW-TOM's balance row for 4 seconds, then read `production_batches` and committed. `supabase migration up` started 1.5 seconds into the hold.
+  - The cd2b597 migration, sha256 `87af2f1f54dda067cf08e2a6c0cf5cc28a2fc40f21c53c9c2da9fc2d2740d4f0`, applied, and the holding session failed with `ERROR: deadlock detected`. It was waiting for an AccessShareLock on `production_batches` while the migration waited for its row.
+  - The fixed migration, sha256 `0e3145cb3f2741bb347c9e0554ea4fc9fbd935abf27c48c676d1daed1c897038`, applied, and the holding session committed with no error.
+- Receipt-in-flight probe with the fixed migration. A second session called `receive_lot` for 500 lbs at 2.40 and held the transaction for 4 seconds while the migration started. Afterwards RAW-TOM had 1,500.000 lbs on hand, equal to its lots' remaining lbs, at an average of 2.0000.
+- Gates after the fixes, after the folder check listed no folder: `npm run db:reset:stack-b` applied all 14 migrations, and `npm run typecheck` exited 0. `E2E_PORT=3200 npm test` exited 0: Vitest 51 files and 1,034 tests passed, then the browser suite passed 655 tests in 8.9 minutes.

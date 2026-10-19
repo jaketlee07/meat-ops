@@ -131,9 +131,10 @@ such change the average is 0, its value before any receipt.
 
 A void receipt and a reversed batch are never stock-lowering changes, and each
 lb is priced at its lot's current cost, so the order in which receipts are
-voided or corrected never changes the average. A void lot was never drawn or
-adjusted, so after voids alone the average is the one the product would have if
-the voided receipts had never been entered. The rule prices the lbs the last
+voided or corrected never changes the average. A void lot has no adjustment
+row and no consumption row of a batch that is not reversed, so after voids
+alone the average is the one the product would have if the voided receipts had
+never been entered. The rule prices the lbs the last
 change actually drew: a reversal or a weight correction does not re-run the
 draws of the batches made after it.
 
