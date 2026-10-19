@@ -393,6 +393,10 @@ begin
     if p_weight_lbs is null or p_weight_lbs = 'NaN'::numeric or p_weight_lbs <= 0 then
         raise exception 'correct_receipt: invalid weight, must be above 0';
     end if;
+    v_weight := round(p_weight_lbs, 3);
+    if v_weight <= 0 then
+        raise exception 'correct_receipt: invalid weight, must be above 0';
+    end if;
 
     select product_id into v_product from public.lots where id = p_lot_id;
     if not found then
@@ -408,10 +412,6 @@ begin
     end if;
 
     v_cost := round(p_unit_cost, 4);
-    v_weight := round(p_weight_lbs, 3);
-    if v_weight <= 0 then
-        raise exception 'correct_receipt: invalid weight, must be above 0';
-    end if;
     if v_cost = v_lot.current_unit_cost and v_weight = v_lot.current_weight_lbs then
         raise exception 'correct_receipt: invalid, nothing to correct';
     end if;

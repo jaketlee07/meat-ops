@@ -359,6 +359,8 @@ describe("catalog", () => {
       ["valid", reverseCall(fixture.batch2Id)],
       ["reversed batch (AC-0048)", reverseCall(fixture.batch1Id)],
       ["blank reason (AC-0049)", reverseCall(fixture.batch2Id, "  ")],
+      ["empty reason (AC-0049)", reverseCall(fixture.batch2Id, "")],
+      ["spaces, tabs, and line breaks reason (AC-0049)", reverseCall(fixture.batch2Id, " \t\r\n ")],
       ["null reason (AC-0049)", reverseCall(fixture.batch2Id, null)],
       ["unknown batch (AC-0049)", reverseCall(bad)],
     ];

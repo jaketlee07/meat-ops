@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { TypedClient } from "../src/lib/supabase.js";
 import {
@@ -13,6 +13,7 @@ import {
   correctCall,
   expectRefused,
   getInventoryBalance,
+  getOperatorId,
   idOf,
   ledgerViolations,
   produceCall,
@@ -22,13 +23,14 @@ import {
   resetTestData,
   saleCall,
   saleFixture,
+  sqlOf,
   tableFingerprints,
   voidReceiptCall,
   type OpCall,
   type SaleFixture,
 } from "./db.js";
 import { resolveStackEnv } from "./env.js";
-import { signInNonOperator, signInOperator } from "./users.js";
+import { NON_OPERATOR_EMAIL, signInNonOperator, signInOperator } from "./users.js";
 
 let operator: TypedClient;
 let nonOperator: TypedClient;
@@ -479,13 +481,14 @@ describe("correct_receipt", () => {
     const lotVoid = await callAsClient(operator, receiveCall(RAW_TOM_ID, VENDOR_ID, 100, 2, "2026-10-01"));
     expect((await callAsClient(operator, voidReceiptCall(idOf(lotVoid)))).ok).toBe(true);
     const bad = "00000000-0000-0000-0000-000000000099";
-    // JSON cannot carry NaN, so null stands for the bad cost and weight here.
     const calls: [string, OpCall][] = [
       ["valid", correctCall(fixture.lotBId, 1.9, 3000)],
       ["weight below the floor (AC-0023)", correctCall(fixture.lotBId, 1.8, 1999.999)],
       ["nothing to correct (AC-0026)", correctCall(fixture.lotAId, 1.68, 5000)],
       ["void lot (AC-0027)", correctCall(idOf(lotVoid), 2.5, 100)],
       ["blank reason (AC-0028)", correctCall(fixture.lotAId, 1.86, 5000, "  ")],
+      ["empty reason (AC-0028)", correctCall(fixture.lotAId, 1.86, 5000, "")],
+      ["spaces, tabs, and line breaks reason (AC-0028)", correctCall(fixture.lotAId, 1.86, 5000, " \t\r\n ")],
       ["null reason (AC-0028)", correctCall(fixture.lotAId, 1.86, 5000, null)],
       ["null cost (AC-0029)", correctCall(fixture.lotAId, null, 5000)],
       ["negative cost (AC-0029)", correctCall(fixture.lotAId, -1, 5000)],
@@ -501,9 +504,73 @@ describe("correct_receipt", () => {
     };
     for (const [label, call] of calls) await run(label, call);
 
+    // JSON cannot carry NaN, so these go through a pg session that carries the
+    // non-operator's claims, the same as the client's token would.
+    const nonOperatorId = String((await query("select id from auth.users where email = $1", [NON_OPERATOR_EMAIL]))[0]?.id);
+    const pool = new Pool({ connectionString: resolveStackEnv().dbUrl });
+    try {
+      for (const [label, call] of [
+        ["NaN cost (AC-0029)", correctCall(fixture.lotAId, "NaN", 5000)],
+        ["NaN weight (AC-0029)", correctCall(fixture.lotAId, 1.86, "NaN")],
+      ] as [string, OpCall][]) {
+        const before = await tableFingerprints();
+        const client = await pool.connect();
+        try {
+          await client.query("begin");
+          await client.query("set local role authenticated");
+          await client.query("select set_config('request.jwt.claims', $1, true)", [
+            JSON.stringify({ role: "authenticated", sub: nonOperatorId }),
+          ]);
+          const sql = sqlOf(call);
+          await expect(client.query(sql.text, sql.values), label).rejects.toMatchObject({ code: "42501" });
+        } finally {
+          await client.query("rollback").catch(() => undefined);
+          client.release();
+        }
+        expect(await tableFingerprints(), label).toEqual(before);
+      }
+    } finally {
+      await pool.end();
+    }
+
     // The AC-0024 state: lot B adjusted to 900 lbs, then 2,099.999 lbs.
     expect((await callAsClient(operator, adjustCall(fixture.lotBId, 900))).ok).toBe(true);
     await run("weight below the adjusted floor (AC-0024)", correctCall(fixture.lotBId, 1.8, 2099.999));
+  });
+});
+
+// ---- Argument checks come before the lock ----
+
+describe("argument checks before the lock", () => {
+  const pool = new Pool({ connectionString: resolveStackEnv().dbUrl });
+  afterAll(async () => {
+    await pool.end();
+  });
+
+  it("a weight above 0 that rounds to 0 is refused without waiting on the raw product's stock row", async () => {
+    const fixture = await setUp();
+    const holder = await pool.connect();
+    const session: PoolClient = await pool.connect();
+    try {
+      await holder.query("begin");
+      await holder.query(`select 1 from public.inventory_balances where product_id = '${RAW_TOM_ID}' for update`);
+      await session.query("begin");
+      await session.query("set local role authenticated");
+      await session.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ role: "authenticated", sub: await getOperatorId() }),
+      ]);
+      // A call that waited on the held row would fail with a lock timeout instead.
+      await session.query("set local lock_timeout = '1s'");
+      const sql = sqlOf(correctCall(fixture.lotBId, 1.9, 0.0004));
+      await expect(session.query(sql.text, sql.values)).rejects.toThrow(
+        "correct_receipt: invalid weight, must be above 0",
+      );
+    } finally {
+      await session.query("rollback").catch(() => undefined);
+      await holder.query("rollback").catch(() => undefined);
+      holder.release();
+      session.release();
+    }
   });
 });
 
