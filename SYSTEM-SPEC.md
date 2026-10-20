@@ -265,7 +265,10 @@ fractions, superscripts) with any "," or "." between two of them. A digest
 paragraph may hold only plain characters: printable ASCII, curly single and
 double quotes, the en dash, the em dash, the ellipsis, and a letter or number
 character the alerts' own text holds, never an invisible formatting character.
-One paragraph that holds any other character refuses the whole digest. The checks
+One paragraph that holds any other character refuses the whole digest, so while an
+alert is open on a product whose code holds a character a digest may not copy (a
+symbol such as "°" or "®", a non-breaking space, or a combining mark), no
+digest can be written. The checks
 do not catch a sign or unit the model adds, a figure written in words, or a letter
 beside a digit; the alert list under the digest always shows the engine's own
 figures. Every alert carries

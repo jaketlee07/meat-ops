@@ -1,6 +1,6 @@
 # List price change history for price-stale alerts
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
