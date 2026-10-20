@@ -141,3 +141,32 @@ it("AC-0004, AC-0005: the void's write gets no answer, so the void may have happ
   });
   expect(lines).toEqual([["voidReceipt failed at write: voidReceipt failed: TypeError: fetch failed"]]);
 });
+
+it("AC-0001: the saved receipt carries the lot the engine wrote, not the form's values", async () => {
+  const written = { ...lot, vendor_id: "v2", received_date: "2026-10-07", weight_lbs: 499.5, unit_cost: 1.9 } as Lot;
+  const { result } = await logged(() =>
+    decideReceiptSave(
+      new FormData(),
+      saveDeps({
+        readBefore: async () => ({ ...ready, vendors: [...ready.vendors, { id: "v2", name: "Bayside Meats" }] }),
+        write: async () => written,
+        readAfter: async () => {
+          throw new Error("getStock failed: fetch failed");
+        },
+      }),
+    ),
+  );
+  expect(result).toEqual({
+    status: "saved",
+    lot: {
+      lotNumber: "L-0003",
+      productCode: "RAW-TOM",
+      productDescription: "Turkey Drums TOM (raw)",
+      vendorName: "Bayside Meats",
+      receivedDate: "2026-10-07",
+      weightLbs: 499.5,
+      unitCost: 1.9,
+    },
+    totals: null,
+  });
+});

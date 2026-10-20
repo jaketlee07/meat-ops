@@ -106,11 +106,11 @@ function voidFailed(error: unknown, stage: FailureStage): VoidState {
   return { status: "refused", message: voidFailureMessage(error, stage) };
 }
 
-// A server action is a public POST endpoint, so every argument is caller input.
-// It settles who is calling first, then the form rules, then calls the engine
-// with the signed-in session. The engine stays the authority on every refusal.
-// A failure before the write call says the receipt wasn't saved; a write call
-// that got no answer says it may not have been (src/lib/failures.ts).
+// Settles who is calling first, then the reads before the write and the form
+// rules, then the write, then the reads after it. The engine stays the authority
+// on every refusal. A failure before the write call says the receipt wasn't
+// saved; a write call that got no answer says it may not have been
+// (src/lib/failures.ts). A write that returned is a save even if the reads after it fail.
 export async function decideReceiptSave<C>(formData: FormData, deps: ReceiptSaveDeps<C>): Promise<SaveState> {
   // Who is calling comes before any rule that reads through row-level security,
   // so a non-operator never sees a field error built from rows it cannot read.

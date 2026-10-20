@@ -109,3 +109,26 @@ Recorded by the controller with scripts in the ignored `.context/recorded-run/` 
 4. `checkPageState` passed in that state with the T2 scorer and returned `["button Trying again…"]` (AC-0012).
 5. `supabase_rest_meat-ops` was started again, 12.4 seconds after it stopped, and answered.
 - Deviation: releasing the held request failed with Playwright's "Route is already handled!", so the script stopped before its own form check. The service was not stopped again. A second script, `t4-recovery.spec.ts`, stopped nothing, signed in, and loaded `/receiving`, and the form showed at 19:51:46 UTC.
+
+## Post-gates review, round 1 (2026-10-20)
+
+Reviewers on `git diff 43e1ffa..30f9deb`, each report adjudicated except the frontend Nit (artifacts under `.context/reviews/1b10bd71-9fab-402c-a99f-0fc179f197a2/1-post-gates-*`):
+
+- adversarial-reviewer: 4 Nits sustained (a construction-case title claimed full strength, the AC-0001 fixture's lot matched its input, the AC-0008 fixtures faded only the direct parent, the overview row did not say where the receipt form rules run); 1 indeterminate, settled by the owner below.
+- quality-engineer: 4 Nits sustained (the same AC-0008 and AC-0001 gaps, a see-through ring could not tell multiplied from replaced alpha, and the decision's comment repeated the wrapper's endpoint sentence); the AC-0008 one was lowered from Concern.
+- frontend-reviewer: 1 Nit, deferred and not adjudicated. The red fade (`aria-disabled:bg-error/60`, Void sale and Reverse batch) is never scored while faded and focused, since no test runs the page-state checks in those dialog states. It is outside the accepted contract: AC-0011 names its seven states, and a sales or production test change is not in the plan's Touches. The AC-0010 counts and pairing check cover the class.
+- Owner decision, in chat on 2026-10-20: the T4 record settles "confirms the form comes back" with one more short stop of stack A's REST service, watching the held Try again retry bring the form back (below).
+- Review state: `findings-remain` (seq 18) and `review record` round 1 with 5 fingerprints: the four sustained quality findings and the adversarial adjudication's digest for its owner-settled indeterminate.
+
+### Round 1 fixes
+
+- `test/e2e/focus-ring.spec.ts`, below the 55 pinned lines (still hashing to the plan's digest): the construction case is retitled to what it asserts; a new AC-0007 case gives a faded control a see-through ring (alpha 0.5 at opacity 0.6) and expects "outline contrast is 1.63:1, under 3:1"; three new AC-0008 cases wrap the button's opaque parent in a `section` carrying a filter, a blend mode, or opacity 0.9.
+- `test/save-receipt.test.ts`, below the 143 pinned lines (still hashing to the plan's digest): a new AC-0001 case writes a lot whose vendor, date, weight, and cost differ from the form input, and expects the lot's values.
+- `src/app/receiving/save-receipt.ts`: the decision's comment states its own order, as the sibling decisions do; the endpoint sentence stays on the wrapper only. No code changed.
+- `docs/architecture/overview.md`: the `src/app/` row says `receiving/actions.ts` runs the receipt form rules, the recheck product-list choice, and the product lookup inside its `readBefore` call.
+- Each new case is red against the change it guards, each change made alone and undone (the files compared equal to their copies afterwards). The scorer spec ran alone under `.context/recorded-run/focus-ring.config.ts`, with no app:
+  - M7, the ancestor check reads only the direct parent: the three new AC-0008 cases failed, 8 passed.
+  - M8, the ancestor check stops at the first opaque background: the same three failed, 8 passed.
+  - M9, the ring alpha is replaced by the opacity: only the see-through case failed, 10 passed.
+  - M10, the saved lot takes the form input: only the new AC-0001 case failed, 4 passed.
+- With the fixes, the scorer spec passed 11 of 11 and `test/save-receipt.test.ts` 5 of 5.
