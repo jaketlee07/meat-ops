@@ -35,7 +35,7 @@ export function PageError({ heading, extra, retry }: { heading: string; extra?: 
           setTrying(true);
           retry();
         }}
-        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
       >
         {trying ? "Trying again…" : "Try again"}
       </button>

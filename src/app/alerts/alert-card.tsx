@@ -68,7 +68,7 @@ export function AlertCard({ alert, onResult }: { alert: OpenAlert; onResult: (st
               <button
                 type="submit"
                 aria-disabled={pending !== null ? true : undefined}
-                className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+                className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
               >
                 {nextStep}
               </button>
@@ -97,7 +97,7 @@ export function AlertCard({ alert, onResult }: { alert: OpenAlert; onResult: (st
             type="submit"
             aria-label={`Dismiss ${title}`}
             aria-disabled={pending !== null ? true : undefined}
-            className="w-full rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:opacity-60"
+            className="w-full rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
           >
             Dismiss
           </button>

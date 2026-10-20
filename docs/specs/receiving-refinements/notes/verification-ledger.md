@@ -52,3 +52,27 @@ Four rounds, each after the first over the delta since the previous one:
 - **Gates:** see the lines below.
   - The `AGENTS.md` folder check listed no folder before the run. `npm run typecheck` exited 0.
   - `npm test` exited 0 in 18 minutes 25 seconds (13:10:25 to 13:28:50): Vitest 52 files and 1038 tests passed; Playwright 655 passed (15.0 minutes). No rerun was needed.
+
+## T3 (2026-10-20)
+
+- **Change:** each `aria-disabled:opacity-60` became color-alpha classes. Every `disabled:opacity-60` is untouched (`receipt-form.tsx` line 385 keeps its first). `globals.css` is untouched.
+- **AC-0009:** `grep -rn "aria-disabled:opacity" src` printed nothing (exit 1).
+- **AC-0010, first command, verbatim:**
+  ```
+  bg-primary/60 12
+  bg-error/60 2
+  text-ink/60 5
+  border-field-border/60 5
+  ```
+  **Second command:** printed nothing.
+- **The 18 base strings** (`git grep -n "aria-disabled:opacity-60" 9b37639 -- src`), by `file:line` at `9b37639`:
+  - Filled `bg-primary`, replaced by `aria-disabled:bg-primary/60` (11 lines): `alerts/alert-card.tsx:71`, `alerts/digest-section.tsx:108`, `ask/ask-panel.tsx:19`, `invoices/read-forms.tsx:27`, `page-error.tsx:38`, `pricing/apply-button.tsx:54`, `production/check-step.tsx:95`, `production/production-form.tsx:376`, `receiving/correct-dialog.tsx:358`, `receiving/receipt-form.tsx:385` (its `disabled:opacity-60` kept), `sales/sale-form.tsx:348`.
+  - Filled `bg-error`, replaced by `aria-disabled:bg-error/60` (2 lines): `production/reverse-control.tsx:309`, `sales/void-dialog.tsx:187`.
+  - Outlined, replaced by `aria-disabled:text-ink/60 aria-disabled:border-field-border/60` (4 lines): `alerts/alert-card.tsx:100`, `ask/ask-panel.tsx:21`, `production/check-step.tsx:69`, `sales/void-dialog.tsx:147`.
+  - `pricing/change-form.tsx:11` (shared `BUTTON`) lost the fade. The filled button's template gained `aria-disabled:bg-primary/60` (12th `bg-primary/60`). The outlined button's template gained `aria-disabled:text-ink/60 aria-disabled:border-field-border/60` (5th outlined pair).
+- **Gates:** the folder check listed no folder. `npm run typecheck` exited 0.
+  - `npm test` run 1 (13:30:58 to 13:54:32, 23 min 34 s): exit 1. Vitest 52 files and 1038 tests passed. Playwright 654 passed, 1 failed: `receiving.spec.ts:315` (blank-weight refusal page state), axe `document-title: html`. A page with no title is not a fade effect.
+  - Run 2 (13:54:41 to 14:03:03): exit 1. Vitest 1 failed of 1038: `test/invoice-data.test.ts` AC-0031 timed out at 5000 ms. Playwright did not start.
+  - Run 3 (14:03:14 to 14:12:20): exit 1, the same single Vitest timeout.
+  - `npx vitest run test/invoice-data.test.ts` alone fails the same way (31.9 s), and also with the T3 diff stashed (31.7 s). So the timeout is not from T3.
+  - Cause found: the local stack's catalog bloat from the local-stack memory note. `pg_class` holds 452,919 dead rows and the Realtime slot `cainophile_yling60b` is 52,949 transactions behind. The owner-approved fix (end the slot backend, `vacuum pg_class`) was not run, because approval is asked each time.

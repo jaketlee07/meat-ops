@@ -306,7 +306,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
             <button
               type="submit"
               aria-disabled={pending ? true : undefined}
-              className="w-full rounded-md bg-error px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+              className="w-full rounded-md bg-error px-4 text-base font-medium text-on-primary aria-disabled:bg-error/60"
             >
               Reverse batch
             </button>

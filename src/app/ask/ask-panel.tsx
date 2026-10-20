@@ -16,9 +16,9 @@ import { PARAM_FIELD, QUERY_FIELD, QUESTION_FIELD } from "./form-fields";
 
 const IDLE: AskState = { status: "idle" };
 const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
-const BUTTON = "w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60";
+const BUTTON = "w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60";
 const CHOICE_BUTTON =
-  "w-full break-words rounded-md border border-field-border bg-surface px-4 py-2 text-left text-base font-medium text-ink aria-disabled:opacity-60";
+  "w-full break-words rounded-md border border-field-border bg-surface px-4 py-2 text-left text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60";
 const LINK =
   "inline-flex min-h-control min-w-control items-center rounded-md px-3 text-base font-medium text-primary underline";
 

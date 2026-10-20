@@ -144,7 +144,7 @@ export function VoidDialog({ saleId, saleNumber, productCode, lbs, customer, voi
               onClick={() => {
                 if (!pending) dialogRef.current?.close();
               }}
-              className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:opacity-60"
+              className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
             >
               Cancel
             </button>
@@ -184,7 +184,7 @@ export function VoidDialog({ saleId, saleNumber, productCode, lbs, customer, voi
             onClick={(event) => {
               if (pending) event.preventDefault();
             }}
-            className="w-full rounded-md bg-error px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+            className="w-full rounded-md bg-error px-4 text-base font-medium text-on-primary aria-disabled:bg-error/60"
           >
             Void sale
           </button>
