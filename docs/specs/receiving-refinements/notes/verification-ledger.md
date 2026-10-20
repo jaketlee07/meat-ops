@@ -33,3 +33,22 @@ Four rounds, each after the first over the delta since the previous one:
 ## Project knowledge
 
 - Capture not attempted at the spec and plan gates: the store refused captures in earlier sessions (`staged_dual_writer`). Reusable lessons go to the session memory instead.
+
+## T1 (2026-10-20)
+
+- **Stub:** `test/save-receipt.test.ts` is the plan's T1 block, 143 lines. `shasum -a 256` prints `576ea623265efab28e7576a486e8cd3930208375ddfba706fc985e5d469184dc`, the plan's digest.
+- **Red:** before any production code, `npx vitest run test/save-receipt.test.ts` exited 1 with `Error: Cannot find module '../src/app/receiving/save-receipt.js' imported from /Users/jakelee/Developer/meat-ops/test/save-receipt.test.ts` (0 tests ran).
+- **Green:** after the build, 4 passed (4), stub unchanged.
+- **Reuse search:** `sales/save-sale.ts` (`CallerOutcome`, the decision shape) and `receiving/actions.ts`'s own `caller()` adapter were reused. `logMessage` was not used for the after-write line, because the stub's two-line error must reach the log whole, as at base `9b37639`. Stopped at rung 2.
+- **Wiring:** `readBeforeWrite` is the `readBefore` dep. `saveReceipt` revalidates only when the state is `saved` with totals. `voidReceipt` revalidates only on `voided`. The wrapper coerces non-string `lotId` and `reason` to `""` before the decision, as the base did. No outer catch was added.
+- **AC-0006 mutations**, each made alone in `src/app/receiving/save-receipt.ts`, run with `npx vitest run test/save-receipt.test.ts`, then undone. After M6, `diff` against a copy of the file made before M1 printed nothing, and `git status` shows no stray change.
+  - M1 (after-write catch returns `refused("x")`): 1 failed, 3 passed. AC-0001 test, at `expect(result).toEqual({` (received `{ status: "refused", message: "x" }`).
+  - M2 (save write catch passes `"before-write"`): 2 failed. AC-0002 and AC-0003 tests, each at `expect(result).toEqual({` (message "The receipt wasn't saved. Try again in a moment.").
+  - M3 (void write catch passes `"before-write"`): 1 failed. AC-0004 test, at `expect(result).toEqual({` (message "The receipt wasn't voided. Try again in a moment.").
+  - M4 (only the save log line takes `"before-write"`): 2 failed. AC-0002 and AC-0003 tests, each at `expect(lines).toEqual([` (received "saveReceipt failed at before-write: ...").
+  - M5 (only the void log line takes `"before-write"`): 1 failed. AC-0004 test, at `expect(lines).toEqual([` (received "voidReceipt failed at before-write: ...").
+  - M6 (after-write log text changed to "reading totals failed"): 1 failed. AC-0001 test, at `expect(lines).toEqual([` (the result assertion above it passed).
+- **Overview:** the `src/app/` row names `receiving/save-receipt.ts` for `saveReceipt` and `voidReceipt`; the `test/` row lists `save-receipt` among the receiving suites.
+- **Gates:** see the lines below.
+  - The `AGENTS.md` folder check listed no folder before the run. `npm run typecheck` exited 0.
+  - `npm test` exited 0 in 18 minutes 25 seconds (13:10:25 to 13:28:50): Vitest 52 files and 1038 tests passed; Playwright 655 passed (15.0 minutes). No rerun was needed.

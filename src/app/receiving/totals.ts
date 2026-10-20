@@ -1,6 +1,6 @@
 import type { FinishedPrice, ProductStock } from "../../lib/receiving";
 import { priceView } from "../stock-view";
-import type { PriceChange } from "./actions";
+import type { PriceChange } from "./save-receipt";
 
 // The suggested price of each finished product made from a raw product, before
 // and after a change to its lots. Each figure is a read from the database.
