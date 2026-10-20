@@ -1,6 +1,6 @@
 # Receiving test-tool refinements
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
