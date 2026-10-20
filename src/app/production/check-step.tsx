@@ -66,7 +66,7 @@ export function CheckStep({ input, product, saving, onClose, onConfirm }: Props)
             onClick={() => {
               if (!saving) dialogRef.current?.close();
             }}
-            className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:opacity-60"
+            className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
           >
             Go back
           </button>
@@ -92,7 +92,7 @@ export function CheckStep({ input, product, saving, onClose, onConfirm }: Props)
           onClick={() => {
             if (!saving) onConfirm();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
         >
           Save batch
         </button>

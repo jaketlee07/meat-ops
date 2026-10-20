@@ -24,7 +24,7 @@ const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surf
 const FILE_BUTTON =
   "file:mr-3 file:rounded-md file:border file:border-field-border file:bg-surface file:px-3 file:py-1 file:text-base file:font-medium file:text-ink";
 const BUTTON =
-  "w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60";
+  "w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60";
 
 type Press =
   | { source: "photo"; file: File | undefined; today: string }

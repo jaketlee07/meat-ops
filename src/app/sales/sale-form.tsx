@@ -345,7 +345,7 @@ export function SaleForm({ products, customers }: Props) {
           onClick={(event) => {
             if (blocked || pending) event.preventDefault();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
         >
           Save sale
         </button>

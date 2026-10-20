@@ -2,17 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { CorrectionFields } from "../../lib/correction-input";
-import {
-  actionFailureLogLine,
-  correctionFailureMessage,
-  NOT_ALLOWED,
-  NOT_SAVED,
-  NOT_VOIDED,
-  saveFailureMessage,
-  voidFailureMessage,
-  type FailureStage,
-} from "../../lib/failures";
-import { parseReceiptForm, parseVoidReason, type ReceiptField } from "../../lib/receipt-input";
+import { actionFailureLogLine, correctionFailureMessage } from "../../lib/failures";
+import { parseReceiptForm } from "../../lib/receipt-input";
 import {
   getLatestCorrectionReason,
   getLotFigures,
@@ -23,74 +14,22 @@ import {
   listRawProducts,
   listVendors,
 } from "../../lib/receiving";
-import { correctReceipt as correctReceiptCall, receiveLot, voidReceipt as voidReceiptCall, type Lot } from "../../lib/rpc";
+import { correctReceipt as correctReceiptCall, receiveLot, voidReceipt as voidReceiptCall } from "../../lib/rpc";
 import type { TypedClient } from "../../lib/supabase";
 import { checkCaller } from "../_server/caller";
 import { type CallerOutcome } from "../sales/save-sale";
-import { stockView, type StockView } from "../stock-view";
 import { decideCorrection, type CorrectionSnapshot, type CorrectionState } from "./correct-receipt";
 import { readFields, readRecheck } from "./form-fields";
-import { priceChanges } from "./totals";
+import {
+  decideReceiptSave,
+  decideReceiptVoid,
+  type ReceiptBeforeWrite,
+  type SaveState,
+  type VoidState,
+} from "./save-receipt";
 
 export type { CorrectionState } from "./correct-receipt";
-
-export interface SavedLot {
-  lotNumber: string;
-  productCode: string;
-  productDescription: string;
-  vendorName: string;
-  receivedDate: string;
-  weightLbs: number;
-  unitCost: number;
-}
-
-export interface PriceChange {
-  code: string;
-  description: string;
-  // Null where there is no price to show.
-  before: number | null;
-  after: number | null;
-}
-
-export interface Totals {
-  stock: { before: StockView; after: StockView };
-  prices: PriceChange[];
-}
-
-export type SaveState =
-  | { status: "idle" }
-  // An AC-0010 rule refused the form; nothing reached the database.
-  | { status: "invalid"; fieldErrors: Partial<Record<ReceiptField, string>> }
-  // The caller or the database refused the save; the message says why.
-  | { status: "refused"; message: string }
-  // Totals are null only when the lot is written but the second read failed.
-  | { status: "saved"; lot: SavedLot; totals: Totals | null };
-
-export type VoidState =
-  // The reason rule refused the form (AC-0051); nothing reached the database.
-  | { status: "invalid"; error: string }
-  // The caller or the database refused the void; the message says why.
-  | { status: "refused"; message: string }
-  | { status: "voided" };
-
-const SIGNED_OUT = "You're signed out. Sign in again to save this receipt.";
-const VOID_SIGNED_OUT = "You're signed out. Sign in again to void this receipt.";
-
-function refused(message: string): SaveState {
-  return { status: "refused", message };
-}
-
-// A failure that becomes a screen message also leaves one server log line, so a
-// message that reads "Try again in a moment." on every try can still be traced.
-function saveFailed(error: unknown, stage: FailureStage): SaveState {
-  console.error(actionFailureLogLine("saveReceipt", stage, error));
-  return refused(saveFailureMessage(error, stage));
-}
-
-function voidFailed(error: unknown, stage: FailureStage): VoidState {
-  console.error(actionFailureLogLine("voidReceipt", stage, error));
-  return { status: "refused", message: voidFailureMessage(error, stage) };
-}
+export type { SaveState, Totals, VoidState } from "./save-receipt";
 
 // Everything a save reads before its write call, in one place so a single catch
 // maps a failure in any of those calls. For a code the page knew, the save rules
@@ -100,11 +39,11 @@ function voidFailed(error: unknown, stage: FailureStage): VoidState {
 // products as of now: an inactive code gets the field message, and one made
 // active since the page loaded saves. The mark only picks which message a
 // refused code gets; the engine refuses an inactive product either way.
-async function readBeforeWrite(supabase: TypedClient, formData: FormData) {
+async function readBeforeWrite(supabase: TypedClient, formData: FormData): Promise<ReceiptBeforeWrite> {
   const rawProducts = readRecheck(formData) ? await listActiveRawProducts(supabase) : await listRawProducts(supabase);
   const byCode = new Map(rawProducts.map((product) => [product.code, product]));
   const parsed = parseReceiptForm(readFields(formData), new Set(byCode.keys()));
-  if (!parsed.ok) return { ok: false as const, errors: parsed.errors };
+  if (!parsed.ok) return { ok: false, errors: parsed.errors };
   const input = parsed.value;
   const product = byCode.get(input.productCode);
   // Unreachable while the parse takes these codes. The message holds no form text, because it reaches the log.
@@ -116,112 +55,50 @@ async function readBeforeWrite(supabase: TypedClient, formData: FormData) {
     listFinishedPrices(supabase, product.id),
     listVendors(supabase),
   ]);
-  return { ok: true as const, input, product, stockBefore, pricesBefore, vendors };
+  return { ok: true, input, product, stockBefore, pricesBefore, vendors };
 }
 
 // A server action is a public POST endpoint, so every argument is caller input.
-// It settles who is calling first, then the form rules, then calls the engine
-// with the signed-in session. The engine stays the authority on every refusal.
-// A failure before the write call says the receipt wasn't saved; a write call
-// that got no answer says it may not have been (src/lib/failures.ts).
+// The decision (save-receipt.ts) settles the caller first, then the form rules,
+// then calls the engine with the signed-in session; this wires the real calls.
 export async function saveReceipt(formData: FormData): Promise<SaveState> {
-  // Who is calling comes before any rule that reads through row-level security,
-  // so a non-operator never sees a field error built from rows it cannot read.
-  const caller = await checkCaller();
-  if (caller.status === "ended") return refused(SIGNED_OUT);
-  if (caller.status === "not-operator") return refused(`${NOT_SAVED} ${NOT_ALLOWED}`);
-  if (caller.status === "failed") return saveFailed(caller.error, "before-write");
-  const { supabase } = caller;
-
-  let prior;
-  try {
-    prior = await readBeforeWrite(supabase, formData);
-  } catch (error) {
-    return saveFailed(error, "before-write");
-  }
-  if (!prior.ok) return { status: "invalid", fieldErrors: prior.errors };
-  const { input, product, stockBefore, pricesBefore, vendors } = prior;
-
-  let lot: Lot;
-  try {
-    lot = await receiveLot(supabase, {
-      productId: product.id,
-      vendorId: input.vendorId,
-      weightLbs: input.weightLbs,
-      unitCost: input.unitCost,
-      received: input.receivedDate,
-      notes: input.notes,
-    });
-  } catch (error) {
-    return saveFailed(error, "write");
-  }
-
-  // The lot is written. If this read fails, say so rather than throw: an error
-  // would read as "not saved" and invite a second, duplicate receipt.
-  let totals: Totals | null = null;
-  try {
-    const [stockAfter, pricesAfter] = await Promise.all([
-      getStock(supabase, product.id),
-      listFinishedPrices(supabase, product.id),
-    ]);
-    totals = {
-      stock: { before: stockView(stockBefore), after: stockView(stockAfter) },
-      prices: priceChanges(
-        { stock: stockBefore, prices: pricesBefore },
-        { stock: stockAfter, prices: pricesAfter },
-      ),
-    };
-  } catch (error) {
-    // The error's message only: the log must hold no row data.
-    const reason = error instanceof Error ? error.message : "unknown error";
-    console.error(`saveReceipt: reading the totals after the write failed: ${reason}`);
-    totals = null;
-  }
-
+  const state = await decideReceiptSave(formData, {
+    caller,
+    readBefore: readBeforeWrite,
+    write: (client, { product, input }) =>
+      receiveLot(client, {
+        productId: product.id,
+        vendorId: input.vendorId,
+        weightLbs: input.weightLbs,
+        unitCost: input.unitCost,
+        received: input.receivedDate,
+        notes: input.notes,
+      }),
+    readAfter: async (client, { product }) => {
+      const [stockAfter, pricesAfter] = await Promise.all([
+        getStock(client, product.id),
+        listFinishedPrices(client, product.id),
+      ]);
+      return { stockAfter, pricesAfter };
+    },
+  });
   // A page render that follows a failed read would swap the form for the error
   // page and lose this panel, so the page is revalidated only once the totals
   // loaded. Otherwise the panel keeps the lot and says to reload.
-  if (totals) revalidatePath("/receiving");
-  return {
-    status: "saved",
-    lot: {
-      lotNumber: lot.lot_number,
-      productCode: product.code,
-      productDescription: product.description,
-      vendorName: vendors.find((vendor) => vendor.id === lot.vendor_id)?.name ?? "Unknown vendor",
-      receivedDate: lot.received_date,
-      weightLbs: lot.weight_lbs,
-      unitCost: lot.unit_cost,
-    },
-    totals,
-  };
+  if (state.status === "saved" && state.totals) revalidatePath("/receiving");
+  return state;
 }
 
 // Voids one untouched receipt. The lot id is bound to the action where the list
 // renders, and the reason comes from the dialog; a request can carry any value
-// for either, so both are caller input. The engine decides whether the lot is
-// still untouched, and its refusal is shown as is. A void has one call before
-// the write call, the caller check; a write call that got no answer says the
-// receipt may not have been voided (src/lib/failures.ts).
+// for either, so both are caller input. The decision is in save-receipt.ts.
 export async function voidReceipt(lotId: string, reason: string): Promise<VoidState> {
-  const caller = await checkCaller();
-  if (caller.status === "ended") return { status: "refused", message: VOID_SIGNED_OUT };
-  if (caller.status === "not-operator") {
-    return { status: "refused", message: `${NOT_VOIDED} ${NOT_ALLOWED}` };
-  }
-  if (caller.status === "failed") return voidFailed(caller.error, "before-write");
-
-  const parsed = parseVoidReason(typeof reason === "string" ? reason : "");
-  if (!parsed.ok) return { status: "invalid", error: parsed.error };
-
-  try {
-    await voidReceiptCall(caller.supabase, typeof lotId === "string" ? lotId : "", parsed.value);
-  } catch (error) {
-    return voidFailed(error, "write");
-  }
-
-  revalidatePath("/receiving");
-  return { status: "voided" };
+  const state = await decideReceiptVoid(typeof lotId === "string" ? lotId : "", typeof reason === "string" ? reason : "", {
+    caller,
+    write: voidReceiptCall,
+  });
+  if (state.status === "voided") revalidatePath("/receiving");
+  return state;
 }
 
 async function caller(): Promise<CallerOutcome<TypedClient>> {

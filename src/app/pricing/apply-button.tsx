@@ -51,7 +51,7 @@ export function ApplyButton({
       <button
         type="submit"
         aria-disabled={pending ? true : undefined}
-        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
       >
         {priceButtonName(action, suggestedListPrice)}
       </button>

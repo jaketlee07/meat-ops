@@ -382,7 +382,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
           onClick={(event) => {
             if (blocked) event.preventDefault();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary disabled:opacity-60 aria-disabled:opacity-60"
+          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary disabled:opacity-60 aria-disabled:bg-primary/60"
         >
           Save
         </button>

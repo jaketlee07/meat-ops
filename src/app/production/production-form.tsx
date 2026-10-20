@@ -373,7 +373,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
           onClick={(event) => {
             if (blocked) event.preventDefault();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
         >
           Save
         </button>

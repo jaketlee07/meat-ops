@@ -105,7 +105,7 @@ export function DigestSection({ page }: { page: Exclude<DigestPage, { kind: "no-
             focusRef.current = true;
             void send(false);
           }}
-          className="mt-3 w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:opacity-60"
+          className="mt-3 w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
         >
           Try again
         </button>
