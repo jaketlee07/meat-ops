@@ -132,3 +132,10 @@ Reviewers on `git diff 43e1ffa..30f9deb`, each report adjudicated except the fro
   - M9, the ring alpha is replaced by the opacity: only the see-through case failed, 10 passed.
   - M10, the saved lot takes the form input: only the new AC-0001 case failed, 4 passed.
 - With the fixes, the scorer spec passed 11 of 11 and `test/save-receipt.test.ts` 5 of 5.
+- Gates on `1cc119e`, by the controller: catalog fix 3 first (`pg_class` 101,811 dead rows and the slot 11,179 behind, then 0 and 3). `npm run typecheck` exited 0. `npm test` exited 0 in 666 s, with Vitest 52 files and 1039 tests passed and Playwright 666 passed (10.3 minutes).
+
+### T4 run 2, the owner-approved second stop
+
+- The same `t4-error-page.spec.ts`, its held-request release now ignoring a request Next.js already dropped, ran against the build from that `npm test` on port 3300. `supabase_rest_meat-ops` was stopped at 20:34:42 UTC for 11.7 seconds.
+- The steps matched run 1. The error page showed "Receiving" and "Couldn't load this page.", and the Try again request was held. The button read "Trying again…" with `aria-disabled="true"`, and `checkPageState` passed with `["button Trying again…"]` (AC-0012).
+- With the REST service started again and the held request let go, the error page's own retry brought the form back: the "Product code" field showed within 15 seconds, with no second press and no reload. The run passed (1 of 1, 14.9 s), and the app was stopped by its process group.
