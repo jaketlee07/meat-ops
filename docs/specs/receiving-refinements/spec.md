@@ -1,6 +1,6 @@
 # Spec: receiving-refinements
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the intent [`docs/product/intents/receiving-test-refinements.md`](../../product/intents/receiving-test-refinements.md) (its Outcome and Boundary); the receiving spec [`../receiving/spec.md`](../receiving/spec.md) (AC-0012, AC-0031, AC-0071, AC-0072, AC-0073, and AC-0083); the failure texts and log-line format in `src/lib/failures.ts`; [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §11; the `AGENTS.md` hard rules
@@ -97,26 +97,26 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 
 ### Save and void decisions
 
-- [ ] **AC-0001.** When a save's write call returns the written lot and a read after the write fails, the save's result is a save, not a refusal. It carries the written lot's receiving AC-0012 fields, and it carries no totals.
-- [ ] **AC-0002.** When a save's write call is refused with SQLSTATE `42501`, the save's result is the refusal "The receipt wasn't saved. This account isn't allowed to use Meat Ops."
-- [ ] **AC-0003.** When a save's write call fails with no answer from the engine (an error with no code), the save's result is a refusal with the receiving AC-0071 message, as receiving AC-0072 requires.
-- [ ] **AC-0004.** When a void's write call fails with no answer from the engine (an error with no code), the void's result is a refusal with the receiving AC-0073 message, as receiving AC-0083 requires.
-- [ ] **AC-0005.** Each outcome in AC-0001 to AC-0004 makes exactly one `console.error` call on the server. For AC-0002 and AC-0003 it logs the line `src/lib/failures.ts` gives for a `saveReceipt` failure at the `write` stage, and for AC-0004 the line it gives for a `voidReceipt` failure at the `write` stage. For AC-0001 it logs "saveReceipt: reading the totals after the write failed: " followed by the failed read's whole message, not passed through `logMessage` in `src/lib/failures.ts`, as at base `9b37639`.
-- [ ] **AC-0006.** The test of each of AC-0001 to AC-0005 is red against a change to the branch it covers, with each change made alone:
+- [x] **AC-0001.** When a save's write call returns the written lot and a read after the write fails, the save's result is a save, not a refusal. It carries the written lot's receiving AC-0012 fields, and it carries no totals.
+- [x] **AC-0002.** When a save's write call is refused with SQLSTATE `42501`, the save's result is the refusal "The receipt wasn't saved. This account isn't allowed to use Meat Ops."
+- [x] **AC-0003.** When a save's write call fails with no answer from the engine (an error with no code), the save's result is a refusal with the receiving AC-0071 message, as receiving AC-0072 requires.
+- [x] **AC-0004.** When a void's write call fails with no answer from the engine (an error with no code), the void's result is a refusal with the receiving AC-0073 message, as receiving AC-0083 requires.
+- [x] **AC-0005.** Each outcome in AC-0001 to AC-0004 makes exactly one `console.error` call on the server. For AC-0002 and AC-0003 it logs the line `src/lib/failures.ts` gives for a `saveReceipt` failure at the `write` stage, and for AC-0004 the line it gives for a `voidReceipt` failure at the `write` stage. For AC-0001 it logs "saveReceipt: reading the totals after the write failed: " followed by the failed read's whole message, not passed through `logMessage` in `src/lib/failures.ts`, as at base `9b37639`.
+- [x] **AC-0006.** The test of each of AC-0001 to AC-0005 is red against a change to the branch it covers, with each change made alone:
   - For AC-0001, a failed read after the write ends the save as a refusal.
   - For AC-0002, AC-0003, and AC-0004, a failed write call counts as a failure of a call before the write.
   - For AC-0005, only a logged line changes and the result stays the same, and the named tests are red at their log assertion: the stage in the save's write line (the AC-0002 and AC-0003 tests), the stage in the void's write line (the AC-0004 test), and the text of the after-write line (the AC-0001 test).
 
 ### Focus ring scoring
 
-- [ ] **AC-0007.** In every page state the browser suite checks, the page-state check fails unless each focused control's ring, as drawn, has a contrast of at least 3:1 against the background behind it. The drawn color is the control's computed outline color, with its alpha multiplied by the control's computed opacity, laid over the background behind the ring. An `aria-disabled` button at opacity 0.6, with the ring color `rgb(29, 78, 216)`, on a white page fails the check with "outline contrast is 2.90:1, under 3:1".
-- [ ] **AC-0008.** The page-state check fails, naming the focused control and saying its ring cannot be scored, when that control or any ancestor has a computed `filter` other than `none` or a computed `mix-blend-mode` other than `normal`, or when any ancestor has a computed opacity under 1.
+- [x] **AC-0007.** In every page state the browser suite checks, the page-state check fails unless each focused control's ring, as drawn, has a contrast of at least 3:1 against the background behind it. The drawn color is the control's computed outline color, with its alpha multiplied by the control's computed opacity, laid over the background behind the ring. An `aria-disabled` button at opacity 0.6, with the ring color `rgb(29, 78, 216)`, on a white page fails the check with "outline contrast is 2.90:1, under 3:1".
+- [x] **AC-0008.** The page-state check fails, naming the focused control and saying its ring cannot be scored, when that control or any ancestor has a computed `filter` other than `none` or a computed `mix-blend-mode` other than `normal`, or when any ancestor has a computed opacity under 1.
 
 ### Faded controls
 
-- [ ] **AC-0009.** No control in `src/` fades by opacity while `aria-disabled`: `grep -rn "aria-disabled:opacity" src` prints nothing.
-- [ ] **AC-0010.** Each control whose classes held `aria-disabled:opacity-60` at base `9b37639` fades while `aria-disabled` by its own colors at 60% alpha: a filled control by its fill color, and an outlined control by its text color and its border color. Counted with `grep -rno` over `src/`, `aria-disabled:bg-primary/60` appears 12 times, `aria-disabled:bg-error/60` 2 times, `aria-disabled:text-ink/60` 5 times, and `aria-disabled:border-field-border/60` 5 times. Every line in `src/` that holds one of these four classes also holds, as a class of its own, the color it fades: `bg-primary`, `bg-error`, `text-ink`, or `border-field-border`.
-- [ ] **AC-0011.** In each of these page states, a browser test runs the page-state checks while the faded control can take focus, and the checks pass with the AC-0007 scorer:
+- [x] **AC-0009.** No control in `src/` fades by opacity while `aria-disabled`: `grep -rn "aria-disabled:opacity" src` prints nothing.
+- [x] **AC-0010.** Each control whose classes held `aria-disabled:opacity-60` at base `9b37639` fades while `aria-disabled` by its own colors at 60% alpha: a filled control by its fill color, and an outlined control by its text color and its border color. Counted with `grep -rno` over `src/`, `aria-disabled:bg-primary/60` appears 12 times, `aria-disabled:bg-error/60` 2 times, `aria-disabled:text-ink/60` 5 times, and `aria-disabled:border-field-border/60` 5 times. Every line in `src/` that holds one of these four classes also holds, as a class of its own, the color it fades: `bg-primary`, `bg-error`, `text-ink`, or `border-field-border`.
+- [x] **AC-0011.** In each of these page states, a browser test runs the page-state checks while the faded control can take focus, and the checks pass with the AC-0007 scorer:
   - `/receiving` with no vendors, while Save is `aria-disabled`
   - `/production` with no active finished product, while Save is `aria-disabled`
   - `/sales` with no active finished product, while Save sale is `aria-disabled`
@@ -124,7 +124,7 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
   - `/ask` while a question is in flight with ask-your-data AC-0080's Look it up again on the page, while Ask and Look it up again are `aria-disabled`
   - `/invoices` while a text read is in flight, at the suite's default width and at 320 px, while both Read buttons are `aria-disabled`
   - `/invoices` while a photo read is in flight, at the suite's default width and at 320 px, while both Read buttons are `aria-disabled`
-- [ ] **AC-0012.** On the `/receiving` error page, while Try again reads "Trying again…" and is `aria-disabled`, the page-state checks pass with the AC-0007 scorer.
+- [x] **AC-0012.** On the `/receiving` error page, while Try again reads "Trying again…" and is `aria-disabled`, the page-state checks pass with the AC-0007 scorer.
 
 ## Follow-ons
 

@@ -149,3 +149,19 @@ Delta reviewers on `git diff 30f9deb..75951f6` (artifacts `2-post-gates-*`):
 - quality-engineer: direct clean.
 - adversarial-reviewer: 1 Nit sustained. The T4 run-2 lines blamed Next.js for dropping the held request; the Playwright 1.64 source shows `page.unroute` let it go. The ledger now says so (above), and the script's comment matches.
 - Review state: `findings-remain` (seq 21) and `review record` round 2 with 1 fingerprint.
+
+## Post-gates review, round 3, and close (2026-10-20)
+
+- Gates on `8cfc126`, by the controller: catalog fix 4 first (`pg_class` 101,463 dead rows and the slot 10,743 behind, then 0 and 2). `npm run typecheck` exited 0. `npm test` exited 0 in 722 s, with Vitest 52 files and 1039 tests passed and Playwright 666 passed (11.2 minutes).
+- adversarial-reviewer, on the delta `75951f6..8cfc126`: 1 Nit, deferred without adjudication. The new line on the run-1 error states Playwright's release as a general rule; it holds when `page.unroute` removes the page's only route, as in this script, so the cause it gives for this run is right. It was the third wording round on that line, so it is deferred rather than sent round again.
+- Deferred Nits, each with its citation in the review verdict: the frontend reviewer's red-fade dialog states (round 1), and this one.
+- Review state: `reviewers-clean` (seq 24) and `review record` round 3, a direct clean from the quality-engineer's round-2 report. The review retry count is 2 of 5.
+- Spec `Status: Shipped` with all 12 criteria checked; plan `Status: Done`; `plan check-current` OK; `lint-spec-status` clean, its one warn-only note being `docs/lifecycle/receiving-refinements.json`, which close-work writes.
+
+## Completion evidence
+
+- Implementation, by task: T1 `1c40a4e`, T3 `2ce27e2`, T2 `ff3e095`, T4 the recorded runs above (scripts in the ignored `.context/recorded-run/`); review fixes `1cc119e` and `8cfc126`.
+- Durable outputs: `docs/architecture/overview.md`'s `src/app/`, `test/`, and `test/e2e/` rows (`1c40a4e`, `ff3e095`, `1cc119e`); this ledger.
+- Accepted limits, each the owner's on 2026-10-20 and in the spec's Assumptions: the scorer leaves clipping and masks outside it; no browser test sees a faded control's colors, so the AC-0010 counts and pairing check stand for them; the error page's pending ring is proven by the recorded run, not a committed test.
+- Seen during gates, not raised by any reviewer: one `receiving.spec.ts:315` failure (axe `document-title`) in T3's run 1, under catalog bloat, which did not recur in five later full runs.
+- Follow-ons: none. Close-work marks the intent Fulfilled.

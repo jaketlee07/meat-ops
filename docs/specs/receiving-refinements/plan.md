@@ -1,7 +1,7 @@
 # Plan: receiving-refinements
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** `docs/architecture/overview.md` areas table, `src/app/` row (where each action's decisions live). Analogous implementations: `src/app/sales/save-sale.ts` (`decideSaleSave`, `decideSaleVoid`), wired in `src/app/sales/actions.ts` and tested by `test/save-sale.test.ts`; `src/app/receiving/correct-receipt.ts` (`decideCorrection`), wired in `src/app/receiving/actions.ts` and tested by `test/save-correction.test.ts`. For the scorer: `test/e2e/a11y.ts` itself. Uncertainty: no spec in `test/e2e/` loads a page with `page.setContent` yet, so the T2 spec is the first one that tests a helper of the suite rather than a page of the app
 
 > **Plan contract:** this is the implementation strategy. It may change
