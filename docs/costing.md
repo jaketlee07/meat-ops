@@ -3,8 +3,8 @@
 This is the source of truth for the costing math. The tests in
 `test/costing.test.ts`, `test/engine.test.ts`, `test/corrections.test.ts`,
 `test/pricing.test.ts`, `test/receipt-corrections.test.ts`,
-`test/batch-reversal.test.ts`, and `test/alerts-corrections.test.ts` encode
-every costing number below. The rules and reads around them are in
+`test/batch-reversal.test.ts`, `test/zero-stock.test.ts`, and
+`test/alerts-corrections.test.ts` encode every costing number below. The rules and reads around them are in
 `test/correction-rules.test.ts`, `test/corrections-data.test.ts`, and
 `test/save-correction.test.ts`, and the two pages' end-to-end checks are in
 `test/e2e/correct.spec.ts` and `test/e2e/reverse.spec.ts`. The display formats
@@ -117,16 +117,36 @@ to the cost of the lots that remain.
 ### The zero-stock rule
 
 When an operation leaves a raw product with 0 lbs on hand, the average has
-nothing to divide, so it keeps the value it had before that operation.
+nothing to divide. It becomes the zero-stock average: the average current cost
+of the lbs that the product's last stock-lowering change took, rounded to 4
+decimals.
 
-Example: receive 1,000 lbs at 2.00 and produce 1,000 raw lbs. Stock is 0 and
-the average stays 2.0000. Receive 1,000 lbs at 2.40 and produce all of it: stock
-is 0 and the average is 2.4000.
+A stock-lowering change is a production batch that is not reversed and drew from
+the product's lots, or an adjustment that lowered one of its lots. Each batch and
+each adjustment carries an order number, `stock_seq`, from one sequence,
+`private.stock_change_seq`. An operation takes its number while it holds the
+product's stock row, so the numbers follow the order the operations ran, inside
+one transaction too. The last change is the one with the highest number. With no
+such change the average is 0, its value before any receipt.
 
-One operation breaks the rule on purpose: a void that leaves 0 lbs on hand. A
-voided receipt never happened, so the average goes back to a value from before
-the voided receipts. The void_receipt rules below say which value, and when that value
-can still carry a voided cost.
+A void receipt and a reversed batch are never stock-lowering changes, and each
+lb is priced at its lot's current cost, so the order in which receipts are
+voided or corrected never changes the average. A void lot has no adjustment
+row and no consumption row of a batch that is not reversed, so after voids
+alone the average is the one the product would have if the voided receipts had
+never been entered. The rule prices the lbs the last
+change actually drew: a reversal or a weight correction does not re-run the
+draws of the batches made after it.
+
+A batch or an adjustment that leaves 0 lbs on hand took every lb on hand, so the
+average it leaves is the one the product had just before it. Example: receive
+1,000 lbs at 2.00 and produce 1,000 raw lbs. Stock is 0 and the average stays
+2.0000. Receive 1,000 lbs at 2.40 and produce all of it: stock is 0 and the
+average is 2.4000.
+
+A void or a correction that leaves 0 lbs on hand moves the average to the
+zero-stock average. The void_receipt and correct_receipt sections below give
+examples.
 
 ## The seven invariants
 
@@ -205,42 +225,34 @@ Example: receive 1,000 lbs at 1.68 and 500 lbs at 1.80. Stock is 1,500 lbs at
 an average of 1.72. Void the second lot: stock is 1,000 lbs and the average is
 1.68.
 
-When the void leaves 0 lbs on hand, the average is set by the first of these
-three steps that finds a lot. FIFO order means received date, then entry order.
-The prior average of a lot is the average just before it was entered.
+When the void leaves 0 lbs on hand, the average is the zero-stock average
+above. A void lot is never a stock-lowering change, so the average is the one
+the product would have if the voided receipts had never been entered.
 
-1. The prior average of the first void lot, in FIFO order, among the void lots
-   that come after the last non-void lot. When no lot is non-void, this covers
-   all the product's lots.
-2. The prior average of the first void lot, in FIFO order, among the void lots
-   that come after the last lot a batch that is not reversed drew from. When no
-   such batch has drawn from any of the product's lots, this covers all its void
-   lots.
-3. The prior average of the lot being voided.
+Examples, each starting from 0 lbs on hand at an average of 1.8000, after a
+batch on May 11 drew all of a 1,000-lb lot at 1.80 received May 10. Every lot
+is 1,000 lbs.
 
-Example: stock is 0 lbs at an average of 1.8000. Receive 1,000 lbs at 18.00; the
-average is 18. Void that lot and the average returns to 1.8000. Receive two lots
-of 1,000 lbs at 18.00 and void both, in either order, and the average is 1.8000.
-Receive lots at 18.00 and 20.00, then a lot at 2.00 that is adjusted to 0 as
-waste, and void the first two in either order: the average is 1.8000. The same
-holds when a batch of 2,500 raw lbs drew from all three lots and was reversed
-before the adjustment and the voids, since a reversed batch does not count as a
-draw.
+- Receive a lot at 18.00 on May 12; the average is 18. Void it and the average
+  returns to 1.8000.
+- Receive two lots at 18.00, on May 12 and May 13, and void both, in either
+  order: the average is 1.8000.
+- Receive a lot at 18.00 on May 12 and a lot at 2.00 on May 13, adjust the 2.00
+  lot to 0, and void the 18.00 lot: the average is 2.0000, the cost of the lbs
+  the adjustment took.
+- Receive lots at 18.00 and 20.00 on May 12 and a lot at 2.00 on May 13, adjust
+  the 2.00 lot to 0 as waste, and void the first two, in either order: the
+  average is 2.0000. It is 2.0000 too when a batch of 2,500 raw lbs drew from
+  all three lots and was reversed before the adjustment and the voids, since a
+  reversed batch counts as never entered.
+- Receive a lot at 18.00 received May 14, then a lot at 20.00 received May 12,
+  and void both, in either order: the average is 1.8000.
+- Receive a lot at 18.00 received May 13, then a lot at 2.00 received May 12,
+  produce 1,000 raw lbs on May 12, and void the 18.00 lot: the batch drew the
+  2.00 lot, so the average is 2.0000.
 
-Known limit, accepted by the owner on 2026-10-07: a lot's prior average is
-fixed when it is entered, so it can include other lots that are voided later.
-When lots are entered out of date order, or a void lot's prior average was
-taken while another lot that is now void was on hand, the average after the
-last void can carry a voided receipt's cost, and can depend on the order of the
-voids. It stays that way while stock is 0, until a receipt or an upward
-adjustment brings stock above 0 and the stock-on-hand average takes over. The
-[zero-stock average intent](product/intents/zero-stock-average-recompute.md)
-replaces these steps with a recompute from the non-void lots alone.
-
-A correction does not change any lot's prior average either, so a void that
-leaves 0 lbs on hand can bring back a cost a correction replaced: a lot typed at
-18.00 and corrected to 1.80 was on hand when the next lot arrived, so that lot's
-prior average is 18.0000.
+Each lot keeps the `prior_avg_cost` it was entered with, frozen as invariant 4
+says, and no rule reads it.
 
 ### void_sale
 
@@ -343,8 +355,9 @@ lbs, which is what production used and adjustments removed, and it must be above
 decimals, equal the current ones is refused. A void lot cannot be corrected.
 
 **Zero-stock rule.** The average moves to the stock-on-hand average at current
-cost. When the correction leaves 0 lbs on hand, the stored average keeps its
-value, as the zero-stock rule says above.
+cost. When the correction leaves 0 lbs on hand, it moves to the zero-stock
+average the zero-stock rule above gives, so a cost correction while stock is 0
+moves the average.
 
 Example, in the sale fixture: lot A is 5,000 lbs at 1.68 received Oct 1 and lot B
 is 3,000 lbs at 1.80 received Oct 5. Batch 1 makes 4,620 finished lbs of 502 from
@@ -364,7 +377,9 @@ batch 2, and RAW-TOM has 1,000 lbs on hand at 1.8000.
 - Correct lot B to 3,100 lbs: it has 1,100 lbs remaining and RAW-TOM 1,100 lbs on
   hand, and no batch, finished lot, or sale line changes. The smallest weight
   lot B can take is 2,000 lbs, which leaves it 0 lbs remaining and the average at
-  1.8000. Correcting it to 1,999.999 lbs is refused.
+  1.8000. Correcting it to 1,999.999 lbs is refused. After the correction to
+  2,000 lbs, correcting lot B to 1.90 moves the average to 1.9000, since batch 2's
+  1,000 lbs from lot B now cost 1.90.
 - With lot B adjusted to 900 lbs first, the smallest weight is 2,100 lbs.
 
 ## Rounding note

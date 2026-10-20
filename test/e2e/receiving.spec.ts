@@ -900,6 +900,24 @@ test.describe("voiding", () => {
     await expect(f.region.getByText("Void: wrong product", { exact: true })).toBeVisible();
   });
 
+  test("the zero-stock-average spec's AC-0016: voiding an 18.00 receipt after a lot adjusted to 0 shows that lot's $2.0000/lb", async ({
+    page,
+  }) => {
+    // 0 lbs on hand at an average of 1.8000, then an 18.00 lot and a 2.00 lot counted to 0.
+    await seedReceipt(1000, 1.8, "2026-05-10");
+    expect((await callAsOperator(produceCall(PROD_502_ID, 1000, null, "2026-05-11"))).ok).toBe(true);
+    const voided = await seedReceipt(1000, 18, "2026-05-12");
+    const counted = await seedReceipt(1000, 2, "2026-05-13");
+    expect((await callAsOperator(adjustCall(counted, 0))).ok).toBe(true);
+    const f = await openForm(page, RAW_TOM_URL);
+    await expect(factValue(f.region, "Average cost")).toHaveText("$18.0000/lb");
+
+    await voidThrough(page, receiptItem(page, await lotNumberOf(voided)), "keyed twice");
+
+    await expect(factValue(f.region, "On hand")).toHaveText("0 lbs");
+    await expect(factValue(f.region, "Average cost")).toHaveText("$2.0000/lb");
+  });
+
   test("AC-0052, AC-0057, and AC-0077: a lot production drew from after the list loaded is refused, and stays as it was", async ({
     page,
   }) => {

@@ -86,7 +86,8 @@ operations. Each one:
 4. Writes the rows. `produce_batch` and `record_sale` then check that the pounds they recorded equal the pounds asked for, and raise a shortfall if not.
 
 `receive_lot`, `produce_batch`, `void_receipt`, `adjust_lot`, `correct_receipt`, and `reverse_batch` then rebuild the
-raw product's stock and stock-on-hand average from its lots (`private.refresh_balance`).
+raw product's stock and stock-on-hand average from its lots (`private.refresh_balance`). At 0 lbs on hand the refresh
+sets the zero-stock average that `docs/costing.md` gives instead.
 `record_sale` and `void_sale` move only finished-lot pounds and do not call it.
 
 A trigger on `lots` refuses any change to a lot's recorded cost and weight, product, vendor,
@@ -141,6 +142,18 @@ Lots and finished lots carry an insertion number, `receipt_seq` and
 engine migration numbers rows that already exist by the old keys (lots by
 received date, `created_at`, id; finished lots by produced date, id) before
 identity takes over, and the sequence continues above the highest number given.
+
+Production batches and lot adjustments share a third number, `stock_seq`, from
+the sequence `private.stock_change_seq`. It orders the changes that lower a raw
+product's stock, and the zero-stock average in `docs/costing.md` reads the
+highest. Each operation takes it on insert while it holds the product's
+`inventory_balances` row, so it follows the order the operations ran, inside one
+transaction too. The zero-stock-average migration numbers rows that already
+exist by the time they were made (`production_batches.created_at`,
+`lot_adjustments.adjusted_at`). At equal times, which only one transaction
+gives, a batch comes before an adjustment, then batches follow their finished
+lot's `produced_seq` and adjustments their id. The sequence continues above the
+highest number given.
 
 After the migrations reach a database that already holds lots (the hosted
 follow-on), run this read-only query. It must return no rows. Each row it

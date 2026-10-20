@@ -729,8 +729,10 @@ export async function assertLedgerInvariants(): Promise<void> {
 }
 
 // AC-0028 and AC-0079: every raw product with lbs on hand carries its
-// stock-on-hand average at current cost. The average is computed in SQL, never
-// in TypeScript.
+// stock-on-hand average at current cost. The zero-stock-average spec's AC-0001:
+// every raw product with none carries the average current cost of the lbs its
+// last stock-lowering change took, or 0 with no such change. The averages are
+// computed in SQL, never in TypeScript.
 export async function averageViolations(run: Querier): Promise<{ violation: string; subject: string }[]> {
   const { rows } = await run.query(`
     select 'AC-0079 average <> stock-on-hand average' as violation, b.product_id::text as subject
@@ -739,6 +741,27 @@ export async function averageViolations(run: Querier): Promise<{ violation: stri
           from lots group by product_id having sum(remaining_lbs) > 0) l
       on l.product_id = b.product_id
     where b.moving_avg_cost <> round(l.v / l.q, 4)
+    union all
+    select 'AC-0001 zero-stock average <> average the last change took', b.product_id::text
+    from inventory_balances b
+    join products p on p.id = b.product_id and p.kind = 'raw'
+    left join (
+      select t.product_id, round(sum(t.lbs * t.cost) / sum(t.lbs), 4) as avg
+      from (select l.product_id, x.stock_seq, x.lbs, l.current_unit_cost as cost,
+                   max(x.stock_seq) over (partition by l.product_id) as last_seq
+            from (select pb.stock_seq, pbl.lot_id, pbl.lbs_consumed as lbs
+                  from production_batch_lots pbl
+                  join production_batches pb on pb.id = pbl.batch_id
+                  where pb.reversed_at is null
+                  union all
+                  select a.stock_seq, a.lot_id, a.old_remaining_lbs - a.new_remaining_lbs
+                  from lot_adjustments a
+                  where a.new_remaining_lbs < a.old_remaining_lbs) x
+            join lots l on l.id = x.lot_id) t
+      where t.stock_seq = t.last_seq
+      group by t.product_id
+    ) z on z.product_id = b.product_id
+    where b.qty_on_hand = 0 and b.moving_avg_cost <> coalesce(z.avg, 0)
   `);
   return rows as { violation: string; subject: string }[];
 }

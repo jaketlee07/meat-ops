@@ -1,6 +1,6 @@
 # Spec: zero-stock-average
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the intent [`docs/product/intents/zero-stock-average-recompute.md`](../../product/intents/zero-stock-average-recompute.md) (its Outcome, as the corrections spec widens it, and its Boundary); the corrections spec [`../corrections/spec.md`](../corrections/spec.md) (its definitions and its operations `correct_receipt` and `reverse_batch`), which reaches `main` before this build starts; [`docs/costing.md`](../../costing.md) (the stock-on-hand average, the zero-stock rule, the seven invariants, the Rounding note); [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §4, §5, §6, and §11; foundation-hardening AC-0029 and AC-0053 ([`../foundation-hardening/spec.md`](../foundation-hardening/spec.md)); `AGENTS.md` "Run two folders' tests at once"
@@ -123,48 +123,48 @@ Definitions used by these criteria:
 
 The rule
 
-- [ ] **AC-0001.** After every operation, each raw product whose `inventory_balances` row has 0 lbs on hand has a `moving_avg_cost` equal to its zero-stock average.
+- [x] **AC-0001.** After every operation, each raw product whose `inventory_balances` row has 0 lbs on hand has a `moving_avg_cost` equal to its zero-stock average.
 
 Voids
 
-- [ ] **AC-0002.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-12 and voiding it leaves an average of 1.8000.
-- [ ] **AC-0003.** From the zero-stock start, receiving lots at 18.00 received 2026-05-12 and 2026-05-13 and voiding both, in each order, leaves an average of 1.8000.
-- [ ] **AC-0004.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-12 and a lot at 2.00 received 2026-05-13, adjusting the 2.00 lot to 0 lbs, and voiding the 18.00 lot leaves an average of 2.0000.
-- [ ] **AC-0005.** From the zero-stock start, receiving lots at 18.00 and 20.00 received 2026-05-12 and a lot at 2.00 received 2026-05-13, adjusting the 2.00 lot to 0 lbs as waste, and voiding the 18.00 and 20.00 lots, in each order, leaves an average of 2.0000.
-- [ ] **AC-0006.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-14, then a lot at 20.00 received 2026-05-12, and voiding both, in each order, leaves an average of 1.8000.
-- [ ] **AC-0007.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-13, then a lot at 2.00 received 2026-05-12, producing 1,000 raw lbs of 502 on 2026-05-12, and voiding the 18.00 lot leaves an average of 2.0000.
+- [x] **AC-0002.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-12 and voiding it leaves an average of 1.8000.
+- [x] **AC-0003.** From the zero-stock start, receiving lots at 18.00 received 2026-05-12 and 2026-05-13 and voiding both, in each order, leaves an average of 1.8000.
+- [x] **AC-0004.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-12 and a lot at 2.00 received 2026-05-13, adjusting the 2.00 lot to 0 lbs, and voiding the 18.00 lot leaves an average of 2.0000.
+- [x] **AC-0005.** From the zero-stock start, receiving lots at 18.00 and 20.00 received 2026-05-12 and a lot at 2.00 received 2026-05-13, adjusting the 2.00 lot to 0 lbs as waste, and voiding the 18.00 and 20.00 lots, in each order, leaves an average of 2.0000.
+- [x] **AC-0006.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-14, then a lot at 20.00 received 2026-05-12, and voiding both, in each order, leaves an average of 1.8000.
+- [x] **AC-0007.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-13, then a lot at 2.00 received 2026-05-12, producing 1,000 raw lbs of 502 on 2026-05-12, and voiding the 18.00 lot leaves an average of 2.0000.
 
 Order
 
-- [ ] **AC-0008.** With RAW-TOM holding only a lot X at 2.00 received 2026-05-10, a lot Y at 3.00 received 2026-05-11, and a lot V at 18.00 received 2026-05-20, one transaction makes two changes: a batch of 1,000 raw lbs of 502 produced 2026-05-15 and an adjustment of Y to 0 lbs. Voiding V afterwards leaves the average at the cost of the lbs the second change took: 3.0000 when the adjustment runs second and 2.0000 when the batch runs second.
+- [x] **AC-0008.** With RAW-TOM holding only a lot X at 2.00 received 2026-05-10, a lot Y at 3.00 received 2026-05-11, and a lot V at 18.00 received 2026-05-20, one transaction makes two changes: a batch of 1,000 raw lbs of 502 produced 2026-05-15 and an adjustment of Y to 0 lbs. Voiding V afterwards leaves the average at the cost of the lbs the second change took: 3.0000 when the adjustment runs second and 2.0000 when the batch runs second.
 
 Reversed batches and corrections
 
-- [ ] **AC-0009.** From the zero-stock start, receiving a lot at 2.00 received 2026-05-12, producing 1,000 raw lbs of 502 on 2026-05-12, reversing that batch, and voiding the 2.00 lot leaves an average of 1.8000.
-- [ ] **AC-0010.** From the zero-stock start, correcting the 1.80 lot to 1.90 per lb leaves an average of 1.9000.
-- [ ] **AC-0011.** In the corrections spec's sale fixture after lot B is corrected to 2,000 lbs, correcting lot B to 1.90 per lb leaves RAW-TOM's average at 1.9000.
-- [ ] **AC-0012.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-12, correcting the 1.80 lot to 1.90 per lb, and voiding the 18.00 lot leaves an average of 1.9000.
-- [ ] **AC-0019.** With RAW-TOM holding only a lot P at 1.00 received 2026-05-12 and a lot Q at 2.00 received 2026-05-13, producing 1,500 raw lbs of 502 on 2026-05-13 and then correcting Q to 500 lbs leaves 0 lbs on hand at an average of 1.3333.
+- [x] **AC-0009.** From the zero-stock start, receiving a lot at 2.00 received 2026-05-12, producing 1,000 raw lbs of 502 on 2026-05-12, reversing that batch, and voiding the 2.00 lot leaves an average of 1.8000.
+- [x] **AC-0010.** From the zero-stock start, correcting the 1.80 lot to 1.90 per lb leaves an average of 1.9000.
+- [x] **AC-0011.** In the corrections spec's sale fixture after lot B is corrected to 2,000 lbs, correcting lot B to 1.90 per lb leaves RAW-TOM's average at 1.9000.
+- [x] **AC-0012.** From the zero-stock start, receiving a lot at 18.00 received 2026-05-12, correcting the 1.80 lot to 1.90 per lb, and voiding the 18.00 lot leaves an average of 1.9000.
+- [x] **AC-0019.** With RAW-TOM holding only a lot P at 1.00 received 2026-05-12 and a lot Q at 2.00 received 2026-05-13, producing 1,500 raw lbs of 502 on 2026-05-13 and then correcting Q to 500 lbs leaves 0 lbs on hand at an average of 1.3333.
 
 No lot left
 
-- [ ] **AC-0013.** With RAW-TOM holding only one lot, at 1.68, voiding it leaves an average of 0.0000.
+- [x] **AC-0013.** With RAW-TOM holding only one lot, at 1.68, voiding it leaves an average of 0.0000.
 
 Access
 
-- [ ] **AC-0014.** The `anon`, `authenticated`, and `service_role` roles hold no `USAGE`, `SELECT`, or `UPDATE` privilege on the sequence that numbers stock-lowering changes.
-- [ ] **AC-0020.** `void_receipt` and `private.refresh_balance` are each SECURITY DEFINER with `proconfig` exactly `{search_path=""}`.
-- [ ] **AC-0021.** `authenticated` holds EXECUTE on `void_receipt`, `anon` and `service_role` hold none on it, and none of the three roles holds EXECUTE on `private.refresh_balance`.
+- [x] **AC-0014.** The `anon`, `authenticated`, and `service_role` roles hold no `USAGE`, `SELECT`, or `UPDATE` privilege on the sequence that numbers stock-lowering changes.
+- [x] **AC-0020.** `void_receipt` and `private.refresh_balance` are each SECURITY DEFINER with `proconfig` exactly `{search_path=""}`.
+- [x] **AC-0021.** `authenticated` holds EXECUTE on `void_receipt`, `anon` and `service_role` hold none on it, and none of the three roles holds EXECUTE on `private.refresh_balance`.
 
 Existing rows
 
-- [ ] **AC-0015.** On a database migrated to the migration before this spec's and holding the probe history, applying this spec's migration gives its two batches and two adjustments order numbers that rise in the order they were made.
-- [ ] **AC-0017.** After the AC-0015 migration, RAW-TOM's average is 2.0000.
-- [ ] **AC-0018.** After the AC-0015 migration, receiving a lot at 3.00 received 2026-05-15, producing 1,000 raw lbs of 502 on 2026-05-15, receiving a lot at 4.00 received 2026-05-16, and adjusting it to 0 lbs gives that batch and that adjustment order numbers above all four of the probe history's, the batch's below the adjustment's.
+- [x] **AC-0015.** On a database migrated to the migration before this spec's and holding the probe history, applying this spec's migration gives its two batches and two adjustments order numbers that rise in the order they were made.
+- [x] **AC-0017.** After the AC-0015 migration, RAW-TOM's average is 2.0000.
+- [x] **AC-0018.** After the AC-0015 migration, receiving a lot at 3.00 received 2026-05-15, producing 1,000 raw lbs of 502 on 2026-05-15, receiving a lot at 4.00 received 2026-05-16, and adjusting it to 0 lbs gives that batch and that adjustment order numbers above all four of the probe history's, the batch's below the adjustment's.
 
 The page
 
-- [ ] **AC-0016.** On `/receiving`, with the AC-0004 history made through the operations up to its void, voiding the 18.00 receipt through Recent receipts shows RAW-TOM with 0 lbs on hand and an average cost of "$2.0000/lb".
+- [x] **AC-0016.** On `/receiving`, with the AC-0004 history made through the operations up to its void, voiding the 18.00 receipt through Recent receipts shows RAW-TOM with 0 lbs on hand and an average cost of "$2.0000/lb".
 
 ## Follow-ons
 
