@@ -98,3 +98,14 @@ Four rounds, each after the first over the delta since the previous one:
 
 - Green on the implementer's T2 run above: `npm run typecheck` exit 0, and `npm test` exit 0 with 1038 Vitest tests and 662 Playwright tests passed, the nine AC-0011 tests among them.
 - The controller checked that the first 55 lines of `test/e2e/focus-ring.spec.ts` still hash to the plan's digest `2b2ae1de…`, and that the one added case is the T2 construction case.
+
+## T4 (2026-10-20)
+
+Recorded by the controller with scripts in the ignored `.context/recorded-run/` (`t4-error-page.spec.ts`, `t4-recovery.spec.ts`), against `npm run build` then `npm run start` at `5df95b1`, on stack A. The folder check listed no folder before each run. Port 3000 was taken by another project's dev server (`~/Developer/mobilize/web`), so the app ran on port 3300; it was stopped by its process group each time.
+
+1. The operator signed in through the form and reached `/receiving`.
+2. `supabase_rest_meat-ops` was stopped at 19:49:40 UTC. `/receiving` showed the error page, heading "Receiving", with "Couldn't load this page." The app's log line was `isOperator failed: AbortError: This operation was aborted`.
+3. Try again was pressed. Its page request (the one with the `RSC` header) was held with `page.route`. The button read "Trying again…" with `aria-disabled="true"`.
+4. `checkPageState` passed in that state with the T2 scorer and returned `["button Trying again…"]` (AC-0012).
+5. `supabase_rest_meat-ops` was started again, 12.4 seconds after it stopped, and answered.
+- Deviation: releasing the held request failed with Playwright's "Route is already handled!", so the script stopped before its own form check. The service was not stopped again. A second script, `t4-recovery.spec.ts`, stopped nothing, signed in, and loaded `/receiving`, and the form showed at 19:51:46 UTC.
