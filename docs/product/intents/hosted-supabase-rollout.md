@@ -11,6 +11,7 @@ The hosted Supabase project runs the hardened engine and is safe to hold real bu
 
 - Turn off public sign-up and set a 12-character minimum password in the hosted project.
 - Apply every migration the hosted project lacks, in file order, after checking for lots with no vendor.
+- Apply `20261019195238_zero_stock_average.sql` while no operation runs. A call running during its apply can fail, as its lock comment gives, and the failed call or the file then rolls back whole and can be run again.
 - Create the owner account with a 12-character password, confirm it is new with no earlier sessions, then add its id to private.operators.
 - Run a read-only check that the anon key and a signed-in non-operator reach nothing and that reset_test_data is absent.
 - Load no real business data before that check passes. Every write to the hosted project needs the owner's approval.

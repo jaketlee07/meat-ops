@@ -1,6 +1,6 @@
 # Zero-stock average after voids
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
