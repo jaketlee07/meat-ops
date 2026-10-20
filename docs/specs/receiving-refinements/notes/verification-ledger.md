@@ -136,6 +136,16 @@ Reviewers on `git diff 43e1ffa..30f9deb`, each report adjudicated except the fro
 
 ### T4 run 2, the owner-approved second stop
 
-- The same `t4-error-page.spec.ts`, its held-request release now ignoring a request Next.js already dropped, ran against the build from that `npm test` on port 3300. `supabase_rest_meat-ops` was stopped at 20:34:42 UTC for 11.7 seconds.
+- The run-1 error came from the script, not the app. In Playwright 1.64, `page.unroute` continues any request its route still holds, so the explicit `continue()` after it met "Route is already handled!". The script now lets that call fail quietly.
+
+- The same `t4-error-page.spec.ts` ran against the build from that `npm test` on port 3300. `supabase_rest_meat-ops` was stopped at 20:34:42 UTC for 11.7 seconds.
 - The steps matched run 1. The error page showed "Receiving" and "Couldn't load this page.", and the Try again request was held. The button read "Trying again…" with `aria-disabled="true"`, and `checkPageState` passed with `["button Trying again…"]` (AC-0012).
 - With the REST service started again and the held request let go, the error page's own retry brought the form back: the "Product code" field showed within 15 seconds, with no second press and no reload. The run passed (1 of 1, 14.9 s), and the app was stopped by its process group.
+
+## Post-gates review, round 2 (2026-10-20)
+
+Delta reviewers on `git diff 30f9deb..75951f6` (artifacts `2-post-gates-*`):
+
+- quality-engineer: direct clean.
+- adversarial-reviewer: 1 Nit sustained. The T4 run-2 lines blamed Next.js for dropping the held request; the Playwright 1.64 source shows `page.unroute` let it go. The ledger now says so (above), and the script's comment matches.
+- Review state: `findings-remain` (seq 21) and `review record` round 2 with 1 fingerprint.
