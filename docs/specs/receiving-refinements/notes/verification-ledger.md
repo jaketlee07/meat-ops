@@ -79,3 +79,12 @@ Four rounds, each after the first over the delta since the previous one:
   - The owner approved the fix in chat on 2026-10-20. The controller ran it after the folder check listed no folder: `pg_terminate_backend` on the slot's backend as `supabase_admin`, and Realtime made a new slot (`cainophile_lzknshe5`, 6 transactions behind). Then it vacuumed `pg_class`, `pg_attribute`, `pg_type`, and `pg_depend`, each left with 0 dead rows.
   - Run 4, by the controller after the fix: `npm run typecheck` exited 0. `npm test` exited 0 in 678 s, with Vitest 52 files and 1038 tests passed and Playwright 655 passed (10.5 minutes), `receiving.spec.ts:315` among them. That test's `document-title` failure was seen once, in run 1 under the bloat, and not again.
 - **Wave 1 (T1, T3):** green on run 4.
+
+## T2 (2026-10-20)
+
+- **Stub:** `shasum -a 256 test/e2e/focus-ring.spec.ts` printed `2b2ae1ded6914c1b8e66c59842ce61ea8d1a910199bb93eb7c3ce0e4342774e7`, the plan's digest.
+- **Red, against `a11y.ts` before the change:** `npm run test:e2e -- test/e2e/focus-ring.spec.ts` exited 1 with 6 failed (and 2 passed, the setup projects). Each failed on its own `toContain` with `Received string: "the page-state checks passed"`.
+- **Green, after the change:** the same command exited 0 with 9 passed: the 6 stub tests, and the construction case "AC-0007: a ring on a button whose fill fades by color is drawn at full strength and passes" (returns `["button Save"]`).
+- **Problem texts the scorer emits:** "`<label>` ring cannot be scored: the control has filter `<value>`", "...: the control has mix-blend-mode `<value>`", "...: an ancestor `<tag>` has filter `<value>`", "...: an ancestor `<tag>` has mix-blend-mode `<value>`", and "...: an ancestor `<tag>` has opacity `<value>`". The contrast text "outline contrast is X:1, under 3:1" is unchanged.
+- **Gates:** the folder check listed no folder. `npm run typecheck` exited 0. `npm test` exited 0 in 16 minutes (14:28:11 to 14:44:11): Vitest 52 files and 1038 tests passed; Playwright 662 passed (13.6 minutes; 655 at T3 plus the 7 new tests). No rerun was needed. It was slower than the 10.5 to 11 minute runs, with no timeout or failure.
+- **AC-0011, the nine tests, each shown passed (checkmark) in the saved output:** `receiving.spec.ts` first-run state; `production.spec.ts` AC-0082 and AC-0083; `sales.spec.ts` form with no active finished product; `ask.spec.ts` ask press in flight (status text, and Look it up again); `invoices.spec.ts` AC-0014 text read, text read at 320 px, photo read, photo read at 320 px.

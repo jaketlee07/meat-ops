@@ -6,6 +6,12 @@ import { expect, type Page } from "@playwright/test";
 // (AC-0030, AC-0031). Call checkPageState(page) once the page is in the state.
 // It returns the label of each focusable control in tab order, so a test can
 // also assert that the walk reached the controls it expects.
+//
+// The focus ring is scored as drawn: the outline color with its alpha times the
+// control's opacity, laid over the background behind it. A filter or blend mode
+// on the control or any ancestor, or an ancestor with opacity under 1, fails the
+// control as a ring that cannot be scored. Clipping and masks stay outside the
+// check, a limit the owner accepted on 2026-10-20.
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const PHONE = { width: 320, height: 640 };
@@ -23,6 +29,12 @@ interface FocusedControl {
   outlineColor: string;
   // Computed background colors of the ancestors, nearest first.
   ancestorBackgrounds: string[];
+  // Computed opacity, filter, and blend mode of the control and of each
+  // ancestor, nearest first.
+  opacity: string;
+  filter: string;
+  blendMode: string;
+  ancestorEffects: { tag: string; opacity: string; filter: string; blendMode: string }[];
 }
 
 type WalkStep =
@@ -91,8 +103,16 @@ async function walkTabOrder(page: Page): Promise<FocusedControl[]> {
       const style = getComputedStyle(el);
       const box = el.getBoundingClientRect();
       const ancestorBackgrounds: string[] = [];
+      const ancestorEffects: FocusedControl["ancestorEffects"] = [];
       for (let node = el.parentElement; node; node = node.parentElement) {
-        ancestorBackgrounds.push(getComputedStyle(node).backgroundColor);
+        const ancestor = getComputedStyle(node);
+        ancestorBackgrounds.push(ancestor.backgroundColor);
+        ancestorEffects.push({
+          tag: node.tagName.toLowerCase(),
+          opacity: ancestor.opacity,
+          filter: ancestor.filter,
+          blendMode: ancestor.mixBlendMode,
+        });
       }
       const name = el.id ? `#${el.id}` : (el.getAttribute("name") ?? el.textContent?.trim() ?? "");
       return {
@@ -105,6 +125,10 @@ async function walkTabOrder(page: Page): Promise<FocusedControl[]> {
           outlineWidth: style.outlineWidth,
           outlineColor: style.outlineColor,
           ancestorBackgrounds,
+          opacity: style.opacity,
+          filter: style.filter,
+          blendMode: style.mixBlendMode,
+          ancestorEffects,
         },
       };
     });
@@ -124,13 +148,31 @@ function controlProblems(control: FocusedControl): string[] {
   if (Number.parseFloat(control.outlineWidth) < MIN_OUTLINE_WIDTH) {
     problems.push(`${label} outline is ${control.outlineWidth}, under ${MIN_OUTLINE_WIDTH}px`);
   }
+  const unscorable = unscorableEffect(control);
+  if (unscorable) {
+    problems.push(`${label} ring cannot be scored: ${unscorable}`);
+    return problems;
+  }
   const background = backgroundBehind(control.ancestorBackgrounds);
-  const outline = flatten(parseColor(control.outlineColor), background);
+  const drawn = parseColor(control.outlineColor);
+  const outline = flatten({ ...drawn, a: drawn.a * Number(control.opacity) }, background);
   const ratio = contrastRatio(outline, background);
   if (ratio < MIN_OUTLINE_CONTRAST) {
     problems.push(`${label} outline contrast is ${ratio.toFixed(2)}:1, under ${MIN_OUTLINE_CONTRAST}:1`);
   }
   return problems;
+}
+
+// The first effect the scorer does not model, or null when the ring can be scored.
+function unscorableEffect(control: FocusedControl): string | null {
+  if (control.filter !== "none") return `the control has filter ${control.filter}`;
+  if (control.blendMode !== "normal") return `the control has mix-blend-mode ${control.blendMode}`;
+  for (const { tag, opacity, filter, blendMode } of control.ancestorEffects) {
+    if (filter !== "none") return `an ancestor ${tag} has filter ${filter}`;
+    if (blendMode !== "normal") return `an ancestor ${tag} has mix-blend-mode ${blendMode}`;
+    if (Number(opacity) < 1) return `an ancestor ${tag} has opacity ${opacity}`;
+  }
+  return null;
 }
 
 interface Rgba {
