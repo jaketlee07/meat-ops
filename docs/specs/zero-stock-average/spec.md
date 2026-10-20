@@ -26,15 +26,17 @@
 This spec delivers the outcome and boundary of the
 [zero-stock average intent](../../product/intents/zero-stock-average-recompute.md).
 
-When a raw product has 0 lbs on hand, its average is the one it would have if
-every void receipt and every reversed batch had never been entered, and every
-corrected receipt had been entered with its current cost and weight. That
-average is the average cost of the lbs taken by the last production batch or
-adjustment that lowered the product's stock:
+When a raw product has 0 lbs on hand, its average is the average cost of the
+lbs taken by the last production batch or adjustment that lowered the
+product's stock:
 
 - A void receipt and a reversed batch never count.
 - Each lb is priced at its lot's current cost.
 - The order in which receipts are voided or corrected never changes it.
+
+After voids alone, that is the average the product would have if the voided
+receipts had never been entered. A reversal or a weight correction does not
+re-run the draws of the batches made after it.
 
 One rule sets the average after every operation that leaves 0 lbs on hand. A
 batch or an adjustment that leaves 0 lbs gives the average the product had just
@@ -172,7 +174,7 @@ None.
 
 ## Assumptions
 
-- Technical: on `main`, the three zero-stock steps live only in `void_receipt` in `supabase/migrations/20261007183252_corrections.sql`; the corrections branch redefines `void_receipt` and `private.refresh_balance` in `supabase/migrations/20261018053447_receipt_corrections.sql` and keeps the steps (source: grep on `main` and on `feat/corrections`, 2026-10-18)
+- Technical: on `main`, the three zero-stock steps live only in `void_receipt` in `supabase/migrations/20261007183252_corrections.sql`; the corrections branch redefines `private.refresh_balance` in `supabase/migrations/20261018053447_receipt_corrections.sql` and `void_receipt` last in `supabase/migrations/20261018205556_batch_reversal.sql`, and keeps the steps (source: grep on `main` and on `feat/corrections`, 2026-10-18; the `void_receipt` file rechecked on `main` 2026-10-20)
 - Technical: only `produce_batch` and `adjust_lot` lower a non-void lot's remaining lbs, and `void_receipt` empties only the lot it voids; on the corrections branch, `correct_receipt` moves remaining lbs by a weight change and `reverse_batch` returns lbs (source: grep for `update public.lots` over `supabase/migrations/`; corrections spec Objective)
 - Technical: `produce_batch` and `adjust_lot` each lock the raw product's `inventory_balances` row before they insert their `production_batches` or `lot_adjustments` row, so a number drawn on insert follows the order the operations ran (source: `20261007181933_engine_hardening.sql` `produce_batch`; `20261007183252_corrections.sql` `adjust_lot`)
 - Technical: `production_batches.created_at` and `lot_adjustments.adjusted_at` default to `now()`, the transaction's start time, so two changes in one transaction share it (source: `0001_init.sql`; `20261007183252_corrections.sql`)

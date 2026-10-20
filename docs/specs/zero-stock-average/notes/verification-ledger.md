@@ -239,7 +239,7 @@ For close-work:
 - **Non-goals and follow-ons:** the spec names none.
   - For close-out, the spec's Objective sentence on reversed batches and corrected receipts, and its first Assumption's migration file name, are working-material corrections recorded above.
   - The hosted apply of this migration, under `docs/product/intents/hosted-supabase-rollout.md`, runs while no operation runs, as the migration comment says.
-  - The owner asked that close-out also queue the flaky `test/e2e/ask.spec.ts` AC-0067 timeout, seen once on 2026-10-19.
+  - The flaky `test/e2e/ask.spec.ts` AC-0067 timeout, seen once on 2026-10-18, came from a gate run, not the review. The owner chose at close-out on 2026-10-20 to queue it.
 - **Unresolved obligations:** the pull request waits on the owner's review and merge. Nothing was applied to the hosted project.
 - **Completion event candidate:** the merge of `fix/zero-stock-average-build` into `main`.
 - **Authority facts:**
