@@ -76,3 +76,6 @@ Four rounds, each after the first over the delta since the previous one:
   - Run 3 (14:03:14 to 14:12:20): exit 1, the same single Vitest timeout.
   - `npx vitest run test/invoice-data.test.ts` alone fails the same way (31.9 s), and also with the T3 diff stashed (31.7 s). So the timeout is not from T3.
   - Cause found: the local stack's catalog bloat from the local-stack memory note. `pg_class` holds 452,919 dead rows and the Realtime slot `cainophile_yling60b` is 52,949 transactions behind. The owner-approved fix (end the slot backend, `vacuum pg_class`) was not run, because approval is asked each time.
+  - The owner approved the fix in chat on 2026-10-20. The controller ran it after the folder check listed no folder: `pg_terminate_backend` on the slot's backend as `supabase_admin`, and Realtime made a new slot (`cainophile_lzknshe5`, 6 transactions behind). Then it vacuumed `pg_class`, `pg_attribute`, `pg_type`, and `pg_depend`, each left with 0 dead rows.
+  - Run 4, by the controller after the fix: `npm run typecheck` exited 0. `npm test` exited 0 in 678 s, with Vitest 52 files and 1038 tests passed and Playwright 655 passed (10.5 minutes), `receiving.spec.ts:315` among them. That test's `document-title` failure was seen once, in run 1 under the bloat, and not again.
+- **Wave 1 (T1, T3):** green on run 4.
