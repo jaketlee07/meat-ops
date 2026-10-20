@@ -88,3 +88,13 @@ Four rounds, each after the first over the delta since the previous one:
 - **Problem texts the scorer emits:** "`<label>` ring cannot be scored: the control has filter `<value>`", "...: the control has mix-blend-mode `<value>`", "...: an ancestor `<tag>` has filter `<value>`", "...: an ancestor `<tag>` has mix-blend-mode `<value>`", and "...: an ancestor `<tag>` has opacity `<value>`". The contrast text "outline contrast is X:1, under 3:1" is unchanged.
 - **Gates:** the folder check listed no folder. `npm run typecheck` exited 0. `npm test` exited 0 in 16 minutes (14:28:11 to 14:44:11): Vitest 52 files and 1038 tests passed; Playwright 662 passed (13.6 minutes; 655 at T3 plus the 7 new tests). No rerun was needed. It was slower than the 10.5 to 11 minute runs, with no timeout or failure.
 - **AC-0011, the nine tests, each shown passed (checkmark) in the saved output:** `receiving.spec.ts` first-run state; `production.spec.ts` AC-0082 and AC-0083; `sales.spec.ts` form with no active finished product; `ask.spec.ts` ask press in flight (status text, and Look it up again); `invoices.spec.ts` AC-0014 text read, text read at 320 px, photo read, photo read at 320 px.
+
+## Stack A catalog fixes (2026-10-20)
+
+- The owner approved, in chat on 2026-10-20, the Realtime-slot fix before each remaining full `npm test` in this build. Each run of it follows the folder check, ends the slot's backend as `supabase_admin`, and vacuums `pg_class`, `pg_attribute`, `pg_type`, and `pg_depend`.
+- Fix 2, after T2's gates: `pg_class` had 202,926 dead rows and the slot was 21,222 transactions behind; after it, 0 dead rows and a new slot 5 behind.
+
+## Wave 2 (T2)
+
+- Green on the implementer's T2 run above: `npm run typecheck` exit 0, and `npm test` exit 0 with 1038 Vitest tests and 662 Playwright tests passed, the nine AC-0011 tests among them.
+- The controller checked that the first 55 lines of `test/e2e/focus-ring.spec.ts` still hash to the plan's digest `2b2ae1de…`, and that the one added case is the T2 construction case.
