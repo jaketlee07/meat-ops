@@ -38,18 +38,19 @@ Six rounds, each after the first over the delta since the previous one. Counts a
 - The folder check listed no folder running tests or the app.
 - `npm test` passed at `6378482`: Vitest 52 files and 1,039 tests, then the browser suite's 667 tests, exit 0, 670 seconds.
 - `supabase migration list --local` shows exactly the 15 versions of the files in `supabase/migrations/`.
-- The local dump (`supabase db dump --local -s public,private`) is 3,276 lines, sha256 `0e8dd1a26e0693d6e9a6026257f99f364cbbb3d740fab40379c5be0626e0fa75`. The object lists from stack A hold 23 tables and views, 3 sequences, and 20 functions in `public`. Both are kept in the session scratchpad only.
+- The local dump (`supabase db dump --local -s public,private`) is 3,276 lines, sha256 `0e8dd1a26e0693d6e9a6026257f99f364cbbb3d740fab40379c5be0626e0fa75`. The object lists from stack A hold 23 tables and views, 3 sequences, and 20 functions in `public`. Both are kept in the session scratchpad, with copies for the reviewers in the ignored `.context/evidence/hosted-rollout/`.
 
 ## T2: sign-in settings
 
-- The developer turned off new-user sign-up and set the email provider's minimum password length to 12 in the dashboard, so the developer's own action is the approval of both writes; reported done at about 13:36.
+- The chat carries no clock times, so this ledger places each approval in the order of events rather than at a time.
+- The controller named both sign-in settings in chat and asked the developer to make them. The developer made them in the dashboard, and that action is the approval of both writes, as the developer confirmed in chat. The developer reported them done before the AC-0001 check below.
 - AC-0001, first check, 13:37:10 (18:37:10 UTC): `GET /auth/v1/settings` with the anon key returned `"disable_signup": true` (email provider on, mailer autoconfirm off). AC-0008 compares the developer's account's `created_at` against this time.
-- AC-0002: the developer read the minimum password length as 12, reported in chat at about 13:38.
+- AC-0002: after that check, the developer read the minimum password length in the dashboard as 12 and reported it in chat.
 
 ## T3: the engine on the hosted project
 
-- The developer approved the CLI's temporary login role in chat at about 13:40, before `supabase link` ran at 13:47:48. The link made no role (a read-only `pg_roles` read found no `cli_login%` role after it); the dry run printed "Initialising login role...".
-- `supabase db push --dry-run` listed all 15 files in file order, `0001_init.sql` through `20261021005125_pricing_view_once.sql`. The developer saw the list and approved the push in chat at about 13:50.
+- The developer approved the CLI's temporary login role in chat before `supabase link` ran at 13:47:48. The link made no role (a read-only `pg_roles` read found no `cli_login%` role after it); the dry run printed "Initialising login role...".
+- `supabase db push --dry-run` listed all 15 files in file order, `0001_init.sql` through `20261021005125_pricing_view_once.sql`. The developer saw the list and then approved the push in chat, before the two reads below.
 - AC-0003, 18:59:29 UTC: `to_regclass('public.lots')` was null, so no table `public.lots` existed. AC-0004, 18:59:30 UTC: `to_regclass('private.operators')` was null. These two reads were the only hosted commands before the push.
 - `supabase db push --yes` ran from 18:59:38 to 18:59:42 UTC (13:59 local), exit 0, and applied the 15 files in order. Its two notices were "extension \"pgcrypto\" already exists, skipping" (0001) and "function public.reset_test_data() does not exist, skipping" (access lockdown).
 - AC-0005: a prefixed read of `supabase_migrations.schema_migrations` returned 15 versions, the same set as the 15 file versions.
@@ -61,10 +62,10 @@ Six rounds, each after the first over the delta since the previous one. Counts a
 
 ## T4: the developer's account
 
-- The developer approved making the developer's account in chat at about 14:05 and made it in the dashboard (Add user, Create new user, auto-confirmed) with the developer's personal email.
+- The developer approved making the developer's account in chat, then made it in the dashboard (Add user, Create new user, auto-confirmed) with the developer's personal email, and confirmed that order in chat. Supabase records the account as created at 19:03:22 UTC (14:03:22).
 - AC-0008, 19:03:34 UTC: `auth.users` held exactly 1 user, created 19:03:22 UTC (later than the first AC-0001 check at 18:37:10 UTC), `last_sign_in_at` null, email confirmed; `auth.sessions` and `auth.refresh_tokens` held no row for it.
-- AC-0009: the developer confirmed in chat at about 14:06 that the account's password has at least 12 characters.
-- The developer approved the allowlist insert in chat at about 14:06. `insert into private.operators(user_id) values ('<developer id>')` ran through `execute_sql` at 19:14:43 UTC.
+- AC-0009: after the AC-0008 read, the developer confirmed in chat that the account's password has at least 12 characters.
+- The developer then approved the allowlist insert in chat. `insert into private.operators(user_id) values ('<developer id>')` ran through `execute_sql` at 19:14:43 UTC.
 - AC-0010, first read: `auth.users` holds 1 user and `private.operators` holds 1 row, whose `user_id` is that user's id.
 
 ## T5: the access check
@@ -92,3 +93,29 @@ Six rounds, each after the first over the delta since the previous one. Counts a
 
 - 14:19: the Realtime slot fix ran on stack A (standing approval): `pg_class` dead rows 101,550 before and 0 after; the slot was 12,466 transactions behind before and 1 after. The folder check listed no folder running tests or the app.
 - `npm test` passed at `4dbbace`: Vitest 52 files and 1,039 tests, then the browser suite's 667 tests, exit 0, 667 seconds. `npm run typecheck` exits 0. The repository has no lint command.
+
+## Queries behind the checks
+
+Each SQL batch ran through the Supabase MCP connection's `execute_sql`; ids are masked as `<developer id>`. Every count is an exact `count(*)`, not a statistics estimate.
+
+- AC-0003 and AC-0004: `set transaction read only; select to_regclass('public.lots')::text as lots_table, now() as checked_at;` and the same with `private.operators`.
+- AC-0005: `set transaction read only; select string_agg(version, ',' order by version) as versions, count(*) as n from supabase_migrations.schema_migrations;`
+- AC-0007, AC-0018, and the products count, in one batch: `set transaction read only; select (select count(*) from pg_proc where proname = 'reset_test_data') as reset_test_data_functions, (select count(*) from public.products) as products, (select json_agg(json_build_object('role', r.rolname, 'super', r.rolsuper, 'bypassrls', r.rolbypassrls, 'member_of', (select count(*) from pg_auth_members m where m.member = r.oid)) order by r.rolname) from pg_roles r where r.rolname in ('anon', 'authenticated')) as api_roles;` The `pg_proc` count spans every schema.
+- AC-0008: `set transaction read only; select (select count(*) from auth.users) as users, u.id, u.created_at, u.created_at > timestamptz '2026-10-21 18:37:10+00' as created_after_signup_off, u.last_sign_in_at, u.email_confirmed_at is not null as confirmed, (select count(*) from auth.sessions s where s.user_id = u.id) as sessions, (select count(*) from auth.refresh_tokens r where r.user_id::uuid = u.id) as refresh_tokens, now() as checked_at from auth.users u;`
+- AC-0010, first read: `set transaction read only; select (select count(*) from auth.users) as users, (select count(*) from private.operators) as operators, (select count(*) from private.operators o join auth.users u on u.id = o.user_id) as operators_matching_a_user, (select bool_and(o.user_id = '<developer id>') from private.operators o) as only_developer;`
+- AC-0010, second read, and AC-0020, in one batch: `set transaction read only; select` the sum of `(select count(*) from public.<table>)` over the 18 tables `alert_digests`, `alerts`, `customers`, `fee_types`, `finished_goods`, `import_draft_lines`, `import_drafts`, `inventory_balances`, `lot_adjustments`, `lots`, `product_fees`, `production_batch_lots`, `production_batches`, `products`, `receipt_corrections`, `sale_items`, `sales`, and `vendors`, with `(select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p'))` as the catalog's table count (18), `(select count(*) from auth.users)`, `(select count(*) from private.operators)`, and `(select bool_and(o.user_id = u.id) from private.operators o cross join auth.users u)`.
+- AC-0011: `curl -H "apikey: <anon key>" -H "Authorization: Bearer <anon key>" "<project URL>/rest/v1/<name>?select=*&limit=1"` for each table and view.
+- AC-0012: one read-only batch over every `pg_class` row in `public` of kind `r`, `p`, `v`, `m`, or `S`, true when `anon` holds any of `has_table_privilege` `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`, or `has_any_column_privilege` `SELECT`, `INSERT`, `UPDATE`, `REFERENCES` (sequences: `has_sequence_privilege` `USAGE`, `SELECT`, `UPDATE`); `has_function_privilege('anon', oid, 'EXECUTE')` over every `public` function; and `has_schema_privilege('anon', 'private', 'USAGE')`. It returned 26 objects checked, 0 with a privilege, 21 functions checked, `rls_auto_enable()` the only one executable, and `false`.
+- AC-0013: `curl -X POST -H "apikey: <anon key>" -H "Authorization: Bearer <anon key>" -H 'content-type: application/json' -d '{}' "<project URL>/rest/v1/rpc/rls_auto_enable"`.
+- AC-0014: `curl -X POST` with the same headers and `-d '{"query":"{ __schema { queryType { fields { name } } mutationType { fields { name } } } }"}'` to `<project URL>/graphql/v1`.
+- AC-0015: for each function, `set transaction read only; set local role authenticated; set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}'; select public.<name>(<values>);`, with the values the plan's Design gives per argument type; the made-up `sub` was first read as absent with `select count(*) from private.operators where user_id = '00000000-0000-4000-8000-000000000001'`.
+- AC-0019: `set transaction read only; set local role authenticated; set local request.jwt.claims = '{"sub":"<developer id>","role":"authenticated"}'; select public.check_operator();`
+- AC-0021: `set transaction read only;` then the relation (`relkind` `r`, `p`, `v`, `m`), sequence (`S`), and function (`proname` with `pg_get_function_identity_arguments`) names in `public`, aggregated; stack A answered the same query through `docker exec ... psql`.
+- AC-0022: `set transaction read only; select rolname, rolcanlogin, rolvaliduntil, rolvaliduntil < now() as expired, now() as checked_at from pg_roles where rolname like 'cli_login%' order by 1;`
+
+## Facts for close-work
+
+- The app stays on the local stack: at the end of the work, `.env`'s `SUPABASE_URL` host is `127.0.0.1`.
+- Loading real data is a later job, and the business owner's account is made at hand-over with the overview's "Create the owner account" steps and the re-checks in "The hosted project".
+- The developer chose on 2026-10-21 that a migration merged to `main` reaches the hosted project before the app points at it or any real data goes in.
+- Correction to the spec's Assumptions (kept here because the spec is locked): on stack A the browser suite reorders the grant lines of four objects, not three: `production_batch_lots`, `receipt_corrections`, `sale_items`, and `v_sale_summary`.
