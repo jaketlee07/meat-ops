@@ -45,3 +45,14 @@ Four rounds, each after the first over the delta since the previous one:
   - M2, `min-w-0` removed from the `dd`: failed at the same check with `scroll width 560 is over 320`. Undone the same way; the diff check exited 0.
   - Green after both undos: 3 passed (the two sign-in setups and the test), 10 seconds with the build.
 - `npm run typecheck` passed.
+
+## T3: the Back test's title
+
+- Commit `acfca2b` holds only the rename. On it, `git diff HEAD~1 -- test/e2e/pricing.spec.ts` removed one line, `  test("AC-0124: after Back, the fields match the URL", async ({ page }) => {`, and added one, the same line without `AC-0124: `. `grep -c 'test("after Back, the fields match the URL"' test/e2e/pricing.spec.ts` printed 1.
+- T3 implemented by the controller, not the implementer subagent: a one-line rename.
+
+## Gates (2026-10-20, at `acfca2b`)
+
+- Wave 1 (T1, T2): `npm run typecheck` passed; `npm run test:costing` passed, 3 files and 37 tests, in 5 seconds.
+- Wave 2 (T3), the final gates: `npm run typecheck` passed. `npm test` passed in 749 seconds: Vitest 52 files and 1039 tests, then the browser suite 667 passed in 11.3 minutes. The folder check was empty before the run, and `pg_class` held 3916 dead rows with the Realtime slot 1035 transactions behind.
+- AC-0007: in that run `test/pricing.test.ts` passed. Alone, `npx vitest run test/pricing.test.ts -t "the below-target check compares the rounded margin"` passed. `git diff fb6584b -- test/pricing.test.ts` is empty.
