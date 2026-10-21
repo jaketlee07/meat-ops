@@ -1,6 +1,6 @@
 # Menu-pricing review refinements
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
