@@ -45,7 +45,7 @@ Six rounds, each after the first over the delta since the previous one. Counts a
 - The chat carries no clock times, so this ledger places each approval in the order of events rather than at a time.
 - The controller named both sign-in settings in chat and asked the developer to make them. The developer made them in the dashboard, and that action is the approval of both writes, as the developer confirmed in chat. The developer reported them done before the AC-0001 check below.
 - AC-0001, first check, 13:37:10 (18:37:10 UTC): `GET /auth/v1/settings` with the anon key returned `"disable_signup": true` (email provider on, mailer autoconfirm off). AC-0008 compares the developer's account's `created_at` against this time.
-- AC-0002: the developer read the minimum password length in the dashboard as 12 and reported it in chat after the AC-0001 check below and before approving the CLI login role, which came before `supabase link` at 13:47:48. So the reading falls between 13:37:10 and 13:47:48.
+- AC-0002: the developer read the minimum password length in the dashboard as 12 and reported it in chat after the first AC-0001 check above and before approving the CLI login role, which came before `supabase link` at 13:47:48. So the reading falls between 13:37:10 and 13:47:48.
 
 ## T3: the engine on the hosted project
 
