@@ -4,6 +4,8 @@ import type { TypedClient } from "../src/lib/supabase.js";
 import { resolveStackEnv } from "./env.js";
 import { OPERATOR_EMAIL } from "./users.js";
 
+// Every name, price, and figure in this file is made up.
+//
 // Direct Postgres access for TEST SETUP and RAW-TABLE READ ASSERTIONS only.
 //
 // It resets state between tests and reads back raw tables to check invariants
