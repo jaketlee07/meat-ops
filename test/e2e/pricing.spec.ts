@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { callAsOperator, PROD_502_ID, RAW_TOM_ID, resetTestData, voidReceiptCall } from "../db";
+import { callAsOperator, PROD_502_ID, query, RAW_TOM_ID, resetTestData, voidReceiptCall } from "../db";
 import { checkPageState } from "./a11y";
 import { withSeeAlerts } from "./alerts-page";
 import {
@@ -740,6 +740,35 @@ test.describe("the detail", () => {
     expect(labels.indexOf(NO_TARGET_SENTENCE)).toBeLessThan(labels.indexOf("List price"));
     // The detail with no target margin.
     expect(await checkPageState(page)).toEqual(detailControls({ apply: "Set list price to $2.68/lb", remove: false }));
+  });
+
+  test("menu-pricing-review AC-0001: a raw input and a fee name, each one word wider than the phone, wrap inside it", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    const rawWord = "tomatoes".repeat(8);
+    const feeWord = "freezingcharge".repeat(5);
+    await query("update products set description = $1 where id = $2", [rawWord, RAW_TOM_ID]);
+    await query("update fee_types set name = $1 where code = 'freezing'", [feeWord]);
+    await opensDetail(page, "502");
+    await page.setViewportSize({ width: 320, height: 640 });
+    // Each word alone is wider than the viewport, so only min-w-0 keeps it inside.
+    for (const word of [rawWord, feeWord]) {
+      const width = await page.evaluate((w) => {
+        const walker = document.createTreeWalker(document.querySelector("main")!, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const start = (node.textContent ?? "").indexOf(w);
+          if (start < 0) continue;
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + w.length);
+          return [...range.getClientRects()].reduce((sum, rect) => sum + rect.width, 0);
+        }
+        return 0;
+      }, word);
+      expect(width, word).toBeGreaterThan(320);
+    }
+    expect(await checkPageState(page)).toEqual(detailControls({ remove: true }));
   });
 
   test("AC-0083: a raw input with no cost shows None yet and No price yet", async ({ page }) => {

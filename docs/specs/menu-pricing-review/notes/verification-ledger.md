@@ -36,3 +36,12 @@ Four rounds, each after the first over the delta since the previous one:
   - Products: 0 before the probe and 0 after the rollback. The view count query still printed `1|1` after it.
 - Interface: `src/lib/database.types.ts` has sha256 `c3c62b67…` before and after `npm run gen:types`.
 - T1 implemented by the controller, not the implementer subagent: the migration was written while the plan's probe statement was already in hand.
+
+## T2: the Figure wrap test
+
+- The test `menu-pricing-review AC-0001: a raw input and a fee name, each one word wider than the phone, wrap inside it` sits in the `the detail` block of `test/e2e/pricing.spec.ts`. RAW-TOM's description is `tomatoes` 8 times (64 letters), and the `freezing` fee's name is `freezingcharge` 5 times (70 letters).
+- AC-0002, each run `npm run test:e2e -- test/e2e/pricing.spec.ts -g "menu-pricing-review AC-0001"` on 2026-10-20, with the folder check empty before it. The implementer subagent ran the same five runs first, with the same results; the runs below are the controller's.
+  - M1, `min-w-0` removed from the `dt` in `src/app/pricing/figure.tsx`: failed at `page checks at 320 x 640` with `scroll width 562 is over 320`. Both width preconditions passed first. Undone with `git checkout`; `git diff --exit-code src/app/pricing/figure.tsx` exited 0.
+  - M2, `min-w-0` removed from the `dd`: failed at the same check with `scroll width 560 is over 320`. Undone the same way; the diff check exited 0.
+  - Green after both undos: 3 passed (the two sign-in setups and the test), 10 seconds with the build.
+- `npm run typecheck` passed.
