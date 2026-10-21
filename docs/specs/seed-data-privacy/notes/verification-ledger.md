@@ -76,4 +76,4 @@ Run in a fresh clone of the branch at `17323f8`, where no entry named `private` 
 ## Post-gates review, round 2
 
 - Adversarial: direct clean. Quality: 1 Nit sustained, on the rerun count above, now reworded.
-- Gates after this fix: `git diff 862d3d6..HEAD --stat` touches only this ledger, so the `npm test` run at `862d3d6` covers the same code, and `npm run typecheck` passed again.
+- Gates after this fix (2026-10-21, at `308f17d`): `git diff --stat 862d3d6 308f17d` touches only this ledger, so the `npm test` run at `862d3d6` covers the same code. `npm run typecheck` passed on that code.
