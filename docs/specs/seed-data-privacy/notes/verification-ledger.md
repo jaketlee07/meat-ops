@@ -58,3 +58,17 @@ Run in a fresh clone of the branch at `17323f8`, where no entry named `private` 
 - The `AGENTS.md` folder check listed no folder running tests or the app; this folder has no `supabase/.env`, so it is on stack A.
 - `npm run typecheck`: pass.
 - `npm test`: pass. Vitest 52 files and 1039 tests; Playwright 667 tests in 12.7 min; 890 s in all.
+
+## Post-gates review, round 1
+
+- Security: direct clean. Quality: 1 Nit sustained. Adversarial: 1 Nit sustained. Both were fixed:
+  - The `.gitignore` comment said git never tracks the files, but a forced add still can. Commit `862d3d6` rewords it to say git ignores `private` and that hard rule 8 forbids a forced add. The wording differs from the comment in the plan's Behavior & rules, which is working material; the plan stays as approved.
+  - T4's scratch copy of the old `info/exclude` and Probe #1's clone were still in the session scratch. Both are deleted, so the spec's Always-do rule on probe files and the plan's Probe #1 record now hold.
+- After `862d3d6`, the T1 checks ran again in a fresh clone: AC-0001 printed `.gitignore:41:/private	private` and exited 0; the AC-0002 samples exited 1 and the sweep counted 0; the folder and the link each left 0 status lines; `git add --dry-run` exited 1. The clone was deleted.
+
+## Gates after the round-1 fixes (2026-10-21, at `862d3d6`)
+
+- `npm run typecheck`: pass.
+- `npm test`: Vitest 52 files and 1039 tests passed; Playwright 666 passed and 1 failed, in 14.8 min (1135 s in all). The folder check before the run listed one other project's folder (`mobilize`), which uses neither stack.
+- The failure was `test/e2e/alerts.spec.ts:182` ("AC-0003, AC-0118, AC-0120, AC-0122"), with `duplicate key value violates unique constraint "alerts_one_live"` from its own reset query at line 193. That file is not in this diff, the test passed in the first gate run on the same `test/db.ts`, and `docs/product/intents/alerts-watch-test-race.md` (in `[backlog].open`) records the same error in the same test. It is treated as that known, pre-existing race.
+- `npm run test:e2e -- test/e2e/alerts.spec.ts -g "a replayed action request"` then passed (3 passed, 8.7 s).
