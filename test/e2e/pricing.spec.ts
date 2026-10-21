@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { callAsOperator, PROD_502_ID, RAW_TOM_ID, resetTestData, voidReceiptCall } from "../db";
+import { callAsOperator, PROD_502_ID, query, RAW_TOM_ID, resetTestData, voidReceiptCall } from "../db";
 import { checkPageState } from "./a11y";
 import { withSeeAlerts } from "./alerts-page";
 import {
@@ -637,7 +637,7 @@ test.describe("the what-if", () => {
     await expect(status).toHaveText("No active finished product is made from NOPE.");
   });
 
-  test("AC-0124: after Back, the fields match the URL", async ({ page }) => {
+  test("after Back, the fields match the URL", async ({ page }) => {
     await fixture502(0.2, 3.29);
     await opens(page);
     const w = whatIf(page);
@@ -740,6 +740,44 @@ test.describe("the detail", () => {
     expect(labels.indexOf(NO_TARGET_SENTENCE)).toBeLessThan(labels.indexOf("List price"));
     // The detail with no target margin.
     expect(await checkPageState(page)).toEqual(detailControls({ apply: "Set list price to $2.68/lb", remove: false }));
+  });
+
+  test("menu-pricing-review AC-0001: a raw input and a fee name, each one word wider than the phone, wrap inside it", async ({
+    page,
+  }) => {
+    await fixture502(0.2, 3.29);
+    const rawWord = "tomatoes".repeat(8);
+    const feeWord = "freezingcharge".repeat(5);
+    await query("update products set description = $1 where id = $2", [rawWord, RAW_TOM_ID]);
+    await query("update fee_types set name = $1 where code = 'freezing'", [feeWord]);
+    await opensDetail(page, "502");
+    await page.setViewportSize({ width: 320, height: 640 });
+    // Each word alone is wider than the viewport, so the page check passes only
+    // if the row wraps the word or clips it. The box check at the end rules out the clip.
+    const clipped: string[] = [];
+    for (const word of [rawWord, feeWord]) {
+      const seen = await page.evaluate((w) => {
+        const walker = document.createTreeWalker(document.querySelector("main")!, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const start = (node.textContent ?? "").indexOf(w);
+          if (start < 0) continue;
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + w.length);
+          const box = node.parentElement!;
+          return {
+            width: [...range.getClientRects()].reduce((sum, rect) => sum + rect.width, 0),
+            overflows: box.scrollWidth > box.clientWidth || box.scrollHeight > box.clientHeight,
+          };
+        }
+        return { width: 0, overflows: false };
+      }, word);
+      expect(seen.width, word).toBeGreaterThan(320);
+      if (seen.overflows) clipped.push(word);
+    }
+    expect(await checkPageState(page)).toEqual(detailControls({ remove: true }));
+    // A clipped word keeps the page inside 320 too, so each word's own box must show all of it.
+    expect(clipped, "words cut off by their box").toEqual([]);
   });
 
   test("AC-0083: a raw input with no cost shows None yet and No price yet", async ({ page }) => {
