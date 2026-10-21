@@ -61,3 +61,11 @@ Four rounds, each after the first over the delta since the previous one:
 - Wave 1 (T1, T2): `npm run typecheck` passed; `npm run test:costing` passed, 3 files and 37 tests, in 5 seconds.
 - Wave 2 (T3), the final gates: `npm run typecheck` passed. `npm test` passed in 749 seconds: Vitest 52 files and 1039 tests, then the browser suite 667 passed in 11.3 minutes. The folder check was empty before the run, and `pg_class` held 3916 dead rows with the Realtime slot 1035 transactions behind.
 - AC-0007: in that run `test/pricing.test.ts` passed. Alone, `npx vitest run test/pricing.test.ts -t "the below-target check compares the rounded margin"` passed. `git diff fb6584b -- test/pricing.test.ts` is empty.
+- After the post-gates round 1 fix, at `0482ea5`: `npm run typecheck` passed, and `npm test` passed in 995 seconds: Vitest 52 files and 1039 tests, then the browser suite 667 passed in 14.0 minutes. The folder check was empty before the run. `pg_class` held 107293 dead rows before it and 208843 after, with the Realtime slot 12522 transactions behind before it, which accounts for the slower run (the `local-stack-catalog-bloat` intent).
+
+## Post-gates review
+
+- Round 1 (adversarial-reviewer and quality-engineer, in parallel, over `fb6584b..8594ab1`). Adjudicated: 3 Nits sustained, 2 findings refuted.
+  - Sustained and fixed in `0482ea5`: the wrap test's title said each word wraps while its assertions showed only that it fits, so a clipped word passed (fixed with the box-overflow check in T2 above); its comment gave `min-w-0` sole credit for the wrap (reworded); and this ledger did not record a green run after each undo (T2 above now lists one after each).
+  - Refuted: the quality-engineer's Concern on the same clipping gap, as outside what AC-0001 and AC-0002 require (the Nit above closed it anyway); and a Nit asking the stored T1 probe output to carry its own AC-0004 count, as outside any rule.
+- Not dispatched: security-reviewer (no security boundary, data flow, or control changes; the view keeps its grants and `security_invoker`, which `test/pricing.test.ts` checks), frontend-reviewer (no HTML, CSS, or JS output changes; the diff is a migration and tests), experience-reviewer (nothing a reader sees changes).
