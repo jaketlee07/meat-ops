@@ -637,7 +637,7 @@ test.describe("the what-if", () => {
     await expect(status).toHaveText("No active finished product is made from NOPE.");
   });
 
-  test("AC-0124: after Back, the fields match the URL", async ({ page }) => {
+  test("after Back, the fields match the URL", async ({ page }) => {
     await fixture502(0.2, 3.29);
     await opens(page);
     const w = whatIf(page);
