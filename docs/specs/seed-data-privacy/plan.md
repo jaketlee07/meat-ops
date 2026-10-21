@@ -1,7 +1,7 @@
 # Plan: seed-data-privacy
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** none, non-structural. The ignore rule follows the `.gitignore` "local env files" block (a comment that says why, then a root-anchored pattern, as `/node_modules` and `/coverage` are). The rule joins the `AGENTS.md` Hard rules list. Uncertainty: none; no module, seam, or test changes
 
 > **Plan contract:** this is the implementation strategy. It may change

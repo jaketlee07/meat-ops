@@ -1,6 +1,6 @@
 # Spec: seed-data-privacy
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the intent [`docs/product/intents/seed-data-privacy.md`](../../product/intents/seed-data-privacy.md) (its Outcome and Boundary); the `AGENTS.md` hard rules; the intent [`docs/product/intents/hosted-supabase-rollout.md`](../../product/intents/hosted-supabase-rollout.md), which owns loading real data into the hosted project
@@ -98,19 +98,19 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 
 ### The private folder
 
-- [ ] **AC-0001.** In a fresh clone of the branch, where no entry named `private` exists, `git check-ignore -v private` reports the root entry `private` as ignored and attributes it to a rule in the repository-root `.gitignore`.
-- [ ] **AC-0002.** The rule AC-0001 names ignores no path outside the root entry `private` and what is under it: `git check-ignore -v --no-index` attributes nothing to it for `src/app/private/page.tsx`, for `supabase/private/seed.sql`, or for any file that `git ls-files` lists.
-- [ ] **AC-0007.** In a temporary worktree of this folder, detached at a commit that predates the shared rule, `git check-ignore -v private` reports the root entry `private` as ignored and attributes it to the `info/exclude` file in this folder's git directory.
+- [x] **AC-0001.** In a fresh clone of the branch, where no entry named `private` exists, `git check-ignore -v private` reports the root entry `private` as ignored and attributes it to a rule in the repository-root `.gitignore`.
+- [x] **AC-0002.** The rule AC-0001 names ignores no path outside the root entry `private` and what is under it: `git check-ignore -v --no-index` attributes nothing to it for `src/app/private/page.tsx`, for `supabase/private/seed.sql`, or for any file that `git ls-files` lists.
+- [x] **AC-0007.** In a temporary worktree of this folder, detached at a commit that predates the shared rule, `git check-ignore -v private` reports the root entry `private` as ignored and attributes it to the `info/exclude` file in this folder's git directory.
 
 ### The made-up data
 
-- [ ] **AC-0003.** `supabase/seed.sql` holds the line `-- Every name, price, and figure in this file is made up.` before its first line that starts with `insert`.
-- [ ] **AC-0004.** No line of `supabase/seed.sql` contains the text `sheet`, in any letter case.
-- [ ] **AC-0005.** `test/db.ts` holds the line `// Every name, price, and figure in this file is made up.` before its first line that starts with `export`.
+- [x] **AC-0003.** `supabase/seed.sql` holds the line `-- Every name, price, and figure in this file is made up.` before its first line that starts with `insert`.
+- [x] **AC-0004.** No line of `supabase/seed.sql` contains the text `sheet`, in any letter case.
+- [x] **AC-0005.** `test/db.ts` holds the line `// Every name, price, and figure in this file is made up.` before its first line that starts with `export`.
 
 ### The rule
 
-- [ ] **AC-0006.** The `## Hard rules` list in `AGENTS.md` ends with this line, exactly:
+- [x] **AC-0006.** The `## Hard rules` list in `AGENTS.md` ends with this line, exactly:
 
   ```markdown
   8. Real business data never enters git or GitHub. Keep real vendor, customer, and brand names, real costs, prices, and fees, and real invoices and their photos in the gitignored `private/` folder at the repository root. Never force-add a file from it, and never put real business data in a tracked file, a commit message, a pull request, or an issue. Test and demo data are made up.
