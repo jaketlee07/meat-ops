@@ -35,6 +35,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Real business files: the catalog, price sheets, and invoices. Git never
+# tracks them, whether private is a folder or a link (AGENTS.md hard rule 8).
+/private
+
 # vercel
 .vercel
 
