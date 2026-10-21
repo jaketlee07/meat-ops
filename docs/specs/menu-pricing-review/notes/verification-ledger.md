@@ -40,10 +40,15 @@ Four rounds, each after the first over the delta since the previous one:
 ## T2: the Figure wrap test
 
 - The test `menu-pricing-review AC-0001: a raw input and a fee name, each one word wider than the phone, wrap inside it` sits in the `the detail` block of `test/e2e/pricing.spec.ts`. RAW-TOM's description is `tomatoes` 8 times (64 letters), and the `freezing` fee's name is `freezingcharge` 5 times (70 letters).
-- AC-0002, each run `npm run test:e2e -- test/e2e/pricing.spec.ts -g "menu-pricing-review AC-0001"` on 2026-10-20, with the folder check empty before it. The implementer subagent ran the same five runs first, with the same results; the runs below are the controller's.
-  - M1, `min-w-0` removed from the `dt` in `src/app/pricing/figure.tsx`: failed at `page checks at 320 x 640` with `scroll width 562 is over 320`. Both width preconditions passed first. Undone with `git checkout`; `git diff --exit-code src/app/pricing/figure.tsx` exited 0.
-  - M2, `min-w-0` removed from the `dd`: failed at the same check with `scroll width 560 is over 320`. Undone the same way; the diff check exited 0.
-  - Green after both undos: 3 passed (the two sign-in setups and the test), 10 seconds with the build.
+- At 320 px it checks each word's summed line widths against 320 before the page-state checks. After them, it checks that the element holding each word does not overflow its own box (`scrollWidth` and `scrollHeight` against `clientWidth` and `clientHeight`), so a clipped word fails too. That last check came from post-gates review round 1. Its place after `checkPageState` keeps the AC-0002 runs red at the page-state check.
+- Each run below is `npm run test:e2e -- test/e2e/pricing.spec.ts -g "menu-pricing-review AC-0001"`, run by the controller on 2026-10-20 against the test as it is now, with the folder check empty before them. Each change was made alone in `src/app/pricing/figure.tsx` and undone with `git checkout`, and `git diff --exit-code src/app/pricing/figure.tsx` exited 0 after each undo. Each green run took 9 to 11 seconds, build included, with 3 passed (the two sign-in setups and the test).
+  - Green before any change: passed.
+  - AC-0002, M1, `min-w-0` removed from the `dt`: failed at `page checks at 320 x 640` with `scroll width 562 is over 320`. Green after the undo: passed.
+  - AC-0002, M2, `min-w-0` removed from the `dd`: failed at the same check with `scroll width 560 is over 320`. Green after the undo: passed.
+  - M3, the `dd`'s `break-words` replaced by `truncate`: failed at `words cut off by their box`, after the page-state checks passed. Green after the undo: passed.
+  - M4, the `dt`'s `break-words` replaced by `truncate`: failed at the same check. Green after the undo: passed.
+  - M5, the `dd`'s `break-words` replaced by `overflow-hidden`: failed at the same check. Green after the undo: passed.
+- Before the clip check, a check that each word takes more than one line rect stayed green under M3 and M4. In Chromium 156 a `truncate`d word reports two rects (527 and 189 px wide), so a rect count cannot tell wrapping from clipping (a bare `page.setContent` probe, 2026-10-20). The element's overflow can: its scroll width was 288 when wrapped and 608 when truncated, against a 288 px box.
 - `npm run typecheck` passed.
 
 ## T3: the Back test's title

@@ -752,9 +752,11 @@ test.describe("the detail", () => {
     await query("update fee_types set name = $1 where code = 'freezing'", [feeWord]);
     await opensDetail(page, "502");
     await page.setViewportSize({ width: 320, height: 640 });
-    // Each word alone is wider than the viewport, so only min-w-0 keeps it inside.
+    // Each word alone is wider than the viewport, so the page stays inside it
+    // only if the row breaks the word across lines.
+    const clipped: string[] = [];
     for (const word of [rawWord, feeWord]) {
-      const width = await page.evaluate((w) => {
+      const seen = await page.evaluate((w) => {
         const walker = document.createTreeWalker(document.querySelector("main")!, NodeFilter.SHOW_TEXT);
         for (let node = walker.nextNode(); node; node = walker.nextNode()) {
           const start = (node.textContent ?? "").indexOf(w);
@@ -762,13 +764,20 @@ test.describe("the detail", () => {
           const range = document.createRange();
           range.setStart(node, start);
           range.setEnd(node, start + w.length);
-          return [...range.getClientRects()].reduce((sum, rect) => sum + rect.width, 0);
+          const box = node.parentElement!;
+          return {
+            width: [...range.getClientRects()].reduce((sum, rect) => sum + rect.width, 0),
+            overflows: box.scrollWidth > box.clientWidth || box.scrollHeight > box.clientHeight,
+          };
         }
-        return 0;
+        return { width: 0, overflows: false };
       }, word);
-      expect(width, word).toBeGreaterThan(320);
+      expect(seen.width, word).toBeGreaterThan(320);
+      if (seen.overflows) clipped.push(word);
     }
     expect(await checkPageState(page)).toEqual(detailControls({ remove: true }));
+    // A clipped word keeps the page inside 320 too, so each word's own box must show all of it.
+    expect(clipped, "words cut off by their box").toEqual([]);
   });
 
   test("AC-0083: a raw input with no cost shows None yet and No price yet", async ({ page }) => {
