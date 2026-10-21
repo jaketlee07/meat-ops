@@ -94,6 +94,7 @@ Six rounds, each after the first over the delta since the previous one. Counts a
 - 14:19: the Realtime slot fix ran on stack A (standing approval): `pg_class` dead rows 101,550 before and 0 after; the slot was 12,466 transactions behind before and 1 after. The folder check listed no folder running tests or the app.
 - `npm test` passed at `4dbbace`: Vitest 52 files and 1,039 tests, then the browser suite's 667 tests, exit 0, 667 seconds. `npm run typecheck` exits 0. The repository has no lint command.
 - After the round-1 review fixes: the folder check listed no folder running tests or the app; 15:04, the Realtime slot fix ran again (101,550 dead `pg_class` rows to 0; the slot 11,777 transactions behind to 0); `npm run typecheck` exited 0; `npm test` passed at `f545fb3`: Vitest 52 files and 1,039 tests, then the browser suite's 667 tests, exit 0, 700 seconds.
+- After the round-2 review fixes: the folder check listed no folder running tests or the app; 15:32, the Realtime slot fix ran again (101,550 dead `pg_class` rows to 0; the slot 11,008 transactions behind to 3); `npm run typecheck` exited 0; `npm test` passed at `2bd1a35`: Vitest 52 files and 1,039 tests, then the browser suite's 667 tests, exit 0, 700 seconds.
 
 ## Queries behind the checks
 
