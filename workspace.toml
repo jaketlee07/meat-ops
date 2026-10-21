@@ -21,7 +21,6 @@
 [backlog]
 open = [
   { path = "docs/product/intents/hosted-supabase-rollout.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Hosted rollout needs scheduling; real data waits on a read-only access check", needs = [] },
-  { path = "docs/product/intents/seed-data-privacy.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/foundation-hardening/spec.md", revision = "adcb0a0" }, summary = "Owner decides whether seed data is real before the catalog is loaded", needs = [] },
   { path = "docs/product/intents/app-https-hosting.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving/spec.md", revision = "683782e" }, summary = "Host the app over HTTPS so receiving and production work from a phone and the app installs", needs = [] },
   { path = "docs/product/intents/shared-display-parts.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/production/notes/verification-ledger.md", revision = "3be979d" }, summary = "Move Facts, stock-view, and BeforeAfter into a shared home both pages import", needs = [] },
   { path = "docs/product/intents/local-stack-loopback-web-pages.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/local-ports/spec.md", revision = "e7c181d" }, summary = "A web page in the owner's browser could reach Studio and the API through 127.0.0.1", needs = [] },
@@ -43,5 +42,6 @@ open = [
   { path = "docs/product/intents/receiving-refinements-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving-refinements/notes/verification-ledger.md", revision = "9f75450" }, summary = "Score the red fade's focus ring in a dialog state, and narrow one ledger sentence on Playwright's route release", needs = [] },
   { path = "docs/product/intents/local-stack-catalog-bloat.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/receiving-refinements/notes/verification-ledger.md", revision = "2ce27e2" }, summary = "Stack A's Realtime slot holds back catalog cleanup, so each full test run leaves about 100k dead pg_class rows", needs = [] },
   { path = "docs/product/intents/menu-pricing-review-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/menu-pricing-review/notes/verification-ledger.md", revision = "45779f1" }, summary = "Make a view-comparison probe's own output show which view definition the stack held", needs = [] },
+  { path = "docs/product/intents/seed-data-privacy-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/seed-data-privacy/plan.md", revision = "3e91040" }, summary = "Check that an agent-bundle reinstall keeps /private, and decide whether agents may read private/", needs = [] },
 ]
 closed = []

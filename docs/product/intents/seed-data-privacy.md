@@ -1,6 +1,6 @@
 # Seed data privacy
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
