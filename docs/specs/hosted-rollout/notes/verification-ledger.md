@@ -87,3 +87,8 @@ Six rounds, each after the first over the delta since the previous one. Counts a
 - `grep -n -E "only user|One person for the|beyond the single owner|signed-in owner reaches"` over the three files prints nothing; the new text of edits 1, 2, 3, 4, and 6 each contains "business owner" and "developer"; `AGENTS.md` holds edit 8's sentence once; hard rule 7 ends "without the developer's approval."; the overview's hosted-approval sentence names the developer; "hosted follow-on" no longer appears in the overview, which has one `## The hosted project` heading; no added line holds an em dash.
 - AC-0016: a fixed-string search of `supabase/.temp/` for the project reference matched no file.
 - `lint-spec-status.py --root .` exits 0.
+
+## Final gates
+
+- 14:19: the Realtime slot fix ran on stack A (standing approval): `pg_class` dead rows 101,550 before and 0 after; the slot was 12,466 transactions behind before and 1 after. The folder check listed no folder running tests or the app.
+- `npm test` passed at `4dbbace`: Vitest 52 files and 1,039 tests, then the browser suite's 667 tests, exit 0, 667 seconds. `npm run typecheck` exits 0. The repository has no lint command.
