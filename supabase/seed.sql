@@ -1,8 +1,11 @@
 -- ============================================================
--- Seed + demo. Ties to the pricing sheet: Turkey Drums TOM -> $2.68/lb.
+-- Demo seed.
+-- Every name, price, and figure in this file is made up.
+-- The demo product's final price is $2.68/lb, invariant 2 (the pricing
+-- tie-out) in docs/costing.md.
 -- ============================================================
 
--- Fee types (mirrors the "Processing Fees/lb" columns)
+-- Fee types (per-lb processing and margin fees)
 insert into fee_types(code, name, kind, sort_order) values
     ('cutting',        'Cutting',                 'processing', 1),
     ('defrosting',     'Defrosting',              'processing', 2),
@@ -33,7 +36,7 @@ select '33333333-3333-3333-3333-333333333333', ft.id, x.amt
 from (values ('direct_material',0.05),('freezing',0.03),('overhead',0.37),('profit',0.05)) x(code,amt)
 join fee_types ft on ft.code = x.code;
 
--- Receive raw at $1.68/lb -> pricing view should read $2.68 final (ties to the sheet)
+-- Receive raw at $1.68/lb -> pricing view should read $2.68 final
 select receive_lot('22222222-2222-2222-2222-222222222222',
                    '11111111-1111-1111-1111-111111111111', 5000, 1.68, date '2026-05-12');
 

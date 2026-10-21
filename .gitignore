@@ -35,6 +35,11 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Real business files: the catalog, price sheets, and invoices. Git ignores
+# private whether it is a folder or a link. A forced add would still track a
+# file, and AGENTS.md hard rule 8 forbids one.
+/private
+
 # vercel
 .vercel
 

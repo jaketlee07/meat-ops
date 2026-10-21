@@ -196,6 +196,7 @@ stack A steps from step 3.
 5. Commit messages use `type(scope): description`.
 6. After any change to a migration, a database function, or `src/lib/`, run `npm test`; a red costing test stops the work.
 7. Schema changes go through `supabase/migrations/` and the local stack; nothing writes to the hosted project without the owner's approval.
+8. Real business data never enters git or GitHub. Keep real vendor, customer, and brand names, real costs, prices, and fees, and real invoices and their photos in the gitignored `private/` folder at the repository root. Never force-add a file from it, and never put real business data in a tracked file, a commit message, a pull request, or an issue. Test and demo data are made up.
 
 ## Coding conventions
 
