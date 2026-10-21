@@ -71,4 +71,9 @@ Run in a fresh clone of the branch at `17323f8`, where no entry named `private` 
 - `npm run typecheck`: pass.
 - `npm test`: Vitest 52 files and 1039 tests passed; Playwright 666 passed and 1 failed, in 14.8 min (1135 s in all). The folder check before the run listed one other project's folder (`mobilize`), which uses neither stack.
 - The failure was `test/e2e/alerts.spec.ts:182` ("AC-0003, AC-0118, AC-0120, AC-0122"), with `duplicate key value violates unique constraint "alerts_one_live"` from its own reset query at line 193. That file is not in this diff, the test passed in the first gate run on the same `test/db.ts`, and `docs/product/intents/alerts-watch-test-race.md` (in `[backlog].open`) records the same error in the same test. It is treated as that known, pre-existing race.
-- `npm run test:e2e -- test/e2e/alerts.spec.ts -g "a replayed action request"` then passed (3 passed, 8.7 s).
+- `npm run test:e2e -- test/e2e/alerts.spec.ts -g "a replayed action request"` then passed the failing test once, in one run (8.7 s). Its "3 passed" count also holds the two sign-in tests of the `setup` project that the browser tests depend on.
+
+## Post-gates review, round 2
+
+- Adversarial: direct clean. Quality: 1 Nit sustained, on the rerun count above, now reworded.
+- Gates after this fix: `git diff 862d3d6..HEAD --stat` touches only this ledger, so the `npm test` run at `862d3d6` covers the same code, and `npm run typecheck` passed again.
