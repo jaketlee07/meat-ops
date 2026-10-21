@@ -1,6 +1,6 @@
 # Spec: menu-pricing-review
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the intent [`docs/product/intents/menu-pricing-review-nits.md`](../../product/intents/menu-pricing-review-nits.md) (its Outcome and Boundary); the menu-pricing spec [`../menu-pricing/spec.md`](../menu-pricing/spec.md) (AC-0124, and the `v_product_pricing` columns its migration defines); [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §11; the `AGENTS.md` hard rules
@@ -90,17 +90,17 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 
 ### The Figure wrap fix
 
-- [ ] **AC-0001.** The 502 detail passes the page-state checks in `test/e2e/a11y.ts` at 320 px wide in this state: a 20% target margin and a 3.29 list price over RAW-TOM's one receipt at 1.68, RAW-TOM's description set to one word, and one of 502's processing fees named with one word, where each word's text, added up across the lines it takes, is wider than 320 px.
-- [ ] **AC-0002.** The AC-0001 test is red at its page-state check, reporting a scroll width over 320, against each of these changes made alone in `src/app/pricing/figure.tsx`: `min-w-0` removed from the Figure's label (`dt`), and `min-w-0` removed from its value (`dd`).
+- [x] **AC-0001.** The 502 detail passes the page-state checks in `test/e2e/a11y.ts` at 320 px wide in this state: a 20% target margin and a 3.29 list price over RAW-TOM's one receipt at 1.68, RAW-TOM's description set to one word, and one of 502's processing fees named with one word, where each word's text, added up across the lines it takes, is wider than 320 px.
+- [x] **AC-0002.** The AC-0001 test is red at its page-state check, reporting a scroll width over 320, against each of these changes made alone in `src/app/pricing/figure.tsx`: `min-w-0` removed from the Figure's label (`dt`), and `min-w-0` removed from its value (`dd`).
 
 ### The Back test
 
-- [ ] **AC-0003.** In `test/e2e/pricing.spec.ts`, the what-if test that goes Back twice and checks both fields against the URL has the title `after Back, the fields match the URL`, which names no criterion.
+- [x] **AC-0003.** In `test/e2e/pricing.spec.ts`, the what-if test that goes Back twice and checks both fields against the URL has the title `after Back, the fields match the URL`, which names no criterion.
 
 ### The pricing view
 
-- [ ] **AC-0004.** After every migration applies, the stored definition of `v_product_pricing` (`pg_get_viewdef`) holds the expression that rounds the final price to 2 decimals once, and the expression that divides by the list price once.
-- [ ] **AC-0005.** On the migrated local stack, `v_product_pricing` and `v_current_menu` return the same rows as they do under the menu-pricing definition of `v_product_pricing`, over data whose finished products include:
+- [x] **AC-0004.** After every migration applies, the stored definition of `v_product_pricing` (`pg_get_viewdef`) holds the expression that rounds the final price to 2 decimals once, and the expression that divides by the list price once.
+- [x] **AC-0005.** On the migrated local stack, `v_product_pricing` and `v_current_menu` return the same rows as they do under the menu-pricing definition of `v_product_pricing`, over data whose finished products include:
   - over a raw input with a cost, each pairing of a target margin present or absent with a list price present or absent
   - one with no target margin whose list price equals its suggested list price while its 4-decimal final price does not
   - one over a raw input with no receipt, and one over a raw input whose only receipt is voided, each with a target margin and a list price
@@ -108,8 +108,8 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
   - the rounding edge: 502's 23% shrink and $0.45/lb of processing fees, over a raw input received at 1.6802, with a 20% target margin and a 3.29 list price
 
   Together those products give `price_action` each of null, `set`, `raise`, and `lower`, and give `needs_new_price` and `below_target` each of true and false.
-- [ ] **AC-0006.** For both `v_product_pricing` and `v_current_menu`, the column names, types, and order, the grants, and the options (`security_invoker=true`) are the same on the migrated local stack as under the menu-pricing definition of `v_product_pricing`.
-- [ ] **AC-0007.** The rounding-edge test in `test/pricing.test.ts` (`the below-target check compares the rounded margin, so 0.19997 shown as 0.2000 is not below target`) passes against the migrated view, with its text unchanged.
+- [x] **AC-0006.** For both `v_product_pricing` and `v_current_menu`, the column names, types, and order, the grants, and the options (`security_invoker=true`) are the same on the migrated local stack as under the menu-pricing definition of `v_product_pricing`.
+- [x] **AC-0007.** The rounding-edge test in `test/pricing.test.ts` (`the below-target check compares the rounded margin, so 0.19997 shown as 0.2000 is not below target`) passes against the migrated view, with its text unchanged.
 
 ## Follow-ons
 

@@ -1,7 +1,7 @@
 # Plan: menu-pricing-review
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** `supabase/migrations/20261009070619_menu_pricing.sql` §2 (the view's current text, its header-comment style, and the `security_invoker` rule); `20261018224140_alerts_corrections.sql` (a later migration that replaces an object without editing the file that made it). Tests: `test/pricing.test.ts` (the view's rows and options) and the `the detail` block of `test/e2e/pricing.spec.ts` (`fixture502`, `opensDetail`, `figures`, `checkPageState`). Uncertainty: none; no new module or seam
 
 > **Plan contract:** this is the implementation strategy. It may change

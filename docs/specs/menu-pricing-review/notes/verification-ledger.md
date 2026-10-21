@@ -76,3 +76,6 @@ Four rounds, each after the first over the delta since the previous one:
 - Round 3 (both reviewers, over `45779f1..090921e`). Adjudicated: 3 Nits sustained, none refuted, all on records rather than code.
   - Fixed: the ignored evidence README's header said every probe ran at `fb6584b` before any change, which the T1 and clip probes do not (both reviewers; the header now says where each probe ran); and the line above named the catalog fix without saying what it did (fixed in `6ee591a`).
 - After the round 3 fix, at `6ee591a`: `npm run typecheck` passed. The same catalog fix ran first: `pg_class` went from 101550 dead rows to 0, and the slot from 10674 transactions behind to 4. `npm test` then passed in 770 seconds: Vitest 52 files and 1039 tests, then the browser suite 667 passed in 11.6 minutes.
+- Round 4 (both reviewers, over `090921e..55aa3d9` and the evidence README): both direct clean. `reviewers-clean` fired, and the adversarial reviewer's clean report was recorded as the direct clean.
+- Finding trend, sustained per round: 3, 3, 3, then 0. Every sustained finding was a Nit; none was deferred.
+- project-knowledge unavailable at `plan-locked` as at `spec-approved`; no capture was attempted. Reusable lessons went to the session memory.
