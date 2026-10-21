@@ -752,8 +752,8 @@ test.describe("the detail", () => {
     await query("update fee_types set name = $1 where code = 'freezing'", [feeWord]);
     await opensDetail(page, "502");
     await page.setViewportSize({ width: 320, height: 640 });
-    // Each word alone is wider than the viewport, so the page stays inside it
-    // only if the row breaks the word across lines.
+    // Each word alone is wider than the viewport, so the page check passes only
+    // if the row wraps the word or clips it. The box check at the end rules out the clip.
     const clipped: string[] = [];
     for (const word of [rawWord, feeWord]) {
       const seen = await page.evaluate((w) => {

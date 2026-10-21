@@ -48,7 +48,7 @@ Four rounds, each after the first over the delta since the previous one:
   - M3, the `dd`'s `break-words` replaced by `truncate`: failed at `words cut off by their box`, after the page-state checks passed. Green after the undo: passed.
   - M4, the `dt`'s `break-words` replaced by `truncate`: failed at the same check. Green after the undo: passed.
   - M5, the `dd`'s `break-words` replaced by `overflow-hidden`: failed at the same check. Green after the undo: passed.
-- Before the clip check, a check that each word takes more than one line rect stayed green under M3 and M4. In Chromium 156 a `truncate`d word reports two rects (527 and 189 px wide), so a rect count cannot tell wrapping from clipping (a bare `page.setContent` probe, 2026-10-20). The element's overflow can: its scroll width was 288 when wrapped and 608 when truncated, against a 288 px box.
+- Before the clip check, a check that each word takes more than one line rect stayed green under M3 and M4. In Chromium 156 a `truncate`d word reports two rects (527 and 189 px wide), so a rect count cannot tell wrapping from clipping (a bare `page.setContent` probe, 2026-10-20, stored with its output as `evidence/clip-probe.cjs` and `evidence/clip-probe-output.txt` in the run's review folder). The element's overflow can: its scroll width was 288 when wrapped and 608 when truncated, against a 288 px box.
 - `npm run typecheck` passed.
 
 ## T3: the Back test's title
