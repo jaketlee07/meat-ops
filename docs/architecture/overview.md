@@ -1,7 +1,7 @@
 # Architecture Overview
 
 Meat Ops keeps the business's costs, stock, and trace records in one Postgres
-database. Only the signed-in owner reaches it, and only eight database functions
+database. Only the signed-in business owner and developer reach it, and only eight database functions
 change the ledger. A Next.js app on the same machine is the owner's screen. The
 brief is [`SYSTEM-SPEC.md`](../../SYSTEM-SPEC.md). The costing math and its
 golden numbers are in [`docs/costing.md`](../costing.md).
@@ -155,8 +155,8 @@ gives, a batch comes before an adjustment, then batches follow their finished
 lot's `produced_seq` and adjustments their id. The sequence continues above the
 highest number given.
 
-After the migrations reach a database that already holds lots (the hosted
-follow-on), run this read-only query. It must return no rows. Each row it
+After the migrations reach a database that already holds lots, run this
+read-only query. It must return no rows. Each row it
 returns is a pair of same-day lots of one product whose insertion numbers
 disagree with their `created_at` order:
 
@@ -262,5 +262,22 @@ owner is locked out, which is the safe state.
 2. Confirm the account is new. Run `select id, created_at, last_sign_in_at from auth.users where email = '<owner email>';` and `select count(*) from auth.sessions where user_id = '<id>';`. The user was created minutes ago, `last_sign_in_at` is empty, and the session count is 0. Stop if either differs, because the account is not the one you just made.
 3. Insert the id: `insert into private.operators(user_id) values ('<id>');`
 
-Run the steps against the local stack first. A hosted project needs the owner's
-approval before anything writes to it.
+Run the steps against the local stack first. A hosted project needs the developer's
+approval before anything writes to it (`AGENTS.md` hard rule 7).
+
+## The hosted project
+
+The hosted Supabase project holds the same engine as the local stack, and no
+real business data yet. Loading real data is a later job.
+
+- **Migrations.** It holds every file in `supabase/migrations/` through `20261021005125_pricing_view_once.sql`, applied in file order by `supabase db push` from a folder linked to the project only for that push and unlinked after it. A migration merged to `main` later reaches it the same way, after the developer approves, and before the app points at the hosted project or any real data goes in. Both the push and the lag check use `supabase/migrations/` at `main`'s current commit, with no unmerged file. A read-only query of `supabase_migrations.schema_migrations`, compared with those file names, shows whether the hosted project lags.
+- **Re-check after a push.** The checks of [`docs/specs/hosted-rollout/spec.md`](../specs/hosted-rollout/spec.md) run again around each later push, in this order, as its plan and ledger describe them. First, with the folder unlinked, `npm test` passes on stack A, and stack A is dumped and listed as a fresh local reference. Then, after the developer approves the CLI login role (see CLI login role below), the folder is linked and the dry run lists the files; the developer sees that list and approves the push separately, before it runs; then the push and the hosted dump that AC-0006 compares run, and the folder is unlinked right after that dump; AC-0016 confirms it. If the developer declines the push, or the sequence stops anywhere before that unlink, the folder is unlinked at once and AC-0016 confirms it. The rest are read-only reads through the MCP connection or HTTP: AC-0005, AC-0007, AC-0018, AC-0021 (object lists read from both sides), AC-0011 to AC-0015, AC-0019 with an operator's id, and AC-0022. AC-0012 uses the second query the ledger records, which includes `MAINTAIN`. AC-0008, AC-0010, and AC-0020 recorded the rollout day (one new account, one operator, empty tables) and no longer hold once the business owner's account or real data exist.
+- **Layout.** Its `public` and `private` layout matches the local stack's, apart from `public.rls_auto_enable()`, a function Supabase adds to new projects. Its event trigger turns on row level security for each new table in `public`. The anon key may run that function, and it is the only one: it acts only during a schema change, and a direct call is refused.
+- **Sign-in.** Public sign-up is off, and a password needs at least 12 characters. An account signs in with its password or a link emailed to its address, with no MFA, so a leaked password, or control of the account's mailbox, alone gives full access. The developer accepted that on 2026-10-21.
+- **Accounts.** The app has two allowed users: the business owner, who uses it daily, and the developer, who helps resolve issues. Each account is made by hand with the steps in [Create the owner account](#create-the-owner-account). The developer's account is on the allowlist; the business owner's is made at hand-over.
+- **Sessions.** The session limits are Supabase's own until the [app HTTPS hosting intent](../product/intents/app-https-hosting.md) sets the 12-hour and 7-day limits the local stack uses.
+- **How the access check reads.** The `public` tables hold no rows, so a non-operator's reads prove nothing there; the layout match with the tested local stack carries that proof. A signed-in non-operator is simulated inside a read-only transaction, so the check skips the auth server's own token path.
+- **Public facts.** The project reference is in the tracked `.mcp.json`, and the developer's email is the author address of most commits. Both are public, and the developer accepts that. The publishable keys and account ids stay out of git.
+- **Ways in outside the app.** The database password, the developer's Supabase login (including the access token the Supabase CLI stores on the developer's Mac, which acts as that login), and the admin key each reach the data. The hosted database accepts connections from the internet, so "Postgres itself answers only this Mac" in [Access model](#access-model) describes the local stack only. The agent's Supabase MCP connection can write, and only its rule of starting each check with `set transaction read only` keeps checks from writing. The developer accepted each of these on 2026-10-21.
+- **CLI login role.** With no database password, the CLI signs in through a temporary role, `cli_login_postgres`. Any CLI command that connects to the hosted project without the database password, such as `db push` and its dry run, `db dump`, or `migration list --linked`, creates or renews that role, so it is a hosted write that needs the developer's approval first (`AGENTS.md` hard rule 7). After the rollout's last CLI command, the role stayed in the catalog with a password that expired at 19:05:02 UTC on 2026-10-21, so it could no longer sign in. The next CLI command that connects without the database password makes it usable again.
+- **Pausing.** The free plan pauses the project after about 7 days of low use. A paused project keeps its data and can be resumed from the dashboard for 90 days.

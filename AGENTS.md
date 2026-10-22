@@ -6,7 +6,7 @@
 
 ## Project overview
 
-This is Meat Ops, an inventory, costing, and lot traceability tool for a meat processor. The owner is its only user. The costing math lives in the Postgres database. The Next.js app in `src/app/` and the data layer in `src/lib/` only call it and read its views.
+This is Meat Ops, an inventory, costing, and lot traceability tool for a meat processor. The business owner uses it, and the developer, jaketlee07, holds an account to help resolve issues. Wherever this repository asks for, requires, or records an approval of the work or a decision about it, or an accepted risk, "the owner" means the developer. The costing math lives in the Postgres database. The Next.js app in `src/app/` and the data layer in `src/lib/` only call it and read its views.
 
 - [`SYSTEM-SPEC.md`](SYSTEM-SPEC.md) is the master brief: what the system does and its boundaries.
 - [`docs/costing.md`](docs/costing.md) is the costing reference: the average rule, the corrections, and the golden numbers the tests encode.
@@ -195,7 +195,7 @@ stack A steps from step 3.
 4. No em dashes in copy, comments, or commit messages.
 5. Commit messages use `type(scope): description`.
 6. After any change to a migration, a database function, or `src/lib/`, run `npm test`; a red costing test stops the work.
-7. Schema changes go through `supabase/migrations/` and the local stack; nothing writes to the hosted project without the owner's approval.
+7. Schema changes go through `supabase/migrations/` and the local stack; nothing writes to the hosted project without the developer's approval.
 8. Real business data never enters git or GitHub. Keep real vendor, customer, and brand names, real costs, prices, and fees, and real invoices and their photos in the gitignored `private/` folder at the repository root. Never force-add a file from it, and never put real business data in a tracked file, a commit message, a pull request, or an issue. Test and demo data are made up.
 
 ## Coding conventions

@@ -40,8 +40,9 @@ trustworthy costing and traceability. It shapes every AI feature below:
 
 ## 3. Users and primary jobs
 
-Primary user: the owner/operator of the processing business. One person for the
-MVP, non-technical, works partly at a desk and partly on the plant floor.
+Primary user: the business owner, who owns and operates the processing business:
+non-technical, working partly at a desk and partly on the plant floor. The MVP
+has one other user, the developer, who holds an account to help resolve issues.
 
 Primary jobs to be done:
 - Log incoming raw purchases quickly, including from the floor or dock.
@@ -322,7 +323,7 @@ and prices he recognizes. If this is trustworthy, the AI on top is believed.
 The owner's login is in scope for this part. The owner signs in with an email and a
 password of at least 12 characters. The owner's account is created by hand and added
 to an allowlist; public sign-up is off. A signed-in user who is not on the allowlist
-reads nothing and calls no operation. The owner is the only user in the MVP.
+reads nothing and calls no operation. The business owner and the developer are the MVP's two users.
 
 ### Three AI moments
 
@@ -332,7 +333,7 @@ reads nothing and calls no operation. The owner is the only user in the MVP.
 
 ### Explicitly out of MVP (state as roadmap)
 
-Market price feed, multi-user and roles beyond the single owner, voice, customer-quote documents,
+Market price feed, users and roles beyond the business owner and the developer, voice, customer-quote documents,
 usage forecasting, recall-notice drafting, and the full offline sync engine. Two
 worth naming aloud as near-term roadmap: recall-notice drafting (the reverse trace
 already exists) and market-based pricing.
