@@ -22,7 +22,7 @@ The owner logs receipts and batches from a phone on the floor over an encrypted 
 ## Unresolved questions
 
 - Where is the app hosted?
-- Does app hosting ship with the hosted Supabase rollout or after it?
+- Does app hosting ship with the hosted Supabase rollout or after it? After it: the hosted rollout shipped on 2026-10-21 in PR #37, and the app stays on the local stack.
 - Does the hosted Supabase plan support the session time limits?
 
 ## Projection

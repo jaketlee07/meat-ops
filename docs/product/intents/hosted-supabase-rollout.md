@@ -1,6 +1,6 @@
 # Hosted Supabase rollout
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
