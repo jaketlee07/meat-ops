@@ -1,7 +1,7 @@
 # Plan: hosted-rollout
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** `docs/architecture/overview.md` ("Access model", "Create the owner account", "Insertion order and the hosted check") and the foundation-hardening plan's Rollout, which first set this sequence; the local proof of the same access model is `test/access.test.ts` (AC-0001 to AC-0011 there). Deviation: the hosted check cannot reuse that suite, because the suite refuses any host but `127.0.0.1` or `localhost` (`test/env.ts`) and writes test rows; this plan proves the hosted side read-only instead.
 
 > **Plan contract:** this is the implementation strategy. It may change

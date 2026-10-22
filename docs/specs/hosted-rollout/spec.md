@@ -1,6 +1,6 @@
 # Spec: hosted-rollout
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the intent [`docs/product/intents/hosted-supabase-rollout.md`](../../product/intents/hosted-supabase-rollout.md) (its Outcome and Boundary); the `AGENTS.md` hard rules, 2, 7, and 8 above all; the access model and the owner-account steps in [`docs/architecture/overview.md`](../../architecture/overview.md); the users in [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §3
@@ -115,43 +115,43 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 
 ### Sign-in settings
 
-- [ ] **AC-0001.** `GET /auth/v1/settings` on the hosted project, sent with its anon key, returns `"disable_signup": true` both before the developer's account is made and when the access check runs.
-- [ ] **AC-0002.** The developer reads the hosted dashboard's minimum password length as 12, and the ledger records the reading and its time.
+- [x] **AC-0001.** `GET /auth/v1/settings` on the hosted project, sent with its anon key, returns `"disable_signup": true` both before the developer's account is made and when the access check runs.
+- [x] **AC-0002.** The developer reads the hosted dashboard's minimum password length as 12, and the ledger records the reading and its time.
 
 ### Before the push
 
-- [ ] **AC-0003.** After the dry run, a read-only query on the hosted project shows either no table `public.lots` or no row of it with a null `vendor_id`, and the only hosted commands between this query and `supabase db push` are the AC-0003 and AC-0004 queries.
-- [ ] **AC-0004.** After the dry run, a read-only query on the hosted project shows either no table `private.operators` or no row in it, and the only hosted commands between this query and `supabase db push` are the AC-0003 and AC-0004 queries.
+- [x] **AC-0003.** After the dry run, a read-only query on the hosted project shows either no table `public.lots` or no row of it with a null `vendor_id`, and the only hosted commands between this query and `supabase db push` are the AC-0003 and AC-0004 queries.
+- [x] **AC-0004.** After the dry run, a read-only query on the hosted project shows either no table `private.operators` or no row in it, and the only hosted commands between this query and `supabase db push` are the AC-0003 and AC-0004 queries.
 
 ### The engine
 
-- [ ] **AC-0005.** After the push, the set of versions in the hosted `supabase_migrations.schema_migrations` equals the set of leading versions of the file names in `supabase/migrations/` at the pushed commit.
-- [ ] **AC-0006.** Split at blank lines into paragraphs, with the lines of each paragraph that holds only `GRANT`, `REVOKE`, and `ALTER DEFAULT PRIVILEGES` statements put in sorted order, the output of `supabase db dump -s public,private` from the hosted project equals, paragraph for paragraph and in order, the same dump from local stack A at the pushed commit, once every hosted paragraph containing `rls_auto_enable` is removed.
-- [ ] **AC-0007.** A read-only query on the hosted project finds no function named `reset_test_data` in any schema.
-- [ ] **AC-0018.** A read-only query on the hosted project shows that the roles `anon` and `authenticated` are not superusers, do not bypass row level security, and are members of no role.
+- [x] **AC-0005.** After the push, the set of versions in the hosted `supabase_migrations.schema_migrations` equals the set of leading versions of the file names in `supabase/migrations/` at the pushed commit.
+- [x] **AC-0006.** Split at blank lines into paragraphs, with the lines of each paragraph that holds only `GRANT`, `REVOKE`, and `ALTER DEFAULT PRIVILEGES` statements put in sorted order, the output of `supabase db dump -s public,private` from the hosted project equals, paragraph for paragraph and in order, the same dump from local stack A at the pushed commit, once every hosted paragraph containing `rls_auto_enable` is removed.
+- [x] **AC-0007.** A read-only query on the hosted project finds no function named `reset_test_data` in any schema.
+- [x] **AC-0018.** A read-only query on the hosted project shows that the roles `anon` and `authenticated` are not superusers, do not bypass row level security, and are members of no role.
 
 ### The developer's account
 
-- [ ] **AC-0008.** Before the allowlist insert, a read-only query shows that `auth.users` holds exactly one user, that its `created_at` is later than the first AC-0001 check, that its `last_sign_in_at` is null, and that `auth.sessions` holds no row for it.
-- [ ] **AC-0009.** The developer confirms in chat that the developer's account password has at least 12 characters, and the ledger records the confirmation.
-- [ ] **AC-0010.** When the access check runs, `auth.users` holds exactly one user, and `private.operators` holds exactly one row, whose `user_id` is that user's id.
+- [x] **AC-0008.** Before the allowlist insert, a read-only query shows that `auth.users` holds exactly one user, that its `created_at` is later than the first AC-0001 check, that its `last_sign_in_at` is null, and that `auth.sessions` holds no row for it.
+- [x] **AC-0009.** The developer confirms in chat that the developer's account password has at least 12 characters, and the ledger records the confirmation.
+- [x] **AC-0010.** When the access check runs, `auth.users` holds exactly one user, and `private.operators` holds exactly one row, whose `user_id` is that user's id.
 
 ### The access check
 
-- [ ] **AC-0011.** With the anon key, `GET /rest/v1/<name>?select=*&limit=1` for every table and view the hosted catalog lists in `public` answers with error code `42501` and no rows.
-- [ ] **AC-0012.** A read-only catalog query on the hosted project shows that `anon` holds no privilege on any table, view, sequence, or column in `public`, no `USAGE` on schema `private`, and no `EXECUTE` on any function in `public` other than `rls_auto_enable()`.
-- [ ] **AC-0013.** With the anon key, `POST /rest/v1/rpc/rls_auto_enable` answers with a status outside 200 to 299.
-- [ ] **AC-0014.** With the anon key, a GraphQL introspection request to `/graphql/v1` returns no field whose name contains a `public` table or view name together with `collection`, and no field named after a `public` function. An error answer with no schema data meets this.
-- [ ] **AC-0015.** Every function the hosted catalog lists in `public`, other than `rls_auto_enable()`, fails with SQLSTATE `42501` when called in a read-only transaction as role `authenticated`, with request claims carrying `"role":"authenticated"` and a `sub` that is not in `private.operators`.
-- [ ] **AC-0019.** When the access check runs, `public.check_operator()` returns without error when called in a read-only transaction as role `authenticated`, with request claims carrying `"role":"authenticated"` and the `sub` of the one `private.operators` row.
-- [ ] **AC-0020.** When the access check runs, every table the hosted catalog lists in `public` holds 0 rows.
-- [ ] **AC-0021.** Each hosted list that AC-0011, AC-0012, AC-0015, and AC-0020 run over (the `public` tables and views, sequences, and functions) holds exactly the names of the matching list on local stack A, apart from `rls_auto_enable()`.
+- [x] **AC-0011.** With the anon key, `GET /rest/v1/<name>?select=*&limit=1` for every table and view the hosted catalog lists in `public` answers with error code `42501` and no rows.
+- [x] **AC-0012.** A read-only catalog query on the hosted project shows that `anon` holds no privilege on any table, view, sequence, or column in `public`, no `USAGE` on schema `private`, and no `EXECUTE` on any function in `public` other than `rls_auto_enable()`.
+- [x] **AC-0013.** With the anon key, `POST /rest/v1/rpc/rls_auto_enable` answers with a status outside 200 to 299.
+- [x] **AC-0014.** With the anon key, a GraphQL introspection request to `/graphql/v1` returns no field whose name contains a `public` table or view name together with `collection`, and no field named after a `public` function. An error answer with no schema data meets this.
+- [x] **AC-0015.** Every function the hosted catalog lists in `public`, other than `rls_auto_enable()`, fails with SQLSTATE `42501` when called in a read-only transaction as role `authenticated`, with request claims carrying `"role":"authenticated"` and a `sub` that is not in `private.operators`.
+- [x] **AC-0019.** When the access check runs, `public.check_operator()` returns without error when called in a read-only transaction as role `authenticated`, with request claims carrying `"role":"authenticated"` and the `sub` of the one `private.operators` row.
+- [x] **AC-0020.** When the access check runs, every table the hosted catalog lists in `public` holds 0 rows.
+- [x] **AC-0021.** Each hosted list that AC-0011, AC-0012, AC-0015, and AC-0020 run over (the `public` tables and views, sequences, and functions) holds exactly the names of the matching list on local stack A, apart from `rls_auto_enable()`.
 
 ### Clean-up
 
-- [ ] **AC-0016.** When the work ends, no file under `supabase/.temp/` in this folder contains the hosted project's reference.
-- [ ] **AC-0022.** When the work ends, a read-only query shows that no hosted role whose name starts with `cli_login` can still log in: each has `rolcanlogin` false or a `rolvaliduntil` earlier than the query's time.
-- [ ] **AC-0017.** Before each `git push` of this branch, with no commit made between the search and the push, a search finds no hosted publishable key, no developer's account id, and no link to any agent session in the file content or message of any commit in `main..HEAD`; before the agent posts or edits a pull request title, body, comment, or review, a search finds none of the three in that text.
+- [x] **AC-0016.** When the work ends, no file under `supabase/.temp/` in this folder contains the hosted project's reference.
+- [x] **AC-0022.** When the work ends, a read-only query shows that no hosted role whose name starts with `cli_login` can still log in: each has `rolcanlogin` false or a `rolvaliduntil` earlier than the query's time.
+- [x] **AC-0017.** Before each `git push` of this branch, with no commit made between the search and the push, a search finds no hosted publishable key, no developer's account id, and no link to any agent session in the file content or message of any commit in `main..HEAD`; before the agent posts or edits a pull request title, body, comment, or review, a search finds none of the three in that text.
 
 ## Follow-ons
 
