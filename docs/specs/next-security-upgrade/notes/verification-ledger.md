@@ -30,3 +30,12 @@ Review artifacts sit under the ignored `.context/reviews/c9c476fa-6878-4a72-abf1
 - The controller does each task itself rather than dispatching the implementer subagent: T1 is one resolve command and its checks, and T2 runs the gates.
 - Project knowledge: capture at the spec and plan gates was not attempted; it refused with `strict_parse` in earlier runs, so this run records it as unavailable.
 
+## T1: the resolved tree (2026-10-28)
+
+- Resolve: `npm install --package-lock-only "next@^16.4.2" --before=2026-10-20` exited 0 and wrote only `package.json` and `package-lock.json`.
+- AC-0001: `git diff 8d3f847 -- package.json` shows one changed line, `"next": "^16.4.0"` to `"next": "^16.4.2"`.
+- AC-0002: the field-by-field comparison with `8d3f847`'s lockfile (flattened field paths, one-sided keys and fields shown as absent) printed no top-level difference, no key or field on one side only, and exactly these changes: the root `dependencies.next` to `^16.4.2`; `version` (to 16.4.2), `resolved` (the registry.npmjs.org 16.4.2 tarball), and `integrity` of `node_modules/next` and the nine `node_modules/@next/*` entries; and in `node_modules/next`, `dependencies.@next/env` and the eight `optionalDependencies.@next/swc-*` to `16.4.2` and `optionalDependencies.sharp` to `^0.35.5`.
+- AC-0003: `npm view <name> time --json` gives 16.4.2 these publish times, all before 2026-10-20T00:00:00Z: `next` 2026-10-15T20:57:24Z; `@next/env` 20:43:21Z; `@next/swc-darwin-arm64` 20:48:42Z; `@next/swc-darwin-x64` 20:42:24Z; `@next/swc-linux-arm64-gnu` 20:43:24Z; `@next/swc-linux-arm64-musl` 20:42:06Z; `@next/swc-linux-x64-gnu` 20:43:14Z; `@next/swc-linux-x64-musl` 20:44:02Z; `@next/swc-win32-arm64-msvc` 20:42:42Z; `@next/swc-win32-x64-msvc` 20:43:02Z (all on 2026-10-15).
+- AC-0004: `npm run audit` exited 0.
+- AC-0008: `npm audit --omit=dev --json` printed a report whose `vulnerabilities` object is empty, so it holds no `next` or `@next/` key.
+
