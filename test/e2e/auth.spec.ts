@@ -1,11 +1,10 @@
-import { connect } from "node:net";
-import { request as httpRequest } from "node:http";
 import { expect, test, type Cookie, type Page, type Request } from "@playwright/test";
 import { resolveStackEnv } from "../env";
 import { createTypedClient } from "../../src/lib/supabase";
 import { NON_OPERATOR_EMAIL, OPERATOR_EMAIL, TEST_PASSWORD } from "../users";
 import { query, resetTestData } from "../db";
 import { checkPageState } from "./a11y";
+import { rawHttp10, rawRequest } from "./raw-http";
 import {
   fillReceipt,
   lotCount,
@@ -304,60 +303,6 @@ test.describe("a replayed void request", () => {
     expect(await voidMarks(), "voids after the operator's own copy").toBe(1);
   });
 });
-
-// A request sent straight to the test server, so the test picks every header,
-// including a Host the browser would never send.
-interface RawReply {
-  status: number;
-  body: string;
-}
-
-function rawRequest(
-  base: URL,
-  path: string,
-  { method = "GET", headers = {}, body, setHost = true }: {
-    method?: string;
-    headers?: Record<string, string>;
-    body?: Buffer;
-    setHost?: boolean;
-  } = {},
-): Promise<RawReply> {
-  return new Promise((resolve, reject) => {
-    const sent = httpRequest(
-      { hostname: base.hostname, port: base.port, path, method, headers, setHost, agent: false, timeout: 10_000 },
-      (response) => {
-        const chunks: Buffer[] = [];
-        response.on("data", (chunk: Buffer) => chunks.push(chunk));
-        response.on("error", reject);
-        response.on("end", () =>
-          resolve({ status: response.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf8") }),
-        );
-      },
-    );
-    sent.on("timeout", () => sent.destroy(new Error(`no answer for ${method} ${path}`)));
-    sent.on("error", reject);
-    sent.end(body);
-  });
-}
-
-// An HTTP/1.0 request with no Host header, written to a raw socket. Node's
-// client cannot send one, and the server keeps no connection open for it.
-function rawHttp10(base: URL, path: string): Promise<RawReply> {
-  return new Promise((resolve, reject) => {
-    const socket = connect({ host: base.hostname, port: Number(base.port), timeout: 10_000 });
-    const chunks: Buffer[] = [];
-    socket.on("connect", () => socket.write(`GET ${path} HTTP/1.0\r\n\r\n`));
-    socket.on("data", (chunk: Buffer) => chunks.push(chunk));
-    socket.on("timeout", () => socket.destroy(new Error(`no answer for HTTP/1.0 ${path}`)));
-    socket.on("error", reject);
-    socket.on("close", () => {
-      const text = Buffer.concat(chunks).toString("utf8");
-      const split = text.indexOf("\r\n\r\n");
-      const status = Number(/^HTTP\/1\.[01] (\d{3})/.exec(text)?.[1] ?? 0);
-      resolve({ status, body: split === -1 ? "" : text.slice(split + 4) });
-    });
-  });
-}
 
 const FOREIGN_HOST = "rebind.example:3100";
 const MISDIRECTED = "Misdirected request.";

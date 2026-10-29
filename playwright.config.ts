@@ -88,6 +88,8 @@ export default defineConfig({
         // The app's today comes from its time zone, so the suite fixes it and
         // computes the same date (test/e2e/app-time.ts).
         TZ: APP_TIME_ZONE,
+        // The one hosted name the app answers besides the local ones (src/allowed-host.ts).
+        APP_HOST: "meat-ops.example",
         SUPABASE_URL: stack.apiUrl,
         SUPABASE_ANON_KEY: stack.anonKey,
         ANTHROPIC_API_KEY: ANTHROPIC_TEST_KEY,

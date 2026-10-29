@@ -32,3 +32,18 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 - Base: `d96a997` on branch `feat/app-hosting` in the main folder, on stack A.
 - Project knowledge: capture at the spec and plan gates was not attempted; it refused with `strict_parse` in earlier runs, so this run records it as unavailable.
 
+
+## T1
+
+- 2026-10-28: `test/allowed-host.test.ts` was copied from the plan's stub, and `shasum -a 256` printed `0b32bbde498f3076ad733ee9e425e661ccd376f5b330643aae45c99999b935d4`, the expected hash.
+- The Docker daemon was not running, so `supabase status` failed and the repository's Vitest global setup could not start. The Vitest runs below used a scratch config outside the repository, with no global setup and only this file included. The table needs no database.
+- Red run: with `src/allowed-host.ts` holding today's local-only rule, Vitest ran 1 failed and 3 passed. The AC-0002 test failed.
+- Exact rule: 4 of 4 passed.
+- Mutation runs, each put into the real `src/allowed-host.ts` on the final `return` line, run once, then the exact rule restored (the file matched the saved exact copy afterward, and the file passed 4 of 4 again):
+  - Suffix match (`endsWith`): 1 failed, 3 passed. The AC-0004 test failed.
+  - Port-blind compare (the header cut at the first colon): 1 failed, 3 passed. The AC-0004 test failed.
+  - Regular expression built from `APP_HOST` without escaping: 1 failed, 3 passed. The AC-0004 test failed.
+  - Compare that lowercases only the header: 1 failed, 3 passed. The AC-0002 test failed.
+  - Compare with no empty-`APP_HOST` guard: 1 failed, 3 passed. The AC-0005 test failed.
+- `npm run typecheck` passed. The browser tests were not run in the implementer's session, because stack A was down.
+- 2026-10-29, after Docker and stack A were started again (no reset): `npx playwright test test/e2e/hosting.spec.ts test/e2e/auth.spec.ts` passed 24 of 24 in 13 s, including the AC-0002, AC-0003, AC-0004, AC-0005, AC-0012, AC-0014, and AC-0017 tests and the foreign-or-missing-Host tests in `auth.spec.ts`. The folder check listed no other folder. `npm test` then passed: Vitest 53 files and 1,043 tests, `test/allowed-host.test.ts` among them under the repository's own config, then the browser suite 675 passed, 584 s in all.
