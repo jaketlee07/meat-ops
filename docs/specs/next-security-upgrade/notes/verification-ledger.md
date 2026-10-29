@@ -56,3 +56,13 @@ Review artifacts sit under the ignored `.context/reviews/c9c476fa-6878-4a72-abf1
 - Run times for the T2 commands, all on Node v22.17.0 with the tree at `629f54c`: AC-0005 `npm run build` 8.5 s; AC-0006 the passing `npm test` rerun 11 min 12 s in all (its Vitest part 52 s, its browser part 10.3 min); AC-0009 the privileged-guard check 13.5 s. AC-0007 `npm run typecheck`, AC-0010 the loopback-only check, and AC-0011 the env-reload check were not timed on their first runs, so each ran again at `ed4d5c1` (whose only change from `629f54c` is this ledger) and passed: typecheck 3.3 s, loopback-only 4.8 s (both cases PASS), env-reload 4.3 s (PASS, `.env.local` removed).
 - Folder checks: the `AGENTS.md` folder check listed no folder before the first `npm test`, again before the `npm test` rerun (after the stopped run's server and fake model were stopped by PID), again before the three check scripts, and again before these timing reruns.
 
+## Post-gates review (2026-10-28)
+
+| Round | Adversarial | Security | Quality |
+| ---: | --- | --- | --- |
+| 1 | 1 Concern (T2 run times), 1 Nit (folder-check records), both repaired; 1 refuted | Clean (1 Nit refuted as excluded work) | Clean (6 refuted) |
+| 2 | Clean | not rerun (ledger-only repair) | not rerun (ledger-only repair) |
+
+- Excluded work, acknowledged in the PR and not tracked here: the full `npm audit` (dev packages included) names a high advisory in the dev-only `vite`; the `--ignore-scripts` install rule and the sleep-during-run failure signature stay with this spec and the agent's memory.
+- The spec is Shipped with all 11 criteria checked, and the plan is Done.
+

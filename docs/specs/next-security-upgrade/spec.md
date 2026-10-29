@@ -1,6 +1,6 @@
 # Spec: next-security-upgrade
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the owner's decision of 2026-10-27 to upgrade Next.js on its own branch before the app-hosting spec continues (Assumptions); `AGENTS.md` hard rules and "Build and test commands" (`npm run audit` before merge; stop the app before a build or a test run); the repository `.npmrc`, which keeps `ignore-scripts=true`; the privileged-variable guard, loopback-only listening, and env-reload criteria of [`docs/specs/receiving/spec.md`](../receiving/spec.md), whose check scripts under `test/e2e/checks/` this spec runs again
@@ -74,20 +74,20 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 
 ### The resolved tree
 
-- [ ] **AC-0001.** `git diff 8d3f847 -- package.json` shows exactly one changed line: `next` moves from `"^16.4.0"` to `"^16.4.2"`.
-- [ ] **AC-0002.** Compared field by field with commit `8d3f847`'s lockfile, `package-lock.json` has the same top-level fields and the same `packages` keys, and the only fields that differ are these: the root entry's `dependencies.next`, now `"^16.4.2"`; the `version`, `resolved`, and `integrity` of `node_modules/next` and of the nine `node_modules/@next/*` entries, each `version` now `16.4.2`; and, in `node_modules/next`, `dependencies.@next/env` and the eight `optionalDependencies.@next/swc-*` values, now `"16.4.2"`, and `optionalDependencies.sharp`, now `"^0.35.5"`.
-- [ ] **AC-0003.** For `next` and each of the nine `@next/*` packages, `npm view <name> time --json` gives version 16.4.2 a publish time before `2026-10-20T00:00:00Z`.
-- [ ] **AC-0004.** `npm run audit` exits 0.
-- [ ] **AC-0008.** `npm audit --omit=dev --json` prints a report whose `vulnerabilities` object has no key that is `next` or starts with `@next/`.
+- [x] **AC-0001.** `git diff 8d3f847 -- package.json` shows exactly one changed line: `next` moves from `"^16.4.0"` to `"^16.4.2"`.
+- [x] **AC-0002.** Compared field by field with commit `8d3f847`'s lockfile, `package-lock.json` has the same top-level fields and the same `packages` keys, and the only fields that differ are these: the root entry's `dependencies.next`, now `"^16.4.2"`; the `version`, `resolved`, and `integrity` of `node_modules/next` and of the nine `node_modules/@next/*` entries, each `version` now `16.4.2`; and, in `node_modules/next`, `dependencies.@next/env` and the eight `optionalDependencies.@next/swc-*` values, now `"16.4.2"`, and `optionalDependencies.sharp`, now `"^0.35.5"`.
+- [x] **AC-0003.** For `next` and each of the nine `@next/*` packages, `npm view <name> time --json` gives version 16.4.2 a publish time before `2026-10-20T00:00:00Z`.
+- [x] **AC-0004.** `npm run audit` exits 0.
+- [x] **AC-0008.** `npm audit --omit=dev --json` prints a report whose `vulnerabilities` object has no key that is `next` or starts with `@next/`.
 
 ### The installed tree
 
-- [ ] **AC-0005.** With `.next` deleted, the first `npm run build` exits 0.
-- [ ] **AC-0006.** `npm test` passes.
-- [ ] **AC-0007.** `npm run typecheck` exits 0.
-- [ ] **AC-0009.** `node test/e2e/checks/ac0060-privileged-guard.mjs "$PWD"`, the receiving spec's privileged-guard check, exits 0.
-- [ ] **AC-0010.** `node test/e2e/checks/ac0063-loopback-only.mjs "$PWD"`, the receiving spec's loopback-only check, exits 0.
-- [ ] **AC-0011.** `sh test/e2e/checks/ac0068-env-reload.sh`, the receiving spec's env-reload check, exits 0.
+- [x] **AC-0005.** With `.next` deleted, the first `npm run build` exits 0.
+- [x] **AC-0006.** `npm test` passes.
+- [x] **AC-0007.** `npm run typecheck` exits 0.
+- [x] **AC-0009.** `node test/e2e/checks/ac0060-privileged-guard.mjs "$PWD"`, the receiving spec's privileged-guard check, exits 0.
+- [x] **AC-0010.** `node test/e2e/checks/ac0063-loopback-only.mjs "$PWD"`, the receiving spec's loopback-only check, exits 0.
+- [x] **AC-0011.** `sh test/e2e/checks/ac0068-env-reload.sh`, the receiving spec's env-reload check, exits 0.
 
 ## Follow-ons
 

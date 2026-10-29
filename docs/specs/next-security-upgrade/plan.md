@@ -1,7 +1,7 @@
 # Plan: next-security-upgrade
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** none, non-structural. As in `docs/specs/vitest-upgrade/plan.md`, the tree is resolved with a cutoff and checked from the lockfile before anything installs it; the gates are the `AGENTS.md` commands and the receiving spec's check scripts. Uncertainty: none after the scratch resolves in the spec's Assumptions
 
 > **Plan contract:** this is the implementation strategy. It may change
