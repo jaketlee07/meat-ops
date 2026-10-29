@@ -7,7 +7,7 @@ import { APP_TIME_ZONE } from "./app-time";
 import { ANTHROPIC_TEST_AUTH_TOKEN, ANTHROPIC_TEST_KEY, ports, startSpare } from "./invoices-page";
 import { headerValues, rawHttp10, rawHttp11, rawRequest, type RawHeaderReply } from "./raw-http";
 import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
-import { signInThroughForm, submitSignIn } from "./states";
+import { OPERATOR_STATE, signInThroughForm, submitSignIn } from "./states";
 
 // The hosted name the suite's app answers (playwright.config.ts sets APP_HOST).
 const HOSTED = "meat-ops.example";
@@ -252,5 +252,114 @@ test.describe("every auth cookie is Secure", () => {
       expect(attributes.get("samesite"), `SameSite on ${name}`).toBe("lax");
       expect(attributes.has("secure"), `Secure on ${name}`).toBe(true);
     }
+  });
+});
+
+const MANIFEST = {
+  name: "Meat Ops",
+  short_name: "Meat Ops",
+  start_url: "/receiving",
+  display: "standalone",
+  background_color: "#ffffff",
+  theme_color: "#1d4ed8",
+  icons: [
+    { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+  ],
+};
+
+// Width and height from the PNG header: bytes 16 to 23, after the 8-byte signature.
+function pngSize(png: Buffer): string {
+  return `${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`;
+}
+
+async function headLinks(page: Page): Promise<{ rel: string | null; href: string | null }[]> {
+  return page.evaluate(() =>
+    Array.from(document.head.querySelectorAll("link")).map((link) => ({
+      rel: link.getAttribute("rel"),
+      href: link.getAttribute("href"),
+    })),
+  );
+}
+
+test.describe("the app installs", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("AC-0007: the install file is served signed out with the pinned content", async ({ playwright, baseURL }) => {
+    const signedOut = await playwright.request.newContext({ baseURL });
+    const reply = await signedOut.get("/manifest.webmanifest", { maxRedirects: 0 });
+    expect(reply.status()).toBe(200);
+    expect(reply.headers()["content-type"]).toBe("application/manifest+json");
+    expect(JSON.parse(await reply.text())).toEqual(MANIFEST);
+    await signedOut.dispose();
+  });
+
+  test("AC-0008: each listed icon is a PNG of its listed size, signed out", async ({ playwright, baseURL }) => {
+    const signedOut = await playwright.request.newContext({ baseURL });
+    for (const { src, sizes } of MANIFEST.icons) {
+      const reply = await signedOut.get(src, { maxRedirects: 0 });
+      expect(reply.status(), `status of ${src}`).toBe(200);
+      expect(reply.headers()["content-type"], `content type of ${src}`).toBe("image/png");
+      expect(pngSize(await reply.body()), `size of ${src}`).toBe(sizes);
+    }
+    await signedOut.dispose();
+  });
+
+  test("the 512-pixel icon's corner pixel is the app blue", async ({ playwright, baseURL, page }) => {
+    const signedOut = await playwright.request.newContext({ baseURL });
+    const reply = await signedOut.get("/icon-512.png", { maxRedirects: 0 });
+    const png = (await reply.body()).toString("base64");
+    await signedOut.dispose();
+    await page.goto("about:blank");
+    const pixel = await page.evaluate(async (data) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${data}`;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("no canvas context");
+      context.drawImage(image, 0, 0);
+      return Array.from(context.getImageData(0, 0, 1, 1).data);
+    }, png);
+    expect(pixel).toEqual([0x1d, 0x4e, 0xd8, 255]);
+  });
+
+  test("AC-0009 and AC-0010: /sign-in signed out links the install file and an apple-touch-icon", async ({
+    page,
+  }) => {
+    await page.goto("/sign-in");
+    const links = await headLinks(page);
+    expect(links).toContainEqual({ rel: "manifest", href: "/manifest.webmanifest" });
+    expect(links.filter((link) => link.rel === "apple-touch-icon").length).toBeGreaterThan(0);
+  });
+
+  test("AC-0013: the apple-touch-icon link names a 180 by 180 PNG, fetched signed out", async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    await page.goto("/sign-in");
+    const link = (await headLinks(page)).find((l) => l.rel === "apple-touch-icon");
+    expect(link?.href).toBe("/apple-touch-icon.png");
+    const signedOut = await playwright.request.newContext({ baseURL });
+    const reply = await signedOut.get(link?.href ?? "", { maxRedirects: 0 });
+    expect(reply.status()).toBe(200);
+    expect(reply.headers()["content-type"]).toBe("image/png");
+    expect(pngSize(await reply.body())).toBe("180x180");
+    await signedOut.dispose();
+  });
+});
+
+test.describe("the app installs for a signed-in operator", () => {
+  test.use({ storageState: OPERATOR_STATE });
+
+  test("AC-0009 and AC-0010: /receiving links the install file and an apple-touch-icon", async ({ page }) => {
+    await page.goto("/receiving");
+    await expect(page.getByRole("heading", { level: 1, name: "Receiving" })).toBeVisible();
+    const links = await headLinks(page);
+    expect(links).toContainEqual({ rel: "manifest", href: "/manifest.webmanifest" });
+    expect(links.filter((link) => link.rel === "apple-touch-icon").length).toBeGreaterThan(0);
   });
 });

@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-export const metadata: Metadata = { title: "Meat Ops" };
+export const metadata: Metadata = {
+  title: "Meat Ops",
+  icons: { apple: "/apple-touch-icon.png" },
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

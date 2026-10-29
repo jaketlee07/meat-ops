@@ -318,7 +318,17 @@ async function operatorSessionCount(): Promise<number> {
 }
 
 test.describe("a request with a foreign or missing Host", () => {
-  const PATHS = ["/", "/sign-in", "/_next/static/x.js", "/_next/image", "/favicon.ico"];
+  const PATHS = [
+    "/",
+    "/sign-in",
+    "/_next/static/x.js",
+    "/_next/image",
+    "/favicon.ico",
+    "/manifest.webmanifest",
+    "/icon-192.png",
+    "/icon-512.png",
+    "/apple-touch-icon.png",
+  ];
 
   test("AC-0069: a Host other than 127.0.0.1 or localhost is refused for every path", async ({ baseURL }) => {
     const base = new URL(baseURL ?? "");

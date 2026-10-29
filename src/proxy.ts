@@ -28,9 +28,17 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return refuse(500, "Server misconfigured.");
   }
 
-  // Build output and the favicon need no session work.
+  // Build output, the favicon, the install file, and the icons need no session work.
   const { pathname } = request.nextUrl;
-  if (pathname.startsWith("/_next/static/") || pathname === "/_next/image" || pathname === "/favicon.ico") {
+  if (
+    pathname.startsWith("/_next/static/") ||
+    pathname === "/_next/image" ||
+    pathname === "/favicon.ico" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname === "/icon-192.png" ||
+    pathname === "/icon-512.png" ||
+    pathname === "/apple-touch-icon.png"
+  ) {
     return NextResponse.next();
   }
 
