@@ -24,6 +24,8 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
           { key: "X-Frame-Options", value: "DENY" },
+          // Browsers ignore this on plain http, so local use is unchanged.
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
         ],
       },
     ];

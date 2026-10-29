@@ -363,3 +363,40 @@ test.describe("the app installs for a signed-in operator", () => {
     expect(links.filter((link) => link.rel === "apple-touch-icon").length).toBeGreaterThan(0);
   });
 });
+
+const HSTS = "max-age=31536000";
+
+test.describe("every response asks for HTTPS", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("AC-0006: each listed response carries Strict-Transport-Security: max-age=31536000", async ({
+    playwright,
+    baseURL,
+  }) => {
+    const signedOut = await playwright.request.newContext({ baseURL });
+    const paths = ["/sign-in", "/manifest.webmanifest", ...MANIFEST.icons.map((icon) => icon.src), "/apple-touch-icon.png"];
+    for (const path of paths) {
+      const reply = await signedOut.get(path, { maxRedirects: 0 });
+      expect(reply.status(), `status of ${path}`).toBe(200);
+      expect(reply.headers()["strict-transport-security"], `header on ${path}`).toBe(HSTS);
+    }
+    const redirect = await signedOut.get("/receiving", { maxRedirects: 0 });
+    expect(redirect.status(), "status of the signed-out /receiving").toBe(307);
+    expect(redirect.headers()["strict-transport-security"], "header on the redirect").toBe(HSTS);
+    await signedOut.dispose();
+
+    const refused = await rawHttp11(new URL(baseURL ?? ""), "/receiving", { host: "rebind.example:3100" });
+    expect(refused.status, "status of the refused Host").toBe(421);
+    expect(headerValues(refused, "strict-transport-security"), "header on the refusal").toEqual([HSTS]);
+  });
+
+  test.describe("signed in", () => {
+    test.use({ storageState: OPERATOR_STATE });
+
+    test("AC-0006: /receiving signed in as an operator carries the header", async ({ page }) => {
+      const reply = await page.goto("/receiving");
+      expect(reply?.status()).toBe(200);
+      expect(reply?.headers()["strict-transport-security"]).toBe(HSTS);
+    });
+  });
+});

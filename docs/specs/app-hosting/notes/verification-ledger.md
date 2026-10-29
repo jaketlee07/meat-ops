@@ -61,3 +61,13 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 - Green run. With the paths restored and the app rebuilt, the same command passed 32 of 32 in about 12 s, including the AC-0007, AC-0008, AC-0009, AC-0010, and AC-0013 tests, the corner-pixel pin, and the foreign-Host test with the four new paths. `npm run typecheck` passed.
 - `npm run build` lists `/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`, and `/manifest.webmanifest` as static routes. `git diff d96a997 -- package.json package-lock.json` printed nothing. The folder check listed no other folder.
 - 2026-10-29: `npm test` passed after the folder check listed no other folder: Vitest 53 files and 1,043 tests, then the browser suite 683 passed, 990 s in all. `npm run typecheck` passed.
+
+## T4
+
+- 2026-10-29: red run. With the `Strict-Transport-Security` line removed from `next.config.ts` and the app rebuilt by the Playwright run, `npx playwright test test/e2e/hosting.spec.ts -g "AC-0006"` ran 2 failed in 6.6 s. The signed-out test failed on `/sign-in` (header undefined, not `max-age=31536000`), and the signed-in `/receiving` test failed the same way.
+- Green run. With the line restored, `npx playwright test test/e2e/hosting.spec.ts test/e2e/menu.spec.ts test/e2e/auth.spec.ts` passed 58 of 58 in 26.3 s, the two AC-0006 tests and the framing tests in `menu.spec.ts` among them. `npm run typecheck` passed. The folder check listed no other folder. The full `npm test` was left to the controller.
+- 2026-10-29, controller check of the red run: with the `Strict-Transport-Security` line removed, `npx playwright test test/e2e/hosting.spec.ts -g "AC-0006"` failed both AC-0006 tests (`header on /sign-in` received undefined); the line was restored.
+- `npm test`, first run: Vitest 53 files and 1,043 tests passed; the browser suite had 684 passed and 1 failed in 1,289 s, `test/e2e/invoices.spec.ts` AC-0075 timing out at 30 s. That test alone then passed 3 of 3 (`--repeat-each=3`). Second run: Vitest had 1 failed, `test/invoice-data.test.ts` AC-0031 timing out at 5,000 ms, with Vitest taking 403 s instead of about 52.
+- Cause, read from the stack: `pg_class` held 457,791 dead rows, and the Realtime slot `cainophile_*` held its catalog 48,270 transactions back, the slowdown the overview's "Local stack notes" describe, with its fix. The owner approved, for this build, clearing it before each full run after the folder check: terminate the slot's backend as `supabase_admin`, then `vacuum pg_class`. Run 1: dead rows 457,704 to 0, slot lag 48,450 to 0.
+- `npm test`, third run, after that fix: Vitest 53 files and 1,043 tests, then the browser suite 685 passed, 603 s in all. `npm run typecheck` passed.
+
