@@ -47,3 +47,10 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
   - Compare with no empty-`APP_HOST` guard: 1 failed, 3 passed. The AC-0005 test failed.
 - `npm run typecheck` passed. The browser tests were not run in the implementer's session, because stack A was down.
 - 2026-10-29, after Docker and stack A were started again (no reset): `npx playwright test test/e2e/hosting.spec.ts test/e2e/auth.spec.ts` passed 24 of 24 in 13 s, including the AC-0002, AC-0003, AC-0004, AC-0005, AC-0012, AC-0014, and AC-0017 tests and the foreign-or-missing-Host tests in `auth.spec.ts`. The folder check listed no other folder. `npm test` then passed: Vitest 53 files and 1,043 tests, `test/allowed-host.test.ts` among them under the repository's own config, then the browser suite 675 passed, 584 s in all.
+
+
+## T2
+
+- 2026-10-29: red run. With `secure: true` removed from `SESSION_COOKIE_OPTIONS`, `npx playwright test test/e2e/hosting.spec.ts test/e2e/auth.spec.ts` ran 2 failed and 24 passed in 11.3 s. The AC-0001 test failed (the sign-in cookie `sb-127-auth-token` had `secure` false) and the AC-0016 test failed (its `Set-Cookie` line had no `Secure`). The `auth.spec.ts` sign-in cookie test still passed.
+- Green run. With `secure: true` restored, the same command passed 26 of 26 in about 12 s, the AC-0001 and AC-0016 tests and the `auth.spec.ts` "sign-in ends on the receiving form, with HttpOnly SameSite=Lax cookies" test among them. `npm run typecheck` passed. The folder check listed no other folder. The full `npm test` was left to the controller.
+- 2026-10-29: `npm test` passed after the folder check listed no other folder: Vitest 53 files and 1,043 tests, then the browser suite 677 passed, 744 s in all. `npm run typecheck` passed.

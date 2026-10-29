@@ -1,12 +1,13 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { expect, test, type Page, type Request } from "@playwright/test";
+import { expect, test, type Cookie, type Page, type Request } from "@playwright/test";
 import { OPERATOR_EMAIL } from "../users";
 import { query } from "../db";
 import { APP_TIME_ZONE } from "./app-time";
 import { ANTHROPIC_TEST_AUTH_TOKEN, ANTHROPIC_TEST_KEY, ports, startSpare } from "./invoices-page";
 import { headerValues, rawHttp10, rawHttp11, rawRequest, type RawHeaderReply } from "./raw-http";
-import { submitSignIn } from "./states";
+import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
+import { signInThroughForm, submitSignIn } from "./states";
 
 // The hosted name the suite's app answers (playwright.config.ts sets APP_HOST).
 const HOSTED = "meat-ops.example";
@@ -195,6 +196,61 @@ test.describe("a sign-in posted with the hosted name as Host", () => {
       const before = await operatorSessionCount();
       await replaySignIn(base, captured, origin);
       expect(await operatorSessionCount(), `operator sessions after a sign-in with Origin ${origin}`).toBe(before);
+    }
+  });
+});
+
+// Never print a value: a failure names only the cookie's name and attributes.
+async function authCookies(page: Page): Promise<Cookie[]> {
+  return (await page.context().cookies()).filter(isAuthCookie);
+}
+
+// The attribute names of one Set-Cookie line, lowercased, with the SameSite
+// value, and the cookie's name. The cookie's value is never returned.
+function parseSetCookie(line: string): { name: string; attributes: Map<string, string> } {
+  const [pair = "", ...rest] = line.split(";");
+  const attributes = new Map<string, string>();
+  for (const part of rest) {
+    const [key = "", ...value] = part.split("=");
+    attributes.set(key.trim().toLowerCase(), value.join("=").trim().toLowerCase());
+  }
+  return { name: pair.split("=")[0]?.trim() ?? "", attributes };
+}
+
+test.describe("every auth cookie is Secure", () => {
+  test("AC-0001: sign-in and a token refresh both set Secure on every auth cookie", async ({ page }) => {
+    await signInThroughForm(page, OPERATOR_EMAIL);
+    await expect(page).toHaveURL(/\/receiving$/);
+    const atSignIn = await authCookies(page);
+    expect(atSignIn.length, "the session cookie exists after sign-in").toBeGreaterThan(0);
+    for (const cookie of atSignIn) expect(cookie.secure, `secure on ${cookie.name} after sign-in`).toBe(true);
+
+    const before = readSession(atSignIn);
+    await page.context().addCookies(withExpiredAccessToken(atSignIn));
+    await page.goto("/receiving");
+    await expect(page.getByRole("heading", { level: 1, name: "Receiving" })).toBeVisible();
+
+    const afterRefresh = await authCookies(page);
+    expect(afterRefresh.length, "the session cookie exists after the refresh").toBeGreaterThan(0);
+    for (const cookie of afterRefresh) expect(cookie.secure, `secure on ${cookie.name} after refresh`).toBe(true);
+    const changed = readSession(afterRefresh).refresh_token !== before.refresh_token;
+    expect(changed, "the refresh token changed").toBe(true);
+  });
+
+  test("AC-0016: a sign-in on the hosted name sets each auth cookie HttpOnly, SameSite=Lax, and Secure", async ({
+    page,
+    baseURL,
+  }) => {
+    const captured = await captureSignIn(page);
+    const reply = await replaySignIn(new URL(baseURL ?? ""), captured, `https://${HOSTED}`);
+    const cookies = headerValues(reply, "set-cookie")
+      .map(parseSetCookie)
+      .filter((cookie) => isAuthCookie(cookie));
+    expect(cookies.length, "auth cookies set by the hosted-name sign-in").toBeGreaterThan(0);
+    for (const { name, attributes } of cookies) {
+      expect(attributes.has("httponly"), `HttpOnly on ${name}`).toBe(true);
+      expect(attributes.get("samesite"), `SameSite on ${name}`).toBe("lax");
+      expect(attributes.has("secure"), `Secure on ${name}`).toBe(true);
     }
   });
 });

@@ -8,10 +8,13 @@ import type { TypedClient } from "../../lib/supabase";
 // The one cookie-options constant. Every createServerClient call passes it,
 // the proxy's included. The package default is httpOnly: false, so each call
 // must override it. No browser code reads the session, so script access to the
-// auth cookies is never needed.
+// auth cookies is never needed. `secure` keeps the cookies off plain http on a
+// hosted name; plain-http loopback still works because Chrome treats 127.0.0.1
+// and localhost as secure contexts, so it keeps and sends Secure cookies there.
 export const SESSION_COOKIE_OPTIONS: CookieOptionsWithName = {
   httpOnly: true,
   sameSite: "lax",
+  secure: true,
 };
 
 // Every server-side Supabase client, the proxy's included, passes this as its
