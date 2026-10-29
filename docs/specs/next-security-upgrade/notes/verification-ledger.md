@@ -39,3 +39,15 @@ Review artifacts sit under the ignored `.context/reviews/c9c476fa-6878-4a72-abf1
 - AC-0004: `npm run audit` exited 0.
 - AC-0008: `npm audit --omit=dev --json` printed a report whose `vulnerabilities` object is empty, so it holds no `next` or `@next/` key.
 
+## T2: the installed tree (2026-10-28)
+
+- Install: `npm ci --ignore-scripts` exited 0 (added 190 packages; it took 15 minutes on a slow network), and `node_modules/next/package.json` then read version 16.4.2. Its closing audit summary, which counts dev packages, named one high advisory, in `vite`, a dev-only package outside this spec; `npm run audit` (shipped packages only) stays clean.
+- Pre-checks before the gates: the `AGENTS.md` folder check listed no folder; `pg_class` held about 20,000 dead rows and the Realtime slot was about 2,800 transactions behind, so no slot fix was needed.
+- AC-0005: `rm -rf .next && npm run build` exited 0 on the first run, and its output named Next.js 16.4.2.
+- AC-0006: the first `npm test`, started 16:28 local, ran while the Mac slept with its lid closed on battery until 21:38 (`pmset -g log`). Its Vitest part passed (52 files, 1,039 tests); its browser part had 192 passed and 345 failed before it was stopped by PID, with `refresh_token_already_used` and `refresh_token_not_found` in the app log once the saved sessions outlived the 3,600-second access token. The rerun under `caffeinate -dimsu` with the lid open passed: Vitest 52 files and 1,039 tests, then the browser suite 667 passed in 10.3 minutes.
+- AC-0007: `npm run typecheck` exited 0.
+- Before the check scripts, ports 3000, 3101, 3105, and 3106 had no listener; the owner stopped another project's dev server that held port 3000.
+- AC-0009: `node test/e2e/checks/ac0060-privileged-guard.mjs "$PWD"` exited 0 (`total=27 failed=0`).
+- AC-0010: `node test/e2e/checks/ac0063-loopback-only.mjs "$PWD"` exited 0; `npm run start` (port 3105) and `npm run dev` (port 3106) each had one listener, on 127.0.0.1.
+- AC-0011: `sh test/e2e/checks/ac0068-env-reload.sh` exited 0; after the reload, GET `/sign-in`, GET `/receiving`, and POST `/receiving` each answered 500 "Server misconfigured." with the marker in no body and not in the dev log, and `.env.local` was removed.
+
