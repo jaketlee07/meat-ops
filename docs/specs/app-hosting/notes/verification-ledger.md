@@ -71,3 +71,9 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 - Cause, read from the stack: `pg_class` held 457,791 dead rows, and the Realtime slot `cainophile_*` held its catalog 48,270 transactions back, the slowdown the overview's "Local stack notes" describe, with its fix. The owner approved, for this build, clearing it before each full run after the folder check: terminate the slot's backend as `supabase_admin`, then `vacuum pg_class`. Run 1: dead rows 457,704 to 0, slot lag 48,450 to 0.
 - `npm test`, third run, after that fix: Vitest 53 files and 1,043 tests, then the browser suite 685 passed, 603 s in all. `npm run typecheck` passed.
 
+## T5
+
+- 2026-10-29: the overview's areas table rows for `src/proxy.ts`, `src/app/`, `test/`, and `test/e2e/`, and its Variables, Framing, Cookies, Network, and Host check bullets, now describe `src/allowed-host.ts`, `APP_HOST`, the HTTPS header, Secure cookies, the install file and icons, and the shared sign-in limit accepted on any host. `AGENTS.md` names the optional `APP_HOST` after the `ANTHROPIC_API_KEY` sentence. The intent answers the session-limit question (Pro plan only), keeps "Where is the app hosted?" open and its Boundary unchanged, and lists the online step's remaining work; its `workspace.toml` summary matches.
+- `git diff d96a997 -- docs/architecture/overview.md AGENTS.md docs/product/intents/app-https-hosting.md workspace.toml | perl -CSD -ne 'print if /^\+.*\x{2014}/'` printed nothing. `workspace_status.py reconcile` reported only the 2 findings that predate this spec (`invalid_entry` on `pushed-alert-cards.md`, `unsatisfied_dependency` on `hosted-hardening-check.md`).
+- Slot fix run 2, after the folder check: dead rows 101,550 to 0, slot lag 10,229 to 1. `npm test` then passed: Vitest 53 files and 1,043 tests, then the browser suite 685 passed, 604 s in all.
+

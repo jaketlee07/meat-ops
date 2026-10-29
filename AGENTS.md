@@ -92,7 +92,9 @@ The app reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the gitignored
 repository-root `.env`. It also reads an optional `ANTHROPIC_API_KEY`, the key
 that reads invoices on `/invoices`, writes the daily digest on `/alerts`, and
 answers questions on `/ask`. Without the key, invoice reading, the digest, and
-Ask are off: each says it isn't set up, and nothing else changes. A value set in
+Ask are off: each says it isn't set up, and nothing else changes. It also reads an
+optional `APP_HOST`, the one hosted name the app answers besides `127.0.0.1` and
+`localhost`; it stays unset on this Mac, and the browser suite sets its own. A value set in
 the app's process wins over `.env`. `npm test` never calls the real model: the browser
 suite starts the app with its own test key and a fake model service on this
 machine. Make the file from the local stack. The command keeps an existing
