@@ -2,12 +2,19 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Cookie, type Page, type Request } from "@playwright/test";
 import { OPERATOR_EMAIL } from "../users";
-import { query } from "../db";
 import { APP_TIME_ZONE } from "./app-time";
 import { ANTHROPIC_TEST_AUTH_TOKEN, ANTHROPIC_TEST_KEY, ports, startSpare } from "./invoices-page";
-import { headerValues, rawHttp10, rawHttp11, rawRequest, type RawHeaderReply } from "./raw-http";
+import {
+  captureSignIn,
+  headerValues,
+  operatorSessionCount,
+  rawHttp10,
+  rawHttp11,
+  rawRequest,
+  type RawHeaderReply,
+} from "./raw-http";
 import { isAuthCookie, readSession, withExpiredAccessToken } from "./session";
-import { OPERATOR_STATE, signInThroughForm, submitSignIn } from "./states";
+import { OPERATOR_STATE, signInThroughForm } from "./states";
 
 // The hosted name the suite's app answers (playwright.config.ts sets APP_HOST).
 const HOSTED = "meat-ops.example";
@@ -16,16 +23,6 @@ const SIGN_IN_FORM = "Sign in";
 
 // Never read a value: a failure names only the setting or the file.
 const ENV_FILES = [".env.production.local", ".env.local", ".env.production", ".env"];
-
-async function operatorSessionCount(): Promise<number> {
-  const rows = await query<{ n: number }>(
-    "select count(*)::int as n from auth.sessions s join auth.users u on u.id = s.user_id where u.email = $1",
-    [OPERATOR_EMAIL],
-  );
-  const [row] = rows;
-  if (!row) throw new Error("the session count returned no row");
-  return row.n;
-}
 
 // The unset-APP_HOST run proves the app reads nothing from the runner or from a
 // file Next.js fills a missing name from in production. Reports at most whether
@@ -75,25 +72,6 @@ async function expectMisdirected(base: URL, host: string): Promise<void> {
 // The four local forms a request can carry: each name with and without the port.
 function localHosts(base: URL): string[] {
   return ["127.0.0.1", `127.0.0.1:${base.port}`, "localhost", `localhost:${base.port}`];
-}
-
-// Captures the request the sign-in form sends and stops it before the server
-// sees it, so the capture spends no sign-in.
-async function captureSignIn(page: Page): Promise<Request> {
-  let captured: Request | undefined;
-  await page.route("**/sign-in", async (route) => {
-    const request = route.request();
-    if (request.method() === "POST" && "next-action" in request.headers()) {
-      captured = request;
-      await route.abort();
-    } else {
-      await route.continue();
-    }
-  });
-  await submitSignIn(page, OPERATOR_EMAIL);
-  await expect.poll(() => captured).toBeDefined();
-  if (!captured) throw new Error("no sign-in request was captured");
-  return captured;
 }
 
 // Sends the captured sign-in again as a page on the hosted name would: that name
@@ -192,6 +170,13 @@ test.describe("a sign-in posted with the hosted name as Host", () => {
   test("AC-0014: with another Origin, it creates no session", async ({ page, baseURL }) => {
     const base = new URL(baseURL ?? "");
     const captured = await captureSignIn(page);
+
+    // The control: the same capture replayed with the hosted Origin does create a
+    // session, so a replay that fails for another reason turns this test red.
+    const beforeControl = await operatorSessionCount();
+    await replaySignIn(base, captured, `https://${HOSTED}`);
+    expect(await operatorSessionCount(), "operator sessions after the control replay").toBe(beforeControl + 1);
+
     for (const origin of ["https://rebind.example", `https://sub.${HOSTED}`]) {
       const before = await operatorSessionCount();
       await replaySignIn(base, captured, origin);
@@ -287,29 +272,39 @@ test.describe("the app installs", () => {
 
   test("AC-0007: the install file is served signed out with the pinned content", async ({ playwright, baseURL }) => {
     const signedOut = await playwright.request.newContext({ baseURL });
-    const reply = await signedOut.get("/manifest.webmanifest", { maxRedirects: 0 });
-    expect(reply.status()).toBe(200);
-    expect(reply.headers()["content-type"]).toBe("application/manifest+json");
-    expect(JSON.parse(await reply.text())).toEqual(MANIFEST);
-    await signedOut.dispose();
+    try {
+      const reply = await signedOut.get("/manifest.webmanifest", { maxRedirects: 0 });
+      expect(reply.status()).toBe(200);
+      expect(reply.headers()["content-type"]).toBe("application/manifest+json");
+      expect(JSON.parse(await reply.text())).toEqual(MANIFEST);
+    } finally {
+      await signedOut.dispose();
+    }
   });
 
   test("AC-0008: each listed icon is a PNG of its listed size, signed out", async ({ playwright, baseURL }) => {
     const signedOut = await playwright.request.newContext({ baseURL });
-    for (const { src, sizes } of MANIFEST.icons) {
-      const reply = await signedOut.get(src, { maxRedirects: 0 });
-      expect(reply.status(), `status of ${src}`).toBe(200);
-      expect(reply.headers()["content-type"], `content type of ${src}`).toBe("image/png");
-      expect(pngSize(await reply.body()), `size of ${src}`).toBe(sizes);
+    try {
+      for (const { src, sizes } of MANIFEST.icons) {
+        const reply = await signedOut.get(src, { maxRedirects: 0 });
+        expect(reply.status(), `status of ${src}`).toBe(200);
+        expect(reply.headers()["content-type"], `content type of ${src}`).toBe("image/png");
+        expect(pngSize(await reply.body()), `size of ${src}`).toBe(sizes);
+      }
+    } finally {
+      await signedOut.dispose();
     }
-    await signedOut.dispose();
   });
 
   test("the 512-pixel icon's corner pixel is the app blue", async ({ playwright, baseURL, page }) => {
     const signedOut = await playwright.request.newContext({ baseURL });
-    const reply = await signedOut.get("/icon-512.png", { maxRedirects: 0 });
-    const png = (await reply.body()).toString("base64");
-    await signedOut.dispose();
+    let png: string;
+    try {
+      const reply = await signedOut.get("/icon-512.png", { maxRedirects: 0 });
+      png = (await reply.body()).toString("base64");
+    } finally {
+      await signedOut.dispose();
+    }
     await page.goto("about:blank");
     const pixel = await page.evaluate(async (data) => {
       const image = new Image();
@@ -344,11 +339,14 @@ test.describe("the app installs", () => {
     const link = (await headLinks(page)).find((l) => l.rel === "apple-touch-icon");
     expect(link?.href).toBe("/apple-touch-icon.png");
     const signedOut = await playwright.request.newContext({ baseURL });
-    const reply = await signedOut.get(link?.href ?? "", { maxRedirects: 0 });
-    expect(reply.status()).toBe(200);
-    expect(reply.headers()["content-type"]).toBe("image/png");
-    expect(pngSize(await reply.body())).toBe("180x180");
-    await signedOut.dispose();
+    try {
+      const reply = await signedOut.get(link?.href ?? "", { maxRedirects: 0 });
+      expect(reply.status()).toBe(200);
+      expect(reply.headers()["content-type"]).toBe("image/png");
+      expect(pngSize(await reply.body())).toBe("180x180");
+    } finally {
+      await signedOut.dispose();
+    }
   });
 });
 
@@ -374,16 +372,19 @@ test.describe("every response asks for HTTPS", () => {
     baseURL,
   }) => {
     const signedOut = await playwright.request.newContext({ baseURL });
-    const paths = ["/sign-in", "/manifest.webmanifest", ...MANIFEST.icons.map((icon) => icon.src), "/apple-touch-icon.png"];
-    for (const path of paths) {
-      const reply = await signedOut.get(path, { maxRedirects: 0 });
-      expect(reply.status(), `status of ${path}`).toBe(200);
-      expect(reply.headers()["strict-transport-security"], `header on ${path}`).toBe(HSTS);
+    try {
+      const paths = ["/sign-in", "/manifest.webmanifest", ...MANIFEST.icons.map((icon) => icon.src), "/apple-touch-icon.png"];
+      for (const path of paths) {
+        const reply = await signedOut.get(path, { maxRedirects: 0 });
+        expect(reply.status(), `status of ${path}`).toBe(200);
+        expect(reply.headers()["strict-transport-security"], `header on ${path}`).toBe(HSTS);
+      }
+      const redirect = await signedOut.get("/receiving", { maxRedirects: 0 });
+      expect(redirect.status(), "status of the signed-out /receiving").toBe(307);
+      expect(redirect.headers()["strict-transport-security"], "header on the redirect").toBe(HSTS);
+    } finally {
+      await signedOut.dispose();
     }
-    const redirect = await signedOut.get("/receiving", { maxRedirects: 0 });
-    expect(redirect.status(), "status of the signed-out /receiving").toBe(307);
-    expect(redirect.headers()["strict-transport-security"], "header on the redirect").toBe(HSTS);
-    await signedOut.dispose();
 
     const refused = await rawHttp11(new URL(baseURL ?? ""), "/receiving", { host: "rebind.example:3100" });
     expect(refused.status, "status of the refused Host").toBe(421);

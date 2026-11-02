@@ -89,3 +89,15 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 
 - `npm run audit` found 0 vulnerabilities, and `npm run typecheck` passed, at `87a2ac5`. The last `npm test` (T5, 604 s, all passing) ran at `f0a7b78`; the only later change is this ledger.
 
+## Post-gates review round 1 (2026-11-01)
+
+| Adversarial | Security | Quality |
+| --- | --- | --- |
+| 1 Nit sustained, 1 refuted, 1 indeterminate settled by probe | Clean (footer adjudicated) | 5 Nits sustained (2 lowered from Concerns), 1 refuted |
+
+- Adversarial finding 1 (the developer's first failed sign-in might come from pre-change, non-Secure auth cookies) was indeterminate. Probe, on the current build at `127.0.0.1:3105` with the local test operator in a test Chromium, stopped by PID afterward: a profile holding a valid non-Secure auth cookie kept its session on `/receiving`; one holding a non-Secure cookie whose access token had expired was refreshed and left with a Secure cookie; one holding a stale non-Secure cookie signed in through the form on the first attempt, landing on `/receiving` with a Secure cookie. So pre-change cookies do not block a session or a sign-in, and the finding falls on reachability.
+- Adversarial finding 2: the overview's Host check now says the `Host` must equal `APP_HOST` as a whole, ignoring letter case, so a port matches only when `APP_HOST` names it.
+- Security footer: two online-step items had no owner, the front end's `X-Forwarded-Host` and cookie protection against a sibling subdomain or a first plain-http visit (`__Host-` prefix, `includeSubDomains`, preload). The intent's online-step bullet now names both.
+- Quality findings 1, 2, 4, 5, and 6 are repaired in the tests. AC-0014's control replay adds a sign-in, so the suite now signs in four more times than before this spec (AC-0001 through the form; the AC-0003, AC-0014 control, and AC-0016 replays), one more than the plan's Risks counts; the plan stays as approved.
+- Repair checks: the new `test/e2e/auth.spec.ts` test "AC-0069: look-alikes of the local names are refused" (Hosts `xlocalhost`, `localhost.rebind.example`, `127.0.0.1.rebind.example`) went red with `LOCAL_HOST`'s leading `^` dropped (failing on `xlocalhost`) and with its trailing `$` dropped (failing on `localhost.rebind.example`); `src/allowed-host.ts` matched its saved copy byte for byte afterward. The AC-0014 test passed when run alone with `-g "AC-0014"`. `npx playwright test test/e2e/hosting.spec.ts test/e2e/auth.spec.ts` passed 35 of 35 in 11.1 s, and `npm run typecheck` passed.
+- Slot fix run 3, after the folder check: dead rows 174 to 0, slot lag 1,530 to 0. `npm test` then passed: Vitest 53 files and 1,043 tests, then the browser suite 686 passed, 606 s in all.

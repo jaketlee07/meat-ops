@@ -1,5 +1,9 @@
 import { connect } from "node:net";
 import { request as httpRequest } from "node:http";
+import { expect, type Page, type Request } from "@playwright/test";
+import { OPERATOR_EMAIL } from "../users";
+import { query } from "../db";
+import { submitSignIn } from "./states";
 
 // A request sent straight to the test server, so the test picks every header,
 // including a Host the browser would never send.
@@ -133,4 +137,33 @@ function unchunk(data: Buffer): Buffer {
     at = lineEnd + 2 + size + 2;
   }
   return Buffer.concat(pieces);
+}
+
+export async function operatorSessionCount(): Promise<number> {
+  const rows = await query<{ n: number }>(
+    "select count(*)::int as n from auth.sessions s join auth.users u on u.id = s.user_id where u.email = $1",
+    [OPERATOR_EMAIL],
+  );
+  const [row] = rows;
+  if (!row) throw new Error("the session count returned no row");
+  return row.n;
+}
+
+// Captures the request the sign-in form sends and stops it before the server
+// sees it, so the capture spends no sign-in.
+export async function captureSignIn(page: Page): Promise<Request> {
+  let captured: Request | undefined;
+  await page.route("**/sign-in", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) {
+      captured = request;
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  });
+  await submitSignIn(page, OPERATOR_EMAIL);
+  await expect.poll(() => captured).toBeDefined();
+  if (!captured) throw new Error("no sign-in request was captured");
+  return captured;
 }
