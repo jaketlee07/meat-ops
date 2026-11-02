@@ -77,3 +77,11 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 - `git diff d96a997 -- docs/architecture/overview.md AGENTS.md docs/product/intents/app-https-hosting.md workspace.toml | perl -CSD -ne 'print if /^\+.*\x{2014}/'` printed nothing. `workspace_status.py reconcile` reported only the 2 findings that predate this spec (`invalid_entry` on `pushed-alert-cards.md`, `unsatisfied_dependency` on `hosted-hardening-check.md`).
 - Slot fix run 2, after the folder check: dead rows 101,550 to 0, slot lag 10,229 to 1. `npm test` then passed: Vitest 53 files and 1,043 tests, then the browser suite 685 passed, 604 s in all.
 
+## T6
+
+- 2026-11-01: the app was built with `npm run build` (the route list showed `/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`, and `/manifest.webmanifest`) and started with `npm run start` on `127.0.0.1:3000`, the only listener on that port.
+- No personal operator account exists on the local stack, so the developer signed in as the local test operator `operator@meat-ops.test`. A first attempt in the developer's Chrome did not sign in; the same account then signed in through the form in that Chrome and in a test Chromium at `127.0.0.1:3000` and `localhost:3000`, each landing on `/receiving` with a `Secure` auth cookie.
+- AC-0011 and AC-0015: the developer started the install from `/production` in their desktop Chrome, closed the app window, and launched the installed app from the operating system. They reported that Chrome offered an install, the launched app opened in its own window on `/receiving`, and its icon in the app list was the white "MO" letters on blue.
+- Never-do checks, each printing nothing: `git diff d96a997 -- package.json package-lock.json`; `git diff --stat d96a997 -- supabase/`; `git diff d96a997 -- src next.config.ts | grep -E '^\+.*(NEXT_PUBLIC_|createBrowserClient)'`.
+- The app was then stopped by PID.
+
