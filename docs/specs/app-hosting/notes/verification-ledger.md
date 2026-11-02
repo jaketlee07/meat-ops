@@ -101,3 +101,13 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 - Quality findings 1, 2, 4, 5, and 6 are repaired in the tests. AC-0014's control replay adds a sign-in, so the suite now signs in four more times than before this spec (AC-0001 through the form; the AC-0003, AC-0014 control, and AC-0016 replays), one more than the plan's Risks counts; the plan stays as approved.
 - Repair checks: the new `test/e2e/auth.spec.ts` test "AC-0069: look-alikes of the local names are refused" (Hosts `xlocalhost`, `localhost.rebind.example`, `127.0.0.1.rebind.example`) went red with `LOCAL_HOST`'s leading `^` dropped (failing on `xlocalhost`) and with its trailing `$` dropped (failing on `localhost.rebind.example`); `src/allowed-host.ts` matched its saved copy byte for byte afterward. The AC-0014 test passed when run alone with `-g "AC-0014"`. `npx playwright test test/e2e/hosting.spec.ts test/e2e/auth.spec.ts` passed 35 of 35 in 11.1 s, and `npm run typecheck` passed.
 - Slot fix run 3, after the folder check: dead rows 174 to 0, slot lag 1,530 to 0. `npm test` then passed: Vitest 53 files and 1,043 tests, then the browser suite 686 passed, 606 s in all.
+
+## Post-gates review round 2 (2026-11-01)
+
+| Adversarial | Security | Quality |
+| --- | --- | --- |
+| 1 Nit sustained | Clean (footer adjudicated) | Clean |
+
+- Adversarial finding 1: the intent's online-step text now gives one sentence per decision and says in plain words what `X-Forwarded-Host`, the `__Host-` prefix, and `includeSubDomains` with preload guard.
+- Security footer, test-strength note left as it is: AC-0014's foreign-Origin replays assert only that the session count stays put, so if the Origin refusal ever broke while the control replay had used the last sign-in the 30-per-5-minutes limit allows, the test could still pass. While the Origin refusal works, the test passes for the right reason.
+
