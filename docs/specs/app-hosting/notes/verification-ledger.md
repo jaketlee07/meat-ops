@@ -85,3 +85,7 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 - Never-do checks, each printing nothing: `git diff d96a997 -- package.json package-lock.json`; `git diff --stat d96a997 -- supabase/`; `git diff d96a997 -- src next.config.ts | grep -E '^\+.*(NEXT_PUBLIC_|createBrowserClient)'`.
 - The app was then stopped by PID.
 
+## Final gates (2026-11-01)
+
+- `npm run audit` found 0 vulnerabilities, and `npm run typecheck` passed, at `87a2ac5`. The last `npm test` (T5, 604 s, all passing) ran at `f0a7b78`; the only later change is this ledger.
+
