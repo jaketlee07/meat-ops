@@ -70,7 +70,7 @@ outranks existing guidance.
 ## Build and test commands
 
 ```bash
-npm ci                            # install
+npm ci --ignore-scripts           # install
 npx playwright install chromium   # once, the browser for the browser suite
 supabase start                    # local stack (Docker); tests run against it
 supabase migration up             # apply migrations to the local stack
@@ -87,6 +87,10 @@ npm run audit                     # audit shipped dependencies; run before merge
 ```
 
 There is no lint command.
+
+Every install, in any folder, is `npm ci --ignore-scripts`. The repository
+`.npmrc` already turns install scripts off, and the flag keeps them off even
+when the shell sets an `npm_config_ignore_scripts` variable that says otherwise.
 
 The app reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the gitignored
 repository-root `.env`. It also reads an optional `ANTHROPIC_API_KEY`, the key
@@ -153,7 +157,7 @@ folder belongs to another project and uses neither stack.
 
 Set up a folder on stack A:
 
-1. `npm ci`
+1. `npm ci --ignore-scripts`
 2. `supabase start`
 3. Run the check above. When no other stack A folder is listed, run
    `supabase db reset`. It rebuilds stack A from this folder's migrations. It
@@ -163,7 +167,7 @@ Set up a folder on stack A:
 
 Set up a folder on stack B:
 
-1. `npm ci`
+1. `npm ci --ignore-scripts`
 2. `cp supabase/stack-b.env supabase/.env`
 3. `supabase start`
 4. Run the check above. When no other stack B folder is listed, run
