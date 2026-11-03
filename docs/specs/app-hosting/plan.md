@@ -1,7 +1,7 @@
 # Plan: app-hosting
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** `docs/architecture/overview.md` (the areas table row for `src/proxy.ts`, `src/privileged-env.ts`, `next.config.ts`, and "App trust boundary"); analogous implementation: `src/privileged-env.ts`, a pure rule file at `src/` that `src/proxy.ts` and `next.config.ts` import, with the framing headers in `next.config.ts` beside it; tests: the Vitest table style of `test/env.test.ts`, the raw-`Host` requests of `test/e2e/auth.spec.ts` ("a request with a foreign or missing Host"), and the spare app of `startSpare` in `test/e2e/invoices-page.ts`. Deviation: the icons are route handlers at fixed paths rather than Next.js's `icon` and `apple-icon` files (reason in Design). Uncertainty: none after the probes in the spec's Assumptions
 
 > **Plan contract:** this is the implementation strategy. It may change

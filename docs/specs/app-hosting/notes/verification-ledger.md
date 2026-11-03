@@ -113,3 +113,15 @@ Review artifacts sit under the ignored `.context/reviews/dc02f06e-d303-4031-ac54
 - Post-gates round 3 (adversarial, delta only): 1 Concern, that the reworded intent said `includeSubDomains` and preload make browsers use HTTPS for every name under the domain from the first visit. Repaired without a separate adjudication, since the fix only narrows the claim: the text now says those options reach sibling names only when the base domain sends the header, and the first visit only after that domain joins the browsers' preload list (RFC 6797, section 6.1.2; the preload list is opt-in by the base domain).
 - Post-gates round 4 (adversarial, delta only): 1 Concern and 1 Nit on the same sentence, each a new defect in the previous repair's explanation of the cookie settings. Repaired by cutting the explanation: the intent now names the two decisions and what each is for, and leaves how each setting works to the online step.
 - Post-gates round 5 (adversarial, delta only): 1 Nit, that the cut also dropped the plain-word gloss for `X-Forwarded-Host`. Repaired by restoring the gloss rounds 3 and 4 had already read without a finding.
+
+## Post-gates review rounds 3 to 6 (2026-11-02)
+
+| Round | Adversarial | Security | Quality |
+| ---: | --- | --- | --- |
+| 3 | 1 Concern (intent wording) | not rerun (one-sentence docs delta) | not rerun (one-sentence docs delta) |
+| 4 | 1 Concern, 1 Nit (same sentence) | not rerun | not rerun |
+| 5 | 1 Nit (same sentence) | not rerun | not rerun |
+| 6 | Clean | not rerun | not rerun |
+
+- The spec is Shipped with all 17 criteria checked, and the plan is Done.
+

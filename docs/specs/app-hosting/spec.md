@@ -1,6 +1,6 @@
 # Spec: app-hosting
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the intent [`docs/product/intents/app-https-hosting.md`](../../product/intents/app-https-hosting.md) (its Outcome and Boundary, narrowed by the owner on 2026-10-27 as Assumptions record); the `AGENTS.md` hard rules; the cookie attributes, privileged-variable guard, and loopback-only listening criteria of the receiving spec, [`docs/specs/receiving/spec.md`](../receiving/spec.md). This spec narrows that spec's Host check: while `APP_HOST` names a host, the app also answers that one name, and with `APP_HOST` unset or empty the receiving Host check holds unchanged. The receiving spec scopes its other criteria to requests whose `Host` is local; for the `APP_HOST` name, this spec's AC-0017 covers the signed-out redirect, and AC-0003, AC-0014, and AC-0016 cover sign-in and its cookies. The receiving spec itself is not annotated (owner's choice, Assumptions)
@@ -104,26 +104,26 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
 
 ### Sign-in cookies
 
-- [ ] **AC-0001.** Every Supabase auth cookie the app sets, at sign-in through the form and when the proxy refreshes an expired access token, carries the `Secure` attribute.
+- [x] **AC-0001.** Every Supabase auth cookie the app sets, at sign-in through the form and when the proxy refreshes an expired access token, carries the `Secure` attribute.
 
 ### The hosted name
 
-- [ ] **AC-0002.** While `APP_HOST` names a host, a signed-out GET of `/sign-in` whose `Host` header equals that name, ignoring letter case on both sides, returns status 200 and the sign-in form.
-- [ ] **AC-0003.** While `APP_HOST` names a host, a sign-in posted to `/sign-in` with that name as `Host` and `https://` plus that name as `Origin` creates one new auth session for the operator.
-- [ ] **AC-0014.** While `APP_HOST` is `meat-ops.example`, a sign-in posted to `/sign-in` with `Host: meat-ops.example` and an `Origin` of `https://rebind.example` or of `https://sub.meat-ops.example` creates no auth session.
-- [ ] **AC-0016.** While `APP_HOST` names a host, AC-0003's sign-in sets at least one Supabase auth cookie, and each one carries `HttpOnly`, `SameSite=Lax`, and `Secure`, with attribute names and the `SameSite` value matched ignoring letter case.
-- [ ] **AC-0017.** While `APP_HOST` is `meat-ops.example`, a signed-out GET of `/receiving` with `Host: meat-ops.example` is answered with status 307 and `Location: /sign-in`.
-- [ ] **AC-0004.** While `APP_HOST` is `meat-ops.example`, a GET of `/sign-in` is refused with status 421 and the body `Misdirected request.` for each of these `Host` values: `meat-ops.example:443`, `xmeat-ops.example`, `sub.meat-ops.example`, `meat-ops.example.rebind.example`, `meat-opsxexample`, and `rebind.example:3100`.
-- [ ] **AC-0005.** While `APP_HOST` is unset or empty, a GET of `/sign-in` is refused with status 421 and the body `Misdirected request.` for each of these: a `Host` of `meat-ops.example`, of `rebind.example:3100`, or of the empty value, and an HTTP/1.0 request with no `Host`.
-- [ ] **AC-0012.** With `APP_HOST` unset, empty, or `meat-ops.example`, a signed-out GET of `/sign-in` whose `Host` is `127.0.0.1` or `localhost`, each with and without the app's port, returns status 200 and the sign-in form.
+- [x] **AC-0002.** While `APP_HOST` names a host, a signed-out GET of `/sign-in` whose `Host` header equals that name, ignoring letter case on both sides, returns status 200 and the sign-in form.
+- [x] **AC-0003.** While `APP_HOST` names a host, a sign-in posted to `/sign-in` with that name as `Host` and `https://` plus that name as `Origin` creates one new auth session for the operator.
+- [x] **AC-0014.** While `APP_HOST` is `meat-ops.example`, a sign-in posted to `/sign-in` with `Host: meat-ops.example` and an `Origin` of `https://rebind.example` or of `https://sub.meat-ops.example` creates no auth session.
+- [x] **AC-0016.** While `APP_HOST` names a host, AC-0003's sign-in sets at least one Supabase auth cookie, and each one carries `HttpOnly`, `SameSite=Lax`, and `Secure`, with attribute names and the `SameSite` value matched ignoring letter case.
+- [x] **AC-0017.** While `APP_HOST` is `meat-ops.example`, a signed-out GET of `/receiving` with `Host: meat-ops.example` is answered with status 307 and `Location: /sign-in`.
+- [x] **AC-0004.** While `APP_HOST` is `meat-ops.example`, a GET of `/sign-in` is refused with status 421 and the body `Misdirected request.` for each of these `Host` values: `meat-ops.example:443`, `xmeat-ops.example`, `sub.meat-ops.example`, `meat-ops.example.rebind.example`, `meat-opsxexample`, and `rebind.example:3100`.
+- [x] **AC-0005.** While `APP_HOST` is unset or empty, a GET of `/sign-in` is refused with status 421 and the body `Misdirected request.` for each of these: a `Host` of `meat-ops.example`, of `rebind.example:3100`, or of the empty value, and an HTTP/1.0 request with no `Host`.
+- [x] **AC-0012.** With `APP_HOST` unset, empty, or `meat-ops.example`, a signed-out GET of `/sign-in` whose `Host` is `127.0.0.1` or `localhost`, each with and without the app's port, returns status 200 and the sign-in form.
 
 ### HTTPS only
 
-- [ ] **AC-0006.** Each of these responses carries `Strict-Transport-Security: max-age=31536000`: `/sign-in` signed out; the redirect that a signed-out GET of `/receiving` gets; `/receiving` signed in as an operator; a GET refused for its `Host`; `/manifest.webmanifest`; and each icon the install file lists.
+- [x] **AC-0006.** Each of these responses carries `Strict-Transport-Security: max-age=31536000`: `/sign-in` signed out; the redirect that a signed-out GET of `/receiving` gets; `/receiving` signed in as an operator; a GET refused for its `Host`; `/manifest.webmanifest`; and each icon the install file lists.
 
 ### Install on a phone
 
-- [ ] **AC-0007.** A signed-out GET of `/manifest.webmanifest` returns status 200, content type `application/manifest+json`, and a JSON body equal to this object, key order aside:
+- [x] **AC-0007.** A signed-out GET of `/manifest.webmanifest` returns status 200, content type `application/manifest+json`, and a JSON body equal to this object, key order aside:
 
   ```json
   {
@@ -140,12 +140,12 @@ before proceeding; *Never do* is a hard rule, even under time pressure.
   }
   ```
 
-- [ ] **AC-0008.** Each icon the install file lists, fetched signed out, returns status 200, content type `image/png`, and a PNG whose width and height in pixels match its `sizes` entry.
-- [ ] **AC-0009.** The page head of `/sign-in` signed out, and of `/receiving` signed in as an operator, holds `<link rel="manifest" href="/manifest.webmanifest">`.
-- [ ] **AC-0010.** The page head of `/sign-in` signed out, and of `/receiving` signed in as an operator, holds a `rel="apple-touch-icon"` link.
-- [ ] **AC-0013.** The URL that AC-0010's link names, fetched signed out, returns status 200, content type `image/png`, and a 180 by 180 pixel PNG.
-- [ ] **AC-0011.** In the developer's desktop Chrome, with the app under `npm run start` at `http://127.0.0.1:3000` and an operator signed in, after an install started from `/production`, launching the installed app from the operating system opens it in its own window on `/receiving`.
-- [ ] **AC-0015.** The app AC-0011 installed shows the white "MO" letters on blue as its icon in the operating system's app list.
+- [x] **AC-0008.** Each icon the install file lists, fetched signed out, returns status 200, content type `image/png`, and a PNG whose width and height in pixels match its `sizes` entry.
+- [x] **AC-0009.** The page head of `/sign-in` signed out, and of `/receiving` signed in as an operator, holds `<link rel="manifest" href="/manifest.webmanifest">`.
+- [x] **AC-0010.** The page head of `/sign-in` signed out, and of `/receiving` signed in as an operator, holds a `rel="apple-touch-icon"` link.
+- [x] **AC-0013.** The URL that AC-0010's link names, fetched signed out, returns status 200, content type `image/png`, and a 180 by 180 pixel PNG.
+- [x] **AC-0011.** In the developer's desktop Chrome, with the app under `npm run start` at `http://127.0.0.1:3000` and an operator signed in, after an install started from `/production`, launching the installed app from the operating system opens it in its own window on `/receiving`.
+- [x] **AC-0015.** The app AC-0011 installed shows the white "MO" letters on blue as its icon in the operating system's app list.
 
 ## Follow-ons
 
