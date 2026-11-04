@@ -7,7 +7,7 @@ import { isOperator } from "../../lib/rpc";
 import { runWatch } from "../_server/watch";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader, WATCH_FAILED } from "../page-header";
+import { PageShell, WATCH_FAILED } from "../page-header";
 import { AlertList } from "./alert-list";
 import { DigestSection } from "./digest-section";
 
@@ -29,8 +29,7 @@ export default async function AlertsPage() {
   const digest = digestPage(alerts.length, row, now);
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Alerts" current="alerts" />
+    <PageShell title="Alerts" current="alerts">
       {watch.status === "failed" && <p className="mb-4 text-base font-medium text-error">{WATCH_FAILED}</p>}
       <section aria-labelledby="digest-heading" className="mb-6">
         <h2 id="digest-heading" className="mb-3 text-xl font-semibold">
@@ -39,6 +38,6 @@ export default async function AlertsPage() {
         {digest.kind === "no-alerts" ? <p className="text-base">{NO_OPEN_ALERTS}</p> : <DigestSection page={digest} />}
       </section>
       <AlertList alerts={alerts} />
-    </main>
+    </PageShell>
   );
 }

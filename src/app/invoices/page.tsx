@@ -5,7 +5,7 @@ import { getDraft, isUuid, listWaitingDrafts, readCatalog } from "../../lib/invo
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { DraftReview } from "./draft-review";
 import { DraftsList } from "./drafts-list";
 import { ReadForms } from "./read-forms";
@@ -32,8 +32,7 @@ export default async function InvoicesPage({
     // Only a waiting draft's pickers are shown, so only it reads the catalog.
     const catalog = draft?.status === "pending" ? await readCatalog(supabase) : { products: [], vendors: [] };
     return (
-      <main className="mx-auto w-full max-w-xl p-4">
-        <PageHeader title="Invoices" current="invoices" />
+      <PageShell title="Invoices" current="invoices">
         <Link
           href="/invoices"
           className="mb-4 inline-flex min-h-control min-w-control items-center rounded-md px-3 text-base font-medium text-primary underline"
@@ -54,16 +53,15 @@ export default async function InvoicesPage({
             </>
           )}
         </section>
-      </main>
+      </PageShell>
     );
   }
 
   const drafts = await listWaitingDrafts(supabase);
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Invoices" current="invoices" />
+    <PageShell title="Invoices" current="invoices">
       <ReadForms />
       <DraftsList drafts={drafts} />
-    </main>
+    </PageShell>
   );
 }

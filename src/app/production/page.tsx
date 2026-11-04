@@ -4,7 +4,7 @@ import { getStock } from "../../lib/receiving";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { ProductionForm } from "./production-form";
 import { ProductRegion } from "./product-region";
 
@@ -50,8 +50,7 @@ export default async function ProductionPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Production" current="production" />
+    <PageShell title="Production" current="production">
       <ProductionForm
         products={products.map(({ code, description, shrinkPct }) => ({ code, description, shrinkPct }))}
         urlCode={requested}
@@ -59,6 +58,6 @@ export default async function ProductionPage({
         region={region}
         reversedBatches={reversedBatches}
       />
-    </main>
+    </PageShell>
   );
 }

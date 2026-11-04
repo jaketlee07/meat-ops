@@ -4,7 +4,7 @@ import { parseWhatIf } from "../../lib/price-input";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { PricingDetail } from "./pricing-detail";
 import { PricingList } from "./pricing-list";
 import { WhatIfForm } from "./what-if-form";
@@ -39,14 +39,13 @@ export default async function PricingPage({
   if (productCode !== undefined) {
     const detail = await getPricingDetail(supabase, productCode);
     return (
-      <main className="mx-auto w-full max-w-xl p-4">
-        <PageHeader title="Pricing" current="pricing" />
+      <PageShell title="Pricing" current="pricing">
         {detail ? (
           <PricingDetail key={detail.productId} detail={detail} />
         ) : (
           <p className="break-words text-base">{`No active finished product has code ${productCode}.`}</p>
         )}
-      </main>
+      </PageShell>
     );
   }
 
@@ -54,10 +53,9 @@ export default async function PricingPage({
 
   if (rows.length === 0) {
     return (
-      <main className="mx-auto w-full max-w-xl p-4">
-        <PageHeader title="Pricing" current="pricing" />
+      <PageShell title="Pricing" current="pricing">
         <p className="text-base">{NONE}</p>
-      </main>
+      </PageShell>
     );
   }
 
@@ -77,8 +75,7 @@ export default async function PricingPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Pricing" current="pricing" />
+    <PageShell title="Pricing" current="pricing">
       <PricingList rows={rows} />
       <section aria-labelledby="what-if-heading" className="mt-8">
         <h2 id="what-if-heading" className="mb-3 text-xl font-semibold">
@@ -93,6 +90,6 @@ export default async function PricingPage({
         {/* The container is on every render, empty until a what-if is asked, so new results are announced. */}
         <div role="status">{results}</div>
       </section>
-    </main>
+    </PageShell>
   );
 }

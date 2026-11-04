@@ -151,10 +151,10 @@ export async function shownAnswer(p: Parts) {
 
 // ---- Control lists ----
 
-// The page's own controls after Sign out.
+// The page's own controls after the header's stops.
 export const ASK_OWN_CONTROLS = ["input #ask-question", "button Ask"];
 
-// What Tab reaches on /ask on load: the navigation, Sign out, the field, and Ask.
+// What Tab reaches on /ask on load: the header's stops, the field, and Ask.
 export const ASK_CONTROLS = [...NAV_CONTROLS, ...ASK_OWN_CONTROLS];
 
 // With product buttons or Look it up again after Ask, and an answer's link after that.

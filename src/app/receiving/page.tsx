@@ -9,7 +9,7 @@ import {
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { ProductRegion } from "./product-region";
 import { ReceiptForm } from "./receipt-form";
 
@@ -56,8 +56,7 @@ export default async function ReceivingPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Receiving" current="receiving" />
+    <PageShell title="Receiving" current="receiving">
       <ReceiptForm
         products={products.map(({ code, description, species }) => ({ code, description, species }))}
         vendors={vendors}
@@ -67,6 +66,6 @@ export default async function ReceivingPage({
         voidedLots={voidedLots}
         correctedLots={correctedLots}
       />
-    </main>
+    </PageShell>
   );
 }
