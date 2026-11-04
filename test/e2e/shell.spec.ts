@@ -111,6 +111,7 @@ async function focusedOutline(page: Page): Promise<string> {
 async function ringAfterKeyboardFocus(page: Page, target: Locator): Promise<string> {
   await page.keyboard.press("Tab");
   await target.focus();
+  await expect(target).toBeFocused();
   return focusedOutline(page);
 }
 
@@ -254,6 +255,17 @@ test.describe("the phone menu", () => {
     await expect(primaryNav(page).getByRole("link", { name: "Receiving", exact: true })).toBeFocused();
     await primaryNav(page).getByRole("link", { name: "Production", exact: true }).click();
     await expect(page).toHaveURL(/\/production$/);
+  });
+
+  test("widening to 1024 with the phone menu closed leaves focus where it was", async ({ page }) => {
+    await page.setViewportSize({ width: 1023, height: 720 });
+    await page.goto("/receiving");
+    const field = page.locator("#product-code");
+    await field.focus();
+    await expect(field).toBeFocused();
+    await page.setViewportSize({ width: 1024, height: 720 });
+    await expect(primaryNav(page).getByRole("link", { name: "Receiving", exact: true })).toBeVisible();
+    await expect(field).toBeFocused();
   });
 
   test("AC-0015: the page-state check passes with the phone menu open, reaching Close menu, the nine links, Sign out", async ({
@@ -528,17 +540,6 @@ test.describe("landmarks", () => {
       const side = page.getByRole("complementary", { name: "Side menu" });
       await expect(side.getByRole("button", { name: "Sign out" })).toBeVisible();
     });
-
-    test("the desktop cap leaves /production's check step at its own 28rem width", async ({ page }) => {
-      await seed502Fixture();
-      await page.setViewportSize({ width: 1280, height: 720 });
-      const f = await openForm(page);
-      await fillBatch(f, {});
-      await f.save.click();
-      const dialog = checkDialog(page);
-      await expect(dialog).toBeVisible();
-      expect(await dialog.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("448px");
-    });
   });
 
   test.describe("signed out", () => {
@@ -548,5 +549,24 @@ test.describe("landmarks", () => {
       await page.goto("/sign-in");
       await expect(page.getByRole("banner").getByText("Meat Ops", { exact: true })).toBeVisible();
     });
+  });
+});
+
+test.describe("the desktop content cap", () => {
+  test.use({ storageState: OPERATOR_STATE });
+
+  test("at 1280, /production's form is capped at 544px and its check step keeps its own 28rem", async ({ page }) => {
+    await seed502Fixture();
+    await page.setViewportSize({ width: 1280, height: 720 });
+    const f = await openForm(page);
+    // The form is a direct child of <main>, after the shell's title-and-banner div.
+    const form = page.locator("main > form");
+    await expect(form).toHaveCount(1);
+    expect(await form.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("544px");
+    await fillBatch(f, {});
+    await f.save.click();
+    const dialog = checkDialog(page);
+    await expect(dialog).toBeVisible();
+    expect(await dialog.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("448px");
   });
 });
