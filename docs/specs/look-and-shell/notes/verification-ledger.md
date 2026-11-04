@@ -28,3 +28,10 @@ The spec's Assumptions record each of these as a Product line. Two shaped the re
 - Work-loop run `a3e57000-f8a3-4291-8b94-cdc6743c87d1`. `approve-plan` recorded spec hash `e0f95049dae3…` and plan hash `7c8e4e08f224…`. The schedule runs T1, then T2 and T4 (their Touches overlap, so one at a time), then T3, then T5.
 - Base: `9e3c158` on branch `feat/look-and-shell` in the main folder, on stack A.
 - Project knowledge: capture at the spec and plan gates was not attempted; it refused with `strict_parse` in earlier runs, so this run records it as unavailable.
+
+## Build (2026-11-04)
+
+- T1 (`70c43be`): `npm test` passed, Vitest 1043 of 1043 and Playwright 697 of 697 (9.8 min). The not-allowed AC-0006 test also checks the "Not allowed" heading; `shell.spec.ts` alone then passed 13 of 13.
+- T2 (`84e8dc3`): `npm test` passed, Vitest 1043 of 1043 and Playwright 741 of 741 (14.8 min). Existing test files changed only the header's phone Tab stops (`...HEADER_STOPS`), `invoices-page.ts`'s `NAV_CONTROLS` slice, `withSeeAlerts`'s insertion point, and their imports and comments. Four waiting shells the implementer left (each polled a condition that matched itself or never changed) were stopped by PID.
+- T4: `npm test` gave Vitest 1043 of 1043 and Playwright 742 of 743 (17.6 min). The one failure was `receiving.spec.ts:315` (axe `document-title` on the refused blank-weight form), a page T4 does not touch; it passed when re-run alone. The same failure is already recorded as a symptom in `docs/product/intents/local-stack-catalog-bloat.md` (2026-10-20). The final gates re-run the full suite.
+

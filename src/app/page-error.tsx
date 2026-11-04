@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { LoneCard } from "./lone-card";
 
 // Shown when a page fails to load. Try again calls retry, which fetches the page
 // again and replaces this with the result; reset would only render the same
@@ -19,11 +20,11 @@ export function PageError({ heading, extra, retry }: { heading: string; extra?: 
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-sm p-4">
-      <h1 ref={headingRef} tabIndex={-1} aria-describedby={messageId} className="mb-4 text-2xl font-semibold">
+    <LoneCard>
+      <h1 ref={headingRef} tabIndex={-1} aria-describedby={messageId} className="text-[22px] font-bold">
         {heading}
       </h1>
-      <div id={messageId} role="alert" className="mb-6 space-y-2 text-base text-error">
+      <div id={messageId} role="alert" className="space-y-2 rounded-[10px] border border-error-edge bg-error-wash px-3 py-2.5 text-base font-semibold text-error">
         <p>Couldn&apos;t load this page.</p>
         {extra && <p>{extra}</p>}
       </div>
@@ -35,10 +36,10 @@ export function PageError({ heading, extra, retry }: { heading: string; extra?: 
           setTrying(true);
           retry();
         }}
-        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+        className="h-12 w-full rounded-xl bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60"
       >
         {trying ? "Trying again…" : "Try again"}
       </button>
-    </main>
+    </LoneCard>
   );
 }

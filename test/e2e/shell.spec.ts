@@ -398,3 +398,46 @@ test.describe("the urgent counts", () => {
     await expect(badge(inMenu)).toHaveText("1");
   });
 });
+
+// ---- The lone card ----
+
+// The card is <main>: white, holding the heading and every control, with the
+// "MO" mark and "Meat Ops" ahead of it in the document.
+async function expectLoneCard(page: Page): Promise<void> {
+  const card = page.getByRole("main");
+  expect(await backgroundOf(card)).toBe(WHITE);
+  await expect(card.getByRole("heading", { level: 1 })).toHaveCount(1);
+  expect(await page.getByRole("heading", { level: 1 }).count()).toBe(1);
+  expect(await page.locator("button, input").count()).toBe(await card.locator("button, input").count());
+  const before = await page.evaluate(() => {
+    const main = document.querySelector("main") as Element;
+    const text = (needle: string) =>
+      Array.from(document.querySelectorAll("span")).find((el) => el.textContent === needle);
+    const comesBefore = (el: Element | undefined) =>
+      !!el && !!(el.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING) && !main.contains(el);
+    return { mark: comesBefore(text("MO")), name: comesBefore(text("Meat Ops")) };
+  });
+  expect(before).toEqual({ mark: true, name: true });
+}
+
+test.describe("the lone card", () => {
+  test.describe("signed out", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test("AC-0021: /sign-in is one white card", async ({ page }) => {
+      await page.goto("/sign-in");
+      await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
+      await expectLoneCard(page);
+    });
+  });
+
+  test.describe("non-operator", () => {
+    test.use({ storageState: NON_OPERATOR_STATE });
+
+    test("AC-0021: the not-allowed view is one white card", async ({ page }) => {
+      await page.goto("/receiving");
+      await expect(page.getByRole("heading", { level: 1, name: "Not allowed" })).toBeVisible();
+      await expectLoneCard(page);
+    });
+  });
+});

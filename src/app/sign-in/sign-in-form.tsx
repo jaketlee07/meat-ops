@@ -6,7 +6,7 @@ import { signIn, type SignInState } from "./actions";
 const INITIAL_STATE: SignInState = {};
 
 const FIELD =
-  "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
+  "block h-11 w-full rounded-[10px] border border-field-border bg-surface px-3 text-base text-ink";
 
 export function SignInForm() {
   const [state, formAction, pending] = useActionState(signIn, INITIAL_STATE);
@@ -18,9 +18,9 @@ export function SignInForm() {
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div>
-        <label htmlFor="email" className="block text-base font-medium">
+    <form action={formAction} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="email" className="text-sm font-semibold text-ink-secondary">
           Email
         </label>
         <input
@@ -34,8 +34,8 @@ export function SignInForm() {
           className={FIELD}
         />
       </div>
-      <div>
-        <label htmlFor="password" className="block text-base font-medium">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="password" className="text-sm font-semibold text-ink-secondary">
           Password
         </label>
         <input
@@ -54,14 +54,14 @@ export function SignInForm() {
         ref={errorRef}
         role="alert"
         tabIndex={-1}
-        className="text-base font-medium text-error"
+        className="text-[15px] font-semibold text-error"
       >
         {state.message}
       </div>
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary disabled:opacity-60"
+        className="h-12 w-full rounded-xl bg-primary px-4 text-base font-bold text-on-primary disabled:opacity-60"
       >
         Sign in
       </button>
