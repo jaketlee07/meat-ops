@@ -92,45 +92,45 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 
 ### Where the shell shows
 
-- [ ] **AC-0001.** On every header page, the side menu shows when the viewport is 1024 CSS px wide or wider, and the top bar shows when it is narrower. Exactly one of the two shows at any width: at 1023 px the top bar shows, and at 1024 px the side menu shows.
-- [ ] **AC-0002.** The side menu, the top bar, and the open phone menu each have the background color #0F276C.
-- [ ] **AC-0003.** Top to bottom, the side menu holds the text "Meat Ops", the navigation region named "Primary" with nine links (Receiving, Production, Menu, Pricing, Sales, Trace, Invoices, Ask, and Alerts, in that order), and the Sign out button.
-- [ ] **AC-0004.** Left to right, the top bar holds a button named "Open menu", the page's title as the level-1 heading, and a link to `/alerts`.
-- [ ] **AC-0005.** At 320×640 and at 1280×720, every header page shows exactly one level-1 heading. Its text is the page's title: the label of that page's own link in AC-0003.
-- [ ] **AC-0006.** The page background is #F3F6FA on `/sign-in`, on every header page, on the not-allowed view, and on the error view.
+- [x] **AC-0001.** On every header page, the side menu shows when the viewport is 1024 CSS px wide or wider, and the top bar shows when it is narrower. Exactly one of the two shows at any width: at 1023 px the top bar shows, and at 1024 px the side menu shows.
+- [x] **AC-0002.** The side menu, the top bar, and the open phone menu each have the background color #0F276C.
+- [x] **AC-0003.** Top to bottom, the side menu holds the text "Meat Ops", the navigation region named "Primary" with nine links (Receiving, Production, Menu, Pricing, Sales, Trace, Invoices, Ask, and Alerts, in that order), and the Sign out button.
+- [x] **AC-0004.** Left to right, the top bar holds a button named "Open menu", the page's title as the level-1 heading, and a link to `/alerts`.
+- [x] **AC-0005.** At 320×640 and at 1280×720, every header page shows exactly one level-1 heading. Its text is the page's title: the label of that page's own link in AC-0003.
+- [x] **AC-0006.** The page background is #F3F6FA on `/sign-in`, on every header page, on the not-allowed view, and on the error view.
 
 ### The phone menu
 
-- [ ] **AC-0007.** At 320×640, with no dialog open, Tab on a header page reaches the "Open menu" button first and the top bar's `/alerts` link second. It reaches no link in the Primary navigation and no Sign out button.
-- [ ] **AC-0008.** Pressing "Open menu" opens a modal dialog named "Menu". It holds a button named "Close menu", then the Primary navigation with the AC-0003 links in the AC-0003 order, then Sign out.
-- [ ] **AC-0009.** When the phone menu opens, focus is on "Close menu".
-- [ ] **AC-0010.** Pressing Escape, pressing "Close menu", or tapping the dimmed page outside the phone menu's panel closes the phone menu.
-- [ ] **AC-0011.** After each way of closing in AC-0010, focus is on the "Open menu" button.
-- [ ] **AC-0012.** Choosing any of the nine links in the open phone menu, including the link to the page already showing, shows that link's page with the phone menu closed.
-- [ ] **AC-0013.** Choosing Sign out in the open phone menu meets receiving AC-0005.
-- [ ] **AC-0014.** With the phone menu open, widening the viewport to 1024 CSS px or more closes the phone menu.
-- [ ] **AC-0015.** At 320×640 on `/receiving`, the page-state check passes with the phone menu open. Its Tab walk reaches "Close menu", the nine links, and Sign out, in that order, and nothing else.
+- [x] **AC-0007.** At 320×640, with no dialog open, Tab on a header page reaches the "Open menu" button first and the top bar's `/alerts` link second. It reaches no link in the Primary navigation and no Sign out button.
+- [x] **AC-0008.** Pressing "Open menu" opens a modal dialog named "Menu". It holds a button named "Close menu", then the Primary navigation with the AC-0003 links in the AC-0003 order, then Sign out.
+- [x] **AC-0009.** When the phone menu opens, focus is on "Close menu".
+- [x] **AC-0010.** Pressing Escape, pressing "Close menu", or tapping the dimmed page outside the phone menu's panel closes the phone menu.
+- [x] **AC-0011.** After each way of closing in AC-0010, focus is on the "Open menu" button.
+- [x] **AC-0012.** Choosing any of the nine links in the open phone menu, including the link to the page already showing, shows that link's page with the phone menu closed.
+- [x] **AC-0013.** Choosing Sign out in the open phone menu meets receiving AC-0005.
+- [x] **AC-0014.** With the phone menu open, widening the viewport to 1024 CSS px or more closes the phone menu.
+- [x] **AC-0015.** At 320×640 on `/receiving`, the page-state check passes with the phone menu open. Its Tab walk reaches "Close menu", the nine links, and Sign out, in that order, and nothing else.
 
 ### Focus outlines
 
-- [ ] **AC-0016.** A focused control inside the side menu, the top bar, or the open phone menu draws its focus outline in #FFFFFF.
-- [ ] **AC-0017.** A focused control outside those three surfaces draws its focus outline in #1D4ED8. The surfaces outside them are a header page's own content, the urgent banner, `/sign-in`, the not-allowed view, the error view, and a page's confirmation dialog.
-- [ ] **AC-0018.** At 1280×720 on `/receiving` with one open urgent alert, the page-state check passes when its Tab walk also runs at 1280×720. That walk reaches the nine Primary links and Sign out, in the AC-0003 order, before any other control.
+- [x] **AC-0016.** A focused control inside the side menu, the top bar, or the open phone menu draws its focus outline in #FFFFFF.
+- [x] **AC-0017.** A focused control outside those three surfaces draws its focus outline in #1D4ED8. The surfaces outside them are a header page's own content, the urgent banner, `/sign-in`, the not-allowed view, the error view, and a page's confirmation dialog.
+- [x] **AC-0018.** At 1280×720 on `/receiving` with one open urgent alert, the page-state check passes when its Tab walk also runs at 1280×720. That walk reaches the nine Primary links and Sign out, in the AC-0003 order, before any other control.
 
 ### Urgent counts
 
-- [ ] **AC-0019.** Each of the three Alerts links in the shell (the side menu's, the open phone menu's, and the top bar's) shows a badge with the number N when N urgent alerts are open, N is 1 or more, the page's watch succeeded, and the page is not `/alerts`. In every other case, no badge shows.
-- [ ] **AC-0020.** The top bar's `/alerts` link has the accessible name "Alerts, N urgent" when AC-0019 shows a badge with N, and the name "Alerts" in every other case.
+- [x] **AC-0019.** Each of the three Alerts links in the shell (the side menu's, the open phone menu's, and the top bar's) shows a badge with the number N when N urgent alerts are open, N is 1 or more, the page's watch succeeded, and the page is not `/alerts`. In every other case, no badge shows.
+- [x] **AC-0020.** The top bar's `/alerts` link has the accessible name "Alerts, N urgent" when AC-0019 shows a badge with N, and the name "Alerts" in every other case.
 
 ### Views with no menu
 
-- [ ] **AC-0021.** `/sign-in`, the not-allowed view, and the error view each show the text "Meat Ops" beside the "MO" mark, above one card with the background color #FFFFFF that holds the view's level-1 heading and every control the view has.
+- [x] **AC-0021.** `/sign-in`, the not-allowed view, and the error view each show the text "Meat Ops" beside the "MO" mark, above one card with the background color #FFFFFF that holds the view's level-1 heading and every control the view has.
 
 ### Look and regressions
 
-- [ ] **AC-0022.** The verification ledger records the owner's "match" verdict for each of five built screens, each compared whole with its spec 1 board on the canvas at revision 1793808116-460d. A "no match" on any screen fails this criterion. Each screen is set to its board's drawn state: `/sign-in` at 390 px wide with "operator@example.test" typed into Email (S1-SignIn); the not-allowed view at 390 px (S1-NotAllowed); the error view of `/receiving` at 390 px (S1-Error); `/receiving` at 390 px with two open urgent alerts and the phone menu open (S1-PhoneMenu); and `/receiving` at 1280 px with two open urgent alerts (S1-Desktop). Three differences do not count: the page's own content in place of the "[Page content]" box, at that content's current width; a drawn text color shown as its nearest `globals.css` token; and focus outlines, which AC-0016 and AC-0017 own.
-- [ ] **AC-0023.** `npm test` passes.
-- [ ] **AC-0024.** Read from the branch point with `main`, the only changed expectations in the existing browser test files are the header's stops in each phone Tab-order list: the "Open menu" button and the top bar's `/alerts` link replace the nine Primary links and Sign out.
+- [x] **AC-0022.** The verification ledger records the owner's "match" verdict for each of five built screens, each compared whole with its spec 1 board on the canvas at revision 1793808116-460d. A "no match" on any screen fails this criterion. Each screen is set to its board's drawn state: `/sign-in` at 390 px wide with "operator@example.test" typed into Email (S1-SignIn); the not-allowed view at 390 px (S1-NotAllowed); the error view of `/receiving` at 390 px (S1-Error); `/receiving` at 390 px with two open urgent alerts and the phone menu open (S1-PhoneMenu); and `/receiving` at 1280 px with two open urgent alerts (S1-Desktop). Three differences do not count: the page's own content in place of the "[Page content]" box, at that content's current width; a drawn text color shown as its nearest `globals.css` token; and focus outlines, which AC-0016 and AC-0017 own.
+- [x] **AC-0023.** `npm test` passes.
+- [x] **AC-0024.** Read from the branch point with `main`, the only changed expectations in the existing browser test files are the header's stops in each phone Tab-order list: the "Open menu" button and the top bar's `/alerts` link replace the nine Primary links and Sign out.
 
 ## Follow-ons
 
