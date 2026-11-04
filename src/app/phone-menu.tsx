@@ -16,11 +16,16 @@ export function PhoneMenu({ children }: { children: ReactNode }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   // A modal dialog whose top bar is hidden keeps the page inert, so the menu
-  // closes when the window reaches the desktop width.
+  // closes when the window reaches the desktop width. The native focus return
+  // goes to the hidden Open menu button, so focus moves to the side menu's
+  // current-page link instead.
   useEffect(() => {
     const query = window.matchMedia(DESK);
     const onChange = () => {
-      if (query.matches) dialogRef.current?.close();
+      const dialog = dialogRef.current;
+      if (!query.matches || !dialog?.open) return;
+      dialog.close();
+      document.querySelector<HTMLElement>('aside nav[aria-label="Primary"] a[aria-current="page"]')?.focus();
     };
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);

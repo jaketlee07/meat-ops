@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 export function LoneCard({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-5 px-4 pb-4 pt-14">
-      <div className="flex items-center gap-2.5">
+      <header className="flex items-center gap-2.5">
         <span
           aria-hidden="true"
           className="flex size-9 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-on-primary"
@@ -14,7 +14,7 @@ export function LoneCard({ children }: { children: ReactNode }) {
           MO
         </span>
         <span className="text-lg font-bold">Meat Ops</span>
-      </div>
+      </header>
       <main className="flex w-full max-w-sm flex-col gap-4 rounded-[14px] border border-card-border bg-surface p-5">
         {children}
       </main>

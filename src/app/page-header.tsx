@@ -52,11 +52,14 @@ export async function PageShell({
   const urgent = watch && watch.status === "ok" ? watch.urgent : 0;
   return (
     <div className="desk:flex">
-      <div className="on-bar hidden h-dvh w-60 shrink-0 flex-col gap-1 overflow-y-auto px-3 py-4 desk:sticky desk:top-0 desk:flex">
+      <aside
+        aria-label="Side menu"
+        className="on-bar hidden h-dvh w-60 shrink-0 flex-col gap-1 overflow-y-auto px-3 py-4 desk:sticky desk:top-0 desk:flex"
+      >
         <Brand />
         <PrimaryNav current={current} urgent={urgent} />
         <SignOutButton />
-      </div>
+      </aside>
       <div className="min-w-0 desk:flex-1">
         <header className="on-bar flex min-h-15 items-center gap-1 px-2 desk:hidden">
           <PhoneMenu>
@@ -65,9 +68,10 @@ export async function PageShell({
             <SignOutButton />
           </PhoneMenu>
           <h1 className="flex-1 text-lg font-bold">{title}</h1>
-          <AlertsLink urgent={urgent} />
+          <AlertsLink urgent={urgent} current={current === "alerts"} />
         </header>
-        <main className="mx-auto w-full max-w-xl p-4 desk:mx-0 desk:max-w-none desk:px-7 desk:py-6 desk:[&>*:not(:first-child)]:max-w-[34rem]">
+        {/* The 34rem cap is the 36rem column less its two 1rem paddings. The first child is the shell's title-and-banner div and must stay <main>'s first child. Dialogs keep their own width. */}
+        <main className="mx-auto w-full max-w-xl p-4 desk:mx-0 desk:max-w-none desk:px-7 desk:py-6 desk:[&>*:not(:first-child,dialog)]:max-w-[34rem]">
           <div>
             <h1 className="hidden text-2xl font-bold desk:mb-4 desk:block">{title}</h1>
             {/* A status container that is in the page before a save fills it, so a banner a save raises is announced. */}
@@ -159,11 +163,12 @@ function SignOutButton() {
   );
 }
 
-function AlertsLink({ urgent }: { urgent: number }) {
+function AlertsLink({ urgent, current }: { urgent: number; current: boolean }) {
   return (
     <Link
       id="alerts-link"
       href="/alerts"
+      aria-current={current ? "page" : undefined}
       aria-label={urgent >= 1 ? `Alerts, ${urgent} urgent` : "Alerts"}
       className="relative flex size-control items-center justify-center rounded-[10px]"
     >

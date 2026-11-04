@@ -3,6 +3,7 @@ import { resetTestData } from "../db";
 import { OPERATOR_EMAIL } from "../users";
 import { checkDesktopWalk, checkPageState } from "./a11y";
 import { banner, costEarlier, marginCase, receiveTom, withWatchRefused } from "./alerts-page";
+import { checkDialog, fillBatch, openForm, seed502Fixture } from "./production-page";
 import { RAW_TOM_URL } from "./receiving-page";
 import { NON_OPERATOR_STATE, OPERATOR_STATE, signInThroughForm } from "./states";
 
@@ -92,22 +93,32 @@ async function openPhoneMenu(page: Page, path = "/receiving"): Promise<void> {
   await expect(phoneMenu(page)).toBeVisible();
 }
 
-// Presses Tab until the target has focus, so the keyboard-focus outline applies.
-async function tabTo(page: Page, target: Locator): Promise<void> {
-  for (let press = 0; press < 80; press++) {
-    await page.keyboard.press("Tab");
-    if (await target.evaluate((el) => el === document.activeElement)) return;
-  }
-  throw new Error("Tab never reached the control");
+// A focused control must be drawn as keyboard focus: it matches :focus-visible and
+// its outline is drawn, so the color read is the ring and not just the text color.
+async function focusedOutline(page: Page): Promise<string> {
+  const ring = await page.evaluate(() => {
+    const el = document.activeElement as Element;
+    const style = getComputedStyle(el);
+    return { visible: el.matches(":focus-visible"), style: style.outlineStyle, color: style.outlineColor };
+  });
+  expect(ring.visible, "the focused control matches :focus-visible").toBe(true);
+  expect(ring.style, "the focused control draws an outline").not.toBe("none");
+  return ring.color;
 }
 
-function focusedOutline(page: Page): Promise<string> {
-  return page.evaluate(() => getComputedStyle(document.activeElement as Element).outlineColor);
-}
-
-async function ringAfterTab(page: Page, target: Locator): Promise<string> {
-  await tabTo(page, target);
+// One key press sets keyboard modality, then the control takes focus directly, so
+// the number of presses does not grow with the page.
+async function ringAfterKeyboardFocus(page: Page, target: Locator): Promise<string> {
+  await page.keyboard.press("Tab");
+  await target.focus();
   return focusedOutline(page);
+}
+
+// Opens the phone menu the keyboard way: focus Open menu, press Enter.
+async function openPhoneMenuByKeyboard(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Open menu" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(phoneMenu(page)).toBeVisible();
 }
 
 test.describe("the shell", () => {
@@ -187,7 +198,15 @@ test.describe("the phone menu", () => {
   const ways: ReadonlyArray<readonly [string, (page: Page) => Promise<void>]> = [
     ["Escape", (page) => page.keyboard.press("Escape")],
     ["Close menu", (page) => page.getByRole("button", { name: "Close menu" }).click()],
-    ["a tap on the dimmed page", (page) => page.mouse.click(310, 320).then(() => undefined)],
+    [
+      "a tap on the dimmed page",
+      async (page) => {
+        const box = await phoneMenu(page).boundingBox();
+        if (!box) throw new Error("the menu has no box");
+        const right = box.x + box.width;
+        await page.mouse.click(right + (PHONE.width - right) / 2, 320);
+      },
+    ],
   ];
   for (const [way, close] of ways) {
     test(`AC-0010, AC-0011: ${way} closes the phone menu and focus returns to Open menu`, async ({ page }) => {
@@ -197,6 +216,21 @@ test.describe("the phone menu", () => {
       await expect(page.getByRole("button", { name: "Open menu" })).toBeFocused();
     });
   }
+
+  test("AC-0010: a tap on an empty part of the menu panel leaves the menu open", async ({ page }) => {
+    await openPhoneMenu(page);
+    const nav = await primaryNav(page).last().boundingBox();
+    const box = await phoneMenu(page).boundingBox();
+    if (!nav || !box) throw new Error("no boxes");
+    const point = { x: box.x + box.width - 20, y: nav.y + nav.height + 10 };
+    const hitsControl = await page.evaluate(
+      ({ x, y }) => !!document.elementFromPoint(x, y)?.closest("a, button, input, select, textarea"),
+      point,
+    );
+    expect(hitsControl, "the point is on no control").toBe(false);
+    await page.mouse.click(point.x, point.y);
+    await expect(phoneMenu(page)).toBeVisible();
+  });
 
   for (const [index, path] of NINE_PAGES.entries()) {
     const title = TITLES[index] ?? "";
@@ -217,6 +251,7 @@ test.describe("the phone menu", () => {
     await expect(phoneMenu(page)).toBeVisible();
     await page.setViewportSize({ width: 1024, height: 720 });
     await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await expect(primaryNav(page).getByRole("link", { name: "Receiving", exact: true })).toBeFocused();
     await primaryNav(page).getByRole("link", { name: "Production", exact: true }).click();
     await expect(page).toHaveURL(/\/production$/);
   });
@@ -261,18 +296,20 @@ test.describe("focus outlines", () => {
       page,
     }) => {
       await open(page, "/receiving", { width: 1280, height: 720 });
-      expect(await ringAfterTab(page, primaryNav(page).getByRole("link", { name: "Production" }))).toBe(WHITE);
-      expect(await ringAfterTab(page, sideMenu(page).getByRole("button", { name: "Sign out" }))).toBe(WHITE);
+      expect(await ringAfterKeyboardFocus(page, primaryNav(page).getByRole("link", { name: "Production" }))).toBe(WHITE);
+      expect(await ringAfterKeyboardFocus(page, sideMenu(page).getByRole("button", { name: "Sign out" }))).toBe(WHITE);
 
       await open(page, "/receiving", PHONE);
-      expect(await ringAfterTab(page, page.locator("#menu-button"))).toBe(WHITE);
-      expect(await ringAfterTab(page, page.locator("#alerts-link"))).toBe(WHITE);
+      expect(await ringAfterKeyboardFocus(page, page.locator("#menu-button"))).toBe(WHITE);
+      expect(await ringAfterKeyboardFocus(page, page.locator("#alerts-link"))).toBe(WHITE);
 
-      await page.getByRole("button", { name: "Open menu" }).click();
+      await openPhoneMenuByKeyboard(page);
       await expect(page.getByRole("button", { name: "Close menu" })).toBeFocused();
       expect(await focusedOutline(page)).toBe(WHITE);
-      expect(await ringAfterTab(page, phoneMenu(page).getByRole("link", { name: "Menu", exact: true }))).toBe(WHITE);
-      expect(await ringAfterTab(page, phoneMenu(page).getByRole("button", { name: "Sign out" }))).toBe(WHITE);
+      expect(
+        await ringAfterKeyboardFocus(page, phoneMenu(page).getByRole("link", { name: "Menu", exact: true })),
+      ).toBe(WHITE);
+      expect(await ringAfterKeyboardFocus(page, phoneMenu(page).getByRole("button", { name: "Sign out" }))).toBe(WHITE);
     });
 
     test("AC-0017: a focused control in the page's content, the banner, and the Void confirmation draws a blue outline", async ({
@@ -281,11 +318,13 @@ test.describe("focus outlines", () => {
       await marginCase();
       await receiveTom(1000, "1.68", 0);
       await open(page, RAW_TOM_URL, { width: 1280, height: 720 });
-      expect(await ringAfterTab(page, page.locator("#product-code"))).toBe(BLUE);
-      expect(await ringAfterTab(page, banner(page).getByRole("link", { name: "See alerts" }))).toBe(BLUE);
+      expect(await ringAfterKeyboardFocus(page, page.locator("#product-code"))).toBe(BLUE);
+      expect(await ringAfterKeyboardFocus(page, banner(page).getByRole("link", { name: "See alerts" }))).toBe(BLUE);
 
       const voidButton = page.getByRole("button", { name: /^Void lot/ }).first();
-      await tabTo(page, voidButton);
+      await page.keyboard.press("Tab");
+      await voidButton.focus();
+      expect(await focusedOutline(page)).toBe(BLUE);
       await page.keyboard.press("Enter");
       await expect(page.getByRole("dialog", { name: "Void this receipt?" })).toBeVisible();
       expect(await focusedOutline(page)).toBe(BLUE);
@@ -297,7 +336,7 @@ test.describe("focus outlines", () => {
 
     test("AC-0017: a focused control on /sign-in draws a blue outline", async ({ page }) => {
       await page.goto("/sign-in");
-      expect(await ringAfterTab(page, page.getByLabel("Email"))).toBe(BLUE);
+      expect(await ringAfterKeyboardFocus(page, page.getByLabel("Email"))).toBe(BLUE);
     });
   });
 
@@ -307,7 +346,7 @@ test.describe("focus outlines", () => {
     test("AC-0017: a focused control in the not-allowed view draws a blue outline", async ({ page }) => {
       await page.goto("/receiving");
       await expect(page.getByRole("heading", { level: 1, name: "Not allowed" })).toBeVisible();
-      expect(await ringAfterTab(page, page.getByRole("button", { name: "Sign out" }))).toBe(BLUE);
+      expect(await ringAfterKeyboardFocus(page, page.getByRole("button", { name: "Sign out" }))).toBe(BLUE);
     });
   });
 });
@@ -341,6 +380,12 @@ test.describe("the urgent counts", () => {
     return primaryNav(page).getByRole("link", { name: "Alerts", exact: true });
   }
 
+  // The link is shown, so a count of 0 can only mean no badge.
+  async function expectNoBadge(link: Locator): Promise<void> {
+    await expect(link).toBeVisible();
+    await expect(badge(link)).toHaveCount(0);
+  }
+
   test("AC-0019, AC-0020: one urgent alert shows 1 on the three Alerts links, and the top bar link says Alerts, 1 urgent", async ({
     page,
   }) => {
@@ -372,9 +417,9 @@ test.describe("the urgent counts", () => {
     await open(page, "/receiving", PHONE);
     const top = page.getByRole("link", { name: "Alerts", exact: true });
     await expect(top).toHaveAttribute("id", "alerts-link");
-    await expect(badge(top)).toHaveCount(0);
+    await expectNoBadge(top);
     await page.getByRole("button", { name: "Open menu" }).click();
-    await expect(badge(await sideAlerts(page))).toHaveCount(0);
+    await expectNoBadge(await sideAlerts(page));
   });
 
   test("AC-0019, AC-0020: a failed watch shows no badge and the name Alerts", async ({ page }) => {
@@ -384,20 +429,35 @@ test.describe("the urgent counts", () => {
       await expect(banner(page)).toBeVisible();
       const top = page.getByRole("link", { name: "Alerts", exact: true });
       await expect(top).toHaveAttribute("id", "alerts-link");
-      await expect(badge(top)).toHaveCount(0);
+      await expectNoBadge(top);
       await page.getByRole("button", { name: "Open menu" }).click();
-      await expect(badge(await sideAlerts(page))).toHaveCount(0);
+      await expectNoBadge(await sideAlerts(page));
     });
   });
 
   test("AC-0019, AC-0020: /alerts shows no badge even with an urgent alert open", async ({ page }) => {
     await marginCase();
     await open(page, "/alerts", { width: 1280, height: 720 });
-    await expect(badge(await sideAlerts(page))).toHaveCount(0);
+    await expectNoBadge(await sideAlerts(page));
     await open(page, "/alerts", PHONE);
     const top = page.getByRole("link", { name: "Alerts", exact: true });
     await expect(top).toHaveAttribute("id", "alerts-link");
-    await expect(badge(top)).toHaveCount(0);
+    await expectNoBadge(top);
+  });
+
+  test("the top bar's Alerts link marks /alerts as the current page and no other", async ({ page }) => {
+    await open(page, "/alerts", PHONE);
+    await expect(page.locator("#alerts-link")).toHaveAttribute("aria-current", "page");
+    await open(page, "/receiving", PHONE);
+    await expect(page.locator("#alerts-link")).not.toHaveAttribute("aria-current", /.*/);
+  });
+
+  test("the page-state check passes at 320 with the badge showing on the closed top bar", async ({ page }) => {
+    await marginCase();
+    await page.setViewportSize(PHONE);
+    await page.goto("/receiving");
+    await expect(badge(page.locator("#alerts-link"))).toHaveText("1");
+    await checkPageState(page);
   });
 
   test("AC-0019: the side menu's and the phone menu's Alerts links keep the name Alerts while a badge shows", async ({
@@ -455,6 +515,38 @@ test.describe("the lone card", () => {
       await page.goto("/receiving");
       await expect(page.getByRole("heading", { level: 1, name: "Not allowed" })).toBeVisible();
       await expectLoneCard(page);
+    });
+  });
+});
+
+test.describe("landmarks", () => {
+  test.describe("operator", () => {
+    test.use({ storageState: OPERATOR_STATE });
+
+    test("the side menu is the complementary landmark named Side menu and holds Sign out", async ({ page }) => {
+      await open(page, "/receiving", { width: 1280, height: 720 });
+      const side = page.getByRole("complementary", { name: "Side menu" });
+      await expect(side.getByRole("button", { name: "Sign out" })).toBeVisible();
+    });
+
+    test("the desktop cap leaves /production's check step at its own 28rem width", async ({ page }) => {
+      await seed502Fixture();
+      await page.setViewportSize({ width: 1280, height: 720 });
+      const f = await openForm(page);
+      await fillBatch(f, {});
+      await f.save.click();
+      const dialog = checkDialog(page);
+      await expect(dialog).toBeVisible();
+      expect(await dialog.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("448px");
+    });
+  });
+
+  test.describe("signed out", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test("the banner landmark on /sign-in holds Meat Ops", async ({ page }) => {
+      await page.goto("/sign-in");
+      await expect(page.getByRole("banner").getByText("Meat Ops", { exact: true })).toBeVisible();
     });
   });
 });

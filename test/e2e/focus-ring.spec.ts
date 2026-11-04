@@ -103,7 +103,9 @@ button { min-width: 44px; min-height: 44px; padding: 0 16px; border: 0; backgrou
 </html>`;
 
 test("AC-0018: the desktop walk runs at 1280 x 720 and fails a ring the phone walk never reaches", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
   await page.setContent(DESKTOP_ONLY);
+  const before = page.viewportSize();
   let message = "the desktop walk passed";
   try {
     await checkDesktopWalk(page);
@@ -111,6 +113,6 @@ test("AC-0018: the desktop walk runs at 1280 x 720 and fails a ring the phone wa
     message = (error instanceof Error ? error.message : String(error)).replace(COLOR_CODE, "");
   }
   expect(message).toContain("button Side outline contrast is 2.05:1, under 3:1");
-  expect(await page.evaluate(() => window.innerWidth)).toBe(page.viewportSize()?.width);
+  expect(page.viewportSize(), "the walk puts the viewport back").toEqual(before);
   expect(await checkPageState(page), "the phone walk never reaches Side").toEqual(["button Always"]);
 });
