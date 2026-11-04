@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetTestData } from "../db";
 import { OPERATOR_EMAIL } from "../users";
-import { checkPageState } from "./a11y";
+import { checkDesktopWalk, checkPageState } from "./a11y";
 import { banner, costEarlier, marginCase, receiveTom, withWatchRefused } from "./alerts-page";
 import { RAW_TOM_URL } from "./receiving-page";
 import { NON_OPERATOR_STATE, OPERATOR_STATE, signInThroughForm } from "./states";
@@ -309,6 +309,23 @@ test.describe("focus outlines", () => {
       await expect(page.getByRole("heading", { level: 1, name: "Not allowed" })).toBeVisible();
       expect(await ringAfterTab(page, page.getByRole("button", { name: "Sign out" }))).toBe(BLUE);
     });
+  });
+});
+
+test.describe("the desktop walk", () => {
+  test.use({ storageState: OPERATOR_STATE });
+
+  test("AC-0018: with one urgent alert, the page-state check passes and the 1280 walk reaches the nine links, then Sign out, first", async ({
+    page,
+  }) => {
+    await marginCase();
+    await open(page, "/receiving", { width: 1280, height: 720 });
+    await checkPageState(page);
+    const labels = await checkDesktopWalk(page);
+    expect(labels.slice(0, 10)).toEqual([
+      ...TITLES.map((title) => (title === "Alerts" ? "a Alerts1" : `a ${title}`)),
+      "button Sign out",
+    ]);
   });
 });
 

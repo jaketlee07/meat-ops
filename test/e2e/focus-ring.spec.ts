@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { checkPageState } from "./a11y";
+import { checkDesktopWalk, checkPageState } from "./a11y";
 
 // One page with one focusable button, drawn the way the app draws a faded
 // control: the primary fill, white text, aria-disabled, and the app's focus ring.
@@ -84,3 +84,33 @@ for (const { effect, style } of [
     expect(await checkFailure(page)).toContain("button Save ring cannot be scored: an ancestor section has");
   });
 }
+
+// AC-0018: a control shown only from 1024 px up, with a ring that fails there.
+const DESKTOP_ONLY = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Desktop only</title>
+<style>
+body { margin: 0; background: #fff; color: #111827; font: 16px sans-serif; }
+#side { display: none; background: #0f276c; }
+@media (min-width: 1024px) { #side { display: block; } }
+button { min-width: 44px; min-height: 44px; padding: 0 16px; border: 0; background: #0f276c; color: #fff; font: inherit; }
+:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+</style>
+</head>
+<body><main><button type="button" style="background: #1d4ed8">Always</button><div id="side"><button type="button">Side</button></div></main></body>
+</html>`;
+
+test("AC-0018: the desktop walk runs at 1280 x 720 and fails a ring the phone walk never reaches", async ({ page }) => {
+  await page.setContent(DESKTOP_ONLY);
+  let message = "the desktop walk passed";
+  try {
+    await checkDesktopWalk(page);
+  } catch (error) {
+    message = (error instanceof Error ? error.message : String(error)).replace(COLOR_CODE, "");
+  }
+  expect(message).toContain("button Side outline contrast is 2.05:1, under 3:1");
+  expect(await page.evaluate(() => window.innerWidth)).toBe(page.viewportSize()?.width);
+  expect(await checkPageState(page), "the phone walk never reaches Side").toEqual(["button Always"]);
+});

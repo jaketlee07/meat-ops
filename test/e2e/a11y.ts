@@ -15,6 +15,7 @@ import { expect, type Page } from "@playwright/test";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const PHONE = { width: 320, height: 640 };
+const DESKTOP = { width: 1280, height: 720 };
 const MIN_CONTROL = 44;
 const MIN_OUTLINE_WIDTH = 2;
 const MIN_OUTLINE_CONTRAST = 3;
@@ -48,20 +49,29 @@ export async function checkPageState(page: Page): Promise<string[]> {
     axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`),
     "axe violations",
   ).toEqual([]);
+  return checkAtSize(page, PHONE);
+}
 
+// The same walk and control rules at 1280 x 720, where the side menu shows
+// (AC-0018). It runs no axe scan; checkPageState already scans the page.
+export function checkDesktopWalk(page: Page): Promise<string[]> {
+  return checkAtSize(page, DESKTOP);
+}
+
+async function checkAtSize(page: Page, size: { width: number; height: number }): Promise<string[]> {
   const original = page.viewportSize();
-  await page.setViewportSize(PHONE);
+  await page.setViewportSize(size);
   try {
     const problems: string[] = [];
 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    if (scrollWidth > PHONE.width) problems.push(`scroll width ${scrollWidth} is over ${PHONE.width}`);
+    if (scrollWidth > size.width) problems.push(`scroll width ${scrollWidth} is over ${size.width}`);
 
     const controls = await walkTabOrder(page);
     if (controls.length === 0) problems.push("Tab reached no focusable control");
     for (const control of controls) problems.push(...controlProblems(control));
 
-    expect(problems, `page checks at ${PHONE.width} x ${PHONE.height}`).toEqual([]);
+    expect(problems, `page checks at ${size.width} x ${size.height}`).toEqual([]);
     return controls.map((control) => control.label);
   } finally {
     if (original) await page.setViewportSize(original);
