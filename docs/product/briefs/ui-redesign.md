@@ -16,7 +16,7 @@ Every Meat Ops screen wears look E: a navy side menu on a desktop, a navy top ba
 - `/sign-in` and the nine pages that share the header in `src/app/page-header.tsx`.
 - The parts those pages share: the header with the Primary navigation, the not-allowed view (`src/app/not-allowed.tsx`), the error view (`src/app/page-error.tsx`), and the tokens in `src/app/globals.css`.
 - The two shared display parts in `src/app/`: the label-and-value list (`facts.tsx`) and the before-and-after table (`before-after.tsx`). Each is restyled once, where it lives. The `src/app` row of `docs/architecture/overview.md` lists the pages that show each.
-- Drawing what the canvas lacks, each when its spec starts: Receiving on a desktop, Pricing on a phone, the before-and-after table, `/sign-in`, the not-allowed and error views, and the seven other pages. The owner chose this on 2026-11-03, so the business owner's Receiving check can still change the look before the rest is drawn.
+- Drawing what the canvas lacks, each when its spec starts: Receiving on a desktop, Pricing on a phone, the before-and-after table, `/sign-in`, the not-allowed and error views, and the seven other pages. The owner chose this on 2026-11-03, so each drawing sits with the spec that builds it.
 - The look's description: the "Keep the screens' look" sentence in `docs/architecture/overview.md` and the `globals.css` comment that names Stripe Dashboard forms as the reference.
 - The tests each change breaks or newly needs, in the same spec as the change, including tests for new controls and new contrast pairs.
 
@@ -36,7 +36,7 @@ Every Meat Ops screen wears look E: a navy side menu on a desktop, a navy top ba
 
 ## Assumptions and risks
 
-- **Riskiest assumption:** the business owner, who uses the floor screens every day, finds look E at least as quick and hard to mistype as today's screens. The developer chose E from two drawn screens, and nobody has used it on the floor yet. Test: once Pricing and Receiving ship, the business owner uses Receiving in look E on their phone, and the developer records the result in this entry. If they find it slower or easier to mistype, a spec revises the parts of look E the result faults, Receiving's own screen included.
+- **Riskiest assumption:** the business owner, who uses the floor screens every day, finds look E at least as quick and hard to mistype as today's screens. The developer chose E from two drawn screens, and nobody has used it on the floor yet. On 2026-11-04 the owner chose to build all three specs without a try-out by the business owner first. A problem the business owner finds in what a shipped spec built gets its own intent, even while a later spec is still in progress. The old layout on a page a later spec still redoes is the mixed look below, and that spec closes it.
 - **Mixed look between specs:** the token and header change reaches every page at once, and spec 2's shared display parts also reach the other pages that the overview's `src/app` row lists for them. Until the last spec ships, a page not yet redone shows the navy menu and new colors around its old layout.
 - **One more tap on a phone:** today the nine page links wrap onto the phone screen under the title. Behind a menu button, moving between pages takes an extra tap.
 - **Taller desktop rows:** at 44 px instead of 38 px, a table row with a button is taller, so fewer rows fit on one screen.
@@ -62,7 +62,7 @@ This brief proposes three specs, built from the intent's projection, with each s
 2. **Pricing and Receiving**, with the two shared display parts, because Receiving imports both.
 3. **The other seven pages:** Production, Menu, Sales, Trace, Invoices, Ask, and Alerts.
 
-Spec 2 builds on spec 1's tokens and header. Spec 3 starts after the Receiving test under Assumptions and risks passes, or after the spec that answers a failed test ships.
+Spec 2 builds on spec 1's tokens and header. Spec 3 builds on those and on spec 2's two shared display parts.
 
 ## Governance references
 

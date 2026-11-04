@@ -57,5 +57,5 @@ status = "active"
 
 [ini-001.brief_queue]
 ready = [
-  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Ready brief for look E: the owner confirms the spec cut next (proposed: look and shell, Pricing and Receiving, the other seven pages)", needs = [] },
+  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Ready brief for look E; owner confirmed three specs (look and shell, Pricing and Receiving, the other seven pages), to be written in that order", needs = [] },
 ]
