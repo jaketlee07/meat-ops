@@ -1,7 +1,7 @@
 # Brief: Redesign the screens in look E
 
 - **Slug:** `ui-redesign`
-- **Status:** Ready
+- **Status:** Executing
 - **Received:** 2026-11-03
 - **Owner:** jaketlee07
 
@@ -74,10 +74,9 @@ None.
 
 ## Spec map
 
-No specs yet.
-
 | Spec | Status |
 | --- | --- |
+| `look-and-shell` | Implementing |
 
 ## Source
 
