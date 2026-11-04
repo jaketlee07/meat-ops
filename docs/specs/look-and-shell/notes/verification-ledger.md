@@ -58,5 +58,11 @@ The spec's Assumptions record each of these as a Product line. Two shaped the re
 - Round 2, on `f329323`, scoped to the round 1 fixes: adversarial clean; frontend clean; quality 1 Concern and 3 Nits sustained, recorded as round 2. The fixes, all in `test/e2e/shell.spec.ts`: a test that widening past 1024 px with the phone menu closed leaves focus on a focused field; the outline helper confirms its target holds focus; the content-cap test also pins `/production`'s form at 544px; and that test moved to a group named for the cap.
 - Mutation check: with the widen handler's open-menu check removed, the new focus test failed ("Expected: focused, Received: inactive"); with it restored, `shell.spec.ts` and `focus-ring.spec.ts` passed 79 of 79.
 - Slot fix run 3, 23:42:55 to 23:42:58 UTC: dead `pg_class` rows 118,602 to 0; slot age 11,244 to 5.
-- After the round 2 fixes, `npm test` passed: Vitest 1043 of 1043 (42 s), Playwright 752 of 752 (10.1 min).
+- After the round 2 fixes, `npm test` passed: Vitest 1043 of 1043 (42 s), Playwright 752 of 752 (10.1 min).- Round 3, on `bec1d0a`, scoped to the round 2 fixes: quality returned one Nit, deferred by the Nit rule and recorded in the review verdict: the closed-menu widen test (`test/e2e/shell.spec.ts:260`) does not first prove the page's script is running and the width change was handled, so a removed open-menu check could pass on a very fast poll. The mutation run above went red in the usual order.
+
+## Finish (2026-11-04)
+
+- Every warranted reviewer ends clean or with a deferred Nit: adversarial and frontend clean in round 2, quality with one deferred Nit in round 3. Named skips: `experience-reviewer` is not installed; `security-reviewer` did not fire, as no auth, session, input, or file or network control changed.
+- All 24 criteria are checked. The spec is Shipped and the plan Done; the brief's Spec map row reads Shipped, and the brief stays Executing until specs 2 and 3 ship.
+- Project knowledge: unavailable, as at approval; no capture was attempted.
 

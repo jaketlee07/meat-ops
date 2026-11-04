@@ -76,7 +76,7 @@ None.
 
 | Spec | Status |
 | --- | --- |
-| `look-and-shell` | Implementing |
+| `look-and-shell` | Shipped |
 
 ## Source
 

@@ -56,8 +56,8 @@ name = "Look E UI redesign"
 status = "active"
 
 [ini-001.work]
-active = [
-  { path = "docs/specs/look-and-shell/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "9e3c158", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 1 of look E: colors, the side menu and phone top bar, and the sign-in, not-allowed, and error cards; approved 2026-11-04, building T1 to T5", needs = [] },
+shipped = [
+  { path = "docs/specs/look-and-shell/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "9e3c158", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 1 of look E: colors, the side menu and phone top bar, and the sign-in, not-allowed, and error cards; shipped on feat/look-and-shell 2026-11-04, awaiting merge", needs = [] },
 ]
 
 [ini-001.brief_queue]

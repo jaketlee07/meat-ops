@@ -1,7 +1,7 @@
 # Plan: look-and-shell
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the screen rules in the `src/app` and `test/e2e/` rows of `docs/architecture/overview.md`; the native-dialog pattern in `src/app/receiving/void-dialog.tsx` and its Escape and focus-return test in `test/e2e/correct.spec.ts`; the page-state check in `test/e2e/a11y.ts` with its fixture tests in `test/e2e/focus-ring.spec.ts`; the header in `src/app/page-header.tsx` and the 12 places the nine pages render it. No precedent exists for a layout that changes at a viewport width. This plan defines one, the `desk` variant at `(min-width: 1024px)`.
 
 > **Plan contract:** this is the implementation strategy. It may change

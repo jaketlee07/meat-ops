@@ -1,6 +1,6 @@
 # Spec: look-and-shell
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the Constraints in the brief [`docs/product/briefs/ui-redesign.md`](../../product/briefs/ui-redesign.md); the alerts spec [`../alerts/spec.md`](../alerts/spec.md) (AC-0005, AC-0006, and AC-0010 to AC-0017, the Primary navigation and the urgent banner); the receiving-refinements spec [`../receiving-refinements/spec.md`](../receiving-refinements/spec.md) (AC-0007 and AC-0008, how the page-state check scores a focus ring); the receiving spec [`../receiving/spec.md`](../receiving/spec.md) (AC-0005, what Sign out does); the screen rules in the `src/app` row of [`docs/architecture/overview.md`](../../architecture/overview.md); [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §11; the `AGENTS.md` hard rules
