@@ -9,11 +9,12 @@ const HEADING_ID = "recent-receipts-heading";
 
 // From wide up the section reads as a table: one template for the header line and every
 // receipt, six figure columns and an actions column. Under wide each receipt is a card.
-// The three figure columns are 5.5rem: a six-digit weight with three decimals, or a cost of
-// $10 or more, fits whole; a weight's unit drops under its number when it must. The lot
-// number, date, and vendor wrap inside their columns, and the vendor takes what is left.
+// The figure columns fit a six-digit weight with three decimals, or a cost of $10 or more,
+// whole; a weight's unit drops under its number when it must. The lot number column holds
+// "L-20261031-" on one line, so a lot number wraps once, at its second hyphen. The date and
+// vendor wrap inside their columns, and the vendor takes what is left.
 const TABLE_COLUMNS =
-  "wide:grid-cols-[5.25rem_3.5rem_minmax(0,1fr)_5.5rem_5.5rem_5.5rem_6rem] wide:gap-x-1.5 wide:px-4";
+  "wide:grid-cols-[5.75rem_3.5rem_minmax(0,1fr)_5.5rem_5.5rem_5.5rem_5.75rem] wide:gap-x-1.5 wide:px-4";
 // The facts list spans the six figure columns. The first three values read left and the
 // figures read right; a lot number breaks only at its hyphen, any other value breaks inside
 // a word only when nothing else fits.
