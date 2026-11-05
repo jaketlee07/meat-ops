@@ -2,7 +2,7 @@
 // `look` only chooses classes: the elements, their order, and the text are the same in
 // every look, and each label stays in the page. "list" is the plain rows. "tiles" draws
 // the pairs as tinted tiles side by side, label above value. "cells" is for a list inside
-// a card that, from `wide` up, lays its pairs out as cells of a table: it needs a grid
+// a card that, from `receipt-table` up (see globals.css), lays its pairs out as cells of a table: it needs a grid
 // parent that gives it the columns, and the parent says how many it spans and how each
 // value reads.
 type Look = "list" | "tiles" | "cells";
@@ -11,7 +11,7 @@ const LIST_CLASS: Record<Look, string> = {
   list: "divide-y divide-card-border border-y border-card-border",
   tiles: "grid grid-cols-2 gap-2",
   cells:
-    "divide-y divide-card-border wide:grid wide:grid-cols-subgrid wide:divide-y-0 wide:[&>div]:contents wide:[&_dt]:sr-only",
+    "divide-y divide-card-border receipt-table:grid receipt-table:grid-cols-subgrid receipt-table:divide-y-0 receipt-table:[&>div]:contents receipt-table:[&_dt]:sr-only",
 };
 
 const ROW_CLASS: Record<Look, string> = {
@@ -31,7 +31,7 @@ const VALUE_CLASS: Record<Look, string> = {
   list: "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums",
   tiles: "break-words text-lg font-semibold tabular-nums",
   cells:
-    "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums wide:min-w-0 wide:max-w-none wide:shrink wide:text-sm wide:font-normal",
+    "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums receipt-table:min-w-0 receipt-table:max-w-none receipt-table:shrink receipt-table:text-sm receipt-table:font-normal",
 };
 
 export function Facts({

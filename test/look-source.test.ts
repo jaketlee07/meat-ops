@@ -38,3 +38,10 @@ it("AC-0016: the icon component hides its svg from assistive technology", () => 
   const tag = icon!.text.match(/<svg[^>]*>/)?.[0] ?? "";
   expect(tag).toContain('aria-hidden="true"');
 });
+
+it("the search reads the stylesheet and the plain .ts files, not only .tsx", () => {
+  const names = FILES.map((f) => f.name);
+  expect(names).toContain("src/app/globals.css");
+  expect(names.some((name) => name.endsWith(".ts"))).toBe(true);
+  expect(names.some((name) => name.endsWith(".tsx"))).toBe(true);
+});

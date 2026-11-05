@@ -48,6 +48,22 @@
    room for six columns. Set in px for the same reason as desk. */
 @custom-variant wide (@media (min-width: 1280px));
 
+/* Recent receipts read as a table only when the screen is wide and the section itself is wide
+   enough for the row's fixed tracks (about 35.75rem of columns, gaps, and padding) plus a vendor
+   column. The section is the container named receipts. The width is in rem, so a larger browser
+   text size keeps the receipts as cards until the section has grown to fit; at the default size
+   the section is about 39rem wide at 1280 px and the table shows. */
+@custom-variant receipt-table {
+  @media (min-width: 1280px) {
+    @container receipts (min-width: 38rem) {
+      @slot;
+    }
+  }
+}
+
+/* A receipt whose status area holds a non-empty refusal or panel. */
+@custom-variant receipt-message (&:has(> div > [role="alert"]:not(:empty), > div > [role="status"]:not(:empty)));
+
 /* Anything on the navy bar: white text, and a white focus ring. */
 @utility on-bar {
   background-color: var(--color-bar);

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { callAsOperator, query, RAW_TOM_ID, receiveCall, resetTestData, VENDOR_ID } from "../db";
+import { callAsOperator, produceCall, PROD_502_ID, query, RAW_TOM_ID, receiveCall, resetTestData, VENDOR_ID } from "../db";
 import { checkDesktopWalk, checkPageState } from "./a11y";
 import { withSeeAlerts } from "./alerts-page";
 import { addFinished, addRaw, receive, retire502 } from "./menu-page";
@@ -22,11 +22,13 @@ import {
   FORM_CONTROLS,
   fillReceipt,
   lotNumberOf,
+  NOT_VOIDED,
   openForm,
   RAW_TOM_URL,
   RECEIVING_FORM,
   receiptItem,
   seedReceipt,
+  voidMessage,
   voidThrough,
 } from "./receiving-page";
 import { OPERATOR_STATE } from "./states";
@@ -181,6 +183,23 @@ test.describe("the Pricing content cap", () => {
       expect(widths.filter((value) => value !== "none")).toEqual([]);
     });
   }
+
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0001: /pricing with an unknown code lifts the 34rem cap on every child of main at ${width}x${height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await opensDetail(page, "NO-SUCH-CODE");
+      const widths = await page.locator("main > *").evaluateAll((children) =>
+        children.map((child) => getComputedStyle(child).maxWidth),
+      );
+      expect(widths.length).toBeGreaterThan(0);
+      expect(widths.filter((value) => value !== "none")).toEqual([]);
+    });
+  }
 });
 
 test.describe("the tiles", () => {
@@ -285,7 +304,7 @@ test.describe("the product details beside the list", () => {
       expect(region!.y, "the region sits below the tiles").toBeGreaterThanOrEqual(tilesBox.y + tilesBox.height);
     });
 
-    test(`AC-0005: at ${width}x${height} the first group's top lines up with the region's top`, async ({ page }) => {
+    test(`at ${width}x${height} the first group's top lines up with the region's top`, async ({ page }) => {
       await pricingFixture();
       await page.setViewportSize({ width, height });
       await opensDetail(page, "NB");
@@ -448,7 +467,6 @@ const RECEIPT_FIGURES = ["Lot number", "Received", "Vendor", "Weight", "Cost per
 // With `long`, two more receipts carry the longest figures the form accepts (a six-digit weight with
 // three decimals, a cost of $10 or more with four decimals) and a one-word vendor name with no space.
 const LONG_VENDOR = "Internationalmeatpackersincorporated";
-const LONG_WEIGHTS = ["100,000.125 lbs", "200,000.25 lbs"];
 
 async function seedLongReceipts() {
   const [vendor] = await query<{ id: string }>("insert into vendors(name) values ($1) returning id", [LONG_VENDOR]);
@@ -562,12 +580,11 @@ test.describe("the Receiving layout", () => {
       for (const row of rows) {
         const cells = await boxes(values(row));
         expect(cells).toHaveLength(6);
-        // A long figure wraps at the space before its unit, so only the short rows are one line.
-        const longRow = LONG_WEIGHTS.includes((await values(row).nth(3).textContent())!.trim());
-        if (!longRow) {
-          const tops = cells.map((cell) => cell.y);
-          expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
-        }
+        // The six figures of every receipt, the long rows included, start at one top.
+        const tops = cells.map((cell) => cell.y);
+        expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
+        const heights = cells.map((cell) => cell.height);
+        expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(4);
         // Each figure sits in the column the header line names.
         cells.forEach((cell, index) => {
           expect(Math.abs(cell.x - columns[index]!.x), `column ${index} left`).toBeLessThanOrEqual(1);
@@ -584,18 +601,24 @@ test.describe("the Receiving layout", () => {
       );
       expect(fits).toHaveLength(5 * 6);
       expect(fits.filter((cell) => !cell.fits)).toEqual([]);
-      // A figure breaks at the space before its unit, never inside the number.
-      for (const weight of ["100,000.125", "200,000.25"]) {
-        const cell = recent.locator("li dd").filter({ hasText: `${weight} lbs` });
-        await expect(cell).toHaveCount(2);
-        const pieces = await cell.first().evaluate((el, number) => {
-          const range = document.createRange();
-          range.setStart(el.firstChild!, 0);
-          range.setEnd(el.firstChild!, number.length);
-          return range.getClientRects().length;
-        }, weight);
-        expect(pieces, `${weight} is in one piece`).toBe(1);
-      }
+      // In the long rows, the number of Weight, Cost per lb, and Remaining (the text before the
+      // first space) sits in one piece: a unit may drop under its number, the number never splits.
+      const pieces = await recent.locator("li").evaluateAll((items) =>
+        items.flatMap((item) => {
+          const cells = [...item.querySelectorAll("dd")];
+          const long = /^[12]00,000/.test(cells[3]!.textContent ?? "");
+          return cells.slice(3, 6).map((el) => {
+            const text = el.textContent ?? "";
+            const range = document.createRange();
+            range.setStart(el.firstChild!, 0);
+            range.setEnd(el.firstChild!, text.split(" ")[0]!.length);
+            return { text, long, rects: range.getClientRects().length };
+          });
+        }),
+      );
+      const longPieces = pieces.filter((piece) => piece.long);
+      expect(longPieces.length, "the long rows' Weight, Cost per lb, and Remaining").toBe(6);
+      expect(longPieces.filter((piece) => piece.rects !== 1)).toEqual([]);
 
       if (width === 1280) {
         expect(await checkPageState(page)).toEqual([
@@ -614,7 +637,7 @@ test.describe("the Receiving layout", () => {
     });
   }
 
-  test("AC-0012: at 1280x900 a corrected receipt's panel shows whole across its row", async ({ page }) => {
+  test("at 1280x900 a corrected receipt's panel shows every figure and word whole, across its row", async ({ page }) => {
     const id = await seedReceipt(12345.678, 1.74, "2026-10-20");
     await seedReceipt(1234.567, 1.69, "2026-10-27");
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -642,7 +665,7 @@ test.describe("the Receiving layout", () => {
     await expect(item.getByRole("button", { name: /^Correct lot / })).toBeVisible();
   });
 
-  test("AC-0011: at 1024x768 the saved result stays in the form's column", async ({ page }) => {
+  test("at 1024x768 the saved result stays in the form's column, below the form", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     const f = await openForm(page, RAW_TOM_URL);
     await fillReceipt(f, { weight: "5000", cost: "1.68" });
@@ -653,6 +676,67 @@ test.describe("the Receiving layout", () => {
     expect(result.x).toBeGreaterThanOrEqual(form.x - 1);
     expect(result.x + result.width).toBeLessThanOrEqual(form.x + form.width + 1);
     expect(result.y).toBeGreaterThanOrEqual(form.y + form.height - 1);
+  });
+
+  // The owner's ruling of 2026-11-05: at the default text size the table shows from 1280 px; with a
+  // larger browser text size the receipts stay cards until their section fits the table, so Void and
+  // Correct stay inside the section, which clips what runs past its edge.
+  test("a larger browser text size keeps Recent receipts as cards until the section fits the table", async ({ page }) => {
+    await opensReceiving(page, 1280, 720);
+    const recent = recentReceipts(page);
+    const header = recent.locator("div[aria-hidden='true']");
+    await expect(header, "the table shows at the default text size").toBeVisible();
+
+    const withTextSize = async (width: number, height: number, px: number) => {
+      await page.setViewportSize({ width, height });
+      await page.evaluate((size) => {
+        document.documentElement.style.fontSize = `${size}px`;
+      }, px);
+    };
+    const buttonsInside = async () => {
+      const section = await box(recent);
+      const buttons = recent.getByRole("button", { name: /^(Void|Correct) lot / });
+      await expect(buttons).toHaveCount(4);
+      for (const button of await boxes(buttons)) {
+        expect(button.x + button.width, "a button ends inside the section").toBeLessThanOrEqual(section.x + section.width);
+      }
+    };
+
+    await withTextSize(1280, 720, 20);
+    await expect(header, "the table is off at 20 px text in a 1280 px window").toBeHidden();
+    await buttonsInside();
+    for (const label of await recent.locator("li dt").all()) await expect(label).toBeVisible();
+
+    await withTextSize(1920, 1080, 20);
+    await expect(header, "the table is back once the section is wide enough").toBeVisible();
+    await buttonsInside();
+
+    await withTextSize(1280, 720, 16);
+    await expect(header).toBeVisible();
+    await buttonsInside();
+  });
+
+  test("at 1280x720 a refusal that closes the void takes a row of its own below the figures", async ({ page }) => {
+    const id = await seedReceipt(1000, 1.68);
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(RAW_TOM_URL);
+    const item = receiptItem(page, await lotNumberOf(id));
+    const voidButton = item.getByRole("button", { name: /^Void lot / });
+    await expect(voidButton).toBeVisible();
+    const before = await box(voidButton);
+
+    // Production draws from the lot after the list shows it as untouched, so the void is refused.
+    expect((await callAsOperator(produceCall(PROD_502_ID, 500))).ok).toBe(true);
+    await voidThrough(page, item, "keyed twice");
+    const message = voidMessage(item);
+    await expect(message).toHaveText(new RegExp(`^${NOT_VOIDED} invalid, lot [0-9a-f-]{36} has been consumed`));
+
+    const figures = await box(item.locator("dl").first());
+    const area = await box(message.locator(".."));
+    expect(before.x, "the Void button sat in the actions column, right of the figures").toBeGreaterThanOrEqual(figures.x + figures.width - 1);
+    expect(area.y, "the message sits below the figures").toBeGreaterThanOrEqual(figures.y + figures.height - 1);
+    expect(area.width, "the message area is as wide as the figures").toBeGreaterThanOrEqual(figures.width - 1);
+    expect(area.x).toBeLessThanOrEqual(figures.x + 1);
   });
 
   for (const [width, height] of [
