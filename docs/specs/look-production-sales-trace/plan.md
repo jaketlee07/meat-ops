@@ -43,11 +43,11 @@ Most construction tests live under **Tasks** below.
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| Overview `src/app` row: the three pages | T2, T3, T4 | The row names the three pages' desktop layouts, Production's stock tiles, and the lists that read as tables when they have room. | `close-work` reads the row whole against the code. |
-| Overview look notes: the table switches | T1 | The notes say each list picks its table look from its own section's width in rem, and that the Pricing list does the same. | `close-work` reads them. |
+| Overview `src/app` row: the three pages | T2, T3, T4, T6 | The row names the three pages' desktop layouts, Production's stock tiles, and the lists that read as tables when they have room. | `close-work` reads the row whole against the code. |
+| Overview look notes: the table switches | T1, T6 | The notes say each list picks its table look from its own section's width in rem, and that the Pricing list does the same. | `close-work` reads them. |
 | Overview `test/` row | T1 | The row lists `look-tidy.test.ts`. | `close-work` reads the row whole. |
 | Overview `test/e2e/` row | T2 | The row lists `look-floor-pages.spec.ts`. | `close-work` reads the row whole. |
-| Intent `look-pricing-receiving-review-nits.md` | T1, T5 | AC-0017, AC-0018, AC-0019, AC-0020, AC-0021, AC-0022, and AC-0031 pass, and the ledger records the `VALUE_CLASS` comment read. | `close-work` marks it Fulfilled and reconcile shows no finding. |
+| Intent `look-pricing-receiving-review-nits.md` | T1, T5, T6 | AC-0017, AC-0018, AC-0019, AC-0020, AC-0021, AC-0022, and AC-0031 pass, the ledger records the `VALUE_CLASS` comment read, and the intent records the owner's 2026-11-05 Pricing answer. | `close-work` marks it Fulfilled and reconcile shows no finding. |
 | Design reference: the canvas | T5 | The AC-0024 ledger entries name revisions 1793899703-bb47 and 1793856599-9c48. | The brief still links the canvas. |
 
 ## Design (LLD)
@@ -147,13 +147,13 @@ Most construction tests live under **Tasks** below.
 
 ### T5: The recorded checks are in the verification ledger
 
-**Depends on:** T1, T2, T3, T4
+**Depends on:** T1, T2, T3, T4, T6
 **Mode:** visual and manual QA
 **Touches:** `docs/specs/look-production-sales-trace/notes/verification-ledger.md`
 
 **Tests:**
-- AC-0024: the built app on `127.0.0.1` with the test data, each screen in the state AC-0024 names, compared by the owner with its board, and the four dialogs and panel compared with Receiving's; the ledger records each verdict.
-- AC-0023: `npm test` on the branch head after T1 to T4, its pass counts and run time in the ledger.
+- AC-0024: the built app on `127.0.0.1` with the test data, captured at the head after T6, each screen in the state AC-0024 names, compared by the owner with its board, and the four dialogs and panel compared with Receiving's; the ledger records each verdict.
+- AC-0023: `npm test` on the branch head after T1 to T4 and T6, its pass counts and run time in the ledger.
 - AC-0020, AC-0021, and AC-0022: the T1 Vitest checks pass at the head. The ledger records the read of the comment above `VALUE_CLASS`.
 - AC-0025: `git diff "$(git merge-base main HEAD)" -- src/app/facts.tsx src/app/before-after.tsx` read in full; the ledger records the result.
 - AC-0026: `git diff "$(git merge-base main HEAD)" -- test/e2e` read in full, plus every file `git ls-files --others --exclude-standard -- test` lists; the ledger lists each changed expectation in an existing test file.
@@ -161,7 +161,30 @@ Most construction tests live under **Tasks** below.
 **Approach:**
 - Reuse `.context/recorded-run/s2-captures.spec.ts`'s pattern for the screenshots, run with `PLAYWRIGHT_FORCE_ASYNC_LOADER=1` after `npm run build`, and stop every process it starts by its PID.
 
-**Done when:** the ledger records the owner's "match" for each of the seven boards and the dialog comparison, the AC-0023 pass, the `VALUE_CLASS` comment read, the AC-0025 read, and the AC-0026 list.
+**Done when:** the ledger records the owner's "match" for each of the seven boards and the dialog comparison, the AC-0023 pass, the `VALUE_CLASS` comment read, the AC-0025 read, and the AC-0026 list, and each of these records names the commit it read, at or after T6's last commit.
+
+### T6: The round 1 review fixes land, and the saved result stays under the form
+
+**Depends on:** T1, T2, T3, T4
+**Mode:** manual QA through the browser suite, and goal-based checks of the shared module, the test helpers, and the ledger map
+**Touches:** `src/app/before-after.tsx`, `src/app/globals.css`, `src/app/facts.tsx`, `src/app/form-column-grid.ts`, `src/app/production/page.tsx`, `src/app/production/result-panel.tsx`, `src/app/production/recent-batches.tsx`, `src/app/production/reverse-control.tsx`, `src/app/sales/page.tsx`, `src/app/sales/result-panel.tsx`, `src/app/sales/recent-sales.tsx`, `src/app/receiving/page.tsx`, `src/app/receiving/result-panel.tsx`, `src/app/receiving/correct-dialog.tsx`, `src/app/receiving/recent-receipts.tsx`, `test/e2e/production-page.ts`, `test/e2e/sales-page.ts`, `test/e2e/trace-page.ts`, `test/e2e/receiving-page.ts`, `src/app/trace/lot-list.tsx`, `src/app/trace/lot-trace.tsx`, `src/app/trace/sale-trace.tsx`, `test/e2e/look-floor-pages.spec.ts`, `docs/architecture/overview.md`, `docs/product/intents/look-pricing-receiving-review-nits.md`
+
+**Tests:**
+- In `test/e2e/look-floor-pages.spec.ts`: AC-0032 with ten recent rows built through each page's helpers and a result saved through the page, finding each page's own form by role and name ("New batch", "New sale", "New receipt") and measuring its Save button, its bottom edge, and the saved result's top, with 1rem read at each size; AC-0033 with a result saved through each page, at the four sizes it names, against each result card's right edge less its computed right padding; AC-0034 with one batch reversed through `/production` and one receipt corrected through `/receiving`, at the three sizes it names, against each batch's or receipt's right edge less its computed right padding. Each AC-0033 and AC-0034 state shows every before-and-after table its card or panel can hold, with every Before and After weight and cost at the long-figure lengths the list-table bullet below gives its weight and cost columns: the stock the saved result, the reversed batch, and the corrected receipt act on is built that large, and the receipt correction changes the cost of a lot a batch drew from, so the "Cost per finished lb" table shows. In those tables, every cell's text, row labels included, stays inside its cell, and the no-split half of the fit check covers the Before and After cells; a row label may wrap.
+- A helper in `test/e2e/production-page.ts`, `sales-page.ts`, `trace-page.ts`, or `receiving-page.ts` may gain a parameter for a long figure; every existing caller keeps its values.
+- Each table check on Recent batches, Recent sales, and Trace's three lists also runs on rows with long figures: every weight column (Raw lbs in, Finished lbs out, Lbs, Lbs drawn, Lbs on hand, Weight) holds a six-digit weight with three decimals, such as 123,456.789 lbs, and Cost per finished lb and Price per lb hold $10 or more. The check fails when a number's text runs past its cell or splits across lines, as Receiving's long-row test in `look-pages.spec.ts` does, while a unit that drops under its number passes. Recent sales' sale-number check measures the number's cell, not its link.
+- The sale trace's heading meets its facts list as the lot trace's does, and the sale trace's batch-card test fails when a batch loses its card. Production's reverse-refusal test checks that the refusal ends inside its batch, as the Sales copy does.
+
+**Approach:**
+- On Production and Receiving, the grid row below the result's own row takes a long list's extra height, so the result starts under the form at any list length. The three pages take the shared form-column grid (columns, gap, and the `wide` step) from `src/app/form-column-grid.ts`, and each page names its own rows and areas there or beside it; the `batch-table` and `sale-table` comments point at that module.
+- Commit `e7912b3`'s saved-result table steps belong to this task. The steps answer only to the card that holds the table: each saved-result card and each "Batch reversed" and "Receipt corrected" panel names one shared container, and the two steps are named custom variants on it in `globals.css` like the others, so a list section's container never reaches a `BeforeAfter`. `before-after.tsx` and `facts.tsx` change class strings and comments only (AC-0025).
+- The control's own "Reversed:" line in `reverse-control.tsx` takes the same table alignment as the list's line.
+- In `look-floor-pages.spec.ts`, each assertion shape the Production, Sales, and Trace tests share (the AC-0001 cap check, the card check, the row-and-column check, the fit check, and button containment) lives in one helper; per-test setup stays inline.
+- In `facts.tsx`, each distinct class string is written once, and every look still only chooses classes. The trace card's two halves (the heading's top half and the facts list's bottom half) and the gap the heading cancels come from one source.
+- Each use of the header-after-the-list `order` trick names the suite lookup it serves (`trace.spec.ts`'s `h3 + ul > li`), or is dropped where it serves none.
+- The overview and the `globals.css` comments state the widths the code produces at the default text size (Recent batches shows its table from about 1260 px with the 340 px column; Customers sits beside "Sales from this lot" from about 1144 px). The intent records the owner's 2026-11-05 Pricing answer and drops that question.
+
+**Done when:** the T6 tests pass; `/production`, `/sales`, and `/receiving` take the form-column grid from `src/app/form-column-grid.ts`; in `look-floor-pages.spec.ts` the AC-0001 cap check, the card check, the row-and-column check, the fit check, and button containment (Production and Sales only) each live in one helper that every test checking that shape calls; the T6 ledger entry lists each of the 15 sustained round 1 findings with the commit and the file and line that resolve it; and `npm test` passes.
 
 ## Rollout
 
@@ -177,3 +200,4 @@ Big bang, in one PR. Rollback is a revert. No data, schema, or hosted setting ch
 - 2026-11-05: initial plan, after the owner's split of spec 3, the "size to its space" rule, the result under the form, Production's tiles, and the Pricing table rule.
 - 2026-11-05: after the round 1 reviews: shell.spec.ts's content-cap test moves its form check (AC-0026); the Pricing advice row follows the container switch (AC-0031); the Trace DOM keeps the positions its suites read; the Trace and Pricing 20 px cases stop forcing a look; button containment is its own criterion per page; AC-0020 to AC-0022 are Vitest checks; the dialogs join the owner's comparison.
 - 2026-11-05: after the round 2 reviews: T1's AC-0019 test takes 33 px; AC-0031 builds a state with advice; the comment read names its defect; AC-0022's search covers globals.css border rules; each Trace list's container is its own wrapper, the lot card is drawn on the heading and the facts list together; the overview's test/ row names look-tidy.test.ts.
+- 2026-11-05: controlled amendment after the post-gates round 1 reviews, on the owner's approval: new task T6 owns commit `e7912b3`'s saved-result table steps and every sustained round 1 finding, and keeps the saved result under the form on Production and Receiving at any list length; T5 runs after T6.

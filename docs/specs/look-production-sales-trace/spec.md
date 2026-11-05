@@ -75,7 +75,7 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 
 ## Testing Strategy
 
-- **Manual QA exercised by the end-to-end (E2E) browser suite (AC-0001, AC-0002, AC-0003, AC-0004, AC-0005, AC-0006, AC-0007, AC-0008, AC-0009, AC-0010, AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0027, AC-0028, AC-0029, AC-0030, and AC-0031)**: in a new `test/e2e/look-floor-pages.spec.ts`, and for the Pricing and Receiving criteria in `test/e2e/look-pages.spec.ts`. Each is a layout or content the owner sees in a browser. A width-bound criterion is checked at each width it names; a criterion about the room a list has is checked at the default text size at the widths it names and, where it names one, with the root text size set to 20 px.
+- **Manual QA exercised by the end-to-end (E2E) browser suite (AC-0001, AC-0002, AC-0003, AC-0004, AC-0005, AC-0006, AC-0007, AC-0008, AC-0009, AC-0010, AC-0011, AC-0012, AC-0013, AC-0014, AC-0015, AC-0016, AC-0017, AC-0018, AC-0019, AC-0027, AC-0028, AC-0029, AC-0030, AC-0031, AC-0032, AC-0033, and AC-0034)**: in a new `test/e2e/look-floor-pages.spec.ts`, and for the Pricing and Receiving criteria in `test/e2e/look-pages.spec.ts`. Each is a layout or content the owner sees in a browser. A width-bound criterion is checked at each width it names; a criterion about the room a list has is checked at the default text size at the widths it names and, where it names one, with the root text size set to 20 px.
 - **Goal-based check over the source (AC-0020, AC-0021, AC-0022)**: a Vitest search in a new `test/look-tidy.test.ts` decides each; AC-0022's search covers every `border-` and `divide-` class under `src/app` and every border rule in `src/app/globals.css`.
 - **Goal-based check over the whole suite (AC-0023)**: `npm test` passes.
 - **Visual and manual QA, recorded in the verification ledger (AC-0024, AC-0025, AC-0026)**: the owner's comparison with the canvas boards, a read of the shared parts' markup diff, and a read of the branch's test diff.
@@ -120,6 +120,12 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 - [ ] **AC-0031.** With at least one product in "Needs a new price", where the Pricing list reads as a table at 1024 px and 1279 px at the default text size, each advice block and its one-press button span that product's row below its figures.
 - [ ] **AC-0018.** At 1280 px and 1440 px at the default text size, a recent receipt whose vendor is "Wholesale Provisions Company" shows each word of the vendor's name whole on one line.
 - [ ] **AC-0019.** At 1280 px at the default text size with 33 px of the page's width taken on the right (an always-visible 17 px scrollbar and 16 px to spare), Recent receipts still read as a table under their header line.
+
+### Saved results and panels
+
+- [ ] **AC-0032.** On `/production`, `/sales`, and `/receiving` with ten recent rows and a result just saved, at 1024 px and 1280 px at the default text size and at 1280 px with the browser's text size at 20 px, the form card ends no more than its own bottom padding and border plus 1 px below its Save button, and the saved result's top sits at or below the form card's bottom and no more than 1rem plus 1 px below it.
+- [ ] **AC-0033.** On `/production`, `/sales`, and `/receiving`, each with a result just saved, at 1024 px, 1280 px, and 1440 px at the default text size and at 1280 px with the browser's text size at 20 px, every before-and-after table in the saved result ends at or left of the result card's right edge less its right padding, no figure in it runs past its cell, and no number in its Before or After cells splits across lines (a unit may drop under its number; a row label may wrap).
+- [ ] **AC-0034.** At 390 px and 1024 px with the browser's text size at 20 px, and at 1280 px at the default text size, on `/production` while a batch's "Batch reversed" panel shows and on `/receiving` while a receipt's "Receipt corrected" panel shows, every before-and-after table in that panel ends at or left of its batch's or receipt's right edge less that item's right padding, no figure in it runs past its cell, and no number in its Before or After cells splits across lines (a unit may drop under its number; a row label may wrap).
 
 ### Code
 
