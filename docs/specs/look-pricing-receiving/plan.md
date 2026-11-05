@@ -43,8 +43,8 @@ Most construction tests live under **Tasks** below.
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| Overview `src/app` row: the content cap, Pricing, and Receiving | T3, T4, T5 | The row's diff names the 34rem cap and that both pages lift it, the tiles, the details panel, and the Receiving cards. | `close-work` reads the row whole against the code. |
-| Overview look notes: tokens, the table width, and the icon component | T1, T3 | The notes name the radius and type-size tokens, `line-icon.tsx`, and the 1280 px `wide` variant. | `close-work` reads them. |
+| Overview `src/app` row: the content cap, Pricing, and Receiving | T3, T4, T5, T7 | The row's diff names the 34rem cap and that both pages lift it, the tiles, the details panel, and the Receiving cards. | `close-work` reads the row whole against the code. |
+| Overview look notes: tokens, the table width, and the icon component | T1, T3, T7 | The notes name the radius and type-size tokens, `line-icon.tsx`, the 1280 px `wide` variant, and the `receipt-table` variant with its section-width condition. | `close-work` reads them. |
 | Overview `test/e2e/` row | T3 | The row lists `look-pages.spec.ts`. | `close-work` reads the row whole. |
 | Intent `look-e-shared-tokens-and-icons.md` | T1 | AC-0014 to AC-0016 pass. | `close-work` marks it Fulfilled and reconcile shows no finding. |
 | Design reference: the canvas | T6 | The AC-0018 ledger entries name revision 1793856599-9c48. | The brief still links the canvas. |
@@ -53,7 +53,7 @@ Most construction tests live under **Tasks** below.
 
 ### Design decisions
 
-- **Two desktop widths.** From `desk` (1024 px) the shell shows the side menu and both pages lift the content cap. From a new `wide` variant (1280 px, set in px like `desk`) the Pricing groups and Recent receipts read as tables. Between the two, both stay cards: at 1024 px the content is 728 px wide, and beside the 360 px details panel or the 340 px receipt form a six-column row has under 40 px per column. Traces to: AC-0003, AC-0004, AC-0012, AC-0013.
+- **Two desktop widths.** From `desk` (1024 px) the shell shows the side menu and both pages lift the content cap. From a new `wide` variant (1280 px, set in px like `desk`) the Pricing groups read as tables. Between the two, both stay cards: at 1024 px the content is 728 px wide, and beside the 360 px details panel or the 340 px receipt form a six-column row has under 40 px per column. Recent receipts read as a table through the `receipt-table` variant in `globals.css`: it needs the 1280 px width and a Recent receipts section (a size container) wide enough for the row, so a larger text size keeps the cards until the row fits. Traces to: AC-0003, AC-0004, AC-0012, AC-0013, AC-0022, AC-0023.
 - **One markup, two looks.** Each Pricing product stays an `li` with its level-3 heading link, a `dl` of five `Figure`s, and its advice block. From `wide` up, the group's `ul` becomes a grid with a header line (`aria-hidden="true"`, naming the five figures), each `li` lays its `dl` out on the same columns with CSS subgrid, and the list's own classes hide each `dt` visually. The label stays in the page, so screen readers and `figure()` still find it. `Figure` itself keeps a visible label, so the details panel and the what-if results show theirs. Recent receipts use the same pattern; T5, which first renders it, gives `Facts` an `inline` option that only picks classes (AC-0019). Traces to: AC-0003, AC-0004, AC-0006, AC-0012, AC-0013, AC-0019.
 - **`PageShell` gains `fullWidth` and `mainClassName`.** `fullWidth` drops the 34rem cap on `<main>`'s children; `/pricing` and `/receiving` pass it, and every other page keeps the cap. `mainClassName` adds Receiving's grid classes to `<main>` itself, because a wrapping `div` would put the result's status container inside `main > div`. Traces to: AC-0001, AC-0011.
 - **The tiles are a list, not headings.** A `ul` labeled "Product counts" holds three items, each a label and a number counted from the rows `listPricing` returns, so `groupHeadings()` and `group()` in the test helpers see nothing new. Each tile's top edge takes its group's status color. Traces to: AC-0002.
@@ -177,13 +177,13 @@ Most construction tests live under **Tasks** below.
 
 ### T6: The recorded checks are in the verification ledger
 
-**Depends on:** T1, T2, T3, T4, T5
+**Depends on:** T1, T2, T3, T4, T5, T7
 **Mode:** visual and manual QA
 **Touches:** `docs/specs/look-pricing-receiving/notes/verification-ledger.md`
 
 **Tests:**
-- AC-0018: the built app on `127.0.0.1` with the test data, each screen in the state AC-0018 names, compared by the owner with its board; the ledger records each verdict.
-- AC-0017: `npm test` on the branch head after T1 to T5, its pass counts and run time in the ledger.
+- AC-0018: the built app on `127.0.0.1` with the test data, each screen in the state AC-0018 names, compared by the owner with its board; the ledger records each verdict. The verdicts that stand at `21a6886` (the owner's two desktop verdicts on a build of `21a6886`, and the three phone and result verdicts from `db3d64c` the ledger carries forward) stand at the head T6 records when a full read of `git diff 21a6886 <that head> -- src/app` finds only the changes T7's AC-0018 bullet allows; otherwise the owner compares every board that diff can reach again.
+- AC-0017: `npm test` on the branch head after T1 to T5 and T7, its pass counts and run time in the ledger.
 - AC-0019: `git diff "$(git merge-base main HEAD)" -- src/app/facts.tsx src/app/before-after.tsx` read in full; the ledger records that, for the same props, the elements, nesting, attributes other than `class`, and text are unchanged.
 - AC-0020: `git diff "$(git merge-base main HEAD)" -- test/e2e` read in full, plus every file `git ls-files --others --exclude-standard -- test/e2e` lists; the ledger lists each changed expectation in an existing test file.
 
@@ -191,6 +191,23 @@ Most construction tests live under **Tasks** below.
 - Script the screenshots in the ignored `.context/recorded-run/` and stop every process it starts by its PID.
 
 **Done when:** the ledger records the owner's "match" for each of the five boards, the AC-0017 pass, the AC-0019 read with only class choices changed, and the AC-0020 list with no change outside the details scoping.
+
+### T7: Recent receipts keep cards at a larger text size
+
+**Depends on:** T5
+**Mode:** manual QA through the new browser suite
+**Touches:** `src/app/globals.css`, `src/app/facts.tsx`, `src/app/receiving/recent-receipts.tsx`, `test/e2e/look-pages.spec.ts`, `docs/architecture/overview.md`
+
+**Tests:**
+- `look-pages.spec.ts`, the larger-text-size test, titled for AC-0022, AC-0023, and AC-0012: with the root text size at 20 px, at 1280×720 and 1440×900 the receipts header line is hidden and every receipt label is wider than 20 px and sits beside its value on the value's first line (AC-0022); at 1920×1080 the header line is visible, each receipt's six values start at one top within 4 px, and each label is 1 px wide or less (AC-0022); at each of the three widths every Void and Correct button ends inside the Recent receipts section (AC-0023); at 1280×720 with 16 px text the header line is visible (AC-0012).
+- AC-0018: `git diff 21a6886 HEAD -- src/app`, read in full on T7's head, changes only comments and the message-row variant's name, in its definition and every use; the ledger records the read and that the AC-0018 verdicts standing at `21a6886` (see T6) therefore still hold. If the read finds any other change, the owner compares every board it can reach again, and the ledger records those verdicts.
+- The AC-0012 tests keep the tops check on every receipt and drop the value-height comparison, which cannot fail.
+- The existing suites pass unchanged.
+
+**Approach:**
+- Retitle and strengthen the text-size test. Reword the comment above `VALUE_CLASS` in `facts.tsx` so it claims only what each look's classes do. Rename the message-row variant for the status area it matches, apart from the receipt form's `receipt-message` id, and make its comment describe that element. Reword the overview's `src/app` row: each receipt's `li` holds the column rules, the "cells" look places `Facts`'s pairs on them, and the table shows at 1280 px and wider at the default text size, while a larger text size keeps cards until the section fits. Name the `receipt-table` variant and its section-width condition in the look notes.
+
+**Done when:** the T7 tests pass, the ledger records the AC-0018 diff read (and any new owner verdicts it calls for), and `npm test` passes.
 
 ## Rollout
 
@@ -205,3 +222,5 @@ Big bang, in one PR. Rollback is a revert. No data, schema, or hosted setting ch
 
 - 2026-11-04: initial plan, after the owner's answers (full button name, all five figures), the confirmed boards, and a probe of the Receiving layout.
 - 2026-11-05: after the round 1 reviews and the owner's answers (stock card below the form on a phone, no what-if beside the details, boards redrawn to the app's words): the table look starts at 1280 px, the icon file is `line-icon.tsx`, T4 scopes every detail read in `pricing.spec.ts`, T5 depends on T2 and T4 and adds `Facts`'s `inline` option, the fixtures come from the menu helpers, and each task names its mode.
+- 2026-11-05: controlled amendment after post-gates review round 3: AC-0012 holds at the default text size, the new AC-0022 states the owner's larger-text-size rule, and T7 carries its test and the round 3 comment and naming fixes.
+- 2026-11-05: amendment review: AC-0022 split into AC-0022 and AC-0023 with the owner's approval; T6 now depends on T7; T7 checks the 1920 px table rows and proves the signed-off look unchanged by a full read of its `src/app` diff from `21a6886`.

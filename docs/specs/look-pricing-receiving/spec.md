@@ -30,7 +30,7 @@ Success for the owner:
 - On `/pricing`, three tiles count the products that need a new price, are priced, and have no cost yet. Each product keeps its five figures and, when it needs a new price, its advice and its one-press button, still named "Raise list price to $3.44/lb" and the like.
 - On a desktop 1280 px or wider, each group reads as a compact table. On a narrower desktop and on a phone, each product is a card.
 - On a desktop, a product's details open in a panel beside the list, and the keyboard reaches the panel first. On a phone, a product's details open on their own.
-- On `/receiving`, the chosen product's stock and suggested prices sit in a card: below the form on a phone, so nothing moves while the owner types, and beside the form on a desktop. Recent receipts read as a table at 1280 px and wider, and as cards below that.
+- On `/receiving`, the chosen product's stock and suggested prices sit in a card: below the form on a phone, so nothing moves while the owner types, and beside the form on a desktop. Recent receipts read as a table at 1280 px and wider at the browser's default text size, and as cards below that; with a larger text size they stay cards until their section has room for the table.
 - Look E's corner radii and type sizes come from named tokens, and every inline icon comes from one shared component.
 
 What each screen does, and every figure, word, and control name it shows, stays the same. The drawn reference is the spec 2 row of boards on the [UI directions canvas](https://claude.ai/artifact/4EaCu25FA6HoBaDA4PKAnX) at revision 1793856599-9c48.
@@ -42,7 +42,7 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 | Semantic role | Applicability | Destination | Owner | Expected evidence | Closeout condition |
 | --- | --- | --- | --- | --- | --- |
 | Current architecture: the two pages and the shared parts | The overview's `src/app` row describes `/pricing` (its list, one-press repricing, what-if, and per-product detail) and `/receiving`. It does not name the shell's 34rem content cap. | `docs/architecture/overview.md`, the `src/app` row | `work-loop` implementer | The row names the content cap and that both pages lift it, the Pricing tiles and details panel, and the Receiving card layout. | `close-work` reads the row whole against the code. |
-| Current architecture: the look's tokens and icons | The overview's screen-look sentence points at the tokens in `globals.css`. | `docs/architecture/overview.md`, the `src/app` row's notes column; `src/app/globals.css` | `work-loop` implementer | The notes name the radius and type-size tokens, the 1280 px table width, and the shared icon component. | `close-work` reads both. |
+| Current architecture: the look's tokens and icons | The overview's screen-look sentence points at the tokens in `globals.css`. | `docs/architecture/overview.md`, the `src/app` row's notes column; `src/app/globals.css` | `work-loop` implementer | The notes name the radius and type-size tokens, the 1280 px table width, the `receipt-table` variant with its section-width condition, and the shared icon component. | `close-work` reads both. |
 | Current architecture: the browser suite | The overview's `test/e2e/` row lists each suite. | `docs/architecture/overview.md`, the `test/e2e/` row | `work-loop` implementer | The row lists this spec's new suite. | `close-work` reads the row whole. |
 | Backlog | This spec delivers the Draft intent `docs/product/intents/look-e-shared-tokens-and-icons.md`. | That intent and its `workspace.toml` entry | `close-work` | The intent reads Fulfilled and leaves `backlog.open`. | `workspace_status.py reconcile --root .` shows no finding for it. |
 | Design reference | The canvas boards are the drawn reference for AC-0018. | The UI directions canvas, linked in the brief's Design artifacts section | Owner | The AC-0018 entries in the verification ledger | `close-work` confirms that the brief still links the canvas. |
@@ -75,7 +75,7 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 
 ## Testing Strategy
 
-- **Manual QA exercised by the end-to-end (E2E) browser suite (AC-0001, AC-0002, AC-0003, AC-0004, AC-0005, AC-0006, AC-0007, AC-0008, AC-0009, AC-0010, AC-0011, AC-0012, AC-0013, AC-0021)**: in a new `test/e2e/look-pages.spec.ts`. Each is a layout or content the owner sees in a browser. Each width-bound criterion is checked at its edge and at a common size: 1024 and 1280 px from 1024 up, 1023 and 390 px under 1024, 1280 and 1440 px from 1280 up, and 1279, 1024, and 390 px under 1280.
+- **Manual QA exercised by the end-to-end (E2E) browser suite (AC-0001, AC-0002, AC-0003, AC-0004, AC-0005, AC-0006, AC-0007, AC-0008, AC-0009, AC-0010, AC-0011, AC-0012, AC-0013, AC-0021, AC-0022, AC-0023)**: in a new `test/e2e/look-pages.spec.ts`. Each is a layout or content the owner sees in a browser. Each width-bound criterion is checked at its edge and at a common size: 1024 and 1280 px from 1024 up, 1023 and 390 px under 1024, 1280 and 1440 px from 1280 up, and 1279, 1024, and 390 px under 1280. AC-0022 and AC-0023 are checked at 1280, 1440, and 1920 px with the root text size set to 20 px.
 - **Goal-based check over the source (AC-0014, AC-0015, AC-0016)**: a Vitest search of `src/app` decides each.
 - **Goal-based check over the whole suite (AC-0017)**: `npm test` passes.
 - **Visual and manual QA, recorded in the verification ledger (AC-0018, AC-0019, AC-0020)**: the owner's comparison with the canvas boards, a read of the shared parts' markup diff, and a read of the branch's test diff.
@@ -105,8 +105,10 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 
 - [ ] **AC-0010.** With a product chosen, under 1024 px, `/receiving` shows from top to bottom the "New receipt" form, the card holding the product's stock (On hand, Average cost) and suggested prices, and Recent receipts.
 - [ ] **AC-0011.** With a product chosen, at 1024 px and wider, the page title sits above the form and the stock card, and the "New receipt" form sits to the left of the stock card and of Recent receipts.
-- [ ] **AC-0012.** At 1280 px and wider, each recent receipt's six figures (Lot number, Received, Vendor, Weight, Cost per lb, Remaining) sit on one line, under one header line that names them in that order. No figure's text runs past its cell.
+- [ ] **AC-0012.** At 1280 px and wider, at the browser's default text size, each recent receipt's six figures (Lot number, Received, Vendor, Weight, Cost per lb, Remaining) sit on one line, under one header line that names them in that order. No figure's text runs past its cell.
 - [ ] **AC-0013.** Under 1280 px, each recent receipt's six figures each sit on their own line beside a visible label.
+- [ ] **AC-0022.** With the browser's text size at 20 px, Recent receipts show as cards, each label beside its value, at 1280 px and 1440 px, and as the table at 1920 px.
+- [ ] **AC-0023.** With the browser's text size at 20 px, at 1280 px, 1440 px, and 1920 px, every Void and Correct button sits inside the Recent receipts section.
 
 ### Tokens and icons
 
@@ -145,5 +147,6 @@ None. The canvas ideas this spec leaves out are the brief's non-goals.
 - Product: beside the details panel the page shows the tiles and the list and no what-if section; the keyboard reaches the panel first; on a phone the details show with no tiles (source: user confirmation 2026-11-05)
 - Product: the boards use today's words: the advice sentence, "Stock and prices", the vendor list, and the product hint; the open product's row shows no advice or button (source: user confirmation 2026-11-05; canvas revision 1793856599-9c48)
 - Technical: at 1024 px the content beside the side menu is 728 px wide (1024 less the 240 px menu and two 28 px paddings), too narrow for a six-column row beside the details panel or the receipt form, so the table look starts at 1280 px; the list alone on `/pricing` uses the same width, so a product's row looks the same with or without the panel (source: `src/app/page-header.tsx`; the S2 desktop boards' 360 px panel and 340 px form; user confirmation 2026-11-05)
+- Product: with a larger browser text size, Recent receipts stay as cards until their section has room for the table, so Void and Correct stay usable; at the default text size the table shows from 1280 px (source: user confirmation 2026-11-05, after a probe put Void and Correct outside the section at 1280 px with 20 px text)
 - Product: the label-and-value list and the before-and-after table keep their markup and change only color and spacing, on every page that shows them (source: user confirmation 2026-11-04)
 - Product: this spec delivers the Draft intent `look-e-shared-tokens-and-icons.md`, the owner's choice of 2026-11-04 (source: that intent)
