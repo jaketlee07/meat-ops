@@ -72,20 +72,25 @@ The owner compared each built screen with its board on the UI directions canvas 
 
 Shown to the owner before the verdict: real lot numbers are longer than the boards', so desktop receipt rows wrap and Void and Correct stack; the before-and-after header tint runs edge to edge, because a 10 px inset scrolled sideways at 320 px; the test data shows an urgent-alerts banner the boards do not draw.
 
+Re-verdict on the final build (2026-11-05): the review fixes changed S2-Receiving-Desktop (rebalanced receipt columns; lot numbers wrap once, at the second hyphen) and S2-Pricing-Desktop (the open row's edge drawn as an inset shadow). The owner compared both, retaken from a build of `21a6886` (canvas version 1793893414-5cb6, boards titled "As built (after review fixes)"), and answered "Both match". The three phone and result boards are unchanged by the fixes: the Pricing phone capture is byte-identical, and the Receiving phone and result changes apply only from 1280 px.
+
 ### AC-0017: the whole suite
 
-`npm test` on `3f63c31` (code as of `db3d64c`): Vitest 54 files, 1046 passed in 42.2 s; Playwright 786 passed in 10.5 min. The folder check listed no folder, and the slot fix ran first.
+`npm test` on `21a6886`, the last code commit: Vitest 54 files, 1047 passed in 54.6 s; Playwright 794 passed in 10.6 min. The folder check listed no folder, and the slot fix ran first.
 
 ### AC-0019: the shared parts' markup
 
-`git diff 2d9f923 -- src/app/facts.tsx src/app/before-after.tsx`, read in full. `BeforeAfter` changed only `className` values. `Facts` gained `inline` and `tiles`, which only choose class strings; called with `rows` alone, as on `main`, it renders the same `dl`, `div`, `dt`, and `dd` in the same nesting, with the same `key`s and text and no attribute other than `class` changed.
+`git diff 2d9f923 21a6886 -- src/app/facts.tsx src/app/before-after.tsx`, read in full. `BeforeAfter` changed only `className` values. `Facts` gained one `look` prop ("list", the default, "tiles", or "cells") that picks class strings from four lookup tables; called with `rows` alone, as on `main`, it renders the same `dl`, `div`, `dt`, and `dd` in the same nesting, with the same `key`s and text and no attribute other than `class` changed.
 
 ### AC-0020: the test diff
 
-`git diff 2d9f923 -- test/e2e`, read in full; `git ls-files --others --exclude-standard -- test/e2e` lists nothing. New files: `test/e2e/look-pages.spec.ts` and `test/look-source.test.ts`. Changed expectations in existing test files, each scoping a read on `/pricing?product=<code>` to the "Product details" region, with no asserted value, name, count, or order changed:
+`git diff 2d9f923 21a6886 -- test/e2e`, read in full; `git ls-files --others --exclude-standard -- test` lists nothing. New files: `test/e2e/look-pages.spec.ts` and `test/look-source.test.ts`. Changed lines in existing test files:
 
-- `test/e2e/pricing-page.ts`, `detail()`: `main`, `heading`, the five controls, and the four message locators read inside the region.
-- `test/e2e/pricing.spec.ts`: the `figures()` helper (`dt` and `dd`), the AC-0080/AC-0082 order check (`dt, p`), and the `const main` locators of the two AC-0083 tests read inside the region.
+- `test/e2e/pricing-page.ts`, `detail()`: `main`, `heading`, the five controls, and the four message locators read inside the "Product details" region.
+- `test/e2e/pricing.spec.ts`: the `figures()` helper (`dt` and `dd`), the AC-0080/AC-0082 order check (`dt, p`), and the `const main` locators of the two AC-0083 tests read inside the same region.
+- `test/e2e/pricing.spec.ts` line 827, the unknown-code loop: `detail(page).target` is written out as `page.getByRole("textbox", { name: "Target margin %" })`, the same page-wide locator `main` used, so it asserts what `main` asserted.
+
+No asserted value, name, count, or order changed.
 
 ## Post-gates review round 1 (2026-11-05)
 
@@ -102,3 +107,8 @@ Shown to the owner before the verdict: real lot numbers are longer than the boar
 - Owner ruling on the indeterminate (frontend finding 1), 2026-11-05: with a larger browser text size, Recent receipts stay as cards until their section is wide enough for the table, so Void and Correct stay usable; at the default text size the table shows from 1280 px as signed off. Evidence shown to the owner: a probe on a build of `da7ca0b` with a 20 px root font at 1280 px put Correct at 1281 to 1391 px and Void at 1309 to 1391 px, past the section's 1245 px edge, which clips; at 16 px both sat inside (section edge 1252 px, buttons end 1235 px); at 1440 px and 20 px both sat inside.
 - The adversarial Blocker reopens AC-0018 for S2-Receiving-Desktop and S2-Pricing-Desktop: the fix commits changed the receipts columns and the open row's edge after the owner's verdict, so the owner compares those two screens again on the final build.
 - Deferred Nit (frontend finding 2): at 1280 px the Vendor column is about 54 px wide, so a vendor word of eight or more letters breaks inside the word; the other columns hold the lot number, a six-digit weight, and the buttons, so no track can give up width without breaking AC-0012's fixture.
+
+## Post-gates review round 2 fixes (2026-11-05)
+
+- Fix commit `21a6886`: a `receipt-table` variant in `globals.css` needs both the 1280 px width and a Recent receipts section at least 38rem wide, so a larger text size keeps the receipts as cards (at 1440 px with 20 px text they are cards too); a `receipt-message` variant states the full-row condition once; the AC-0012 tops check covers every row; the one-piece check covers Weight, Cost per lb, and Remaining; three tests renamed without AC ids; AC-0001 covers `/pricing?product=` with an unknown code; the source search must read `globals.css` and a `.ts` file.
+- The text-size test failed against `da7ca0b`'s source; the refusal full-row test failed with the message-row classes removed. `npm test` on `21a6886`: Vitest 1047 passed; Playwright 794 passed in 10.6 min.
