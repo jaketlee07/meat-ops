@@ -33,3 +33,13 @@ The spec's Assumptions record each of these as a Product line:
 
 - Commit `7aca3f1`. `test/look-source.test.ts` failed 3 of 3 on the tree before the change and passed 3 of 3 after it. `npm test`: Vitest 1046 passed in 41.5 s; Playwright 752 passed in 10.3 min.
 - Bookkeeping: the cohort's wave pointer advanced to wave 2 before the engine's `wave-passed` fired, so `wave-passed` was fired with `--wave-index 1` to match the pointer. Wave 1 (T1) passed its gates; no wave was skipped, and wave 2 (T2, T3) is next.
+
+## T2 (2026-11-05)
+
+- Commit `4fc407b`. A script that blanks every `className` value finds `facts.tsx` and `before-after.tsx` otherwise identical to `8b32b12`: only classes changed. `npm test`: Vitest 1046 passed in 48 s; Playwright 752 passed in 10.3 min.
+- A first version with 10 px of outer table padding failed two 320 px sideways-scroll checks (`correct.spec.ts:213`, `receiving.spec.ts:458`); the committed version keeps the original side padding, so the table's header tint sits flush with the text where the board insets it by 10 px.
+
+## T3 (2026-11-05)
+
+- Commit `8be3ec0`. `look-pages.spec.ts` gained 12 tests; with the source changes stashed, 6 failed (AC-0001, AC-0002 full and emptied-group states, AC-0003) and 6 passed by design (AC-0002 with no product and AC-0004, which pin behavior that must not change below 1280 px). All 12 pass on the change. `npm test`: Vitest 1046 passed; Playwright 762 passed in 10.1 min; no reruns.
+- The table look uses one `minmax(0, ...)` column template on the header line and every row, a subgrid `dl`, and `display: contents` on each figure's wrapper, so each value is a grid cell; `figure.tsx` is unchanged. The board's 12 px tile and phone-button radii use Tailwind's `rounded-xl`.
