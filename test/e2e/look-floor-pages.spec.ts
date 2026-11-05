@@ -30,9 +30,11 @@ import {
   voidThrough,
 } from "./sales-page";
 import { OPERATOR_STATE } from "./states";
+import { lastSaleNumber, open as openTrace, receiveOn, threeBatchSale, TRACE_CONTROLS, TWELVE_DATES, twoLotSale } from "./trace-page";
 
 // The look E floor pages at the widths where their layout changes: Production's and Sales' two-column
-// layouts, Production's stock tiles, and the Recent batches and Recent sales tables. Operator session; data is reset before each test.
+// layouts, Production's stock tiles, the Recent batches and Recent sales tables, and Trace's side-by-side
+// forms and its three lists. Operator session; data is reset before each test.
 
 test.use({ storageState: OPERATOR_STATE });
 
@@ -568,4 +570,279 @@ test.describe("the Sales layout", () => {
       }
     });
   }
+});
+
+// Trace.
+
+// A lot's trace with two sales, a customer on one, and finished stock on hand: the lot first received
+// is the one the batch drew from first, the later lot is traced. The page is left on the lot trace at
+// the given size.
+async function opensLotTrace(page: Page, width: number, height: number) {
+  const { later } = await twoLotSale();
+  await seedSale(20, "2026-10-07", 3.29, CUSTOMER_ID);
+  await page.setViewportSize({ width, height });
+  await openTrace(page, `/trace?lot=${later}`);
+  const lot = page.getByRole("region", { name: later, exact: true });
+  await expect(lot.getByRole("heading", { level: 2, name: later })).toBeVisible();
+  return { lot, later };
+}
+
+// A sale's trace over three batches, and the raw lots they drew from.
+async function opensSaleTrace(page: Page, width: number, height: number) {
+  await threeBatchSale();
+  const number = await lastSaleNumber();
+  await page.setViewportSize({ width, height });
+  await openTrace(page, `/trace?sale=${number}`);
+  const sale = page.getByRole("region", { name: number, exact: true });
+  await expect(sale.getByRole("heading", { level: 2, name: number })).toBeVisible();
+  return { sale, number };
+}
+
+// Three receipts of RAW-TOM, listed newest received first.
+async function opensLotList(page: Page, width: number, height: number) {
+  await receiveOn(TWELVE_DATES.slice(0, 3));
+  await page.setViewportSize({ width, height });
+  await openTrace(page, "/trace?raw=RAW-TOM");
+  const list = page.getByRole("region", { name: "Receipts of RAW-TOM" });
+  await expect(list.getByRole("heading", { level: 2, name: "Receipts of RAW-TOM" })).toBeVisible();
+  return { list };
+}
+
+// What Tab reaches on a result: the finder's controls, then each link in the result, in page order.
+async function traceControls(result: Locator): Promise<string[]> {
+  const links = (await result.locator("a").allTextContents()).map((text) => text.trim());
+  return [...TRACE_CONTROLS, ...links.map((label) => `a ${label}`)];
+}
+
+// One of Trace's three lists: its rows, its header line, and the names the header line shows, in order.
+type TraceList = { items: Locator; header: Locator; names: string[]; figures: string[] };
+
+function salesFromLot(lot: Locator): TraceList {
+  const heading = lot.locator('h3:text-is("Sales from this lot")');
+  return {
+    items: heading.locator("+ ul > li"),
+    header: heading.locator("~ div[aria-hidden='true']"),
+    names: ["Sale number", "Sale date", "Customer", "Product", "Batch number", "Lbs drawn"],
+    figures: ["Sale date", "Customer", "Product", "Batch number", "Lbs drawn"],
+  };
+}
+
+function stockFromLot(lot: Locator): TraceList {
+  const heading = lot.locator('h3:text-is("Finished stock on hand from this lot")');
+  return {
+    items: heading.locator("+ ul > li"),
+    header: heading.locator("~ div[aria-hidden='true']"),
+    names: ["Batch number", "Product", "Made", "Lbs on hand"],
+    figures: ["Product", "Made", "Lbs on hand"],
+  };
+}
+
+function receiptsOf(list: Locator): TraceList {
+  return {
+    items: list.locator("ul > li"),
+    header: list.locator("div[aria-hidden='true']"),
+    names: ["Lot number", "Received", "Vendor", "Weight"],
+    figures: ["Received", "Vendor", "Weight"],
+  };
+}
+
+// Each row's number cell (a link or a heading) and its figures' values, labels, and the figure list.
+function numberCell(row: Locator): Locator {
+  return row.locator(":scope > h3, :scope > h4");
+}
+
+// The list reads as a table: one header line that names the columns in order, each row on one line with
+// its number and figures in those columns, labels hidden visually, and no figure past its cell.
+async function expectTable(list: TraceList, rows: number) {
+  await expect(list.header).toBeVisible();
+  const names = (await list.header.locator("span").allTextContents()).map((text) => text.trim());
+  expect(names).toEqual(list.names);
+  const columns = await boxes(list.header.locator("span"));
+  const items = await list.items.all();
+  expect(items).toHaveLength(rows);
+  for (const row of items) {
+    const heading = await box(numberCell(row));
+    const cells = await boxes(values(row.locator(":scope > dl")));
+    expect(cells).toHaveLength(list.figures.length);
+    const middles = [heading, ...cells].map((cell) => cell.y + cell.height / 2);
+    expect(Math.max(...middles) - Math.min(...middles), "one line").toBeLessThanOrEqual(6);
+    expect(Math.abs(heading.x - columns[0]!.x), "number left").toBeLessThanOrEqual(1);
+    cells.forEach((cell, index) => {
+      expect(Math.abs(cell.x - columns[index + 1]!.x), `column ${index + 1} left`).toBeLessThanOrEqual(1);
+      expect(Math.abs(cell.width - columns[index + 1]!.width), `column ${index + 1} width`).toBeLessThanOrEqual(1);
+    });
+    for (const label of await boxes(row.locator(":scope > dl dt"))) expect(label.width).toBeLessThanOrEqual(1);
+    expect(await row.locator(":scope > dl dt").allTextContents()).toEqual(list.figures);
+  }
+  await expectNoSpill(list, rows);
+}
+
+// No number and no figure's text runs past its cell.
+async function expectNoSpill(list: TraceList, rows: number) {
+  const fits = await list.items.locator(":scope > dl dd, :scope > h3, :scope > h4").evaluateAll((cells) =>
+    cells.map((cell) => ({ text: cell.textContent, fits: cell.scrollWidth <= cell.clientWidth })),
+  );
+  expect(fits).toHaveLength(rows * (list.figures.length + 1));
+  expect(fits.filter((cell) => !cell.fits)).toEqual([]);
+}
+
+// The list reads as cards: no header line, each figure on its own line with its label visible beside it.
+async function expectCards(list: TraceList, rows: number) {
+  await expect(list.header, "the table is off").toBeHidden();
+  const items = await list.items.all();
+  expect(items).toHaveLength(rows);
+  for (const row of items) {
+    const figures = row.locator(":scope > dl");
+    const cells = await boxes(values(figures));
+    const labels = await boxes(figures.locator("dt"));
+    expect(cells).toHaveLength(list.figures.length);
+    expect(labels).toHaveLength(list.figures.length);
+    for (let i = 1; i < cells.length; i += 1) {
+      expect(cells[i]!.y, `value ${i} below value ${i - 1}`).toBeGreaterThanOrEqual(cells[i - 1]!.y + cells[i - 1]!.height);
+    }
+    labels.forEach((label, index) => {
+      expect(label.width, `label ${index} is not hidden`).toBeGreaterThan(20);
+      expect(Math.abs(label.y - cells[index]!.y), `label ${index} on its value's first line`).toBeLessThanOrEqual(4);
+      expect(label.x + label.width, `label ${index} left of its value`).toBeLessThanOrEqual(cells[index]!.x + 1);
+    });
+    for (const label of await figures.locator("dt").all()) await expect(label).toBeVisible();
+  }
+}
+
+// With 20 px text a list may be a table or cards: either way no figure runs past its cell, and a card
+// keeps each label beside its value.
+async function expectEitherFits(list: TraceList, rows: number) {
+  await expectNoSpill(list, rows);
+  if (await list.header.isVisible()) return;
+  await expectCards(list, rows);
+}
+
+const TRACE_WIDTHS = [
+  [1280, 720],
+  [1440, 900],
+] as const;
+
+test.describe("the Trace layout", () => {
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0001: /trace lifts the 34rem cap on every child of main but a dialog at ${width}x${height}`, async ({
+      page,
+    }) => {
+      await opensLotTrace(page, width, height);
+      const widths = await page.locator("main > *").evaluateAll((children) =>
+        children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
+      );
+      expect(widths.length).toBeGreaterThan(2);
+      expect(widths.filter((value) => value !== "none")).toEqual([]);
+    });
+
+    test(`AC-0013: at ${width}x${height} Find a sale is left of Find a raw lot, their tops level`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      const f = await openTrace(page);
+      const sale = await box(f.saleSection);
+      const lot = await box(f.lotSection);
+      expect(Math.abs(sale.y - lot.y), "tops level").toBeLessThanOrEqual(1);
+      expect(sale.x + sale.width, "Find a sale is left of Find a raw lot").toBeLessThanOrEqual(lot.x);
+      if (width === 1280) {
+        expect(await checkPageState(page)).toEqual(TRACE_CONTROLS);
+        await checkDesktopWalk(page);
+      }
+    });
+  }
+
+  test("AC-0028: at 390x844 Find a sale is above Find a raw lot", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const f = await openTrace(page);
+    const sale = await box(f.saleSection);
+    const lot = await box(f.lotSection);
+    expect(sale.y + sale.height, "Find a sale is above Find a raw lot").toBeLessThanOrEqual(lot.y);
+  });
+
+  for (const [width, height] of TRACE_WIDTHS) {
+    test(`AC-0014: at ${width}x${height} Sales from this lot reads as a table under a header line`, async ({ page }) => {
+      const { lot } = await opensLotTrace(page, width, height);
+      await expectTable(salesFromLot(lot), 2);
+      if (width === 1280) {
+        expect(await checkPageState(page)).toEqual(await traceControls(lot));
+        await checkDesktopWalk(page);
+      }
+    });
+
+    test(`AC-0015: at ${width}x${height} Finished stock on hand from this lot reads as a table under a header line`, async ({
+      page,
+    }) => {
+      const { lot } = await opensLotTrace(page, width, height);
+      await expectTable(stockFromLot(lot), 1);
+    });
+
+    test(`AC-0016: at ${width}x${height} the raw lot list reads as a table under a header line`, async ({ page }) => {
+      const { list } = await opensLotList(page, width, height);
+      await expectTable(receiptsOf(list), 3);
+      if (width === 1280) {
+        expect(await checkPageState(page)).toEqual(await traceControls(list));
+        await checkDesktopWalk(page);
+      }
+    });
+
+    test(`AC-0014, AC-0015: at ${width}x${height} with 20 px text no figure runs past its cell, and a card keeps its labels beside its values`, async ({
+      page,
+    }) => {
+      const { lot } = await opensLotTrace(page, width, height);
+      await withTextSize(page, width, height, 20);
+      await expectEitherFits(salesFromLot(lot), 2);
+      await expectEitherFits(stockFromLot(lot), 1);
+    });
+
+    test(`AC-0016: at ${width}x${height} with 20 px text no figure runs past its cell, and a card keeps its labels beside its values`, async ({
+      page,
+    }) => {
+      const { list } = await opensLotList(page, width, height);
+      await withTextSize(page, width, height, 20);
+      await expectEitherFits(receiptsOf(list), 3);
+    });
+  }
+
+  test("AC-0014, AC-0015: at 390x844 each sale and each batch is a card with its labels beside its values", async ({
+    page,
+  }) => {
+    const { lot } = await opensLotTrace(page, 390, 844);
+    await expectCards(salesFromLot(lot), 2);
+    await expectCards(stockFromLot(lot), 1);
+  });
+
+  test("AC-0016: at 390x844 each lot is a card with its labels beside its values", async ({ page }) => {
+    const { list } = await opensLotList(page, 390, 844);
+    await expectCards(receiptsOf(list), 3);
+  });
+
+  for (const [width, height, beside] of [
+    [1024, 768, false],
+    [1280, 720, true],
+    [1440, 900, true],
+  ] as const) {
+    test(`at ${width}x${height} Customers sits ${beside ? "beside" : "above"} Sales from this lot`, async ({ page }) => {
+      const { lot } = await opensLotTrace(page, width, height);
+      const customers = await box(lot.locator('h3:text-is("Customers")').locator(".."));
+      const sales = await box(lot.locator('h3:text-is("Sales from this lot")').locator("../.."));
+      if (beside) {
+        expect(customers.x + customers.width, "Customers is left of Sales").toBeLessThanOrEqual(sales.x);
+        expect(Math.abs(customers.y - sales.y), "tops level").toBeLessThanOrEqual(1);
+      } else {
+        expect(customers.y + customers.height, "Customers is above Sales").toBeLessThanOrEqual(sales.y);
+      }
+      const card = await box(lot.locator("h2"));
+      const facts = await box(lot.locator(":scope > dl"));
+      expect(Math.abs(card.y + card.height - facts.y), "the lot's card runs from its heading into its facts").toBeLessThanOrEqual(1);
+    });
+  }
+
+  test("at 1280x720 the sale trace keeps its batch cards and passes the page checks", async ({ page }) => {
+    const { sale } = await opensSaleTrace(page, 1280, 720);
+    const cards = sale.locator(":scope > ul > li");
+    await expect(cards).toHaveCount(3);
+    expect(await checkPageState(page)).toEqual(await traceControls(sale));
+    await checkDesktopWalk(page);
+  });
 });

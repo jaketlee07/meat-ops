@@ -98,6 +98,41 @@
   }
 }
 
+/* Trace's lot result: the section is the container named tracelot. Where it is at least 53rem wide
+   (the Customers column of 16.25rem, a gap, and Sales' table at 35rem) Customers sits beside "Sales from
+   this lot" and the lot's facts run in three columns; at the default text size that is 1280 px and
+   wider. In rem, so a larger text size stacks them until the section has grown to fit. */
+@custom-variant lot-wide {
+  @container tracelot (min-width: 53rem) {
+    @slot;
+  }
+}
+
+/* Trace's "Sales from this lot" reads as a table only when its own wrapper is wide enough for a row:
+   fixed tracks, gaps, and padding (about 31rem) plus a customer column that holds a short name (about
+   3.75rem). The wrapper is the container named tracesales. In rem, no screen gate. */
+@custom-variant tsale-table {
+  @container tracesales (min-width: 35rem) {
+    @slot;
+  }
+}
+
+/* "Finished stock on hand from this lot": fixed tracks, gaps, and padding plus a product column that
+   wraps a long name (about 31rem). The wrapper is the container named tracestock. In rem, no screen gate. */
+@custom-variant tstock-table {
+  @container tracestock (min-width: 31rem) {
+    @slot;
+  }
+}
+
+/* The raw lot list ("Receipts of ..."): lot number, received date, vendor, and weight (about 27rem). The
+   section is the container named lotlist. In rem, no screen gate. */
+@custom-variant lots-table {
+  @container lotlist (min-width: 27rem) {
+    @slot;
+  }
+}
+
 /* A row's status area (the div after the figures) while one of its child divs holds a non-empty
    refusal (role alert) or panel (role status), on Receiving's receipts, Production's batches, and Sales' sales. Not the
    receipt form's own `receipt-message` id. */
