@@ -48,13 +48,13 @@ export function ApplyButton({
   }
 
   return (
-    <form onSubmit={submit} className={look === "row" ? "wide:shrink-0" : undefined}>
+    <form onSubmit={submit} className={look === "row" ? "price-table:shrink-0" : undefined}>
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="value" value={priceFieldText(suggestedListPrice)} />
       <button
         type="submit"
         aria-disabled={pending ? true : undefined}
-        className={`min-h-12 w-full rounded-control bg-primary px-3.5 text-base font-bold text-on-primary aria-disabled:bg-primary/60 wide:min-h-control${look === "row" ? " wide:w-auto" : ""}`}
+        className={`min-h-12 w-full rounded-control bg-primary px-3.5 text-base font-bold text-on-primary aria-disabled:bg-primary/60 ${look === "row" ? "price-table:min-h-control price-table:w-auto" : "wide:min-h-control"}`}
       >
         {priceButtonName(action, suggestedListPrice)}
       </button>

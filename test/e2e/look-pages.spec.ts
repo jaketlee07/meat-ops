@@ -259,16 +259,61 @@ test.describe("the table look", () => {
     });
   }
 
+  // AC-0017: the list reads as a table from its own width, so it is a table at these screens.
   for (const [width, height] of [
     [1279, 800],
     [1024, 768],
-    [390, 844],
   ] as const) {
-    test(`AC-0004: at ${width}x${height} a product stays a card with each label beside its value`, async ({ page }) => {
+    test(`AC-0017: at ${width}x${height} a product reads as one row under a header line`, async ({ page }) => {
       await pricingFixture();
       await page.setViewportSize({ width, height });
       await opens(page);
-      await expectStackedRows(page);
+      await expectOneLineRows(page);
+    });
+  }
+
+  test("AC-0004: at 390x844 a product stays a card with each label beside its value", async ({ page }) => {
+    await pricingFixture();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await opens(page);
+    await expectStackedRows(page);
+  });
+
+  // AC-0031: where the list is a table, every advice block and its button span the product's row,
+  // below the figures.
+  for (const [width, height] of [
+    [1279, 800],
+    [1024, 768],
+  ] as const) {
+    test(`AC-0031: at ${width}x${height} each advice block and its button sit below that product's figures, across its row`, async ({
+      page,
+    }) => {
+      await pricingFixture();
+      await page.setViewportSize({ width, height });
+      await opens(page);
+      await expect(group(page, "Needs a new price").locator("div[aria-hidden='true']"), "the table shows").toBeVisible();
+      const rows = await group(page, "Needs a new price").locator("li").all();
+      expect(rows.length).toBeGreaterThanOrEqual(2);
+      let blocks = 0;
+      for (const row of rows) {
+        const block = row.locator(":scope > div");
+        if ((await block.count()) === 0) continue;
+        blocks += 1;
+        const edge = await box(row);
+        const figures = await box(row.locator("dl"));
+        const advice = await box(block);
+        const button = await box(row.getByRole("button", { name: APPLY }));
+        expect(advice.y, "the block is below the figures").toBeGreaterThanOrEqual(figures.y + figures.height - 1);
+        expect(button.y, "the button is below the figures").toBeGreaterThanOrEqual(figures.y + figures.height - 1);
+        // The row has 14 px of padding on each side; the block takes all of what is inside it.
+        expect(advice.x, "the block starts at the row's left edge").toBeLessThanOrEqual(edge.x + 16);
+        expect(advice.x + advice.width, "the block ends at the row's right edge").toBeGreaterThanOrEqual(
+          edge.x + edge.width - 16,
+        );
+        expect(button.x, "the button is inside the block").toBeGreaterThanOrEqual(advice.x - 1);
+        expect(button.x + button.width, "the button is inside the block").toBeLessThanOrEqual(advice.x + advice.width + 1);
+      }
+      expect(blocks, "products with advice").toBeGreaterThanOrEqual(2);
     });
   }
 });
@@ -445,17 +490,37 @@ test.describe("the product details beside the list", () => {
     });
   }
 
-  for (const [width, height] of [
-    [1279, 800],
-    [1024, 768],
-  ] as const) {
-    test(`AC-0004: at ${width}x${height} the list beside the panel keeps each product a card`, async ({ page }) => {
-      await pricingFixture();
-      await page.setViewportSize({ width, height });
-      await opensDetail(page, "NB");
-      await expectStackedRows(page);
+  test("AC-0017: at 1279x800 the list beside the panel reads as one row per product", async ({ page }) => {
+    await pricingFixture();
+    await page.setViewportSize({ width: 1279, height: 800 });
+    await opensDetail(page, "NB");
+    await expectOneLineRows(page);
+  });
+
+  test("AC-0017: at 1024x768 the list beside the panel keeps each product a card", async ({ page }) => {
+    await pricingFixture();
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await opensDetail(page, "NB");
+    await expectStackedRows(page);
+  });
+
+  // The list's table width is in rem, so a larger text size keeps the cards at 1279 px.
+  test("AC-0017: at 1279x800 with a 20 px text size the list beside the panel keeps each product a card, no figure cut off", async ({
+    page,
+  }) => {
+    await pricingFixture();
+    await page.setViewportSize({ width: 1279, height: 800 });
+    await opensDetail(page, "NB");
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "20px";
     });
-  }
+    await expectStackedRows(page);
+    const fits = await page
+      .locator("section[aria-labelledby^='group-'] li dd")
+      .evaluateAll((cells) => cells.map((cell) => cell.scrollWidth <= cell.clientWidth));
+    expect(fits.length).toBe(8 * 5);
+    expect(fits.filter((fit) => !fit)).toEqual([]);
+  });
 });
 
 // ---- Receiving: /receiving?product=RAW-TOM with three receipts, one of them void ----
@@ -764,6 +829,51 @@ test.describe("the Receiving layout", () => {
     expect(area.y, "the message sits below the figures").toBeGreaterThanOrEqual(figures.y + figures.height - 1);
     expect(area.width, "the message area is as wide as the figures").toBeGreaterThanOrEqual(figures.width - 1);
     expect(area.x).toBeLessThanOrEqual(figures.x + 1);
+  });
+
+  // AC-0018: a ten-letter vendor word has room in the Vendor column, so no word breaks inside itself.
+  for (const [width, height] of [
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`AC-0018: at ${width}x${height} a vendor named Wholesale Provisions Company shows each word whole on one line`, async ({
+      page,
+    }) => {
+      const [vendor] = await query<{ id: string }>("insert into vendors(name) values ($1) returning id", [
+        "Wholesale Provisions Company",
+      ]);
+      const saved = await callAsOperator(receiveCall(RAW_TOM_ID, vendor!.id, 1000, 1.5, "2026-05-10"));
+      expect(saved.ok, saved.error).toBe(true);
+      await page.setViewportSize({ width, height });
+      await page.goto(RAW_TOM_URL);
+      const recent = recentReceipts(page);
+      await expect(recent.locator("li")).toHaveCount(1);
+      await expect(recent.locator("div[aria-hidden='true']"), "the table shows").toBeVisible();
+      const words = await recent.locator("li dd").nth(2).evaluate((cell) => {
+        const text = cell.firstChild!;
+        const out: { word: string; rects: number }[] = [];
+        for (const match of (text.textContent ?? "").matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(text, match.index!);
+          range.setEnd(text, match.index! + match[0].length);
+          out.push({ word: match[0], rects: range.getClientRects().length });
+        }
+        return out;
+      });
+      expect(words.map((entry) => entry.word)).toEqual(["Wholesale", "Provisions", "Company"]);
+      expect(words.filter((entry) => entry.rects !== 1)).toEqual([]);
+    });
+  }
+
+  // AC-0019: with a 17 px scrollbar and 16 px to spare taken from the right, the table still shows.
+  test("AC-0019: at 1280x720 with 33 px of the width taken, Recent receipts still read as a table under their header line", async ({
+    page,
+  }) => {
+    await opensReceiving(page, 1280, 720);
+    await page.evaluate(() => {
+      document.documentElement.style.paddingRight = "33px";
+    });
+    await expect(recentReceipts(page).locator("div[aria-hidden='true']")).toBeVisible();
   });
 
   for (const [width, height] of [

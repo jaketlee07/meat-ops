@@ -42,7 +42,7 @@ function Status({ receipt }: { receipt: RecentReceipt }) {
   return (
     <div className={`flex flex-wrap items-start gap-2 ${ACTIONS} ${MESSAGE_ROW}`}>
       {receipt.status === "in-use" ? (
-        <p className="flex min-h-control items-center rounded-full bg-card-border px-2.5 text-sm font-semibold">In use</p>
+        <p className="flex min-h-control items-center rounded-full bg-mark-fill px-2.5 text-sm font-semibold">In use</p>
       ) : (
         <VoidDialog
           lotNumber={receipt.lotNumber}

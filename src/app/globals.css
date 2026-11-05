@@ -27,6 +27,9 @@
   --color-status-nocost: #94a3b8;
   --color-advice-fill: #fffbeb;
   --color-advice-text: #92400e;
+  /* Receiving: the fill of the "In use" mark. Same color as --color-card-border, kept apart so a border rule
+     never moves it. */
+  --color-mark-fill: #e2e8f0;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
   --spacing-control: 44px;
@@ -50,14 +53,26 @@
 
 /* Recent receipts read as a table only when the screen is wide and the section itself is wide
    enough for the row's fixed tracks (about 35.75rem of columns, gaps, and padding) plus a vendor
-   column. The section is the container named receipts. The width is in rem, so a larger browser
-   text size keeps the receipts as cards until the section has grown to fit; at the default size
-   the section is about 39rem wide at 1280 px and the table shows. */
+   column that holds a ten-letter word (about 4.75rem). The section is the container named
+   receipts. The width is in rem, so a larger browser text size keeps the receipts as cards until
+   the section has grown to fit; at the default size the section is about 43rem wide at 1280 px
+   (about 41rem with a 17 px scrollbar and 16 px to spare) and the table shows. */
 @custom-variant receipt-table {
   @media (min-width: 1280px) {
-    @container receipts (min-width: 38rem) {
+    @container receipts (min-width: 40.5rem) {
       @slot;
     }
+  }
+}
+
+/* The Pricing list reads as a table only when the list itself is wide enough for a row: a product
+   column and five figure columns (about 37rem at the default text size). The list is the container
+   named pricing. The width is in rem, so a larger browser text size keeps the cards until the list
+   has grown to fit. At the default size this is a table at 1024 px and 1279 px on its own, and beside
+   the details panel (about 608 px) from 1279 px but not at 1024 px (about 352 px). */
+@custom-variant price-table {
+  @container pricing (min-width: 37rem) {
+    @slot;
   }
 }
 

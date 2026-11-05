@@ -37,7 +37,8 @@ export default async function PricingPage({
   // finished product's is shown back as plain text, never as markup.
   const productCode = textParam(query.product);
   if (productCode !== undefined) {
-    const detail = await getPricingDetail(supabase, productCode);
+    // Both reads start together, so the list does not wait on the details.
+    const [detail, rows] = await Promise.all([getPricingDetail(supabase, productCode), listPricing(supabase)]);
     if (!detail) {
       return (
         <PageShell title="Pricing" current="pricing" fullWidth>
@@ -45,7 +46,6 @@ export default async function PricingPage({
         </PageShell>
       );
     }
-    const rows = await listPricing(supabase);
     // The panel comes first in the page, so Tab reaches its controls before the list's
     // links. From desk up the grid puts the list on the left and the panel on the right;
     // under desk the tiles and the list are hidden and the details show alone.

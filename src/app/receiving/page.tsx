@@ -14,11 +14,11 @@ import { ProductRegion } from "./product-region";
 import { ReceiptForm } from "./receipt-form";
 
 // From desk up, <main> is a grid: the shell's title-and-banner div across the top, the
-// form and the result in the 340 px left column, and the stock card and Recent receipts in
+// form and the result in the left column (340 px, 280 px from wide up, so the receipts table has room), and the stock card and Recent receipts in
 // the right one (#product-region is display: contents, so its two sections are grid items).
 // The DOM order, and so Tab order, stays form, result, region. Each child names its area.
 const MAIN_GRID =
-  "desk:grid desk:grid-cols-[340px_minmax(0,1fr)] desk:grid-rows-[auto_auto_1fr_auto] desk:items-start desk:gap-x-4 desk:[grid-template-areas:'head_head'_'form_stock'_'form_recent'_'result_recent'] desk:[&>div:first-child]:[grid-area:head]";
+  "desk:grid desk:grid-cols-[340px_minmax(0,1fr)] wide:grid-cols-[280px_minmax(0,1fr)] desk:grid-rows-[auto_auto_1fr_auto] desk:items-start desk:gap-x-4 desk:[grid-template-areas:'head_head'_'form_stock'_'form_recent'_'result_recent'] desk:[&>div:first-child]:[grid-area:head]";
 
 // Every page settles who is asking. The proxy only refreshes the session.
 // The chosen product lives in the URL (?product=<code>), so the server renders

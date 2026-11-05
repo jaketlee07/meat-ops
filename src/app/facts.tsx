@@ -26,9 +26,9 @@ const LABEL_CLASS: Record<Look, string> = {
   cells: "min-w-0 flex-1 break-words text-ink-secondary",
 };
 
-// "list" and "cells" (below the table) keep the value's own width, up to 60%, and let the label wrap
-// instead; "tiles" sets no width cap. In the table, "cells" lets
-// the value shrink to its column and wrap.
+// "list" and "cells" keep the value's own width, up to 60%, and let the label wrap instead; the
+// list classes apply where the section is not a table. "tiles" sets no width cap. Where the
+// section is a table, "cells" lets the value shrink to its column and wrap.
 const VALUE_CLASS: Record<Look, string> = {
   list: "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums",
   tiles: "break-words text-lg font-semibold tabular-nums",

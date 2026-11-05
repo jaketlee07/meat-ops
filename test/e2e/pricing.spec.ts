@@ -806,12 +806,12 @@ test.describe("the detail", () => {
     await page.getByRole("button", { name: "Raise list price to $3.29/lb" }).click();
     await expect(d.saved).toHaveText("List price for 502 saved: $3.29/lb.");
     await expect(d.saved).toBeFocused();
-    await expect(figure(d.main, "List price")).toHaveText("$3.29/lb");
-    await expect(figure(d.main, "Margin at list price")).toHaveText("20.01%");
+    await expect(figure(d.region, "List price")).toHaveText("$3.29/lb");
+    await expect(figure(d.region, "Margin at list price")).toHaveText("20.01%");
     await expect(d.price).toHaveValue("3.29");
     expect(await storedListPrice(PROD_502_ID)).toBe(3.29);
     // At its suggested price the advice and the button are gone.
-    await expect(d.main.getByRole("button", { name: /list price to/ })).toHaveCount(0);
+    await expect(d.region.getByRole("button", { name: /list price to/ })).toHaveCount(0);
     await expect(page.getByText(/^Cost is /)).toHaveCount(0);
   });
 
@@ -886,8 +886,8 @@ test.describe("the target margin", () => {
     await opensDetail(page, "502");
     const d = detail(page);
     // Before the save: the no-target layout.
-    await expect(figure(d.main, "Profit")).toHaveText("$0.0500/lb");
-    await expect(d.main.getByText(NO_TARGET_SENTENCE, { exact: true })).toBeVisible();
+    await expect(figure(d.region, "Profit")).toHaveText("$0.0500/lb");
+    await expect(d.region.getByText(NO_TARGET_SENTENCE, { exact: true })).toBeVisible();
     await expect(d.target).toHaveValue("");
     await d.target.focus();
     await page.keyboard.type("22.50");
@@ -898,11 +898,11 @@ test.describe("the target margin", () => {
     await expect(d.saved).toBeFocused();
     await expect(d.saved).toHaveAttribute("role", "status");
     await expect(d.refused).toHaveText("");
-    await expect(figure(d.main, "Target margin")).toHaveText("22.5%");
-    await expect(figure(d.main, "Suggested price")).toHaveText("$3.40/lb");
+    await expect(figure(d.region, "Target margin")).toHaveText("22.5%");
+    await expect(figure(d.region, "Suggested price")).toHaveText("$3.40/lb");
     // After the save: the target layout, with no margin fee and no no-target sentence.
-    await expect(d.main.getByText(NO_TARGET_SENTENCE, { exact: true })).toHaveCount(0);
-    await expect(d.main.getByText("Profit", { exact: true })).toHaveCount(0);
+    await expect(d.region.getByText(NO_TARGET_SENTENCE, { exact: true })).toHaveCount(0);
+    await expect(d.region.getByText("Profit", { exact: true })).toHaveCount(0);
     await expect(d.target).toHaveValue("22.5");
     expect(await storedTarget(PROD_502_ID)).toBe(0.225);
     // The detail after a target save.
@@ -930,8 +930,8 @@ test.describe("the target margin", () => {
     await page.keyboard.press("Enter");
     await expect(d.saved).toHaveText("Target margin for 502 removed.");
     await expect(d.saved).toBeFocused();
-    await expect(figure(d.main, "Profit")).toHaveText("$0.0500/lb");
-    await expect(figure(d.main, "Suggested price")).toHaveText("$2.68/lb");
+    await expect(figure(d.region, "Profit")).toHaveText("$0.0500/lb");
+    await expect(figure(d.region, "Suggested price")).toHaveText("$2.68/lb");
     await expect(d.target).toHaveValue("");
     await expect(d.removeTarget).toHaveCount(0);
     expect(await storedTarget(PROD_502_ID)).toBeNull();
@@ -1003,8 +1003,8 @@ test.describe("the list price", () => {
     await page.keyboard.press("Space");
     await expect(d.saved).toHaveText("List price for 502 saved: $3.50/lb.");
     await expect(d.saved).toBeFocused();
-    await expect(figure(d.main, "List price")).toHaveText("$3.50/lb");
-    await expect(figure(d.main, "Margin at list price")).toHaveText("24.81%");
+    await expect(figure(d.region, "List price")).toHaveText("$3.50/lb");
+    await expect(figure(d.region, "Margin at list price")).toHaveText("24.81%");
     await expect(d.price).toHaveValue("3.50");
     expect(await storedListPrice(PROD_502_ID)).toBe(3.5);
     // The detail after a list price save.
