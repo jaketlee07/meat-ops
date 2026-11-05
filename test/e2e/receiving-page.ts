@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { Pool, type PoolClient } from "pg";
 import { callAsOperator, getOperatorId, idOf, query, RAW_TOM_ID, receiveCall, VENDOR_ID } from "../db";
 import { resolveStackEnv } from "../env";
+import { HEADER_STOPS } from "./shell-page";
 
 // What the receiving specs share: how to find the form's parts, fill it, and
 // read raw tables through pg. The pg pool stays open: every spec in this worker
@@ -25,16 +26,7 @@ export const RECEIVING_FORM = "New receipt";
 
 // What Tab reaches on the receiving page, in order.
 export const FORM_CONTROLS = [
-  "a Receiving",
-  "a Production",
-  "a Menu",
-  "a Pricing",
-  "a Sales",
-  "a Trace",
-  "a Invoices",
-  "a Ask",
-  "a Alerts",
-  "button Sign out",
+  ...HEADER_STOPS,
   "input #product-code",
   "select #vendor",
   "input #weight",

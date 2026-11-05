@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
-/* Design tokens. Stripe Dashboard forms are the reference: a light surface,
-   high contrast, no gradients. Contrast pairs are checked by the browser suite. */
+/* Design tokens. The reference is look E from the UI directions canvas: a navy
+   side menu and phone top bar, white cards on a cool blue-gray page, and blue
+   #1D4ED8 buttons and highlights. High contrast, no gradients. Contrast pairs
+   are checked by the browser suite. */
 @theme {
   --color-surface: #ffffff;
   --color-ink: #111827;
@@ -11,14 +13,35 @@
   --color-error: #b91c1c;
   --color-success: #15803d;
   --color-field-border: #6b7280;
+  --color-page: #f3f6fa;
+  --color-bar: #0f276c;
+  --color-on-bar: #ffffff;
+  --color-card-border: #e2e8f0;
+  --color-badge: #dc2626;
+  --color-error-wash: #fef2f2;
+  --color-error-edge: #fecaca;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
   --spacing-control: 44px;
 }
 
+/* The desktop layout starts at 1024 px. */
+@custom-variant desk (@media (min-width: 1024px));
+
+/* Anything on the navy bar: white text, and a white focus ring. */
+@utility on-bar {
+  background-color: var(--color-bar);
+  color: var(--color-on-bar);
+  --focus-ring: var(--color-on-bar);
+}
+
 @layer base {
+  :root {
+    --focus-ring: var(--color-primary);
+  }
+
   body {
-    background-color: var(--color-surface);
+    background-color: var(--color-page);
     color: var(--color-ink);
     font-family: var(--font-sans);
   }
@@ -36,7 +59,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 }

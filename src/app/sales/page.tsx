@@ -3,7 +3,7 @@ import { isOperator } from "../../lib/rpc";
 import { listCustomers, listRecentSales, listSaleProducts } from "../../lib/sales";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { RecentSales } from "./recent-sales";
 import { SaleForm } from "./sale-form";
 import { VoidedSalesProvider } from "./voided-sales";
@@ -27,14 +27,13 @@ export default async function SalesPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Sales" current="sales" />
+    <PageShell title="Sales" current="sales">
       <VoidedSalesProvider>
         <SaleForm products={products} customers={customers} />
         <div className="mt-8">
           <RecentSales {...recent} />
         </div>
       </VoidedSalesProvider>
-    </main>
+    </PageShell>
   );
 }

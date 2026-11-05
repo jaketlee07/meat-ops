@@ -4,7 +4,7 @@ import { isOperator } from "../../lib/rpc";
 import { findLots, getLotTrace, getSaleTrace } from "../../lib/trace";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { FindForms } from "./find-forms";
 import { LotList } from "./lot-list";
 import { LotTraceView } from "./lot-trace";
@@ -59,8 +59,7 @@ export default async function TracePage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Trace" current="trace" />
+    <PageShell title="Trace" current="trace">
       <FindForms
         sale={sale ?? ""}
         lot={lot}
@@ -71,6 +70,6 @@ export default async function TracePage({
       />
       {/* No live region: a trace can list over 1,000 sales. A move to a new lookup focuses the result's heading instead. */}
       <div className="mt-8">{result}</div>
-    </main>
+    </PageShell>
   );
 }

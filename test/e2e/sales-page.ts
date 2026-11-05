@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, type Request } from "@playwright/test";
 import { callAsOperator, idOf, PROD_502_ID, query, saleFixture, type SaleFixture } from "../db";
 import type { SentAction } from "./pricing-page";
+import { HEADER_STOPS } from "./shell-page";
 
 // What the sales specs share: how to find the form's parts, fill it, and read
 // raw tables through pg. Helpers that need nothing sales-specific (captureAction,
@@ -23,16 +24,7 @@ export const DETAILS_MISSING =
 
 // What Tab reaches on /sales before any sale exists, in order.
 export const FORM_CONTROLS = [
-  "a Receiving",
-  "a Production",
-  "a Menu",
-  "a Pricing",
-  "a Sales",
-  "a Trace",
-  "a Invoices",
-  "a Ask",
-  "a Alerts",
-  "button Sign out",
+  ...HEADER_STOPS,
   "input #product-code",
   "input #lbs",
   "input #price-per-lb",

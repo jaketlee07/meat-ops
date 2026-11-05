@@ -3,7 +3,7 @@ import { CATALOG, QUERY_IDS } from "../../lib/ask";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { AskPanel } from "./ask-panel";
 
 // Every page settles who is asking. The proxy only refreshes the session. An
@@ -18,8 +18,7 @@ export default async function AskPage() {
   if (!(await isOperator(supabase))) return <NotAllowed />;
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Ask" current="ask" />
+    <PageShell title="Ask" current="ask">
       <AskPanel />
       <section aria-labelledby="examples-heading" className="mt-8 space-y-2">
         <h2 id="examples-heading" className="text-xl font-semibold">
@@ -33,6 +32,6 @@ export default async function AskPage() {
           ))}
         </ul>
       </section>
-    </main>
+    </PageShell>
   );
 }

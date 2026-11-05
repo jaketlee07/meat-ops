@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { callAsOperator, idOf, PROD_502_ID, produceCall, query, RAW_TOM_ID, receiveCall, VENDOR_ID } from "../db";
+import { HEADER_STOPS } from "./shell-page";
 
 // What the production specs share: how to find the form's parts, fill it, and
 // read raw tables through pg. Helpers that need nothing production-specific
@@ -17,16 +18,7 @@ export const BATCH_UNKNOWN =
 
 // What Tab reaches on the production page, in order.
 export const FORM_CONTROLS = [
-  "a Receiving",
-  "a Production",
-  "a Menu",
-  "a Pricing",
-  "a Sales",
-  "a Trace",
-  "a Invoices",
-  "a Ask",
-  "a Alerts",
-  "button Sign out",
+  ...HEADER_STOPS,
   "input #product-code",
   "input #raw-lbs",
   "input #finished-lbs",

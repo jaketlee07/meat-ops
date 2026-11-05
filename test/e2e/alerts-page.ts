@@ -12,6 +12,7 @@ import {
 import { formatDate } from "../../src/lib/format";
 import { appDate } from "./app-time";
 import { MENU_CONTROLS } from "./menu-page";
+import { HEADER_STOPS } from "./shell-page";
 
 // What the alerts specs share: finding the groups and messages, and building the
 // spec's fixtures through the operations (every receipt, batch, target, and list
@@ -30,13 +31,13 @@ export const ZERO_ID = "00000000-0000-0000-0000-000000000000";
 
 export const HEADER_PAGES = ["/receiving", "/production", "/menu", "/pricing", "/invoices", "/sales", "/trace"] as const;
 
-// Tab order of the header: the links, then Sign out. The banner's link, when
+// Tab order of the header: the menu button, then the Alerts link. The banner's link, when
 // there is one, comes next.
 export const NAV_CONTROLS = MENU_CONTROLS;
 
-// A page with the urgent banner: its See alerts link comes right after Sign out in tab order.
+// A page with the urgent banner: its See alerts link comes right after the header's last stop in tab order.
 export function withSeeAlerts(controls: readonly string[]): string[] {
-  const at = controls.indexOf("button Sign out");
+  const at = controls.lastIndexOf(HEADER_STOPS.slice(-1)[0] ?? "");
   return [...controls.slice(0, at + 1), "a See alerts", ...controls.slice(at + 1)];
 }
 

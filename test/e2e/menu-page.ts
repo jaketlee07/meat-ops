@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { callAsOperator, idOf, produceCall, query, receiveCall, VENDOR_ID } from "../db";
+import { HEADER_STOPS } from "./shell-page";
 
 // What the menu specs share: finding the cards and writing fixtures through pg
 // (master data) and the operations (stock). The pg pool stays open: every spec
@@ -10,16 +11,7 @@ export const NOTHING_SELLABLE = "No product can be sold right now.";
 
 // What Tab reaches on the menu page, in order.
 export const MENU_CONTROLS = [
-  "a Receiving",
-  "a Production",
-  "a Menu",
-  "a Pricing",
-  "a Sales",
-  "a Trace",
-  "a Invoices",
-  "a Ask",
-  "a Alerts",
-  "button Sign out",
+  ...HEADER_STOPS,
 ];
 
 export function sellableSwitch(page: Page): Locator {

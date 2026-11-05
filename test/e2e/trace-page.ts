@@ -2,6 +2,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { callAsOperator, idOf, PROD_502_ID, query, RAW_TOM_ID, receiveCall, produceCall, VENDOR_ID } from "../db";
 import { lotNumberOf } from "./receiving-page";
 import { seedSale } from "./sales-page";
+import { HEADER_STOPS } from "./shell-page";
 
 // What the trace specs share: the find forms' parts, an open helper, the Tab
 // order of the empty page, and fixtures written through pg. The pg pool stays
@@ -17,16 +18,7 @@ export const DATE_REFUSAL = "Enter the received date, or leave it blank.";
 
 // What Tab reaches on the empty /trace page, in order.
 export const TRACE_CONTROLS = [
-  "a Receiving",
-  "a Production",
-  "a Menu",
-  "a Pricing",
-  "a Sales",
-  "a Trace",
-  "a Invoices",
-  "a Ask",
-  "a Alerts",
-  "button Sign out",
+  ...HEADER_STOPS,
   "input #find-sale-number",
   "button Show sale",
   "input #find-raw-code",

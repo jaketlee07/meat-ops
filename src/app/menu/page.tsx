@@ -3,7 +3,7 @@ import { isOperator } from "../../lib/rpc";
 import { getMenu } from "../../lib/views";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
-import { PageHeader } from "../page-header";
+import { PageShell } from "../page-header";
 import { MenuList } from "./menu-list";
 
 // Every page settles who is asking. The proxy only refreshes the session.
@@ -28,9 +28,8 @@ export default async function MenuPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-xl p-4">
-      <PageHeader title="Menu" current="menu" />
+    <PageShell title="Menu" current="menu">
       <MenuList items={items} />
-    </main>
+    </PageShell>
   );
 }
