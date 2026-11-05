@@ -30,7 +30,7 @@ const FIELD_IDS: Record<SaleField, string> = {
 const IDLE: SaleSaveState = { status: "idle" };
 const NO_ERRORS: Partial<Record<SaleField, string>> = {};
 
-const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
+const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
 function deviceToday(): string {
@@ -204,8 +204,8 @@ export function SaleForm({ products, customers }: Props) {
 
   return (
     <>
-      <form onSubmit={submit} aria-labelledby="sale-form-heading" noValidate className="space-y-4">
-        <h2 id="sale-form-heading" className="text-xl font-semibold">
+      <form onSubmit={submit} aria-labelledby="sale-form-heading" noValidate className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]">
+        <h2 id="sale-form-heading" className="text-lg font-bold">
           New sale
         </h2>
 
@@ -345,7 +345,7 @@ export function SaleForm({ products, customers }: Props) {
           onClick={(event) => {
             if (blocked || pending) event.preventDefault();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+          className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60"
         >
           Save sale
         </button>

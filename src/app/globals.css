@@ -87,8 +87,19 @@
   }
 }
 
+/* Sales' Recent sales read as a table only when the section itself is wide enough for a row: fixed
+   tracks, gaps, and padding (about 36.25rem) plus a customer column that holds a short name (about
+   3.75rem). The section is the container named sales. The width is in rem, so a larger browser text
+   size keeps the cards until the section has grown to fit; at the default size the section is about
+   43rem wide at 1280 px and about 23rem at 1024 px. It has no screen gate. */
+@custom-variant sale-table {
+  @container sales (min-width: 40rem) {
+    @slot;
+  }
+}
+
 /* A row's status area (the div after the figures) while one of its child divs holds a non-empty
-   refusal (role alert) or panel (role status), on Receiving's receipts and Production's batches. Not the
+   refusal (role alert) or panel (role status), on Receiving's receipts, Production's batches, and Sales' sales. Not the
    receipt form's own `receipt-message` id. */
 @custom-variant status-has-message (&:has(> div > [role="alert"]:not(:empty), > div > [role="status"]:not(:empty)));
 
