@@ -27,7 +27,7 @@ const ACTIONS = "receipt-table:col-start-7 receipt-table:row-start-1 receipt-tab
 // While a refusal or the "Receipt corrected" panel has text, the status area takes a row of its
 // own across the receipt, below the figures; its place in the page does not change.
 const MESSAGE_ROW =
-  "receipt-table:receipt-message:col-span-full receipt-table:receipt-message:col-start-1 receipt-table:receipt-message:row-start-auto receipt-table:receipt-message:justify-start receipt-table:receipt-message:pb-2";
+  "receipt-table:status-has-message:col-span-full receipt-table:status-has-message:col-start-1 receipt-table:status-has-message:row-start-auto receipt-table:status-has-message:justify-start receipt-table:status-has-message:pb-2";
 
 // Each receipt is a card of labeled facts, so the list fits a 320 px screen
 // with no sideways scroll; where the section is a table it is a row of it. The status is the database's: a Void button where

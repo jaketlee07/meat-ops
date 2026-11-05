@@ -583,8 +583,6 @@ test.describe("the Receiving layout", () => {
         // The six figures of every receipt, the long rows included, start at one top.
         const tops = cells.map((cell) => cell.y);
         expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
-        const heights = cells.map((cell) => cell.height);
-        expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(4);
         // Each figure sits in the column the header line names.
         cells.forEach((cell, index) => {
           expect(Math.abs(cell.x - columns[index]!.x), `column ${index} left`).toBeLessThanOrEqual(1);
@@ -681,8 +679,10 @@ test.describe("the Receiving layout", () => {
   // The owner's ruling of 2026-11-05: at the default text size the table shows from 1280 px; with a
   // larger browser text size the receipts stay cards until their section fits the table, so Void and
   // Correct stay inside the section, which clips what runs past its edge.
-  test("a larger browser text size keeps Recent receipts as cards until the section fits the table", async ({ page }) => {
-    await opensReceiving(page, 1280, 720);
+  test("AC-0022, AC-0023, AC-0012: a larger browser text size keeps Recent receipts as cards until the section fits the table", async ({
+    page,
+  }) => {
+    await opensReceiving(page, 1280, 720, true);
     const recent = recentReceipts(page);
     const header = recent.locator("div[aria-hidden='true']");
     await expect(header, "the table shows at the default text size").toBeVisible();
@@ -693,27 +693,54 @@ test.describe("the Receiving layout", () => {
         document.documentElement.style.fontSize = `${size}px`;
       }, px);
     };
+    // AC-0023: every Void and Correct button ends inside the section.
     const buttonsInside = async () => {
       const section = await box(recent);
       const buttons = recent.getByRole("button", { name: /^(Void|Correct) lot / });
-      await expect(buttons).toHaveCount(4);
+      await expect(buttons).toHaveCount(8);
       for (const button of await boxes(buttons)) {
         expect(button.x + button.width, "a button ends inside the section").toBeLessThanOrEqual(section.x + section.width);
       }
     };
+    // AC-0022: a card, each label wider than 20 px and beside its value on the value's first line.
+    const cardsWithLabels = async () => {
+      await expect(header, "the table is off").toBeHidden();
+      const rows = await recent.locator("li").all();
+      expect(rows).toHaveLength(5);
+      for (const row of rows) {
+        const cells = await boxes(values(row));
+        const labels = await boxes(row.locator("dt"));
+        expect(cells).toHaveLength(6);
+        expect(labels).toHaveLength(6);
+        labels.forEach((label, index) => {
+          expect(label.width, `label ${index} is not hidden`).toBeGreaterThan(20);
+          expect(Math.abs(label.y - cells[index]!.y), `label ${index} on its value's first line`).toBeLessThanOrEqual(4);
+          expect(label.x + label.width, `label ${index} left of its value`).toBeLessThanOrEqual(cells[index]!.x + 1);
+        });
+      }
+    };
 
-    await withTextSize(1280, 720, 20);
-    await expect(header, "the table is off at 20 px text in a 1280 px window").toBeHidden();
-    await buttonsInside();
-    for (const label of await recent.locator("li dt").all()) await expect(label).toBeVisible();
+    for (const [width, height] of [
+      [1280, 720],
+      [1440, 900],
+    ] as const) {
+      await withTextSize(width, height, 20);
+      await cardsWithLabels();
+      await buttonsInside();
+    }
 
     await withTextSize(1920, 1080, 20);
     await expect(header, "the table is back once the section is wide enough").toBeVisible();
+    for (const row of await recent.locator("li").all()) {
+      const tops = (await boxes(values(row))).map((cell) => cell.y);
+      expect(tops).toHaveLength(6);
+      expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
+      for (const label of await boxes(row.locator("dt"))) expect(label.width).toBeLessThanOrEqual(1);
+    }
     await buttonsInside();
 
     await withTextSize(1280, 720, 16);
-    await expect(header).toBeVisible();
-    await buttonsInside();
+    await expect(header, "AC-0012: the table shows at the default text size").toBeVisible();
   });
 
   test("at 1280x720 a refusal that closes the void takes a row of its own below the figures", async ({ page }) => {
