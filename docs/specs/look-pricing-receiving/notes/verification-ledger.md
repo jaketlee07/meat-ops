@@ -86,3 +86,12 @@ Shown to the owner before the verdict: real lot numbers are longer than the boar
 
 - `test/e2e/pricing-page.ts`, `detail()`: `main`, `heading`, the five controls, and the four message locators read inside the region.
 - `test/e2e/pricing.spec.ts`: the `figures()` helper (`dt` and `dd`), the AC-0080/AC-0082 order check (`dt, p`), and the `const main` locators of the two AC-0083 tests read inside the region.
+
+## Post-gates review round 1 (2026-11-05)
+
+- Reviewers: adversarial-reviewer, quality-engineer, and frontend-reviewer in parallel. Named skips: `experience-reviewer` is not installed; `security-reviewer` did not fire (no auth, input, secret, or data-flow change).
+- A controller probe at 1280 px on a build of `db3d64c` confirmed the two worst findings: after a correction, the "Receipt corrected" panel sat in the 96 px actions column and its tables ran past the section (right edges 1372 to 1428 px against the section's 1252 px); "1,234.567 lbs" read `scrollWidth` 92 in a 72 px cell.
+- Adjudicated: 25 sustained (2 Blockers, 4 Concerns, 19 Nits), 8 refuted (among them the shared parts on the page background before spec 3, which the brief accepts). Recorded as round 1, retry 1.
+- Fix commits `737d605` and `da7ca0b`: the correction panel and refusals take a full row from 1280 px; every receipt value the form accepts fits its cell (tested with 100,000.125 lbs, $12.3456/lb, and a 36-letter vendor); `Facts` takes one `look` prop and the receipts own their column rules; the advice block and its button take `look: "row" | "stacked"`; the list owns its top spacing beside the panel; the unknown-code view lifts the cap; `pricing.spec.ts` line 827 checks the whole page again; desktop walks at 1280 px, stronger AC-0003, AC-0004, AC-0005, and AC-0006 checks, and a saved-result column test; the source search covers every text file type under `src/app`. Deferred Nit: renaming `detail(page).main` (quality-engineer finding 14), to keep existing-test churn down.
+- The new long-value, corrected-panel, column-alignment, and accent-edge tests failed against `65735c4`; the top-alignment test failed with the list's own margin rule removed. The lot column was widened after a recapture showed lot numbers on three lines; the screenshots now match the signed-off look.
+- `npm test` on `da7ca0b`: Vitest 1046 passed in 44.7 s; Playwright 790 passed in 10.6 min.
