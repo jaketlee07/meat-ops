@@ -55,3 +55,34 @@ The spec's Assumptions record each of these as a Product line:
 - T5 commit `f728ae8`. Its 13 new tests were written after the code and passed on their first run; they were not seen failing first. `npm test`: Vitest 1046 passed; Playwright 786 passed in 10.5 min. A first full run failed `receiving.spec.ts:458` (sideways scroll at 320 px from the result card's padding); the committed version uses smaller phone padding.
 - Screenshots of the five AC-0018 states (`.context/recorded-run/s2-captures.spec.ts`, run with `PLAYWRIGHT_FORCE_ASYNC_LOADER=1` after `npm run build`) showed four gaps against the boards: mid-word breaks and misaligned columns in the 1280 px receipts table, plain rows where the stock card draws two tinted tiles, the details view's list starting 24 px below the panel, and the build-up's "Cost per lb" and "Suggested price" rows not bold.
 - Polish commit `db3d64c` closes all four within the plan's Touches: a shared receipts column template with fixed number columns and no mid-word breaks, a `tiles` option on `Facts` and a `--color-tint` token, the list's top margin dropped beside the panel while its message regions are empty, and a `strong` option on `Figure`. `Facts` and `Figure` options only choose classes. `npm test`: Vitest 1046 passed in 43 s; Playwright 786 passed in 10.5 min.
+
+## T6: recorded checks (2026-11-05)
+
+### AC-0018: the owner's comparison with the boards
+
+The owner compared each built screen with its board on the UI directions canvas and answered "All five match" in chat on 2026-11-05. The boards are at revision 1793856599-9c48. The as-built screenshots sit in the canvas row "Spec 2 as built" (canvas version 1793865441-ab08). They were captured from a build of `db3d64c` by `.context/recorded-run/s2-captures.spec.ts`, on test data only.
+
+| Board | Built state | Verdict |
+| --- | --- | --- |
+| S2-Pricing-Phone | `/pricing` at 390 px, products in all three groups | match |
+| S2-Receiving-Phone | `/receiving?product=RAW-TOM` at 390 px, three receipts, one void | match |
+| S2-BeforeAfter | the "Receipt saved" result card alone at 390 px | match |
+| S2-Pricing-Desktop | `/pricing?product=NB` at 1280 px, a product that needs a new price | match |
+| S2-Receiving-Desktop | `/receiving?product=RAW-TOM` at 1280 px, three receipts, one void | match |
+
+Shown to the owner before the verdict: real lot numbers are longer than the boards', so desktop receipt rows wrap and Void and Correct stack; the before-and-after header tint runs edge to edge, because a 10 px inset scrolled sideways at 320 px; the test data shows an urgent-alerts banner the boards do not draw.
+
+### AC-0017: the whole suite
+
+`npm test` on `3f63c31` (code as of `db3d64c`): Vitest 54 files, 1046 passed in 42.2 s; Playwright 786 passed in 10.5 min. The folder check listed no folder, and the slot fix ran first.
+
+### AC-0019: the shared parts' markup
+
+`git diff 2d9f923 -- src/app/facts.tsx src/app/before-after.tsx`, read in full. `BeforeAfter` changed only `className` values. `Facts` gained `inline` and `tiles`, which only choose class strings; called with `rows` alone, as on `main`, it renders the same `dl`, `div`, `dt`, and `dd` in the same nesting, with the same `key`s and text and no attribute other than `class` changed.
+
+### AC-0020: the test diff
+
+`git diff 2d9f923 -- test/e2e`, read in full; `git ls-files --others --exclude-standard -- test/e2e` lists nothing. New files: `test/e2e/look-pages.spec.ts` and `test/look-source.test.ts`. Changed expectations in existing test files, each scoping a read on `/pricing?product=<code>` to the "Product details" region, with no asserted value, name, count, or order changed:
+
+- `test/e2e/pricing-page.ts`, `detail()`: `main`, `heading`, the five controls, and the four message locators read inside the region.
+- `test/e2e/pricing.spec.ts`: the `figures()` helper (`dt` and `dd`), the AC-0080/AC-0082 order check (`dt, p`), and the `const main` locators of the two AC-0083 tests read inside the region.
