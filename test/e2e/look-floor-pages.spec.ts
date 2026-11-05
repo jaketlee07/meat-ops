@@ -16,7 +16,7 @@ import {
   seed502Fixture,
   seedBatch,
 } from "./production-page";
-import { factValue } from "./receiving-page";
+import { factValue, fillReceipt, openForm as openReceivingForm } from "./receiving-page";
 import {
   fillSale,
   fixtureWithPrice,
@@ -845,4 +845,55 @@ test.describe("the Trace layout", () => {
     expect(await checkPageState(page)).toEqual(await traceControls(sale));
     await checkDesktopWalk(page);
   });
+});
+
+// The saved result sits in the form column, which is narrow from 1280 px. Every before-and-after table
+// in it ends inside the card's inner edge: the card's right edge minus its right padding.
+async function expectTablesInside(name: string, result: Locator, minimum: number) {
+  const tables = result.locator("table");
+  await expect(tables.first()).toBeVisible();
+  const edges = await result.evaluate((card) => {
+    const inner = card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight);
+    return [...card.querySelectorAll("table")].map((table) => ({ table: table.getBoundingClientRect().right, inner }));
+  });
+  expect(edges.length, `${name}: tables`).toBeGreaterThanOrEqual(minimum);
+  for (const edge of edges) expect.soft(edge.table, `${name}: table right ${edge.table}, card inner ${edge.inner}`).toBeLessThanOrEqual(edge.inner + 0.5);
+}
+
+test.describe("the saved results", () => {
+  for (const [width, height, px] of [
+    [1024, 768, 16],
+    [1280, 720, 16],
+    [1440, 900, 16],
+    [1280, 720, 20],
+  ] as const) {
+    test(`the saved results' before-and-after tables stay inside their cards at ${width}x${height}, ${px} px text`, async ({
+      page,
+    }) => {
+      const production = await opensProduction(page, width, height);
+      await withTextSize(page, width, height, px);
+      await expectTablesInside("production", production.f.result, 1);
+
+      await resetTestData();
+      await fixtureWithPrice();
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const sales = await openSalesForm(page);
+      await fillSale(sales, { lbs: "100", customer: "Fulton Market Deli", date: "2026-10-08" });
+      await sales.save.click();
+      await expect(sales.result.getByRole("heading", { name: "Sale saved" })).toBeVisible();
+      await withTextSize(page, width, height, px);
+      await expectTablesInside("sales", sales.result, 1);
+
+      await resetTestData();
+      await seed502Fixture();
+      await seedBatch(1000, "2026-10-06");
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const receiving = await openReceivingForm(page);
+      await fillReceipt(receiving, { weight: "1000", cost: "1.9" });
+      await receiving.save.click();
+      await expect(receiving.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
+      await withTextSize(page, width, height, px);
+      await expectTablesInside("receiving", receiving.result, 2);
+    });
+  }
 });

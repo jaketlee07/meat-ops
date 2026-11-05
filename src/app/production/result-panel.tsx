@@ -26,7 +26,7 @@ export function ResultPanel({
       aria-label="Batch result"
       className={
         view
-          ? "mt-4 space-y-4 rounded-card border border-card-border bg-surface p-2.5 desk:p-4 desk:[grid-area:result]"
+          ? "@container mt-4 space-y-4 rounded-card border border-card-border bg-surface p-2.5 desk:p-4 desk:[grid-area:result]"
           : "desk:[grid-area:result]"
       }
     >
