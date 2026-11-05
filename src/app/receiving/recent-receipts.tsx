@@ -10,7 +10,7 @@ const HEADING_ID = "recent-receipts-heading";
 // From wide up the section reads as a table: one template for the header line and every
 // receipt, six figure columns and an actions column. Under wide each receipt is a card.
 const TABLE_COLUMNS =
-  "wide:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_repeat(3,minmax(0,1fr))_minmax(0,1.4fr)] wide:gap-x-2 wide:px-4";
+  "wide:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)_minmax(0,1.1fr)_4.5rem_5rem_4.5rem_6rem] wide:gap-x-2 wide:px-4";
 const COLUMN_NAMES = ["Lot number", "Received", "Vendor", "Weight", "Cost per lb", "Remaining"];
 // The status and buttons sit in the last column, on the receipt's first line.
 const ACTIONS = "wide:col-start-7 wide:row-start-1 wide:justify-end";

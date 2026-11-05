@@ -86,6 +86,7 @@ export function PricingDetail({ detail }: { detail: Detail }) {
             <Figure key={fee.name} label={fee.name} value={formatCostPerLb(fee.amountPerLb)} />
           ))}
           <Figure
+            strong
             label="Cost per lb"
             value={!detail.hasCost || detail.costPerLb === null ? "None yet" : formatCostPerLb(detail.costPerLb)}
           />
@@ -95,6 +96,7 @@ export function PricingDetail({ detail }: { detail: Detail }) {
               <Figure key={fee.name} label={fee.name} value={formatCostPerLb(fee.amountPerLb)} />
             ))}
           <Figure
+            strong
             label="Suggested price"
             value={detail.suggestedListPrice === null ? "No price yet" : formatPricePerLb(detail.suggestedListPrice)}
           />

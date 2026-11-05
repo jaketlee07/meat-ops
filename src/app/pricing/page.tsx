@@ -61,7 +61,8 @@ export default async function PricingPage({
           >
             <PricingDetail key={detail.productId} detail={detail} />
           </section>
-          <div className="hidden min-w-0 desk:col-start-1 desk:row-start-1 desk:block">
+          {/* The list's empty message region keeps a 24 px gap under it; with no message, close it so the first group lines up with the panel. */}
+          <div className="hidden min-w-0 desk:col-start-1 desk:row-start-1 desk:block desk:[&>div>div:first-child:not(:has([role]:not(:empty)))]:mb-0">
             <PricingList rows={rows} openCode={detail.code} />
           </div>
         </div>

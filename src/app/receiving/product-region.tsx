@@ -19,21 +19,25 @@ export function ProductRegion({
   const view = stockView(stock);
   return (
     <>
-      <section aria-labelledby="stock-heading" className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:mb-4 desk:p-4 desk:[grid-area:stock]">
-        <h2 id="stock-heading" className="text-lg font-bold">
+      <section aria-labelledby="stock-heading" className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:mb-4 desk:p-4 desk:[grid-area:stock] wide:grid wide:grid-cols-2 wide:gap-x-6 wide:gap-y-3 wide:space-y-0">
+        <h2 id="stock-heading" className="text-lg font-bold wide:col-span-2">
           Stock and prices
         </h2>
-        <Facts rows={[["On hand", showOnHand(view)], ["Average cost", showAverage(view)]]} />
-        <h3 className="text-base font-bold">Suggested price per lb</h3>
+        <div className="wide:col-start-1 wide:row-span-2 wide:row-start-2 wide:self-start">
+          <Facts tiles rows={[["On hand", showOnHand(view)], ["Average cost", showAverage(view)]]} />
+        </div>
+        <h3 className="text-base font-bold wide:col-start-2 wide:row-start-2">Suggested price per lb</h3>
         {prices.length === 0 ? (
-          <p>{NO_FINISHED}</p>
+          <p className="wide:col-start-2 wide:row-start-3">{NO_FINISHED}</p>
         ) : (
-          <Facts
+          <div className="wide:col-start-2 wide:row-start-3">
+            <Facts
             rows={prices.map((row) => [
               `${row.code} ${row.description}`,
               showPrice(priceView(row, stock)),
             ])}
-          />
+            />
+          </div>
         )}
       </section>
       <RecentReceipts {...recent} />
