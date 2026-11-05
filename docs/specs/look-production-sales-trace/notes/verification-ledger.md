@@ -27,3 +27,10 @@ The spec's Assumptions record each of these as a Product line:
 - The owner approved the spec and the plan in chat on 2026-11-05 and chose to start building, and approved the stack A slot fix before each full test run for this build.
 - Work-loop run `c3f5e50e-7b0f-434e-8b69-cbdbefb337d0`. `approve-plan` recorded spec hash `5df0f279dbb0…` and plan hash `53f9123a9e3f…`. The schedule runs T1, T2, T3, T4, then T5.
 - Base: `9e661f8` on branch `feat/look-production-sales-trace` in the main folder, on stack A.
+
+## T1 (2026-11-05)
+
+- Commit `eca05ca`. The Pricing list is the size container `pricing`, and one custom variant `price-table` (`@container pricing (min-width: 37rem)`) carries its whole table look, the open row's accent edge, and the advice block's and one-press button's row placement. Receiving's form column is 280 px from 1280 px (340 px below), and `receipt-table` rose from 38rem to 40.5rem: at 1280 px the section is 688 px, and 655 px with 33 px taken (7 px over the threshold); "Provisions" is 66 px in an 81 px Vendor cell.
+- `test/look-tidy.test.ts` (AC-0020 to AC-0022) failed 3 of 3 on the tree before the change. Of the new browser tests, AC-0017 at 1279 and 1024 px full width and beside the panel at 1279 px, AC-0018 at 1280 px, and AC-0019 failed against the old source; AC-0018 at 1440 px, the 1024 px beside-panel card test, AC-0017's 20 px step, and AC-0031 passed on it (AC-0031 gained a header-visible check afterward).
+- Changed lines in existing test files: `pricing-page.ts` `detail()` returns `region`; `pricing.spec.ts` 13 uses of `d.main` became `d.region`; `look-pages.spec.ts` replaced its Pricing cards checks at 1279 and 1024 px (full width) and at 1279 px beside the panel with AC-0017's table checks.
+- `npm test`: Vitest 55 files, 1050 passed; Playwright 800 passed in 11.0 min. Other projects' folders showed in the folder check throughout; AGENTS.md says they use neither stack, and the slot fix ran only once the check came back clear.
