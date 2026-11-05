@@ -21,10 +21,10 @@ export function PageError({ heading, extra, retry }: { heading: string; extra?: 
 
   return (
     <LoneCard>
-      <h1 ref={headingRef} tabIndex={-1} aria-describedby={messageId} className="text-[22px] font-bold">
+      <h1 ref={headingRef} tabIndex={-1} aria-describedby={messageId} className="text-title font-bold">
         {heading}
       </h1>
-      <div id={messageId} role="alert" className="space-y-2 rounded-[10px] border border-error-edge bg-error-wash px-3 py-2.5 text-base font-semibold text-error">
+      <div id={messageId} role="alert" className="space-y-2 rounded-control border border-error-edge bg-error-wash px-3 py-2.5 text-base font-semibold text-error">
         <p>Couldn&apos;t load this page.</p>
         {extra && <p>{extra}</p>}
       </div>

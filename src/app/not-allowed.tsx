@@ -6,7 +6,7 @@ import { signOut } from "./sign-in/actions";
 export function NotAllowed() {
   return (
     <LoneCard>
-      <h1 className="text-[22px] font-bold">Not allowed</h1>
+      <h1 className="text-title font-bold">Not allowed</h1>
       <p className="text-base text-ink-secondary">{NOT_ALLOWED}</p>
       <form action={signOut} className="flex flex-col">
         <button type="submit" className="h-12 w-full rounded-xl bg-primary px-4 text-base font-bold text-on-primary">

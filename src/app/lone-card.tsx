@@ -9,13 +9,13 @@ export function LoneCard({ children }: { children: ReactNode }) {
       <header className="flex items-center gap-2.5">
         <span
           aria-hidden="true"
-          className="flex size-9 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-on-primary"
+          className="flex size-9 items-center justify-center rounded-control bg-primary text-sm font-bold text-on-primary"
         >
           MO
         </span>
         <span className="text-lg font-bold">Meat Ops</span>
       </header>
-      <main className="flex w-full max-w-sm flex-col gap-4 rounded-[14px] border border-card-border bg-surface p-5">
+      <main className="flex w-full max-w-sm flex-col gap-4 rounded-card border border-card-border bg-surface p-5">
         {children}
       </main>
     </div>

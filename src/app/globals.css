@@ -23,6 +23,14 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
   --spacing-control: 44px;
+  /* Corner radii: controls and bars, cards, and the small marks and count badges. */
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-mark: 9px;
+  /* Type sizes the screens use beyond Tailwind's scale: page titles, form notes, count badges. */
+  --text-title: 22px;
+  --text-note: 15px;
+  --text-count: 11px;
 }
 
 /* The desktop layout starts at 1024 px. It is set in px, not rem, so the switch does not

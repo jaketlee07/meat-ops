@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { LineIcon } from "./line-icon";
 
 // The width where the side menu takes over from the top bar; the same query as
 // the `desk` variant in globals.css.
@@ -55,20 +56,9 @@ export function PhoneMenu({ children }: { children: ReactNode }) {
         type="button"
         aria-label="Open menu"
         onClick={() => dialogRef.current?.showModal()}
-        className="flex size-control items-center justify-center rounded-[10px]"
+        className="flex size-control items-center justify-center rounded-control"
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          aria-hidden="true"
-        >
-          <path d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        <LineIcon path="M4 6h16M4 12h16M4 18h16" size={20} strokeWidth={2} />
       </button>
       <dialog
         ref={dialogRef}
@@ -79,20 +69,9 @@ export function PhoneMenu({ children }: { children: ReactNode }) {
         <button
           type="button"
           onClick={() => dialogRef.current?.close()}
-          className="absolute top-2 right-3 flex size-control items-center justify-center rounded-[10px]"
+          className="absolute top-2 right-3 flex size-control items-center justify-center rounded-control"
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
+          <LineIcon path="M6 6l12 12M18 6 6 18" size={20} strokeWidth={2} />
           <span className="sr-only">Close menu</span>
         </button>
         <div className="flex h-full flex-col gap-1 overflow-y-auto px-3 pt-2 pb-4">{children}</div>
