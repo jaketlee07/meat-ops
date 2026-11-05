@@ -18,16 +18,52 @@
   --color-on-bar: #ffffff;
   --color-card-border: #e2e8f0;
   --color-badge: #dc2626;
+  --color-tint: #f1f4fd;
   --color-error-wash: #fef2f2;
   --color-error-edge: #fecaca;
+  /* Pricing: the tiles' top edges by group, and the advice box. */
+  --color-status-needs: #d97706;
+  --color-status-priced: #16a34a;
+  --color-status-nocost: #94a3b8;
+  --color-advice-fill: #fffbeb;
+  --color-advice-text: #92400e;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
   --spacing-control: 44px;
+  /* Corner radii: controls and bars, cards, and the small marks and count badges. */
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-mark: 9px;
+  /* Type sizes the screens use beyond Tailwind's scale: page titles, form notes, count badges. */
+  --text-title: 22px;
+  --text-note: 15px;
+  --text-count: 11px;
 }
 
 /* The desktop layout starts at 1024 px. It is set in px, not rem, so the switch does not
    move with the browser's default font size; phone-menu.tsx watches the same query. */
 @custom-variant desk (@media (min-width: 1024px));
+
+/* Wide screens: lists that read as tables start at 1280 px, when the side menu leaves
+   room for six columns. Set in px for the same reason as desk. */
+@custom-variant wide (@media (min-width: 1280px));
+
+/* Recent receipts read as a table only when the screen is wide and the section itself is wide
+   enough for the row's fixed tracks (about 35.75rem of columns, gaps, and padding) plus a vendor
+   column. The section is the container named receipts. The width is in rem, so a larger browser
+   text size keeps the receipts as cards until the section has grown to fit; at the default size
+   the section is about 39rem wide at 1280 px and the table shows. */
+@custom-variant receipt-table {
+  @media (min-width: 1280px) {
+    @container receipts (min-width: 38rem) {
+      @slot;
+    }
+  }
+}
+
+/* A receipt's status area (the div after the figures) while one of its child divs holds a non-empty
+   refusal (role alert) or panel (role status). Not the receipt form's own `receipt-message` id. */
+@custom-variant status-has-message (&:has(> div > [role="alert"]:not(:empty), > div > [role="status"]:not(:empty)));
 
 /* Anything on the navy bar: white text, and a white focus ring. */
 @utility on-bar {

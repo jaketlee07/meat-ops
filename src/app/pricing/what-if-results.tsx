@@ -10,13 +10,13 @@ export function WhatIfResults({ rawCode, rows }: { rawCode: string; rows: WhatIf
     return <p className="mt-4 break-words text-base">No active finished product is made from {rawCode}.</p>;
   }
   return (
-    <ul className="mt-4 space-y-3">
+    <ul className="mt-4 max-w-md space-y-3">
       {rows.map((row) => (
-        <li key={row.product_id} className="rounded-md border border-field-border p-3">
-          <h3 className="text-lg font-semibold break-words">
+        <li key={row.product_id} className="rounded-control border border-card-border bg-page p-3">
+          <h3 className="text-lg font-bold break-words">
             {row.code} {row.description}
           </h3>
-          <dl className="mt-1 space-y-1 text-base tabular-nums">
+          <dl className="mt-1 space-y-1 text-note tabular-nums">
             <Figure label="Cost per lb" value={formatCostPerLb(row.cost_per_lb)} />
             <Figure label="Suggested price" value={formatPricePerLb(row.suggested_list_price)} />
             <Figure

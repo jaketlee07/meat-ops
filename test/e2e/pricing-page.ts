@@ -108,18 +108,20 @@ export async function opensDetail(page: Page, code: string): Promise<void> {
 }
 
 export function detail(page: Page) {
+  // Every read is inside the "Product details" region: the list beside it has links and headings too.
+  const region = page.getByRole("region", { name: "Product details" });
   return {
-    main: page.locator("main"),
-    heading: page.getByRole("heading", { level: 2 }).first(),
-    target: page.getByRole("textbox", { name: "Target margin %" }),
-    price: page.getByRole("textbox", { name: "List price per lb" }),
-    saveTarget: page.getByRole("button", { name: "Save target" }),
-    removeTarget: page.getByRole("button", { name: "Remove target margin" }),
-    savePrice: page.getByRole("button", { name: "Save price" }),
-    saved: page.locator("#change-saved"),
-    refused: page.locator("#change-refused"),
-    targetError: page.locator("#target-margin-error"),
-    priceError: page.locator("#list-price-error"),
+    main: region,
+    heading: region.getByRole("heading", { level: 2 }).first(),
+    target: region.getByRole("textbox", { name: "Target margin %" }),
+    price: region.getByRole("textbox", { name: "List price per lb" }),
+    saveTarget: region.getByRole("button", { name: "Save target" }),
+    removeTarget: region.getByRole("button", { name: "Remove target margin" }),
+    savePrice: region.getByRole("button", { name: "Save price" }),
+    saved: region.locator("#change-saved"),
+    refused: region.locator("#change-refused"),
+    targetError: region.locator("#target-margin-error"),
+    priceError: region.locator("#list-price-error"),
   };
 }
 

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { runWatch, type Watch } from "./_server/watch";
 import { PhoneMenu } from "./phone-menu";
+import { LineIcon } from "./line-icon";
 import { signOut } from "./sign-in/actions";
 
 export const WATCH_FAILED = "Alerts couldn't be checked.";
@@ -42,10 +43,16 @@ const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string; icon: 
 export async function PageShell({
   title,
   current,
+  fullWidth = false,
+  mainClassName = "",
   children,
 }: {
   title: string;
   current: PageName;
+  // Drops the desktop content cap, for a page that lays out wider than a single column.
+  fullWidth?: boolean;
+  // Extra classes for <main> itself, for a page that lays out its direct children as a grid.
+  mainClassName?: string;
   children: ReactNode;
 }) {
   const watch = current === "alerts" ? null : await runWatch();
@@ -71,7 +78,7 @@ export async function PageShell({
           <AlertsLink urgent={urgent} current={current === "alerts"} />
         </header>
         {/* The 34rem cap is the 36rem column less its two 1rem paddings. The first child is the shell's title-and-banner div and must stay <main>'s first child. Dialogs keep their own width. */}
-        <main className="mx-auto w-full max-w-xl p-4 desk:mx-0 desk:max-w-none desk:px-7 desk:py-6 desk:[&>*:not(:first-child,dialog)]:max-w-[34rem]">
+        <main className={`mx-auto w-full max-w-xl p-4 desk:mx-0 desk:max-w-none desk:px-7 desk:py-6 ${fullWidth ? "" : "desk:[&>*:not(:first-child,dialog)]:max-w-[34rem]"} ${mainClassName}`}>
           <div>
             <h1 className="hidden text-2xl font-bold desk:mb-4 desk:block">{title}</h1>
             {/* A status container that is in the page before a save fills it, so a banner a save raises is announced. */}
@@ -93,7 +100,7 @@ function Brand() {
     <div className="flex min-h-control items-center gap-2.5 px-2">
       <span
         aria-hidden="true"
-        className="flex size-[30px] items-center justify-center rounded-[9px] bg-on-bar text-xs font-bold text-primary"
+        className="flex size-[30px] items-center justify-center rounded-mark bg-on-bar text-xs font-bold text-primary"
       >
         MO
       </span>
@@ -123,24 +130,12 @@ function PrimaryNav({ current, urgent }: { current: PageName; urgent: number }) 
             <Link
               href={page.href}
               aria-current={page.name === current ? "page" : undefined}
-              className="flex min-h-control items-center gap-2.5 rounded-[10px] px-2.5 font-medium text-on-bar/85 aria-[current=page]:bg-on-bar/16 aria-[current=page]:font-bold aria-[current=page]:text-on-bar aria-[current=page]:shadow-[inset_3px_0_0_var(--color-on-bar)]"
+              className="flex min-h-control items-center gap-2.5 rounded-control px-2.5 font-medium text-on-bar/85 aria-[current=page]:bg-on-bar/16 aria-[current=page]:font-bold aria-[current=page]:text-on-bar aria-[current=page]:shadow-[inset_3px_0_0_var(--color-on-bar)]"
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d={page.icon} />
-              </svg>
+              <LineIcon path={page.icon} size={18} strokeWidth={1.8} roundJoin />
               <span className="flex-1">{page.label}</span>
               {page.name === "alerts" && (
-                <Badge urgent={urgent} className="h-5 min-w-5 rounded-[10px] px-[5px] text-xs" />
+                <Badge urgent={urgent} className="h-5 min-w-5 rounded-control px-[5px] text-xs" />
               )}
             </Link>
           </li>
@@ -155,7 +150,7 @@ function SignOutButton() {
     <form action={signOut} className="mt-auto border-t border-on-bar/15 pt-3">
       <button
         type="submit"
-        className="w-full rounded-[10px] border border-on-bar/35 px-3 text-left text-base font-semibold"
+        className="w-full rounded-control border border-on-bar/35 px-3 text-left text-base font-semibold"
       >
         Sign out
       </button>
@@ -170,22 +165,10 @@ function AlertsLink({ urgent, current }: { urgent: number; current: boolean }) {
       href="/alerts"
       aria-current={current ? "page" : undefined}
       aria-label={urgent >= 1 ? `Alerts, ${urgent} urgent` : "Alerts"}
-      className="relative flex size-control items-center justify-center rounded-[10px]"
+      className="relative flex size-control items-center justify-center rounded-control"
     >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d={BELL} />
-      </svg>
-      <Badge urgent={urgent} className="absolute top-[5px] right-[3px] h-[18px] min-w-[18px] rounded-[9px] px-1 text-[11px]" />
+      <LineIcon path={BELL} size={20} strokeWidth={2} roundJoin />
+      <Badge urgent={urgent} className="absolute top-[5px] right-[3px] h-[18px] min-w-[18px] rounded-mark px-1 text-count" />
     </Link>
   );
 }

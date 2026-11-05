@@ -49,10 +49,18 @@ export function ResultPanel({
   corrected: boolean;
 }) {
   return (
-    <div role="status" aria-label="Receipt result" className="mt-6 space-y-4">
+    <div
+      role="status"
+      aria-label="Receipt result"
+      className={
+        state.status === "saved"
+          ? "mt-4 space-y-4 rounded-card border border-card-border bg-surface p-2.5 desk:p-4 desk:[grid-area:result]"
+          : "desk:[grid-area:result]"
+      }
+    >
       {state.status === "saved" && (
         <>
-          <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">
+          <h2 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-success">
             Receipt saved
           </h2>
           <Facts

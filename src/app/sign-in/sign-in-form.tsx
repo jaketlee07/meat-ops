@@ -6,7 +6,7 @@ import { signIn, type SignInState } from "./actions";
 const INITIAL_STATE: SignInState = {};
 
 const FIELD =
-  "block h-11 w-full rounded-[10px] border border-field-border bg-surface px-3 text-base text-ink";
+  "block h-11 w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 export function SignInForm() {
   const [state, formAction, pending] = useActionState(signIn, INITIAL_STATE);
@@ -54,7 +54,7 @@ export function SignInForm() {
         ref={errorRef}
         role="alert"
         tabIndex={-1}
-        className="text-[15px] font-semibold text-error"
+        className="text-note font-semibold text-error"
       >
         {state.message}
       </div>

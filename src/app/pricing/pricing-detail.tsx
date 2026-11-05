@@ -60,11 +60,11 @@ export function PricingDetail({ detail }: { detail: Detail }) {
 
   return (
     <div>
-      <section aria-labelledby="detail-heading">
-        <h2 id="detail-heading" className="mb-3 text-xl font-semibold break-words">
+      <section aria-labelledby="detail-heading" className="flex flex-col gap-3">
+        <h2 id="detail-heading" className="text-lg font-bold break-words">
           {detail.code} {detail.description}
         </h2>
-        <dl className="space-y-1 text-base tabular-nums">
+        <dl className="flex flex-col gap-1.5 text-sm tabular-nums">
           <Figure label="Raw input" value={detail.raw ? `${detail.raw.code} ${detail.raw.description}` : "None"} />
           <Figure
             label="Raw average cost"
@@ -79,6 +79,7 @@ export function PricingDetail({ detail }: { detail: Detail }) {
             <Figure key={fee.name} label={fee.name} value={formatCostPerLb(fee.amountPerLb)} />
           ))}
           <Figure
+            strong
             label="Cost per lb"
             value={!detail.hasCost || detail.costPerLb === null ? "None yet" : formatCostPerLb(detail.costPerLb)}
           />
@@ -88,12 +89,13 @@ export function PricingDetail({ detail }: { detail: Detail }) {
               <Figure key={fee.name} label={fee.name} value={formatCostPerLb(fee.amountPerLb)} />
             ))}
           <Figure
+            strong
             label="Suggested price"
             value={detail.suggestedListPrice === null ? "No price yet" : formatPricePerLb(detail.suggestedListPrice)}
           />
         </dl>
-        {detail.targetMargin === null && <p className="mt-2 break-words text-base">{NO_TARGET_SENTENCE}</p>}
-        <dl className="mt-1 space-y-1 text-base tabular-nums">
+        {detail.targetMargin === null && <p className="break-words text-sm">{NO_TARGET_SENTENCE}</p>}
+        <dl className="flex flex-col gap-1.5 text-sm tabular-nums">
           <Figure
             label="List price"
             value={detail.listPrice === null ? "No list price yet" : formatPricePerLb(detail.listPrice)}
@@ -103,16 +105,16 @@ export function PricingDetail({ detail }: { detail: Detail }) {
             value={detail.marginAtList === null ? "None yet" : formatMargin(detail.marginAtList)}
           />
         </dl>
-        <PriceAdviceBlock row={detail} onResult={show} />
+        <PriceAdviceBlock row={detail} onResult={show} look="stacked" />
       </section>
       {/* Both regions are in the page before they have text, so each message is announced. */}
-      <div className="mt-4">
+      <div>
         <div
           id="change-saved"
           ref={savedRef}
           role="status"
           tabIndex={-1}
-          className="break-words text-base font-medium text-success"
+          className="break-words text-base font-medium text-success not-empty:mt-3"
         >
           {message?.kind === "saved" ? message.text : null}
         </div>
@@ -121,7 +123,7 @@ export function PricingDetail({ detail }: { detail: Detail }) {
           ref={refusedRef}
           role="alert"
           tabIndex={-1}
-          className="break-words text-base font-medium text-error"
+          className="break-words text-base font-medium text-error not-empty:mt-3"
         >
           {message?.kind === "refused" ? message.text : null}
         </div>

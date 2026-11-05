@@ -7,8 +7,8 @@ import type { ChangeState } from "./save-change";
 
 type ChangeAction = (formData: FormData) => Promise<ChangeState>;
 
-const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink tabular-nums";
-const BUTTON = "w-full rounded-md px-4 text-base font-medium";
+const CONTROL = "col-start-1 row-start-2 block w-full min-w-0 rounded-control border border-field-border bg-surface px-3 text-base text-ink tabular-nums";
+const BUTTON = "rounded-control px-3.5 text-base";
 
 // One value field with its Save button and, for a target, a Remove button. The
 // parent owns the field's text and error, so a saved price from Apply can fill
@@ -91,13 +91,14 @@ export function ChangeForm({
 
   const errorId = `${id}-error`;
   return (
-    <section aria-labelledby={`${id}-heading`} className="mt-6">
-      <h2 id={`${id}-heading`} className="mb-3 text-xl font-semibold">
+    <section aria-labelledby={`${id}-heading`} className="mt-3 border-t border-card-border pt-3">
+      <h2 id={`${id}-heading`} className="mb-2 text-base font-bold">
         {heading}
       </h2>
-      <form onSubmit={submit} noValidate className="space-y-3">
-        <div>
-          <label htmlFor={id} className="block text-base font-medium">
+      <form onSubmit={submit} noValidate className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2">
+        {/* The field's parts sit straight on the form's grid: label above, input and Save on one line, then the error. */}
+        <div className="contents">
+          <label htmlFor={id} className="col-span-2 row-start-1 mb-1.5 block text-sm font-semibold text-ink-secondary">
             {label}
           </label>
           <input
@@ -113,12 +114,12 @@ export function ChangeForm({
             aria-describedby={error ? errorId : undefined}
           />
           {error && (
-            <p id={errorId} role="alert" className="mt-1 break-words text-base font-medium text-error">
+            <p id={errorId} role="alert" className="col-span-2 row-start-3 mt-1 break-words text-base font-medium text-error">
               {error}
             </p>
           )}
         </div>
-        <button type="submit" aria-disabled={pending ? true : undefined} className={`${BUTTON} bg-primary text-on-primary aria-disabled:bg-primary/60`}>
+        <button type="submit" aria-disabled={pending ? true : undefined} className={`${BUTTON} col-start-2 row-start-2 font-bold bg-primary text-on-primary aria-disabled:bg-primary/60`}>
           {saveLabel}
         </button>
         {remove && (
@@ -126,13 +127,13 @@ export function ChangeForm({
             type="button"
             aria-disabled={pending ? true : undefined}
             onClick={() => void run(remove.action, "")}
-            className={`${BUTTON} border border-field-border bg-surface text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60`}
+            className={`${BUTTON} col-span-2 row-start-4 mt-2 justify-self-start font-semibold border border-field-border bg-surface text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60`}
           >
             {remove.label}
           </button>
         )}
         {/* The status is in the page before it has text, so "Saving…" is announced. */}
-        <p role="status" className="text-base text-ink-secondary">
+        <p role="status" className="col-span-2 row-start-5 text-base text-ink-secondary">
           {pending ? "Saving…" : null}
         </p>
       </form>

@@ -5,6 +5,7 @@ import { CHANGE_UNKNOWN } from "../../lib/failures";
 import { priceFieldText } from "../../lib/format";
 import { priceButtonName, type PriceAction } from "../../lib/price-advice";
 import { saveListPrice } from "./actions";
+import type { AdviceLook } from "./price-advice-block";
 import type { ChangeState } from "./save-change";
 
 // One press stores the price the button names, the suggested list price the
@@ -15,11 +16,13 @@ export function ApplyButton({
   action,
   suggestedListPrice,
   onResult,
+  look = "row",
 }: {
   productId: string;
   action: PriceAction;
   suggestedListPrice: number;
   onResult: (state: ChangeState) => void;
+  look?: AdviceLook;
 }) {
   const [pending, setPending] = useState(false);
   // Set at once on press, because state updates land a render later.
@@ -45,13 +48,13 @@ export function ApplyButton({
   }
 
   return (
-    <form onSubmit={submit} className="mt-3">
+    <form onSubmit={submit} className={look === "row" ? "wide:shrink-0" : undefined}>
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="value" value={priceFieldText(suggestedListPrice)} />
       <button
         type="submit"
         aria-disabled={pending ? true : undefined}
-        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+        className={`min-h-12 w-full rounded-control bg-primary px-3.5 text-base font-bold text-on-primary aria-disabled:bg-primary/60 wide:min-h-control${look === "row" ? " wide:w-auto" : ""}`}
       >
         {priceButtonName(action, suggestedListPrice)}
       </button>
