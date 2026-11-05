@@ -43,7 +43,7 @@ const NO_ERRORS: Partial<Record<BatchField, string>> = {};
 
 const NO_BATCHES: readonly string[] = [];
 
-const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
+const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
 function deviceToday(): string {
@@ -251,8 +251,13 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
 
   return (
     <>
-      <form onSubmit={submit} aria-labelledby="production-form-heading" noValidate className="space-y-4">
-        <h2 id="production-form-heading" className="text-xl font-semibold">
+      <form
+        onSubmit={submit}
+        aria-labelledby="production-form-heading"
+        noValidate
+        className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
+      >
+        <h2 id="production-form-heading" className="text-lg font-bold">
           New batch
         </h2>
 
@@ -263,7 +268,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         )}
 
         <div>
-          <label htmlFor={FIELD_IDS.productCode} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.productCode} className="block text-sm font-semibold text-ink-secondary">
             Product code
           </label>
           <input
@@ -286,7 +291,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.rawLbs} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.rawLbs} className="block text-sm font-semibold text-ink-secondary">
             Raw lbs
           </label>
           <input
@@ -304,7 +309,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.finishedLbs} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.finishedLbs} className="block text-sm font-semibold text-ink-secondary">
             Finished lbs (optional)
           </label>
           <input
@@ -322,7 +327,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.productionDate} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.productionDate} className="block text-sm font-semibold text-ink-secondary">
             Production date
           </label>
           <input
@@ -339,7 +344,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.notes} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.notes} className="block text-sm font-semibold text-ink-secondary">
             Notes (optional)
           </label>
           <textarea
@@ -373,7 +378,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
           onClick={(event) => {
             if (blocked) event.preventDefault();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+          className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60"
         >
           Save
         </button>
@@ -391,7 +396,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
 
       <ResultPanel state={state} headingRef={headingRef} reversed={batchReversed} />
 
-      <div id="product-region" aria-busy={regionPending} className="mt-6 space-y-4">
+      <div id="product-region" aria-busy={regionPending} className="mt-4 flex flex-col gap-4 desk:mt-0 desk:contents">
         {chosen && chosen.code === regionCode ? region : null}
       </div>
     </>

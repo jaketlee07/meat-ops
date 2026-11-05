@@ -8,6 +8,13 @@ import { PageShell } from "../page-header";
 import { ProductionForm } from "./production-form";
 import { ProductRegion } from "./product-region";
 
+// From desk up, <main> is a grid, laid out as on Receiving: the shell's title-and-banner div across the
+// top, the form and the result in the left column (340 px, 280 px from wide up), and the stock card and
+// Recent batches in the right one (#product-region is display: contents, so its two sections are grid
+// items). The DOM order, and so Tab order, stays form, check step, result, region. Each child names its area.
+const MAIN_GRID =
+  "desk:grid desk:grid-cols-[340px_minmax(0,1fr)] wide:grid-cols-[280px_minmax(0,1fr)] desk:grid-rows-[auto_auto_1fr_auto] desk:items-start desk:gap-x-4 desk:[grid-template-areas:'head_head'_'form_stock'_'form_recent'_'result_recent'] desk:[&>div:first-child]:[grid-area:head]";
+
 // Every page settles who is asking. The proxy only refreshes the session.
 // The chosen product lives in the URL (?product=<code>), so the server renders
 // that product's raw stock and the form keeps its typed values in the browser.
@@ -50,7 +57,7 @@ export default async function ProductionPage({
   }
 
   return (
-    <PageShell title="Production" current="production">
+    <PageShell title="Production" current="production" fullWidth mainClassName={MAIN_GRID}>
       <ProductionForm
         products={products.map(({ code, description, shrinkPct }) => ({ code, description, shrinkPct }))}
         urlCode={requested}

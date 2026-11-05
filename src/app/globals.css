@@ -76,8 +76,20 @@
   }
 }
 
-/* A receipt's status area (the div after the figures) while one of its child divs holds a non-empty
-   refusal (role alert) or panel (role status). Not the receipt form's own `receipt-message` id. */
+/* Production's Recent batches read as a table only when the section itself is wide enough for a row:
+   fixed tracks, gaps, and padding (about 21rem) plus three figure columns that hold a six-digit weight
+   with three decimals (about 5.5rem each). The section is the container named batches. The width is in
+   rem, so a larger browser text size keeps the cards until the section has grown to fit; at the default
+   size the section is about 43rem wide at 1280 px and about 23rem at 1024 px. It has no screen gate. */
+@custom-variant batch-table {
+  @container batches (min-width: 38rem) {
+    @slot;
+  }
+}
+
+/* A row's status area (the div after the figures) while one of its child divs holds a non-empty
+   refusal (role alert) or panel (role status), on Receiving's receipts and Production's batches. Not the
+   receipt form's own `receipt-message` id. */
 @custom-variant status-has-message (&:has(> div > [role="alert"]:not(:empty), > div > [role="status"]:not(:empty)));
 
 /* Anything on the navy bar: white text, and a white focus ring. */

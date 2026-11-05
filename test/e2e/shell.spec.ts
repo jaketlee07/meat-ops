@@ -555,14 +555,15 @@ test.describe("landmarks", () => {
 test.describe("the desktop content cap", () => {
   test.use({ storageState: OPERATOR_STATE });
 
-  test("at 1280, /production's form is capped at 544px and its check step keeps its own 28rem", async ({ page }) => {
+  test("at 1280, /ask's examples section is capped at 544px and /production's check step keeps its own 28rem", async ({ page }) => {
     await seed502Fixture();
     await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto("/ask");
+    // The examples section is a direct child of <main>, after the shell's title-and-banner div.
+    const examples = page.locator("main > section[aria-labelledby='examples-heading']");
+    await expect(examples).toHaveCount(1);
+    expect(await examples.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("544px");
     const f = await openForm(page);
-    // The form is a direct child of <main>, after the shell's title-and-banner div.
-    const form = page.locator("main > form");
-    await expect(form).toHaveCount(1);
-    expect(await form.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("544px");
     await fillBatch(f, {});
     await f.save.click();
     const dialog = checkDialog(page);
