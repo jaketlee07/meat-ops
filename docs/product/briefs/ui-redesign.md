@@ -33,6 +33,7 @@ Every Meat Ops screen wears look E: a navy side menu on a desktop, a navy top ba
 - The canvas draws 38 px desktop buttons and fields. They grow to the 44 px `--spacing-control` in `globals.css`.
 - Each in-scope Pricing tile counts one existing group in `src/app/pricing/pricing-list.tsx`, and no tile adds a new query. The canvas's "Use $3.44" button is the one-press button that `src/app/pricing/price-advice-block.tsx` shows.
 - Every board, drawn now or when a spec starts, holds made-up names and numbers only. Hard rule 8 in `AGENTS.md` governs real business data.
+- From spec 3 on, every table or card layout picks its look from the room its own section has (its width and the text size), not the screen width alone; the owner chose this on 2026-11-05.
 
 ## Assumptions and risks
 
@@ -60,9 +61,11 @@ This brief proposes three specs, built from the intent's projection, with each s
 
 1. **Look and shell:** the tokens and the look's description, the side menu and phone top bar, the not-allowed and error views, and `/sign-in`.
 2. **Pricing and Receiving**, with the two shared display parts, because Receiving imports both.
-3. **The other seven pages:** Production, Menu, Sales, Trace, Invoices, Ask, and Alerts.
+3. **The other seven pages**, in two specs by the owner's choice on 2026-11-05:
+   - **3a. Production, Sales, and Trace**, the pages built like Receiving, together with the spec 2 leftovers intent `docs/product/intents/look-pricing-receiving-review-nits.md`.
+   - **3b. Menu, Invoices, Ask, and Alerts.**
 
-Spec 2 builds on spec 1's tokens and header. Spec 3 builds on those and on spec 2's two shared display parts.
+Spec 2 builds on spec 1's tokens and header. Specs 3a and 3b build on those and on spec 2's two shared display parts.
 
 ## Governance references
 
@@ -78,6 +81,7 @@ None.
 | --- | --- |
 | `look-and-shell` | Shipped |
 | `look-pricing-receiving` | Shipped |
+| `look-production-sales-trace` | Implementing |
 
 ## Source
 
