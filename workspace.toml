@@ -48,6 +48,7 @@ open = [
   { path = "docs/product/intents/hosted-rollout-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/hosted-rollout/notes/verification-ledger.md", revision = "027d4a3" }, summary = "A spare app server outlived a slow run and ignored SIGTERM, and the AC-0090 digest test once read a row still writing", needs = [] },
   { path = "docs/product/intents/vite-advisory-upgrade.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/next-security-upgrade/notes/verification-ledger.md", revision = "ed4d5c1" }, summary = "The full npm audit names a high advisory in vite 8.3.2, which only Vitest uses; upgrade it in its own change", needs = [] },
   { path = "docs/product/intents/app-hosting-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/app-hosting/notes/verification-ledger.md", revision = "813a8e6" }, summary = "The AC-0014 foreign-Origin test counts sessions only, so a broken Origin check could pass if the sign-in limit refused the replays too", needs = [] },
+  { path = "docs/product/intents/look-pricing-receiving-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/look-pricing-receiving/notes/verification-ledger.md", revision = "706bf95" }, summary = "Pricing cards between 1024 and 1279 px and the 1280 px receipts table fit the space and text size they have, plus four code tidy-ups; the owner asked that everything be dynamic", needs = [] },
 ]
 closed = []
 
