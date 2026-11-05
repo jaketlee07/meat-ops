@@ -43,3 +43,9 @@ The spec's Assumptions record each of these as a Product line:
 
 - Commit `8be3ec0`. `look-pages.spec.ts` gained 12 tests; with the source changes stashed, 6 failed (AC-0001, AC-0002 full and emptied-group states, AC-0003) and 6 passed by design (AC-0002 with no product and AC-0004, which pin behavior that must not change below 1280 px). All 12 pass on the change. `npm test`: Vitest 1046 passed; Playwright 762 passed in 10.1 min; no reruns.
 - The table look uses one `minmax(0, ...)` column template on the header line and every row, a subgrid `dl`, and `display: contents` on each figure's wrapper, so each value is a grid cell; `figure.tsx` is unchanged. The board's 12 px tile and phone-button radii use Tailwind's `rounded-xl`.
+
+## T4 (2026-11-05)
+
+- Commit `5affd74`. With `src/app` stashed, 12 of the 13 new tests failed; AC-0021 passed, because the old details page had no what-if either, so it guards against a regression. All pass on the change. `npm test`: Vitest 1046 passed in 45.9 s; Playwright 775 passed in 10.8 min.
+- AC-0020 changes in existing test files, scope only: `detail()` in `test/e2e/pricing-page.ts` reads inside the "Product details" region; in `test/e2e/pricing.spec.ts` the `figures()` helper, the order check (`dt, p`), and two `const main` locators read inside the same region. No asserted value, name, count, or order changed.
+- The panel keeps the advice stacked at 1280 px through descendant classes in `pricing-detail.tsx`, because `price-advice-block.tsx` (which holds the list row's 1280 px styling) is not in T4's Touches. The board's bold "Cost per lb" and "Suggested price" build-up rows are not bold: `Figure` takes no weight option. Both are noted for the review and the owner's comparison.
