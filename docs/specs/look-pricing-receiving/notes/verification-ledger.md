@@ -28,3 +28,8 @@ The spec's Assumptions record each of these as a Product line:
 - Work-loop run `2883dc24-d404-4724-8f6f-4e41bff3ec8b`. `approve-plan` recorded spec hash `c9af1376cffd…` and plan hash `557bee333542…`. The schedule runs T1, then T2 and T3 (one at a time), then T4, T5, and T6.
 - Base: `2d9f923` on branch `feat/look-pricing-receiving` in the main folder, on stack A.
 - Project knowledge: capture at the spec and plan gates was not attempted; it refused with `strict_parse` in earlier runs, so this run records it as unavailable.
+
+## T1 (2026-11-05)
+
+- Commit `7aca3f1`. `test/look-source.test.ts` failed 3 of 3 on the tree before the change and passed 3 of 3 after it. `npm test`: Vitest 1046 passed in 41.5 s; Playwright 752 passed in 10.3 min.
+- Bookkeeping: the cohort's wave pointer advanced to wave 2 before the engine's `wave-passed` fired, so `wave-passed` was fired with `--wave-index 1` to match the pointer. Wave 1 (T1) passed its gates; no wave was skipped, and wave 2 (T2, T3) is next.
