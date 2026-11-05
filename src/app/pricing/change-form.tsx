@@ -8,7 +8,7 @@ import type { ChangeState } from "./save-change";
 type ChangeAction = (formData: FormData) => Promise<ChangeState>;
 
 const CONTROL = "col-start-1 row-start-2 block w-full min-w-0 rounded-control border border-field-border bg-surface px-3 text-base text-ink tabular-nums";
-const BUTTON = "rounded-control px-3.5 text-base font-bold";
+const BUTTON = "rounded-control px-3.5 text-base";
 
 // One value field with its Save button and, for a target, a Remove button. The
 // parent owns the field's text and error, so a saved price from Apply can fill
@@ -119,7 +119,7 @@ export function ChangeForm({
             </p>
           )}
         </div>
-        <button type="submit" aria-disabled={pending ? true : undefined} className={`${BUTTON} col-start-2 row-start-2 bg-primary text-on-primary aria-disabled:bg-primary/60`}>
+        <button type="submit" aria-disabled={pending ? true : undefined} className={`${BUTTON} col-start-2 row-start-2 font-bold bg-primary text-on-primary aria-disabled:bg-primary/60`}>
           {saveLabel}
         </button>
         {remove && (

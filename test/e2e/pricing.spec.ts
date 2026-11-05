@@ -824,7 +824,7 @@ test.describe("the detail", () => {
       await expect(page.getByText(`No active finished product has code ${code}.`, { exact: true }), code).toBeVisible();
       await expect(page.locator("main b"), code).toHaveCount(0);
       await expect(page.getByRole("heading", { level: 2 }), code).toHaveCount(0);
-      await expect(detail(page).target, code).toHaveCount(0);
+      await expect(page.getByRole("textbox", { name: "Target margin %" }), code).toHaveCount(0);
     }
     // The not-active-product detail.
     expect(await checkPageState(page)).toEqual(NAV_CONTROLS);

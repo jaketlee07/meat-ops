@@ -40,7 +40,7 @@ export default async function PricingPage({
     const detail = await getPricingDetail(supabase, productCode);
     if (!detail) {
       return (
-        <PageShell title="Pricing" current="pricing">
+        <PageShell title="Pricing" current="pricing" fullWidth>
           <p className="break-words text-base">{`No active finished product has code ${productCode}.`}</p>
         </PageShell>
       );
@@ -61,8 +61,7 @@ export default async function PricingPage({
           >
             <PricingDetail key={detail.productId} detail={detail} />
           </section>
-          {/* The list's empty message region keeps a 24 px gap under it; with no message, close it so the first group lines up with the panel. */}
-          <div className="hidden min-w-0 desk:col-start-1 desk:row-start-1 desk:block desk:[&>div>div:first-child:not(:has([role]:not(:empty)))]:mb-0">
+          <div className="hidden min-w-0 desk:col-start-1 desk:row-start-1 desk:block">
             <PricingList rows={rows} openCode={detail.code} />
           </div>
         </div>

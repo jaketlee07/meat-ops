@@ -24,7 +24,7 @@ export function ProductRegion({
           Stock and prices
         </h2>
         <div className="wide:col-start-1 wide:row-span-2 wide:row-start-2 wide:self-start">
-          <Facts tiles rows={[["On hand", showOnHand(view)], ["Average cost", showAverage(view)]]} />
+          <Facts look="tiles" rows={[["On hand", showOnHand(view)], ["Average cost", showAverage(view)]]} />
         </div>
         <h3 className="text-base font-bold wide:col-start-2 wide:row-start-2">Suggested price per lb</h3>
         {prices.length === 0 ? (

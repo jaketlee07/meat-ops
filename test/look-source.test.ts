@@ -5,15 +5,18 @@ import { expect, it } from "vitest";
 const APP = join(__dirname, "..", "src", "app");
 const ICON_FILE = "src/app/line-icon.tsx";
 
-function tsxFiles(dir: string): string[] {
+// Every source file under src/app that can hold a class or an svg tag.
+const SOURCE = /\.(tsx?|jsx?|mjs|cjs|css|svg|html|mdx?)$/;
+
+function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) return tsxFiles(path);
-    return entry.name.endsWith(".tsx") ? [path] : [];
+    if (entry.isDirectory()) return sourceFiles(path);
+    return SOURCE.test(entry.name) ? [path] : [];
   });
 }
 
-const FILES = tsxFiles(APP).map((path) => ({
+const FILES = sourceFiles(APP).map((path) => ({
   name: relative(join(__dirname, ".."), path),
   text: readFileSync(path, "utf8"),
 }));

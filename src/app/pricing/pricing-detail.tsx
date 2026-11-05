@@ -22,13 +22,6 @@ interface Message {
   text: string;
 }
 
-// The advice block is built for a table row and lays out wide at 1280 px. In this
-// 360 px panel it stays stacked at every width: the amber box, then a full-width button.
-const ADVICE_IN_PANEL =
-  "[&>div]:mt-0 wide:[&>div]:flex-col wide:[&>div]:items-stretch wide:[&>div]:gap-y-2.5 wide:[&>div]:py-0 " +
-  "wide:[&>div>p]:flex-none wide:[&>div>p]:basis-auto wide:[&>div>p]:bg-advice-fill wide:[&>div>p]:px-3 wide:[&>div>p]:py-2.5 wide:[&>div>p]:text-note " +
-  "wide:[&_button]:w-full";
-
 const NO_TARGET_SENTENCE = "No target margin. The suggested price is cost per lb plus the margin fees.";
 
 // A product's cost build-up, its advice, and the two forms. Every number comes
@@ -112,9 +105,7 @@ export function PricingDetail({ detail }: { detail: Detail }) {
             value={detail.marginAtList === null ? "None yet" : formatMargin(detail.marginAtList)}
           />
         </dl>
-        <div className={ADVICE_IN_PANEL}>
-          <PriceAdviceBlock row={detail} onResult={show} />
-        </div>
+        <PriceAdviceBlock row={detail} onResult={show} look="stacked" />
       </section>
       {/* Both regions are in the page before they have text, so each message is announced. */}
       <div>

@@ -19,7 +19,9 @@ const TABLE_COLUMNS = "wide:grid-cols-[minmax(0,2.2fr)_repeat(5,minmax(0,1fr))] 
 const COLUMN_NAMES = ["Cost per lb", "List price", "Suggested price", "Margin at list price", "Target margin"];
 
 // The open product's row: a tint and an accent edge on the left.
-const OPEN_ROW = "bg-page border-l-4 border-l-primary wide:border-l-4";
+// From wide up the edge is an inset shadow, so it takes no room from the row's content and
+// the row's columns stay under the header line's.
+const OPEN_ROW = "bg-page border-l-4 border-l-primary wide:shadow-[inset_4px_0_0_0_var(--color-primary)]";
 
 const TILE_EDGES = {
   "Needs a new price": "border-t-status-needs",
@@ -73,8 +75,9 @@ export function PricingList({ rows, openCode }: { rows: PricingRow[]; openCode?:
 
   return (
     <div className="space-y-6">
-      {/* Both regions are in the page before they have text, so each message is announced. */}
-      <div>
+      {/* Both regions are in the page before they have text, so each message is announced.
+          Beside the details panel, with no message the first group sits at the panel's top. */}
+      <div className={openCode === undefined ? undefined : "mb-0 has-[[role]:not(:empty)]:mb-6"}>
         <div
           ref={savedRef}
           role="status"
