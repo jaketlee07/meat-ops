@@ -191,7 +191,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
           reversed. The action skips the re-render when a read after the write
           failed, or when no finished lbs on hand come back because the product
           was made inactive. */}
-      {done && !reversed && <p className="break-words font-semibold text-error">{`Reversed: ${sentReason}`}</p>}
+      {done && !reversed && <p className="break-words font-semibold text-error batch-table:text-right">{`Reversed: ${sentReason}`}</p>}
       {!reversed && !done && (
         <button
           type="button"
@@ -214,7 +214,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
       </div>
 
       {/* The panel is in a status region that is in the page before the reversal fills it. */}
-      <div role="status" aria-label={`Reversal of batch ${batchNumber}`} className={done ? "mt-2 space-y-4" : undefined}>
+      <div role="status" aria-label={`Reversal of batch ${batchNumber}`} className={done ? "@container/result mt-2 space-y-4" : undefined}>
         {done && (
           <>
             <h3 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">

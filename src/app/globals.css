@@ -79,8 +79,10 @@
 /* Production's Recent batches read as a table only when the section itself is wide enough for a row:
    fixed tracks, gaps, and padding (about 21rem) plus three figure columns that hold a six-digit weight
    with three decimals (about 5.5rem each). The section is the container named batches. The width is in
-   rem, so a larger browser text size keeps the cards until the section has grown to fit; at the default
-   size the section is about 43rem wide at 1280 px and about 23rem at 1024 px. It has no screen gate. */
+   rem, so a larger browser text size keeps the cards until the section has grown to fit. At the default
+   size the right column of form-column-grid.ts (340 px, then 280 px from 1280 px) leaves the section
+   about 23rem wide at 1024 px, 38rem at about 1260 px (the first width with the table), and about 43rem
+   at 1280 px. It has no screen gate. */
 @custom-variant batch-table {
   @container batches (min-width: 38rem) {
     @slot;
@@ -90,8 +92,9 @@
 /* Sales' Recent sales read as a table only when the section itself is wide enough for a row: fixed
    tracks, gaps, and padding (about 36.25rem) plus a customer column that holds a short name (about
    3.75rem). The section is the container named sales. The width is in rem, so a larger browser text
-   size keeps the cards until the section has grown to fit; at the default size the section is about
-   43rem wide at 1280 px and about 23rem at 1024 px. It has no screen gate. */
+   size keeps the cards until the section has grown to fit. It sits in the same right column as Recent
+   batches (form-column-grid.ts): about 23rem wide at 1024 px, 39rem at 1279 px (under this threshold), and
+   about 43rem from 1280 px, so at the default size the table shows from 1280 px. It has no screen gate. */
 @custom-variant sale-table {
   @container sales (min-width: 40rem) {
     @slot;
@@ -100,8 +103,9 @@
 
 /* Trace's lot result: the section is the container named tracelot. Where it is at least 53rem wide
    (the Customers column of 16.25rem, a gap, and Sales' table at 35rem) Customers sits beside "Sales from
-   this lot" and the lot's facts run in three columns; at the default text size that is 1280 px and
-   wider. In rem, so a larger text size stacks them until the section has grown to fit. */
+   this lot" and the lot's facts run in three columns. The page has no column grid, so the section is the
+   viewport less 296 px: at the default text size that is from about 1144 px (848 px of section), and so
+   at 1280 px and 1440 px. In rem, so a larger text size stacks them until the section has grown to fit. */
 @custom-variant lot-wide {
   @container tracelot (min-width: 53rem) {
     @slot;
@@ -129,6 +133,25 @@
    section is the container named lotlist. In rem, no screen gate. */
 @custom-variant lots-table {
   @container lotlist (min-width: 27rem) {
+    @slot;
+  }
+}
+
+/* The before-and-after tables. A table answers only to the card that holds it: each saved-result card and
+   each "Batch reversed" and "Receipt corrected" panel is the container named result, so a list section's
+   container never reaches one. Under 18rem of card the table's text and cell padding tighten, and under
+   13rem they tighten again, so long figures (six-digit weights with three decimals, costs of $10 or more)
+   stay inside it. In rem, so a larger text size tightens them sooner: at the default text size the
+   280 px form column leaves a saved-result card about 15.4rem wide (the first step), and with a 20 px
+   text size it is about 11.9rem (both steps). */
+@custom-variant result-snug {
+  @container result (max-width: 18rem) {
+    @slot;
+  }
+}
+
+@custom-variant result-tight {
+  @container result (max-width: 13rem) {
     @slot;
   }
 }

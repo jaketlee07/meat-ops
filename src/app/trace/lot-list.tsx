@@ -9,8 +9,8 @@ const LINK =
 // Where the section is a table (the `lots-table` variant: the section is the container named
 // `lotlist` and at least 27rem wide at the current text size) the header line and every lot share
 // one template: the lot number, then Received, Vendor, and Weight. Otherwise each lot is a card.
-// The header line follows the list in the page and `order` puts it above the list, so each lot
-// stays in the page's order. A lot number breaks only at its hyphens.
+// A lot number breaks only at its hyphens. The header line comes right before the list in the page; no suite
+// needs the list's position, since its tests find the rows by role.
 const TABLE_COLUMNS =
   "lots-table:grid-cols-[minmax(7rem,1.2fr)_minmax(5.5rem,1fr)_minmax(5rem,2fr)_6rem] lots-table:gap-x-1.5 lots-table:px-4";
 // The figures list sits on the three columns after the lot number, the same way Sales' does: each pair
@@ -51,7 +51,18 @@ export function LotList({ code, received, found }: { code: string; received?: st
             {total > lots.length && (
               <p className="lots-table:px-4 lots-table:pb-3">{`Showing the ${lots.length} most recent of ${total} receipts.`}</p>
             )}
-            <ul className="flex flex-col gap-3 lots-table:order-2 lots-table:gap-0">
+            {/* Where the section is a table the header line names the columns; each lot's own labels are hidden visually and stay in the page. */}
+            <div
+              aria-hidden="true"
+              className={`hidden items-end border-t border-card-border bg-page py-2 text-xs font-semibold text-ink-secondary lots-table:grid ${TABLE_COLUMNS}`}
+            >
+              {COLUMN_NAMES.map((name, index) => (
+                <span key={name} className={index === 3 ? "text-right" : undefined}>
+                  {name}
+                </span>
+              ))}
+            </div>
+            <ul className="flex flex-col gap-3 lots-table:gap-0">
               {lots.map((lot) => (
                 <li
                   key={lot.lotNumber}
@@ -72,17 +83,6 @@ export function LotList({ code, received, found }: { code: string; received?: st
                 </li>
               ))}
             </ul>
-            {/* Where the section is a table the header line names the columns; each lot's own labels are hidden visually and stay in the page. */}
-            <div
-              aria-hidden="true"
-              className={`hidden items-end border-t border-card-border bg-page py-2 text-xs font-semibold text-ink-secondary lots-table:order-1 lots-table:grid ${TABLE_COLUMNS}`}
-            >
-              {COLUMN_NAMES.map((name, index) => (
-                <span key={name} className={index === 3 ? "text-right" : undefined}>
-                  {name}
-                </span>
-              ))}
-            </div>
           </>
         )}
       </div>

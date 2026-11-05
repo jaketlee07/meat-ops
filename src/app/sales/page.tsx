@@ -3,16 +3,16 @@ import { isOperator } from "../../lib/rpc";
 import { listCustomers, listRecentSales, listSaleProducts } from "../../lib/sales";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
+import { FORM_COLUMN_GRID } from "../form-column-grid";
 import { PageShell } from "../page-header";
 import { RecentSales } from "./recent-sales";
 import { SaleForm } from "./sale-form";
 import { VoidedSalesProvider } from "./voided-sales";
 
-// From desk up, <main> is a grid, laid out as on Production: the shell's title-and-banner div across the
-// top, the form and the result in the left column (340 px, 280 px from wide up), and Recent sales in the
-// right one. The DOM order, and so Tab order, stays form, result, Recent sales. Each child names its area.
-const MAIN_GRID =
-  "desk:grid desk:grid-cols-[340px_minmax(0,1fr)] wide:grid-cols-[280px_minmax(0,1fr)] desk:grid-rows-[auto_auto_1fr] desk:items-start desk:gap-x-4 desk:[grid-template-areas:'head_head'_'form_recent'_'result_recent'] desk:[&>div:first-child]:[grid-area:head]";
+// The form-column grid (see form-column-grid.ts) with three rows: the form and then the result in the left
+// column, Recent sales spanning both beside them. The result's row takes the list's extra height and the
+// result starts at its top. The DOM order stays form, result, Recent sales.
+const MAIN_GRID = `${FORM_COLUMN_GRID} desk:grid-rows-[auto_auto_1fr] desk:[grid-template-areas:'head_head'_'form_recent'_'result_recent']`;
 
 // Every page settles who is asking. The proxy only refreshes the session.
 // /sales?product=<code> renders the same page: the form asks for it to get a

@@ -16,7 +16,18 @@ import {
   seed502Fixture,
   seedBatch,
 } from "./production-page";
-import { factValue, fillReceipt, openForm as openReceivingForm } from "./receiving-page";
+import {
+  correctPanel,
+  correctThrough,
+  factValue,
+  fillReceipt,
+  lotNumberOf,
+  openForm as openReceivingForm,
+  RAW_TOM_URL,
+  receiptItem,
+  RECEIVING_FORM,
+  seedReceipt,
+} from "./receiving-page";
 import {
   fillSale,
   fixtureWithPrice,
@@ -77,6 +88,116 @@ async function withTextSize(page: Page, width: number, height: number, px: numbe
   }, px);
 }
 
+// The shapes the three pages share. Each lives here once, and every test that checks the shape calls it.
+
+// AC-0001: no child of <main> but a dialog has a computed max-width.
+async function expectNoCap(page: Page) {
+  const widths = await page.locator("main > *").evaluateAll((children) =>
+    children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
+  );
+  expect(widths.length).toBeGreaterThan(2);
+  expect(widths.filter((value) => value !== "none")).toEqual([]);
+}
+
+// One of the pages' lists of rows: its rows, its header line, and the names and figures in order.
+// `numbered` is true where each row opens with a number cell (an h3 or h4) before its figures.
+type RowList = { items: Locator; header: Locator; names: string[]; figures: string[]; numbered: boolean };
+
+// Each row's number cell (a link or a heading) and its figures' values.
+function numberCell(row: Locator): Locator {
+  return row.locator(":scope > h3, :scope > h4");
+}
+
+// The list reads as a table: one header line that names the columns in order, each row on one line with
+// its number and figures in those columns, labels hidden visually, and no figure past its cell.
+async function expectTable(list: RowList, rows: number) {
+  await expect(list.header).toBeVisible();
+  const names = (await list.header.locator("span").allTextContents()).map((text) => text.trim());
+  expect(names).toEqual(list.names);
+  const columns = await boxes(list.header.locator("span"));
+  const first = list.numbered ? 1 : 0;
+  const items = await list.items.all();
+  expect(items).toHaveLength(rows);
+  for (const row of items) {
+    const heading = list.numbered ? [await box(numberCell(row))] : [];
+    const cells = await boxes(values(row.locator(":scope > dl")));
+    expect(cells).toHaveLength(list.figures.length);
+    // The sale number is a 44 px link, so each cell's middle, not its top, lines up.
+    const middles = [...heading, ...cells].map((cell) => cell.y + cell.height / 2);
+    expect(Math.max(...middles) - Math.min(...middles), "one line").toBeLessThanOrEqual(6);
+    if (heading[0]) expect(Math.abs(heading[0].x - columns[0]!.x), "number left").toBeLessThanOrEqual(1);
+    cells.forEach((cell, index) => {
+      expect(Math.abs(cell.x - columns[index + first]!.x), `column ${index + first} left`).toBeLessThanOrEqual(1);
+      expect(Math.abs(cell.width - columns[index + first]!.width), `column ${index + first} width`).toBeLessThanOrEqual(1);
+    });
+    for (const label of await boxes(row.locator(":scope > dl dt"))) expect(label.width).toBeLessThanOrEqual(1);
+    expect(await row.locator(":scope > dl dt").allTextContents()).toEqual(list.figures);
+  }
+  await expectNoSpill(list, rows);
+}
+
+// The fit check: no number's text and no figure's text runs past its cell, and no figure number (a weight,
+// a cost, a price) splits across lines: the text before the first space sits in one piece, and a unit may
+// drop under its number. An identifier such as a batch number may break at its hyphens. A number is
+// measured in its own cell: the h3 or h4, not the link inside it.
+async function expectNoSpill(list: RowList, rows: number) {
+  const fits = await list.items.locator(":scope > dl dd, :scope > h3, :scope > h4").evaluateAll((cells) =>
+    cells.map((cell) => {
+      const text = cell.textContent ?? "";
+      const node = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT).nextNode()!;
+      const range = document.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, (node.textContent ?? "").split(" ")[0]!.length);
+      const figure = /^\$?\d[\d,]*(\.\d+)?(\/lb)?$/.test((node.textContent ?? "").split(" ")[0]!);
+      return { text, fits: cell.scrollWidth <= cell.clientWidth, pieces: figure ? range.getClientRects().length : 1 };
+    }),
+  );
+  expect(fits).toHaveLength(rows * (list.figures.length + (list.numbered ? 1 : 0)));
+  expect(fits.filter((cell) => !cell.fits || cell.pieces !== 1)).toEqual([]);
+}
+
+// The list reads as cards: no header line, each figure on its own line with its label visible beside it.
+async function expectCards(list: RowList, rows: number) {
+  await expect(list.header, "the table is off").toBeHidden();
+  const items = await list.items.all();
+  expect(items).toHaveLength(rows);
+  for (const row of items) {
+    const figures = row.locator(":scope > dl");
+    const cells = await boxes(values(figures));
+    const labels = await boxes(figures.locator("dt"));
+    expect(cells).toHaveLength(list.figures.length);
+    expect(labels).toHaveLength(list.figures.length);
+    for (let i = 1; i < cells.length; i += 1) {
+      expect(cells[i]!.y, `value ${i} below value ${i - 1}`).toBeGreaterThanOrEqual(cells[i - 1]!.y + cells[i - 1]!.height);
+    }
+    labels.forEach((label, index) => {
+      expect(label.width, `label ${index} is not hidden`).toBeGreaterThan(20);
+      expect(Math.abs(label.y - cells[index]!.y), `label ${index} on its value's first line`).toBeLessThanOrEqual(4);
+      expect(label.x + label.width, `label ${index} left of its value`).toBeLessThanOrEqual(cells[index]!.x + 1);
+    });
+    for (const label of await figures.locator("dt").all()) await expect(label).toBeVisible();
+  }
+}
+
+// With 20 px text a list may be a table or cards: either way no figure runs past its cell, and a card
+// keeps each label beside its value.
+async function expectEitherFits(list: RowList, rows: number) {
+  await expectNoSpill(list, rows);
+  if (await list.header.isVisible()) return;
+  await expectCards(list, rows);
+}
+
+// Every button sits inside its list's section.
+async function expectButtonsInside(section: Locator, buttons: Locator, count: number) {
+  await expect(buttons).toHaveCount(count);
+  const outer = await box(section);
+  for (const button of await boxes(buttons)) {
+    expect(button.x, "a button starts inside the section").toBeGreaterThanOrEqual(outer.x);
+    expect(button.x + button.width, "a button ends inside the section").toBeLessThanOrEqual(outer.x + outer.width);
+    expect(button.y + button.height, "a button ends inside the section, bottom").toBeLessThanOrEqual(outer.y + outer.height);
+  }
+}
+
 // Three batches of 502: the first two written through the engine, the third saved through the
 // page, then the second reversed through the page. The page is left on the third batch's "Batch
 // saved" result and the second batch's "Batch reversed" panel, at the given size. The list reads,
@@ -100,9 +221,17 @@ async function opensProduction(page: Page, width: number, height: number) {
   return { f, first: await batchNumberOf(firstId), firstId, item };
 }
 
-// Each of the three listed batches, in page order.
-function rowsOf(page: Page): Locator {
-  return recentBatches(page).locator("li");
+// The three listed batches, in page order, as a list of rows.
+function batchList(page: Page): RowList {
+  const recent = recentBatches(page);
+  return {
+    // Each batch's dialog holds lists of its own, so the rows are the list's direct children.
+    items: recent.locator(":scope > div > ul > li"),
+    header: recent.locator("div[aria-hidden='true']"),
+    names: [...BATCH_FIGURES, ""],
+    figures: BATCH_FIGURES,
+    numbered: false,
+  };
 }
 
 // What Tab reaches with the three batches listed: the form, then a Reverse button for each batch
@@ -118,11 +247,7 @@ test.describe("the Production layout", () => {
       page,
     }) => {
       await opensProduction(page, width, height);
-      const widths = await page.locator("main > *").evaluateAll((children) =>
-        children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
-      );
-      expect(widths.length).toBeGreaterThan(2);
-      expect(widths.filter((value) => value !== "none")).toEqual([]);
+      await expectNoCap(page);
     });
 
     test(`AC-0002: at ${width}x${height} the title is above, and the form and result are left of the stock card and Recent batches`, async ({
@@ -193,36 +318,7 @@ test.describe("the Production layout", () => {
   ] as const) {
     test(`AC-0005: at ${width}x${height} a batch reads as one row under a header line`, async ({ page }) => {
       await opensProduction(page, width, height);
-      const recent = recentBatches(page);
-      const header = recent.locator("div[aria-hidden='true']");
-      await expect(header).toBeVisible();
-      const names = (await header.locator("span").allTextContents()).map((text) => text.trim());
-      expect(names).toEqual([...BATCH_FIGURES, ""]);
-      const columns = await boxes(header.locator("span"));
-
-      const rows = await rowsOf(page).all();
-      expect(rows).toHaveLength(3);
-      for (const row of rows) {
-        const cells = await boxes(values(row.locator(":scope > dl")));
-        expect(cells).toHaveLength(5);
-        const tops = cells.map((cell) => cell.y);
-        expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
-        // Each figure sits in the column the header line names, in the header's order.
-        cells.forEach((cell, index) => {
-          expect(Math.abs(cell.x - columns[index]!.x), `column ${index} left`).toBeLessThanOrEqual(1);
-          expect(Math.abs(cell.width - columns[index]!.width), `column ${index} width`).toBeLessThanOrEqual(1);
-        });
-        // The labels are hidden visually here: the header line names the columns.
-        for (const label of await boxes(row.locator(":scope > dl dt"))) expect(label.width).toBeLessThanOrEqual(1);
-        expect(await row.locator(":scope > dl dt").allTextContents()).toEqual(BATCH_FIGURES);
-      }
-
-      // No figure's text runs past its cell.
-      const fits = await recent.locator("li > dl dd").evaluateAll((cells) =>
-        cells.map((cell) => ({ text: cell.textContent, fits: cell.scrollWidth <= cell.clientWidth })),
-      );
-      expect(fits).toHaveLength(3 * 5);
-      expect(fits.filter((cell) => !cell.fits)).toEqual([]);
+      await expectTable(batchList(page), 3);
 
       if (width === 1280) {
         expect(await checkPageState(page)).toEqual(CONTROLS);
@@ -241,28 +337,7 @@ test.describe("the Production layout", () => {
     }) => {
       await opensProduction(page, width, height);
       if (size !== 16) await withTextSize(page, width, height, size);
-      const recent = recentBatches(page);
-      await expect(recent.locator("div[aria-hidden='true']"), "the table is off").toBeHidden();
-      const rows = await rowsOf(page).all();
-      expect(rows).toHaveLength(3);
-      for (const row of rows) {
-        const figures = row.locator(":scope > dl");
-        const cells = await boxes(values(figures));
-        const labels = await boxes(figures.locator("dt"));
-        expect(cells).toHaveLength(5);
-        expect(labels).toHaveLength(5);
-        for (let i = 1; i < cells.length; i += 1) {
-          expect(cells[i]!.y, `value ${i} below value ${i - 1}`).toBeGreaterThanOrEqual(
-            cells[i - 1]!.y + cells[i - 1]!.height,
-          );
-        }
-        labels.forEach((label, index) => {
-          expect(label.width, `label ${index} is not hidden`).toBeGreaterThan(20);
-          expect(Math.abs(label.y - cells[index]!.y), `label ${index} on its value's first line`).toBeLessThanOrEqual(4);
-          expect(label.x + label.width, `label ${index} left of its value`).toBeLessThanOrEqual(cells[index]!.x + 1);
-        });
-        for (const label of await figures.locator("dt").all()) await expect(label).toBeVisible();
-      }
+      await expectCards(batchList(page), 3);
     });
   }
 
@@ -317,6 +392,7 @@ test.describe("the Production layout", () => {
     expect(area.x + area.width, "the message area runs to the row's right padding").toBeGreaterThanOrEqual(
       row.x + row.width - 17,
     );
+    expect(area.x + area.width, "the message area ends inside its batch").toBeLessThanOrEqual(row.x + row.width);
   });
 
   for (const [width, height, size] of [
@@ -331,16 +407,7 @@ test.describe("the Production layout", () => {
     }) => {
       await opensProduction(page, width, height);
       if (size !== 16) await withTextSize(page, width, height, size);
-      const buttons = recentBatches(page).getByRole("button", { name: /^Reverse batch / });
-      await expect(buttons).toHaveCount(2);
-      const section = await box(recentBatches(page));
-      for (const button of await boxes(buttons)) {
-        expect(button.x, "a button starts inside the section").toBeGreaterThanOrEqual(section.x);
-        expect(button.x + button.width, "a button ends inside the section").toBeLessThanOrEqual(section.x + section.width);
-        expect(button.y + button.height, "a button ends inside the section, bottom").toBeLessThanOrEqual(
-          section.y + section.height,
-        );
-      }
+      await expectButtonsInside(recentBatches(page), recentBatches(page).getByRole("button", { name: /^Reverse batch / }), 2);
     });
   }
 });
@@ -353,6 +420,18 @@ function salesForm(page: Page): Locator {
 
 function recentSales(page: Page): Locator {
   return page.getByRole("region", { name: "Recent sales" });
+}
+
+// The listed sales, in page order, as a list of rows: the sale number is the row's own cell.
+function saleList(page: Page): RowList {
+  const recent = recentSales(page);
+  return {
+    items: recent.locator(":scope > div > ul > li"),
+    header: recent.locator("div[aria-hidden='true']"),
+    names: ["Sale number", ...SALE_FIGURES, ""],
+    figures: SALE_FIGURES,
+    numbered: true,
+  };
 }
 
 // Three sales of 502: the first two written through the engine (the first with no customer, the
@@ -399,11 +478,7 @@ test.describe("the Sales layout", () => {
       page,
     }) => {
       await opensSales(page, width, height);
-      const widths = await page.locator("main > *").evaluateAll((children) =>
-        children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
-      );
-      expect(widths.length).toBeGreaterThan(2);
-      expect(widths.filter((value) => value !== "none")).toEqual([]);
+      await expectNoCap(page);
     });
 
     test(`AC-0008: at ${width}x${height} the title is above the form, and the form and result are left of Recent sales`, async ({
@@ -443,39 +518,7 @@ test.describe("the Sales layout", () => {
   ] as const) {
     test(`AC-0010: at ${width}x${height} a sale reads as one row under a header line`, async ({ page }) => {
       const numbers = await opensSales(page, width, height);
-      const recent = recentSales(page);
-      const header = recent.locator("div[aria-hidden='true']");
-      await expect(header).toBeVisible();
-      const names = (await header.locator("span").allTextContents()).map((text) => text.trim());
-      expect(names).toEqual(["Sale number", ...SALE_FIGURES, ""]);
-      const columns = await boxes(header.locator("span"));
-
-      const rows = await recent.locator("li").all();
-      expect(rows).toHaveLength(3);
-      for (const row of rows) {
-        const link = await box(row.locator(":scope > h3 a"));
-        const cells = await boxes(values(row.locator(":scope > dl")));
-        expect(cells).toHaveLength(5);
-        // The link is a 44 px target, so its middle, not its top, lines up with the figures.
-        const middles = [link, ...cells].map((cell) => cell.y + cell.height / 2);
-        expect(Math.max(...middles) - Math.min(...middles)).toBeLessThanOrEqual(6);
-        // The sale number and each figure sit in the column the header line names, in the header's order.
-        expect(Math.abs(link.x - columns[0]!.x), "sale number left").toBeLessThanOrEqual(1);
-        cells.forEach((cell, index) => {
-          expect(Math.abs(cell.x - columns[index + 1]!.x), `column ${index + 1} left`).toBeLessThanOrEqual(1);
-          expect(Math.abs(cell.width - columns[index + 1]!.width), `column ${index + 1} width`).toBeLessThanOrEqual(1);
-        });
-        // The labels are hidden visually here: the header line names the columns.
-        for (const label of await boxes(row.locator(":scope > dl dt"))) expect(label.width).toBeLessThanOrEqual(1);
-        expect(await row.locator(":scope > dl dt").allTextContents()).toEqual(SALE_FIGURES);
-      }
-
-      // No figure's text, and no sale number, runs past its cell.
-      const fits = await recent.locator("li > dl dd, li > h3 a").evaluateAll((cells) =>
-        cells.map((cell) => ({ text: cell.textContent, fits: cell.scrollWidth <= cell.clientWidth })),
-      );
-      expect(fits).toHaveLength(3 * 6);
-      expect(fits.filter((cell) => !cell.fits)).toEqual([]);
+      await expectTable(saleList(page), 3);
 
       if (width === 1280) {
         expect(await checkPageState(page)).toEqual(saleControls(numbers));
@@ -494,28 +537,7 @@ test.describe("the Sales layout", () => {
     }) => {
       await opensSales(page, width, height);
       if (size !== 16) await withTextSize(page, width, height, size);
-      const recent = recentSales(page);
-      await expect(recent.locator("div[aria-hidden='true']"), "the table is off").toBeHidden();
-      const rows = await recent.locator("li").all();
-      expect(rows).toHaveLength(3);
-      for (const row of rows) {
-        const figures = row.locator(":scope > dl");
-        const cells = await boxes(values(figures));
-        const labels = await boxes(figures.locator("dt"));
-        expect(cells).toHaveLength(5);
-        expect(labels).toHaveLength(5);
-        for (let i = 1; i < cells.length; i += 1) {
-          expect(cells[i]!.y, `value ${i} below value ${i - 1}`).toBeGreaterThanOrEqual(
-            cells[i - 1]!.y + cells[i - 1]!.height,
-          );
-        }
-        labels.forEach((label, index) => {
-          expect(label.width, `label ${index} is not hidden`).toBeGreaterThan(20);
-          expect(Math.abs(label.y - cells[index]!.y), `label ${index} on its value's first line`).toBeLessThanOrEqual(4);
-          expect(label.x + label.width, `label ${index} left of its value`).toBeLessThanOrEqual(cells[index]!.x + 1);
-        });
-        for (const label of await figures.locator("dt").all()) await expect(label).toBeVisible();
-      }
+      await expectCards(saleList(page), 3);
     });
   }
 
@@ -558,16 +580,7 @@ test.describe("the Sales layout", () => {
     }) => {
       await opensSales(page, width, height);
       if (size !== 16) await withTextSize(page, width, height, size);
-      const buttons = recentSales(page).getByRole("button", { name: /^Void sale / });
-      await expect(buttons).toHaveCount(2);
-      const section = await box(recentSales(page));
-      for (const button of await boxes(buttons)) {
-        expect(button.x, "a button starts inside the section").toBeGreaterThanOrEqual(section.x);
-        expect(button.x + button.width, "a button ends inside the section").toBeLessThanOrEqual(section.x + section.width);
-        expect(button.y + button.height, "a button ends inside the section, bottom").toBeLessThanOrEqual(
-          section.y + section.height,
-        );
-      }
+      await expectButtonsInside(recentSales(page), recentSales(page).getByRole("button", { name: /^Void sale / }), 2);
     });
   }
 });
@@ -608,113 +621,50 @@ async function opensLotList(page: Page, width: number, height: number) {
   return { list };
 }
 
+// A result's heading and its facts list are one white card: the heading's bottom edge is the facts list's top.
+async function expectCardJoin(result: Locator) {
+  const card = await box(result.locator(":scope > h2"));
+  const facts = await box(result.locator(":scope > dl"));
+  expect(Math.abs(card.y + card.height - facts.y), "the card runs from its heading into its facts").toBeLessThanOrEqual(1);
+}
+
 // What Tab reaches on a result: the finder's controls, then each link in the result, in page order.
 async function traceControls(result: Locator): Promise<string[]> {
   const links = (await result.locator("a").allTextContents()).map((text) => text.trim());
   return [...TRACE_CONTROLS, ...links.map((label) => `a ${label}`)];
 }
 
-// One of Trace's three lists: its rows, its header line, and the names the header line shows, in order.
-type TraceList = { items: Locator; header: Locator; names: string[]; figures: string[] };
-
-function salesFromLot(lot: Locator): TraceList {
+// Trace's three lists.
+function salesFromLot(lot: Locator): RowList {
   const heading = lot.locator('h3:text-is("Sales from this lot")');
   return {
     items: heading.locator("+ ul > li"),
     header: heading.locator("~ div[aria-hidden='true']"),
     names: ["Sale number", "Sale date", "Customer", "Product", "Batch number", "Lbs drawn"],
     figures: ["Sale date", "Customer", "Product", "Batch number", "Lbs drawn"],
+    numbered: true,
   };
 }
 
-function stockFromLot(lot: Locator): TraceList {
+function stockFromLot(lot: Locator): RowList {
   const heading = lot.locator('h3:text-is("Finished stock on hand from this lot")');
   return {
     items: heading.locator("+ ul > li"),
     header: heading.locator("~ div[aria-hidden='true']"),
     names: ["Batch number", "Product", "Made", "Lbs on hand"],
     figures: ["Product", "Made", "Lbs on hand"],
+    numbered: true,
   };
 }
 
-function receiptsOf(list: Locator): TraceList {
+function receiptsOf(list: Locator): RowList {
   return {
     items: list.locator("ul > li"),
     header: list.locator("div[aria-hidden='true']"),
     names: ["Lot number", "Received", "Vendor", "Weight"],
     figures: ["Received", "Vendor", "Weight"],
+    numbered: true,
   };
-}
-
-// Each row's number cell (a link or a heading) and its figures' values, labels, and the figure list.
-function numberCell(row: Locator): Locator {
-  return row.locator(":scope > h3, :scope > h4");
-}
-
-// The list reads as a table: one header line that names the columns in order, each row on one line with
-// its number and figures in those columns, labels hidden visually, and no figure past its cell.
-async function expectTable(list: TraceList, rows: number) {
-  await expect(list.header).toBeVisible();
-  const names = (await list.header.locator("span").allTextContents()).map((text) => text.trim());
-  expect(names).toEqual(list.names);
-  const columns = await boxes(list.header.locator("span"));
-  const items = await list.items.all();
-  expect(items).toHaveLength(rows);
-  for (const row of items) {
-    const heading = await box(numberCell(row));
-    const cells = await boxes(values(row.locator(":scope > dl")));
-    expect(cells).toHaveLength(list.figures.length);
-    const middles = [heading, ...cells].map((cell) => cell.y + cell.height / 2);
-    expect(Math.max(...middles) - Math.min(...middles), "one line").toBeLessThanOrEqual(6);
-    expect(Math.abs(heading.x - columns[0]!.x), "number left").toBeLessThanOrEqual(1);
-    cells.forEach((cell, index) => {
-      expect(Math.abs(cell.x - columns[index + 1]!.x), `column ${index + 1} left`).toBeLessThanOrEqual(1);
-      expect(Math.abs(cell.width - columns[index + 1]!.width), `column ${index + 1} width`).toBeLessThanOrEqual(1);
-    });
-    for (const label of await boxes(row.locator(":scope > dl dt"))) expect(label.width).toBeLessThanOrEqual(1);
-    expect(await row.locator(":scope > dl dt").allTextContents()).toEqual(list.figures);
-  }
-  await expectNoSpill(list, rows);
-}
-
-// No number and no figure's text runs past its cell.
-async function expectNoSpill(list: TraceList, rows: number) {
-  const fits = await list.items.locator(":scope > dl dd, :scope > h3, :scope > h4").evaluateAll((cells) =>
-    cells.map((cell) => ({ text: cell.textContent, fits: cell.scrollWidth <= cell.clientWidth })),
-  );
-  expect(fits).toHaveLength(rows * (list.figures.length + 1));
-  expect(fits.filter((cell) => !cell.fits)).toEqual([]);
-}
-
-// The list reads as cards: no header line, each figure on its own line with its label visible beside it.
-async function expectCards(list: TraceList, rows: number) {
-  await expect(list.header, "the table is off").toBeHidden();
-  const items = await list.items.all();
-  expect(items).toHaveLength(rows);
-  for (const row of items) {
-    const figures = row.locator(":scope > dl");
-    const cells = await boxes(values(figures));
-    const labels = await boxes(figures.locator("dt"));
-    expect(cells).toHaveLength(list.figures.length);
-    expect(labels).toHaveLength(list.figures.length);
-    for (let i = 1; i < cells.length; i += 1) {
-      expect(cells[i]!.y, `value ${i} below value ${i - 1}`).toBeGreaterThanOrEqual(cells[i - 1]!.y + cells[i - 1]!.height);
-    }
-    labels.forEach((label, index) => {
-      expect(label.width, `label ${index} is not hidden`).toBeGreaterThan(20);
-      expect(Math.abs(label.y - cells[index]!.y), `label ${index} on its value's first line`).toBeLessThanOrEqual(4);
-      expect(label.x + label.width, `label ${index} left of its value`).toBeLessThanOrEqual(cells[index]!.x + 1);
-    });
-    for (const label of await figures.locator("dt").all()) await expect(label).toBeVisible();
-  }
-}
-
-// With 20 px text a list may be a table or cards: either way no figure runs past its cell, and a card
-// keeps each label beside its value.
-async function expectEitherFits(list: TraceList, rows: number) {
-  await expectNoSpill(list, rows);
-  if (await list.header.isVisible()) return;
-  await expectCards(list, rows);
 }
 
 const TRACE_WIDTHS = [
@@ -731,11 +681,7 @@ test.describe("the Trace layout", () => {
       page,
     }) => {
       await opensLotTrace(page, width, height);
-      const widths = await page.locator("main > *").evaluateAll((children) =>
-        children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
-      );
-      expect(widths.length).toBeGreaterThan(2);
-      expect(widths.filter((value) => value !== "none")).toEqual([]);
+      await expectNoCap(page);
     });
 
     test(`AC-0013: at ${width}x${height} Find a sale is left of Find a raw lot, their tops level`, async ({ page }) => {
@@ -832,68 +778,324 @@ test.describe("the Trace layout", () => {
       } else {
         expect(customers.y + customers.height, "Customers is above Sales").toBeLessThanOrEqual(sales.y);
       }
-      const card = await box(lot.locator("h2"));
-      const facts = await box(lot.locator(":scope > dl"));
-      expect(Math.abs(card.y + card.height - facts.y), "the lot's card runs from its heading into its facts").toBeLessThanOrEqual(1);
+      await expectCardJoin(lot);
     });
   }
 
-  test("at 1280x720 the sale trace keeps its batch cards and passes the page checks", async ({ page }) => {
+  test("at 1280x720 the sale's heading runs into its facts, each batch is a card, and the page checks pass", async ({
+    page,
+  }) => {
     const { sale } = await opensSaleTrace(page, 1280, 720);
-    const cards = sale.locator(":scope > ul > li");
-    await expect(cards).toHaveCount(3);
+    await expectCardJoin(sale);
+    // A batch that loses its card loses its border, its rounded corners, or its white fill.
+    const cards = await sale.locator(":scope > ul > li").evaluateAll((items) =>
+      items.map((item) => {
+        const style = getComputedStyle(item);
+        return {
+          border: style.borderTopWidth,
+          radius: parseFloat(style.borderTopLeftRadius) > 0,
+          fill: style.backgroundColor,
+        };
+      }),
+    );
+    expect(cards).toHaveLength(3);
+    for (const card of cards) {
+      expect(card.border, "a batch card has a border").toBe("1px");
+      expect(card.radius, "a batch card has rounded corners").toBe(true);
+      expect(card.fill, "a batch card has the surface fill").toBe("rgb(255, 255, 255)");
+    }
     expect(await checkPageState(page)).toEqual(await traceControls(sale));
     await checkDesktopWalk(page);
   });
 });
 
-// The saved result sits in the form column, which is narrow from 1280 px. Every before-and-after table
-// in it ends inside the card's inner edge: the card's right edge minus its right padding.
-async function expectTablesInside(name: string, result: Locator, minimum: number) {
-  const tables = result.locator("table");
-  await expect(tables.first()).toBeVisible();
-  const edges = await result.evaluate((card) => {
-    const inner = card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight);
-    return [...card.querySelectorAll("table")].map((table) => ({ table: table.getBoundingClientRect().right, inner }));
-  });
-  expect(edges.length, `${name}: tables`).toBeGreaterThanOrEqual(minimum);
-  for (const edge of edges) expect.soft(edge.table, `${name}: table right ${edge.table}, card inner ${edge.inner}`).toBeLessThanOrEqual(edge.inner + 0.5);
+// ---- Long figures ----
+
+// Two raw lots of 987,654.321 lbs at $12.3456, two batches of 346,913.578 lbs, and two sales of
+// 100,000.123 lbs at $12.34: every weight column holds a six-digit weight with three decimals, and every
+// cost and price is $10 or more. Returns the first lot's number; both batches drew from it.
+async function seedLongRows(): Promise<string> {
+  const first = await seedReceipt(987654.321, 12.3456, "2026-10-01");
+  await seedReceipt(987654.321, 12.3456, "2026-10-02");
+  await seedBatch(346913.578, "2026-10-06", 346913.578);
+  await seedBatch(346913.578, "2026-10-07", 346913.578);
+  await seedSale(100000.123, "2026-10-08", 12.34, CUSTOMER_ID);
+  await seedSale(100000.123, "2026-10-09", 12.34, CUSTOMER_ID);
+  return lotNumberOf(first);
 }
 
-test.describe("the saved results", () => {
-  for (const [width, height, px] of [
-    [1024, 768, 16],
-    [1280, 720, 16],
-    [1440, 900, 16],
-    [1280, 720, 20],
-  ] as const) {
-    test(`the saved results' before-and-after tables stay inside their cards at ${width}x${height}, ${px} px text`, async ({
+test.describe("the lists with long figures", () => {
+  for (const [width, height] of TRACE_WIDTHS) {
+    test(`AC-0005: at ${width}x${height} each batch with six-digit weights and a cost of $10 or more reads as one row, every number whole in its cell`, async ({
       page,
     }) => {
-      const production = await opensProduction(page, width, height);
-      await withTextSize(page, width, height, px);
-      await expectTablesInside("production", production.f.result, 1);
+      await seedLongRows();
+      await page.setViewportSize({ width, height });
+      await openForm(page, BATCH_URL);
+      await expectTable(batchList(page), 2);
+    });
 
-      await resetTestData();
-      await fixtureWithPrice();
-      await page.setViewportSize({ width: 1280, height: 900 });
-      const sales = await openSalesForm(page);
-      await fillSale(sales, { lbs: "100", customer: "Fulton Market Deli", date: "2026-10-08" });
-      await sales.save.click();
-      await expect(sales.result.getByRole("heading", { name: "Sale saved" })).toBeVisible();
-      await withTextSize(page, width, height, px);
-      await expectTablesInside("sales", sales.result, 1);
+    test(`AC-0010: at ${width}x${height} each sale with a six-digit weight and a price of $10 or more reads as one row, every number whole in its cell`, async ({
+      page,
+    }) => {
+      await seedLongRows();
+      await page.setViewportSize({ width, height });
+      await openSalesForm(page);
+      await expectTable(saleList(page), 2);
+    });
 
-      await resetTestData();
-      await seed502Fixture();
-      await seedBatch(1000, "2026-10-06");
-      await page.setViewportSize({ width: 1280, height: 900 });
-      const receiving = await openReceivingForm(page);
-      await fillReceipt(receiving, { weight: "1000", cost: "1.9" });
-      await receiving.save.click();
-      await expect(receiving.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
-      await withTextSize(page, width, height, px);
-      await expectTablesInside("receiving", receiving.result, 2);
+    test(`AC-0014, AC-0015: at ${width}x${height} the lot's sales and finished stock with six-digit weights read as tables, every number whole in its cell`, async ({
+      page,
+    }) => {
+      const lot = await seedLongRows();
+      await page.setViewportSize({ width, height });
+      await openTrace(page, `/trace?lot=${lot}`);
+      const result = page.getByRole("region", { name: lot, exact: true });
+      await expectTable(salesFromLot(result), 2);
+      await expectTable(stockFromLot(result), 2);
+    });
+
+    test(`AC-0016: at ${width}x${height} the raw lot list with six-digit weights reads as a table, every number whole in its cell`, async ({
+      page,
+    }) => {
+      await seedLongRows();
+      await page.setViewportSize({ width, height });
+      await openTrace(page, "/trace?raw=RAW-TOM");
+      await expectTable(receiptsOf(page.getByRole("region", { name: "Receipts of RAW-TOM" })), 2);
+    });
+
+    test(`AC-0014, AC-0015, AC-0016: at ${width}x${height} with 20 px text and long figures no figure runs past its cell, and a card keeps its labels beside its values`, async ({
+      page,
+    }) => {
+      const lot = await seedLongRows();
+      await page.setViewportSize({ width, height });
+      await openTrace(page, `/trace?lot=${lot}`);
+      const result = page.getByRole("region", { name: lot, exact: true });
+      await withTextSize(page, width, height, 20);
+      await expectEitherFits(salesFromLot(result), 2);
+      await expectEitherFits(stockFromLot(result), 2);
+      await openTrace(page, "/trace?raw=RAW-TOM");
+      await withTextSize(page, width, height, 20);
+      await expectEitherFits(receiptsOf(page.getByRole("region", { name: "Receipts of RAW-TOM" })), 2);
     });
   }
+
+  test("AC-0006: at 1280x900 with 20 px text and long figures each batch stays a card and no figure runs past its cell", async ({
+    page,
+  }) => {
+    await seedLongRows();
+    await openForm(page, BATCH_URL);
+    await withTextSize(page, 1280, 900, 20);
+    await expectCards(batchList(page), 2);
+    await expectNoSpill(batchList(page), 2);
+  });
+
+  test("AC-0011: at 1280x900 with 20 px text and long figures each sale stays a card and no figure runs past its cell", async ({
+    page,
+  }) => {
+    await seedLongRows();
+    await openSalesForm(page);
+    await withTextSize(page, 1280, 900, 20);
+    await expectCards(saleList(page), 2);
+    await expectNoSpill(saleList(page), 2);
+  });
+});
+
+// ---- The saved result stays under the form ----
+
+// With ten recent rows and a result just saved: the form card ends within its own bottom padding and border
+// plus 1 px below its Save button, and the result starts at or below the form and no more than 1rem plus 1 px
+// below it.
+async function expectResultUnderForm(page: Page, form: Locator, save: Locator, result: Locator) {
+  const handles = { form: await form.elementHandle(), save: await save.elementHandle(), result: await result.elementHandle() };
+  expect(handles.form && handles.save && handles.result, "the form, its Save button, and the result are in the page").toBeTruthy();
+  const measured = await page.evaluate(({ form, save, result }) => {
+    const style = getComputedStyle(form);
+    return {
+      formBottom: form.getBoundingClientRect().bottom,
+      saveBottom: save.getBoundingClientRect().bottom,
+      resultTop: result.getBoundingClientRect().top,
+      padding: parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth),
+      rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
+    };
+  }, { form: handles.form!, save: handles.save!, result: handles.result! });
+  expect(measured.formBottom - measured.saveBottom, "the form ends just below its Save button").toBeLessThanOrEqual(
+    measured.padding + 1,
+  );
+  expect(measured.resultTop, "the result is at or below the form").toBeGreaterThanOrEqual(measured.formBottom);
+  expect(measured.resultTop - measured.formBottom, "the result starts within 1rem of the form").toBeLessThanOrEqual(
+    measured.rem + 1,
+  );
+}
+
+const GAP_SIZES = [
+  [1024, 768, 16],
+  [1280, 720, 16],
+  [1280, 720, 20],
+] as const;
+
+test.describe("the saved result under the form", () => {
+  for (const [width, height, px] of GAP_SIZES) {
+    test(`AC-0032: /production at ${width}x${height}, ${px} px text, with ten recent batches the saved result starts under the form`, async ({
+      page,
+    }) => {
+      await seed502Fixture();
+      for (let day = 1; day <= 10; day += 1) await seedBatch(100, `2026-10-${String(day).padStart(2, "0")}`);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const f = await openForm(page, BATCH_URL);
+      await expect(recentBatches(page).locator("li")).toHaveCount(10);
+      await fillBatch(f, { raw: "100", date: "2026-10-11" });
+      await saveThrough(page, f);
+      await expect(f.result.getByRole("heading", { name: "Batch saved" })).toBeVisible();
+      await withTextSize(page, width, height, px);
+      const form = page.getByRole("form", { name: "New batch" });
+      await expectResultUnderForm(page, form, form.getByRole("button", { name: "Save", exact: true }), f.result);
+    });
+
+    test(`AC-0032: /sales at ${width}x${height}, ${px} px text, with ten recent sales the saved result starts under the form`, async ({
+      page,
+    }) => {
+      await fixtureWithPrice();
+      for (let day = 11; day <= 20; day += 1) await seedSale(10, `2026-10-${day}`);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const f = await openSalesForm(page);
+      await expect(recentSales(page).locator("li")).toHaveCount(10);
+      await fillSale(f, { lbs: "10", date: "2026-10-21" });
+      await f.save.click();
+      await expect(f.result.getByRole("heading", { name: "Sale saved" })).toBeVisible();
+      await withTextSize(page, width, height, px);
+      const form = page.getByRole("form", { name: "New sale" });
+      await expectResultUnderForm(page, form, form.getByRole("button", { name: "Save sale", exact: true }), f.result);
+    });
+
+    test(`AC-0032: /receiving at ${width}x${height}, ${px} px text, with ten recent receipts the saved result starts under the form`, async ({
+      page,
+    }) => {
+      for (let day = 1; day <= 10; day += 1) await seedReceipt(100 + day, 1.5, `2026-10-${String(day).padStart(2, "0")}`);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const f = await openReceivingForm(page, RAW_TOM_URL);
+      await expect(page.getByRole("region", { name: "Recent receipts" }).locator("li")).toHaveCount(10);
+      await fillReceipt(f, { weight: "100", cost: "1.9" });
+      await f.save.click();
+      await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
+      await withTextSize(page, width, height, px);
+      const form = page.getByRole("form", { name: RECEIVING_FORM });
+      await expectResultUnderForm(page, form, form.getByRole("button", { name: "Save", exact: true }), f.result);
+    });
+  }
+});
+
+// ---- Before-and-after tables inside their card or item ----
+
+// Every before-and-after table in `item` ends at or left of the item's right edge less its right padding,
+// no cell's text (a row label included) runs past its cell, and no number in a Before or After cell splits
+// across lines (the text before the first space sits in one piece; a unit may drop under its number).
+async function expectTablesFit(name: string, item: Locator, minimum: number) {
+  await expect(item.locator("table").first()).toBeVisible();
+  const report = await item.evaluate((card) => {
+    const inner = card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).paddingRight);
+    const problems: string[] = [];
+    const tables = [...card.querySelectorAll("table")];
+    for (const table of tables) {
+      const edge = table.getBoundingClientRect().right;
+      if (edge > inner + 0.5) problems.push(`table right ${edge} is past the inner edge ${inner}`);
+      for (const cell of table.querySelectorAll("th, td")) {
+        const text = cell.textContent ?? "";
+        if (cell.scrollWidth > cell.clientWidth) problems.push(`"${text}" runs past its cell`);
+        if (cell.matches("tbody td")) {
+          const node = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT).nextNode()!;
+          const range = document.createRange();
+          range.setStart(node, 0);
+          range.setEnd(node, text.split(" ")[0]!.length);
+          const figure = /^\$?\d[\d,]*(\.\d+)?(\/lb)?$/.test(text.split(" ")[0]!);
+          if (figure && range.getClientRects().length !== 1) problems.push(`the number in "${text}" splits across lines`);
+        }
+      }
+    }
+    return { tables: tables.length, problems };
+  });
+  expect(report.tables, `${name}: tables`).toBeGreaterThanOrEqual(minimum);
+  expect.soft(report.problems, name).toEqual([]);
+}
+
+async function atSize(page: Page, [width, height, px]: readonly [number, number, number]) {
+  await withTextSize(page, width, height, px);
+  return `${width}x${height}, ${px} px text`;
+}
+
+const RESULT_SIZES = [
+  [1024, 768, 16],
+  [1280, 720, 16],
+  [1440, 900, 16],
+  [1280, 720, 20],
+] as const;
+
+const PANEL_SIZES = [
+  [390, 844, 20],
+  [1024, 768, 20],
+  [1280, 720, 16],
+] as const;
+
+test.describe("before-and-after tables in saved results", () => {
+  test("AC-0033: /production, the saved result's table fits the card at every size with long figures", async ({ page }) => {
+    await seedReceipt(987654.321, 12.3456, "2026-10-01");
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const f = await openForm(page, BATCH_URL);
+    await fillBatch(f, { raw: "123456.789", date: "2026-10-08" });
+    await saveThrough(page, f);
+    await expect(f.result.getByRole("heading", { name: "Batch saved" })).toBeVisible();
+    for (const size of RESULT_SIZES) await expectTablesFit(`production ${await atSize(page, size)}`, f.result, 1);
+  });
+
+  test("AC-0033: /sales, the saved result's table fits the card at every size with long figures", async ({ page }) => {
+    await seedReceipt(987654.321, 12.3456, "2026-10-01");
+    await seedBatch(346913.578, "2026-10-06", 346913.578);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const f = await openSalesForm(page);
+    await fillSale(f, { lbs: "123456.789", price: "12.34", customer: "Fulton Market Deli", date: "2026-10-08" });
+    await f.save.click();
+    await expect(f.result.getByRole("heading", { name: "Sale saved" })).toBeVisible();
+    for (const size of RESULT_SIZES) await expectTablesFit(`sales ${await atSize(page, size)}`, f.result, 1);
+  });
+
+  test("AC-0033: /receiving, the saved result's tables fit the card at every size with long figures", async ({ page }) => {
+    await seedReceipt(987654.321, 12.3456, "2026-10-01");
+    await seedBatch(246913.578, "2026-10-06", 246913.578);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const f = await openReceivingForm(page);
+    await fillReceipt(f, { weight: "123456.789", cost: "12.5" });
+    await f.save.click();
+    await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
+    for (const size of RESULT_SIZES) await expectTablesFit(`receiving ${await atSize(page, size)}`, f.result, 2);
+  });
+
+  test("AC-0034: /production, the Batch reversed panel's tables fit its batch at every size with long figures", async ({
+    page,
+  }) => {
+    await seedReceipt(987654.321, 12.3456, "2026-10-01");
+    const batchId = await seedBatch(346913.578, "2026-10-06", 346913.578);
+    await seedSale(123456.789, "2026-10-08", 12.34, CUSTOMER_ID);
+    const number = await batchNumberOf(batchId);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openForm(page, BATCH_URL);
+    const item = batchItem(page, number);
+    await reverseThrough(page, item, number, "entered twice");
+    await expect(reversePanel(item).getByRole("heading", { name: "Batch reversed" })).toBeVisible();
+    for (const size of PANEL_SIZES) await expectTablesFit(`production panel ${await atSize(page, size)}`, item, 2);
+  });
+
+  test("AC-0034: /receiving, the Receipt corrected panel's tables fit its receipt at every size with long figures", async ({
+    page,
+  }) => {
+    const lotId = await seedReceipt(987654.321, 12.3456, "2026-10-01");
+    await seedBatch(246913.578, "2026-10-06", 246913.578);
+    const lot = await lotNumberOf(lotId);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openReceivingForm(page, RAW_TOM_URL);
+    const item = receiptItem(page, lot);
+    await correctThrough(page, item, lot, { cost: "12.5", weight: "999999.999" });
+    await expect(correctPanel(item).getByRole("heading", { name: "Receipt corrected" })).toBeVisible();
+    await expect(item.locator("th", { hasText: "Cost per finished lb" }), "the batch table shows").toBeVisible();
+    for (const size of PANEL_SIZES) await expectTablesFit(`receiving panel ${await atSize(page, size)}`, item, 3);
+  });
 });

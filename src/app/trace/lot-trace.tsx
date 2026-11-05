@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { LotTrace } from "../../lib/trace";
-import { Facts } from "../facts";
+import { CARD_SECTION, CARD_TOP, Facts } from "../facts";
 
 const LINK =
   "inline-flex min-h-control min-w-control items-center break-all rounded-control text-primary underline";
 
 // Each list's own columns. A list reads as a table where its wrapper is wide enough (its variant in
 // globals.css): the row's `li` holds the column rules and places `Facts`'s pairs on them through its own
-// classes, the same way Recent sales does, and the header line follows the list in the page with `order`
-// putting it above the list. Otherwise each item is a card with each label beside its value.
+// classes, the same way Recent sales does. The header line follows the list in the page and `order` puts it
+// above the list, because trace.spec.ts finds a list's rows with `h3 + ul > li`, so each `ul` must stay its
+// `h3`'s next sibling. Otherwise each item is a card with each label beside its value.
 const SALE_COLUMNS =
   "tsale-table:grid-cols-[6rem_5.5rem_minmax(0,1fr)_4rem_6rem_5.5rem] tsale-table:gap-x-1.5 tsale-table:px-4";
 const SALE_CELLS = [
@@ -32,19 +33,18 @@ const STOCK_NAMES = ["Batch number", "Product", "Made", "Lbs on hand"];
 
 // A raw lot's trace: the receipt, the customers and sales its stock reached, and
 // the finished stock still on hand from it. Every value is React text. The lot's heading and its facts
-// list are one white card (the heading draws the top edge, the list the bottom edge, and the negative
-// margin closes the gap); both stay direct children of the section, which is the container named
-// `tracelot`. Customers sits beside "Sales from this lot" where the section is wide (`lot-wide`).
+// list are one white card (CARD_SECTION, CARD_TOP, and the "card-cols" look in facts.tsx draw it); both stay
+// direct children of the section, which is the container named `tracelot`. Customers sits beside "Sales from this lot" where the section is wide (`lot-wide`).
 export function LotTraceView({ number, trace }: { number: string; trace: LotTrace | null }) {
   if (!trace) return <p tabIndex={-1} data-result-focus className="break-words text-base">{`No receipt has lot number ${number}.`}</p>;
   const { lot, customers, hasNoCustomer, sales, finishedStock } = trace;
   return (
-    <section aria-labelledby="lot-trace-heading" className="@container/tracelot flex flex-col gap-4">
+    <section aria-labelledby="lot-trace-heading" className={`@container/tracelot ${CARD_SECTION}`}>
       <h2
         id="lot-trace-heading"
         tabIndex={-1}
         data-result-focus
-        className="-mb-4 break-words rounded-t-card border border-b-0 border-card-border bg-surface px-4 pb-3 pt-4 text-lg font-bold"
+        className={CARD_TOP}
       >
         {lot.lotNumber}
       </h2>

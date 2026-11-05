@@ -1,22 +1,22 @@
 import Link from "next/link";
 import { formatCostPerLb, formatDate, formatPricePerLb, formatWeight } from "../../lib/format";
 import type { SaleTrace } from "../../lib/trace";
-import { Facts } from "../facts";
+import { CARD_SECTION, CARD_TOP, Facts } from "../facts";
 
 const LINK =
   "inline-flex min-h-control min-w-control items-center break-all rounded-control text-primary underline";
 
 // A sale's trace: the sale's facts, then each finished lot it drew from with the
-// raw lots that batch drew from stacked inside. The heading and the facts list are one white card:
-// the heading draws its top edge, the list its bottom edge, and the negative margin closes the gap
-// between them (the list stays a direct child of the section, as does the batch list). Every value is React text, so a
-// number typed into the URL shows as typed and never as markup.
+// raw lots that batch drew from stacked inside. The heading and the facts list are one white card
+// (CARD_SECTION, CARD_TOP, and the "card" look in facts.tsx draw it; the list stays a direct child of the
+// section, as does the batch list). Every value is React text, so a number typed into the URL shows as typed
+// and never as markup.
 export function SaleTraceView({ number, trace }: { number: string; trace: SaleTrace | null }) {
   if (!trace) return <p tabIndex={-1} data-result-focus className="break-words text-base">{`No sale has number ${number}.`}</p>;
   const { sale, lots } = trace;
   return (
-    <section aria-labelledby="sale-trace-heading" className="flex flex-col gap-4">
-      <h2 id="sale-trace-heading" tabIndex={-1} data-result-focus className="-mb-4 break-words rounded-t-card border border-b-0 border-card-border bg-surface px-4 pb-3 pt-4 text-lg font-bold">
+    <section aria-labelledby="sale-trace-heading" className={CARD_SECTION}>
+      <h2 id="sale-trace-heading" tabIndex={-1} data-result-focus className={CARD_TOP}>
         {sale.saleNumber}
       </h2>
       <Facts
