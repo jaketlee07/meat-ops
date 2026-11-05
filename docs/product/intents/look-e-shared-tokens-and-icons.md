@@ -1,6 +1,6 @@
 # Look E: named tokens for radius and title size, and one icon setup
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
