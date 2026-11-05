@@ -38,13 +38,33 @@ export default async function PricingPage({
   const productCode = textParam(query.product);
   if (productCode !== undefined) {
     const detail = await getPricingDetail(supabase, productCode);
-    return (
-      <PageShell title="Pricing" current="pricing">
-        {detail ? (
-          <PricingDetail key={detail.productId} detail={detail} />
-        ) : (
+    if (!detail) {
+      return (
+        <PageShell title="Pricing" current="pricing">
           <p className="break-words text-base">{`No active finished product has code ${productCode}.`}</p>
-        )}
+        </PageShell>
+      );
+    }
+    const rows = await listPricing(supabase);
+    // The panel comes first in the page, so Tab reaches its controls before the list's
+    // links. From desk up the grid puts the list on the left and the panel on the right;
+    // under desk the tiles and the list are hidden and the details show alone.
+    return (
+      <PageShell title="Pricing" current="pricing" fullWidth>
+        <div className="hidden desk:block">
+          <ProductTiles rows={rows} />
+        </div>
+        <div className="desk:grid desk:grid-cols-[minmax(0,1fr)_360px] desk:items-start desk:gap-4">
+          <section
+            aria-label="Product details"
+            className="rounded-card border border-card-border bg-surface p-4 desk:col-start-2 desk:row-start-1"
+          >
+            <PricingDetail key={detail.productId} detail={detail} />
+          </section>
+          <div className="hidden min-w-0 desk:col-start-1 desk:row-start-1 desk:block">
+            <PricingList rows={rows} openCode={detail.code} />
+          </div>
+        </div>
       </PageShell>
     );
   }

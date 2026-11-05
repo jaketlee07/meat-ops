@@ -516,7 +516,7 @@ test.describe("the what-if", () => {
     await expect(figure(c, "Suggested price")).toHaveText("No price yet");
     await expect(figure(c, "Margin at list price")).toHaveText("None yet");
     await opensDetail(page, "502");
-    const main = page.locator("main");
+    const main = page.getByRole("region", { name: "Product details" });
     for (const label of ["Raw average cost", "Cost after shrink", "Cost per lb"]) {
       await expect(figure(main, label), label).toHaveText("None yet");
     }
@@ -681,8 +681,9 @@ test.describe("the what-if", () => {
 
 // The detail's figures as label and value pairs, in page order.
 async function figures(page: Page): Promise<Array<[string, string]>> {
-  const labels = await page.locator("main dt").allTextContents();
-  const values = await page.locator("main dd").allTextContents();
+  const region = page.getByRole("region", { name: "Product details" });
+  const labels = await region.locator("dt").allTextContents();
+  const values = await region.locator("dd").allTextContents();
   return labels.map((label, index) => [label.trim(), (values[index] ?? "").trim()]);
 }
 
@@ -734,7 +735,7 @@ test.describe("the detail", () => {
     expect(figs.map(([label]) => label)).not.toContain("Target margin");
     await expect(page.getByText(NO_TARGET_SENTENCE, { exact: true })).toBeVisible();
     // The sentence sits between the suggested price and the list price.
-    const order = await page.locator("main dt, main p").allTextContents();
+    const order = await page.getByRole("region", { name: "Product details" }).locator("dt, p").allTextContents();
     const labels = order.map((text) => text.trim());
     expect(labels.indexOf("Suggested price")).toBeLessThan(labels.indexOf(NO_TARGET_SENTENCE));
     expect(labels.indexOf(NO_TARGET_SENTENCE)).toBeLessThan(labels.indexOf("List price"));
@@ -785,7 +786,7 @@ test.describe("the detail", () => {
     const raw = await addRaw("RAWN");
     await addFinished("NOCOST", "Never received", raw);
     await opensDetail(page, "NOCOST");
-    const main = page.locator("main");
+    const main = page.getByRole("region", { name: "Product details" });
     for (const label of ["Raw average cost", "Cost after shrink", "Cost per lb"]) {
       await expect(figure(main, label), label).toHaveText("None yet");
     }

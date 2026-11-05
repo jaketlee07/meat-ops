@@ -18,6 +18,9 @@ const GROUPS = [
 const TABLE_COLUMNS = "wide:grid-cols-[minmax(0,2.2fr)_repeat(5,minmax(0,1fr))] wide:gap-x-2 wide:px-3.5";
 const COLUMN_NAMES = ["Cost per lb", "List price", "Suggested price", "Margin at list price", "Target margin"];
 
+// The open product's row: a tint and an accent edge on the left.
+const OPEN_ROW = "bg-page border-l-4 border-l-primary wide:border-l-4";
+
 const TILE_EDGES = {
   "Needs a new price": "border-t-status-needs",
   Priced: "border-t-status-priced",
@@ -49,8 +52,9 @@ interface Message {
 // The three headed groups of product cards. The database sorted the rows and set
 // every flag, so a row goes to its group by its flags and keeps its place. The
 // list owns the message region: a saved list price moves its card to another
-// group, so the message cannot live in the card.
-export function PricingList({ rows }: { rows: PricingRow[] }) {
+// group, so the message cannot live in the card. The product whose details are
+// open (openCode) is marked and leaves out its advice, which the details hold.
+export function PricingList({ rows, openCode }: { rows: PricingRow[]; openCode?: string }) {
   const [message, setMessage] = useState<Message | null>(null);
   const savedRef = useRef<HTMLDivElement>(null);
   const refusedRef = useRef<HTMLDivElement>(null);
@@ -117,7 +121,7 @@ export function PricingList({ rows }: { rows: PricingRow[] }) {
             </div>
             <ul className="space-y-3 wide:space-y-0">
               {group.map((row) => (
-                <ProductCard key={row.productId} row={row} onResult={show} />
+                <ProductCard key={row.productId} row={row} open={row.code === openCode} onResult={show} />
               ))}
             </ul>
           </section>
@@ -127,14 +131,23 @@ export function PricingList({ rows }: { rows: PricingRow[] }) {
   );
 }
 
-function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: ChangeState) => void }) {
+function ProductCard({
+  row,
+  open,
+  onResult,
+}: {
+  row: PricingRow;
+  open: boolean;
+  onResult: (state: ChangeState) => void;
+}) {
   return (
     <li
-      className={`rounded-card border border-card-border bg-surface p-3.5 wide:grid wide:items-center wide:rounded-none wide:border-0 wide:border-t wide:py-2 ${TABLE_COLUMNS}`}
+      className={`rounded-card border border-card-border p-3.5 wide:grid wide:items-center wide:rounded-none wide:border-0 wide:border-t wide:py-2 ${TABLE_COLUMNS} ${open ? OPEN_ROW : "bg-surface"}`}
     >
       <h3 className="text-lg font-bold break-words wide:text-base">
         <Link
           href={`/pricing?product=${encodeURIComponent(row.code)}`}
+          aria-current={open ? "page" : undefined}
           className="inline-flex min-h-control items-center text-primary underline"
         >
           {row.code} {row.description}
@@ -162,7 +175,7 @@ function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: Cha
           value={row.targetMargin === null ? "No target" : formatMargin(row.targetMargin)}
         />
       </dl>
-      <PriceAdviceBlock row={row} onResult={onResult} />
+      {!open && <PriceAdviceBlock row={row} onResult={onResult} />}
     </li>
   );
 }
