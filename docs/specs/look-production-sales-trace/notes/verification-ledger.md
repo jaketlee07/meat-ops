@@ -60,3 +60,15 @@ The spec's Assumptions record each of these as a Product line:
 - A new test ("the saved results' before-and-after tables stay inside their cards", four sizes) failed on Production and Receiving with the source stashed.
 - `npm test`: Vitest 55 files, 1050 passed; Playwright 862 passed in 13.1 min.
 - The captures were retaken and placed on the canvas (version 1793913526-bd8f) for the owner's comparison.
+
+## T5 (2026-11-05)
+
+- AC-0024: the owner compared the built screens on the canvas (version 1793913526-bd8f) on 2026-11-05 and answered "All six match" for Production, Sales, and Trace on a phone and a desktop against the S3 boards (revision 1793899703-bb47), and "Both match" for Receiving on a desktop against S2-Receiving-Desktop (revision 1793856599-9c48) and for Production's check step, the Reverse batch dialog, the Void this sale? dialog, and the Batch reversed panel against Receiving's void and Correct dialogs and Receipt corrected panel.
+- AC-0023: `npm test` at `e7912b3` passed: Vitest 55 files, 1050 passed; Playwright 862 passed in 13.1 min. The commits after it change only the ledger and one comment in `facts.tsx` (`968135b`; typecheck and `test/look-tidy.test.ts`, 3 passed, rerun on it).
+- AC-0020, AC-0021, AC-0022: `test/look-tidy.test.ts` passes at the head. The comment above `VALUE_CLASS` in `src/app/facts.tsx` now reads that every look but "tiles" keeps the value's width up to 60% (for "cells" where the section is not a table), "tiles" sets no cap, and "cells" in a table shrinks to its column; this matches the classes, including T4's "card", "card-cols", and "plain".
+- AC-0025: `git diff 9e661f8 -- src/app/facts.tsx src/app/before-after.tsx` read in full. Every changed line is a comment, a `className` string, the `Look` type, or an entry in the four class records; the `Facts` and `BeforeAfter` elements, nesting, other attributes, and text are unchanged. The added looks "card", "card-cols", and "plain" only choose classes.
+- AC-0026: `git diff 9e661f8 -- test/e2e` read in full; no untracked file under `test`. Changed expectations in existing files:
+  - `look-pages.spec.ts`: "a product stays a card" at 1279x800 and 1024x768 becomes AC-0017's "a product reads as one row under a header line" at those sizes (the 390x844 card test is kept as its own test); "the list beside the panel keeps each product a card" at 1279x800 becomes AC-0017's table at 1279x800, and at 1024x768 stays cards.
+  - `shell.spec.ts`: the content-cap test checks the 544 px cap on `/ask`'s examples section and keeps its 448 px check-step check on `/production`.
+  - `pricing-page.ts` and `pricing.spec.ts`: `detail().main` is renamed `region` with every use (AC-0021); the asserted values are unchanged.
+  - Everything else in `test/e2e` is added tests: `look-floor-pages.spec.ts` (new) and the AC-0017 and AC-0031 tests in `look-pages.spec.ts`.
