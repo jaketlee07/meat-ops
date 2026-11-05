@@ -53,7 +53,7 @@ const IDLE: SaveState = { status: "idle" };
 const NO_ERRORS: Partial<Record<ReceiptField, string>> = {};
 const NO_LOTS: readonly string[] = [];
 
-const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
+const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
 function deviceToday(): string {
@@ -233,9 +233,9 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         onSubmit={submit}
         aria-labelledby="receipt-form-heading"
         noValidate
-        className="space-y-4"
+        className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
       >
-        <h2 id="receipt-form-heading" className="text-xl font-semibold">
+        <h2 id="receipt-form-heading" className="text-lg font-bold">
           New receipt
         </h2>
 
@@ -247,7 +247,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         )}
 
         <div>
-          <label htmlFor={FIELD_IDS.productCode} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.productCode} className="block text-sm font-semibold text-ink-secondary">
             Product code
           </label>
           <input
@@ -270,7 +270,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.vendorId} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.vendorId} className="block text-sm font-semibold text-ink-secondary">
             Vendor
           </label>
           <select
@@ -292,7 +292,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.weight} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.weight} className="block text-sm font-semibold text-ink-secondary">
             Weight (lbs)
           </label>
           <input
@@ -310,7 +310,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.cost} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.cost} className="block text-sm font-semibold text-ink-secondary">
             Cost per lb ($)
           </label>
           <input
@@ -328,7 +328,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.receivedDate} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.receivedDate} className="block text-sm font-semibold text-ink-secondary">
             Received date
           </label>
           <input
@@ -348,7 +348,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         {recheckCode && <input type="hidden" name={RECHECK_FIELD} value="1" />}
 
         <div>
-          <label htmlFor={FIELD_IDS.notes} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.notes} className="block text-sm font-semibold text-ink-secondary">
             Notes (optional)
           </label>
           <textarea
@@ -382,7 +382,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
           onClick={(event) => {
             if (blocked) event.preventDefault();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary disabled:opacity-60 aria-disabled:bg-primary/60"
+          className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary disabled:opacity-60 aria-disabled:bg-primary/60"
         >
           Save
         </button>
@@ -390,7 +390,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
 
       <ResultPanel state={state} headingRef={headingRef} voided={lotVoided} corrected={lotCorrected} />
 
-      <div id="product-region" aria-busy={regionPending} className="mt-6 space-y-4">
+      <div id="product-region" aria-busy={regionPending} className="mt-4 flex flex-col gap-4 desk:mt-0 desk:contents">
         {chosen && chosen.code === regionCode ? region : null}
       </div>
     </>

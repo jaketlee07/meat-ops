@@ -33,7 +33,7 @@ interface Invalid {
 }
 type Corrected = Extract<CorrectionState, { status: "corrected" }>;
 
-const FIELD = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base font-normal text-ink";
+const FIELD = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base font-normal text-ink";
 const SUBHEAD = "text-lg font-semibold";
 
 // The batches whose cost per finished lb the correction restated, each with the
@@ -214,7 +214,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
         type="button"
         onClick={open}
         aria-label={`Correct lot ${lotNumber}`}
-        className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink"
+        className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink"
       >
         Correct
       </button>
@@ -255,7 +255,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
           // Escape must not hide a correction that is already on its way.
           if (pending) event.preventDefault();
         }}
-        className="m-auto w-full max-w-md rounded-md border border-field-border bg-surface p-4 text-ink backdrop:bg-ink/50"
+        className="m-auto w-full max-w-md rounded-card border border-card-border bg-surface p-4 text-ink backdrop:bg-ink/50"
       >
         <form onSubmit={confirm} noValidate className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -266,7 +266,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
               type="button"
               disabled={pending}
               onClick={() => dialogRef.current?.close()}
-              className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
+              className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
             >
               Cancel
             </button>
@@ -355,7 +355,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
           <button
             type="submit"
             aria-disabled={pending ? true : undefined}
-            className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+            className="w-full rounded-control bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
           >
             Save correction
           </button>

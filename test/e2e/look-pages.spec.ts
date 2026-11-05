@@ -16,10 +16,11 @@ import {
   setTarget,
   WHAT_IF_HEADING,
 } from "./pricing-page";
+import { FORM_CONTROLS, lotNumberOf, RAW_TOM_URL, RECEIVING_FORM, receiptItem, seedReceipt, voidThrough } from "./receiving-page";
 import { OPERATOR_STATE } from "./states";
 
 // The look E pages at the widths where their layout changes: the Pricing list's
-// content cap, tiles, and table look. Operator session; data is reset before each test.
+// content cap, tiles, and table look, and Receiving's two-column layout and receipts table. Operator session; data is reset before each test.
 
 test.use({ storageState: OPERATOR_STATE });
 
@@ -367,6 +368,180 @@ test.describe("the product details beside the list", () => {
       await page.setViewportSize({ width, height });
       await opensDetail(page, "NB");
       await expectStackedRows(page);
+    });
+  }
+});
+
+// ---- Receiving: /receiving?product=RAW-TOM with three receipts, one of them void ----
+
+const RECEIPT_FIGURES = ["Lot number", "Received", "Vendor", "Weight", "Cost per lb", "Remaining"];
+
+// Three receipts of RAW-TOM, the middle one voided through the page. Returns nothing:
+// the page is left open on /receiving?product=RAW-TOM at the given size.
+async function opensReceiving(page: Page, width: number, height: number) {
+  await seedReceipt(1000, 1.5, "2026-05-10");
+  const middle = await seedReceipt(2000, 1.6, "2026-05-11");
+  await seedReceipt(3000, 1.7, "2026-05-12");
+  await page.setViewportSize({ width, height });
+  await page.goto(RAW_TOM_URL);
+  await expect(recentReceipts(page)).toBeVisible();
+  await expect(recentReceipts(page).locator("li")).toHaveCount(3);
+  await voidThrough(page, receiptItem(page, await lotNumberOf(middle)), "entered twice");
+  await expect(recentReceipts(page).getByText("Void: entered twice")).toBeVisible();
+}
+
+function receivingForm(page: Page): Locator {
+  return page.getByRole("form", { name: RECEIVING_FORM });
+}
+
+function stockCard(page: Page): Locator {
+  return page.getByRole("region", { name: "Stock and prices" });
+}
+
+function recentReceipts(page: Page): Locator {
+  return page.getByRole("region", { name: "Recent receipts" });
+}
+
+async function box(target: Locator) {
+  const found = await target.boundingBox();
+  expect(found, "box").not.toBeNull();
+  return found!;
+}
+
+test.describe("the Receiving layout", () => {
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0001: /receiving lifts the 34rem cap on every child of main at ${width}x${height}`, async ({ page }) => {
+      await opensReceiving(page, width, height);
+      const widths = await page.locator("main > *").evaluateAll((children) =>
+        children.map((child) => getComputedStyle(child).maxWidth),
+      );
+      expect(widths.length).toBeGreaterThan(2);
+      expect(widths.filter((value) => value !== "none")).toEqual([]);
+    });
+  }
+
+  for (const [width, height] of [
+    [1023, 768],
+    [390, 844],
+  ] as const) {
+    test(`AC-0010: at ${width}x${height} the form, the stock card, and Recent receipts run top to bottom`, async ({
+      page,
+    }) => {
+      await opensReceiving(page, width, height);
+      const form = await box(receivingForm(page));
+      const stock = await box(stockCard(page));
+      const heading = await box(recentReceipts(page).getByRole("heading", { name: "Recent receipts" }));
+      expect(form.y + form.height).toBeLessThanOrEqual(stock.y);
+      expect(stock.y + stock.height).toBeLessThanOrEqual(heading.y);
+      await expect(stockCard(page).getByText("On hand", { exact: true })).toBeVisible();
+      await expect(stockCard(page).getByText("Average cost", { exact: true })).toBeVisible();
+      await expect(stockCard(page).getByRole("heading", { name: "Suggested price per lb" })).toBeVisible();
+    });
+  }
+
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0011: at ${width}x${height} the title is above, and the form is left of the stock card and Recent receipts`, async ({
+      page,
+    }) => {
+      await opensReceiving(page, width, height);
+      const title = await box(page.getByRole("heading", { level: 1, name: "Receiving" }));
+      const form = await box(receivingForm(page));
+      const stock = await box(stockCard(page));
+      const recent = await box(recentReceipts(page));
+      expect(title.y + title.height).toBeLessThanOrEqual(form.y);
+      expect(title.y + title.height).toBeLessThanOrEqual(stock.y);
+      expect(Math.abs(form.y - stock.y)).toBeLessThanOrEqual(1);
+      expect(form.x + form.width).toBeLessThanOrEqual(stock.x);
+      expect(form.x + form.width).toBeLessThanOrEqual(recent.x);
+      expect(stock.y + stock.height).toBeLessThanOrEqual(recent.y);
+      expect(Math.round(form.width)).toBe(340);
+    });
+  }
+
+  for (const [width, height] of [
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`AC-0012: at ${width}x${height} a receipt reads as one row under a header line`, async ({ page }) => {
+      await opensReceiving(page, width, height);
+      const recent = recentReceipts(page);
+      const header = recent.locator("div[aria-hidden='true']");
+      await expect(header).toBeVisible();
+      const names = (await header.locator("span").allTextContents()).map((text) => text.trim());
+      expect(names).toEqual([...RECEIPT_FIGURES, ""]);
+      const columns = await boxes(header.locator("span"));
+
+      const rows = await recent.locator("li").all();
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        const cells = await boxes(values(row));
+        expect(cells).toHaveLength(6);
+        const tops = cells.map((cell) => cell.y);
+        expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
+        // Each figure sits in the column the header line names.
+        cells.forEach((cell, index) => {
+          expect(Math.abs(cell.x - columns[index]!.x), `column ${index} left`).toBeLessThanOrEqual(1);
+          expect(Math.abs(cell.width - columns[index]!.width), `column ${index} width`).toBeLessThanOrEqual(1);
+        });
+        // The labels are hidden visually here: the header line names the columns.
+        for (const label of await boxes(row.locator("dt"))) expect(label.width).toBeLessThanOrEqual(1);
+        expect(await row.locator("dt").allTextContents()).toEqual(RECEIPT_FIGURES);
+      }
+
+      const fits = await recent
+        .locator("li dd")
+        .evaluateAll((cells) => cells.map((cell) => cell.scrollWidth <= cell.clientWidth));
+      expect(fits).toHaveLength(3 * 6);
+      expect(fits.filter((fit) => !fit)).toEqual([]);
+
+      if (width === 1280) {
+        expect(await checkPageState(page)).toEqual([
+          ...FORM_CONTROLS,
+          "button Void",
+          "button Correct",
+          "button Void",
+          "button Correct",
+        ]);
+      }
+    });
+  }
+
+  for (const [width, height] of [
+    [1279, 800],
+    [1024, 768],
+    [390, 844],
+  ] as const) {
+    test(`AC-0013: at ${width}x${height} a receipt stays a card with each label beside its value`, async ({
+      page,
+    }) => {
+      await opensReceiving(page, width, height);
+      const recent = recentReceipts(page);
+      await expect(recent.locator("div[aria-hidden='true']")).toBeHidden();
+      for (const row of await recent.locator("li").all()) {
+        const cells = await boxes(values(row));
+        expect(cells).toHaveLength(6);
+        for (let i = 1; i < cells.length; i += 1) {
+          expect(cells[i]!.y, `value ${i} below value ${i - 1}`).toBeGreaterThanOrEqual(
+            cells[i - 1]!.y + cells[i - 1]!.height,
+          );
+        }
+        const labels = row.locator("dt");
+        await expect(labels).toHaveCount(6);
+        for (const label of await labels.all()) await expect(label).toBeVisible();
+        for (const label of await boxes(labels)) expect(label.width).toBeGreaterThan(20);
+        // Each label is beside its value: on the same line, and to the left of it.
+        const labelBoxes = await boxes(labels);
+        labelBoxes.forEach((label, index) => {
+          expect(Math.abs(label.y - cells[index]!.y), `label ${index} on its value's line`).toBeLessThanOrEqual(12);
+          expect(label.x + label.width).toBeLessThanOrEqual(cells[index]!.x + 1);
+        });
+      }
     });
   }
 });
