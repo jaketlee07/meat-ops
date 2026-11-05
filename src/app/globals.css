@@ -25,7 +25,8 @@
   --spacing-control: 44px;
 }
 
-/* The desktop layout starts at 1024 px. */
+/* The desktop layout starts at 1024 px. It is set in px, not rem, so the switch does not
+   move with the browser's default font size; phone-menu.tsx watches the same query. */
 @custom-variant desk (@media (min-width: 1024px));
 
 /* Anything on the navy bar: white text, and a white focus ring. */
