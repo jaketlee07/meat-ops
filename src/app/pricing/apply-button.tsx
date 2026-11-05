@@ -45,13 +45,13 @@ export function ApplyButton({
   }
 
   return (
-    <form onSubmit={submit} className="mt-3">
+    <form onSubmit={submit} className="wide:shrink-0">
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="value" value={priceFieldText(suggestedListPrice)} />
       <button
         type="submit"
         aria-disabled={pending ? true : undefined}
-        className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+        className="min-h-12 w-full rounded-control bg-primary px-3.5 text-base font-bold text-on-primary aria-disabled:bg-primary/60 wide:min-h-control wide:w-auto"
       >
         {priceButtonName(action, suggestedListPrice)}
       </button>

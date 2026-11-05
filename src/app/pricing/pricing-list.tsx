@@ -14,6 +14,33 @@ const GROUPS = [
   { heading: "No cost yet", pick: (row: PricingRow) => !row.hasCost && !row.needsNewPrice },
 ] as const;
 
+// One template for a group's header line and every product row, so the columns line up.
+const TABLE_COLUMNS = "wide:grid-cols-[minmax(0,2.2fr)_repeat(5,minmax(0,1fr))] wide:gap-x-2 wide:px-3.5";
+const COLUMN_NAMES = ["Cost per lb", "List price", "Suggested price", "Margin at list price", "Target margin"];
+
+const TILE_EDGES = {
+  "Needs a new price": "border-t-status-needs",
+  Priced: "border-t-status-priced",
+  "No cost yet": "border-t-status-nocost",
+} as const;
+
+// The count of products in each group, counted from the rows the list shows.
+export function ProductTiles({ rows }: { rows: PricingRow[] }) {
+  return (
+    <ul aria-label="Product counts" className="mb-4 grid grid-cols-3 gap-2 desk:gap-3">
+      {GROUPS.map(({ heading, pick }) => (
+        <li
+          key={heading}
+          className={`flex flex-col-reverse gap-0.5 rounded-xl border border-t-3 border-card-border bg-surface px-2.5 py-2 desk:flex-col desk:gap-1 desk:rounded-card desk:px-4 desk:py-3 ${TILE_EDGES[heading]}`}
+        >
+          <span className="text-xs font-semibold text-ink-secondary desk:text-sm">{heading}</span>
+          <span className="text-2xl font-bold tabular-nums">{rows.filter(pick).length}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 interface Message {
   kind: "saved" | "refused";
   text: string;
@@ -65,11 +92,30 @@ export function PricingList({ rows }: { rows: PricingRow[] }) {
         const group = rows.filter(pick);
         if (group.length === 0) return null;
         return (
-          <section key={heading} aria-labelledby={`group-${heading.replaceAll(" ", "-")}`}>
-            <h2 id={`group-${heading.replaceAll(" ", "-")}`} className="mb-3 text-xl font-semibold">
+          <section
+            key={heading}
+            aria-labelledby={`group-${heading.replaceAll(" ", "-")}`}
+            className="wide:overflow-hidden wide:rounded-card wide:border wide:border-card-border wide:bg-surface"
+          >
+            <h2
+              id={`group-${heading.replaceAll(" ", "-")}`}
+              className="mb-2.5 text-lg font-bold wide:mb-0 wide:px-3.5 wide:py-3 wide:text-base"
+            >
               {heading}
             </h2>
-            <ul className="space-y-3">
+            {/* From wide up the header line names the columns; each row's own labels are hidden visually and stay in the page. */}
+            <div
+              aria-hidden="true"
+              className={`hidden border-t border-card-border bg-page py-2 text-xs font-semibold text-ink-secondary wide:grid ${TABLE_COLUMNS}`}
+            >
+              <span>Product</span>
+              {COLUMN_NAMES.map((name) => (
+                <span key={name} className="text-right">
+                  {name}
+                </span>
+              ))}
+            </div>
+            <ul className="space-y-3 wide:space-y-0">
               {group.map((row) => (
                 <ProductCard key={row.productId} row={row} onResult={show} />
               ))}
@@ -83,8 +129,10 @@ export function PricingList({ rows }: { rows: PricingRow[] }) {
 
 function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: ChangeState) => void }) {
   return (
-    <li className="rounded-md border border-field-border p-3">
-      <h3 className="text-lg font-semibold break-words">
+    <li
+      className={`rounded-card border border-card-border bg-surface p-3.5 wide:grid wide:items-center wide:rounded-none wide:border-0 wide:border-t wide:py-2 ${TABLE_COLUMNS}`}
+    >
+      <h3 className="text-lg font-bold break-words wide:text-base">
         <Link
           href={`/pricing?product=${encodeURIComponent(row.code)}`}
           className="inline-flex min-h-control items-center text-primary underline"
@@ -92,7 +140,7 @@ function ProductCard({ row, onResult }: { row: PricingRow; onResult: (state: Cha
           {row.code} {row.description}
         </Link>
       </h3>
-      <dl className="mt-1 space-y-1 text-base tabular-nums">
+      <dl className="mt-2.5 flex flex-col gap-y-1.5 text-note tabular-nums wide:col-span-5 wide:mt-0 wide:grid wide:grid-cols-subgrid wide:gap-y-0 wide:text-sm wide:[&>div]:contents wide:[&_dd]:text-right wide:[&_dt]:sr-only">
         <Figure
           label="Cost per lb"
           value={!row.hasCost || row.costPerLb === null ? "None yet" : formatCostPerLb(row.costPerLb)}

@@ -8,7 +8,8 @@ type Errors = Partial<Record<WhatIfField, string>>;
 
 const IDS: Record<WhatIfField, string> = { rawCode: "what-if-raw", cost: "what-if-cost" };
 const ORDER: WhatIfField[] = ["rawCode", "cost"];
-const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
+const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
+const LABEL = "block text-sm font-semibold text-ink-secondary";
 
 export interface RawChoice {
   code: string;
@@ -77,9 +78,9 @@ export function WhatIfForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
+    <form onSubmit={submit} noValidate className="max-w-md space-y-3">
       <div>
-        <label htmlFor={IDS.rawCode} className="block text-base font-medium">
+        <label htmlFor={IDS.rawCode} className={LABEL}>
           Raw product
         </label>
         <select
@@ -100,7 +101,7 @@ export function WhatIfForm({
         {fieldError("rawCode")}
       </div>
       <div>
-        <label htmlFor={IDS.cost} className="block text-base font-medium">
+        <label htmlFor={IDS.cost} className={LABEL}>
           Raw cost per lb
         </label>
         <input
@@ -116,7 +117,7 @@ export function WhatIfForm({
         />
         {fieldError("cost")}
       </div>
-      <button type="submit" className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary">
+      <button type="submit" className="min-h-12 w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary wide:min-h-control">
         Show prices
       </button>
     </form>

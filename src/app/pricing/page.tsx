@@ -6,7 +6,7 @@ import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
 import { PageShell } from "../page-header";
 import { PricingDetail } from "./pricing-detail";
-import { PricingList } from "./pricing-list";
+import { PricingList, ProductTiles } from "./pricing-list";
 import { WhatIfForm } from "./what-if-form";
 import { WhatIfResults } from "./what-if-results";
 
@@ -53,7 +53,7 @@ export default async function PricingPage({
 
   if (rows.length === 0) {
     return (
-      <PageShell title="Pricing" current="pricing">
+      <PageShell title="Pricing" current="pricing" fullWidth>
         <p className="text-base">{NONE}</p>
       </PageShell>
     );
@@ -75,10 +75,14 @@ export default async function PricingPage({
   }
 
   return (
-    <PageShell title="Pricing" current="pricing">
+    <PageShell title="Pricing" current="pricing" fullWidth>
+      <ProductTiles rows={rows} />
       <PricingList rows={rows} />
-      <section aria-labelledby="what-if-heading" className="mt-8">
-        <h2 id="what-if-heading" className="mb-3 text-xl font-semibold">
+      <section
+        aria-labelledby="what-if-heading"
+        className="mt-6 rounded-card border border-card-border bg-surface p-3.5 desk:p-4"
+      >
+        <h2 id="what-if-heading" className="mb-3 text-lg font-bold">
           What if raw cost changes?
         </h2>
         <WhatIfForm

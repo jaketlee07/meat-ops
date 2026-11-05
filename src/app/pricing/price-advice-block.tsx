@@ -31,14 +31,16 @@ export function PriceAdviceBlock({ row, onResult }: { row: PricingRow; onResult:
     marginFeesPerLb: row.marginFeesPerLb ?? 0,
   });
   return (
-    <>
-      <p className="mt-3 break-words text-base">{text}</p>
+    <div className="mt-2.5 flex flex-col gap-2.5 wide:col-span-full wide:mt-0 wide:flex-row wide:flex-wrap wide:items-center wide:gap-x-3 wide:gap-y-2 wide:pb-1.5 wide:pt-1">
+      <p className="break-words rounded-control bg-advice-fill px-3 py-2.5 text-note font-semibold text-advice-text wide:flex-1 wide:basis-56 wide:bg-transparent wide:p-0 wide:text-sm">
+        {text}
+      </p>
       <ApplyButton
         productId={row.productId}
         action={row.priceAction}
         suggestedListPrice={row.suggestedListPrice}
         onResult={onResult}
       />
-    </>
+    </div>
   );
 }

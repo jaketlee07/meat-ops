@@ -43,10 +43,13 @@ const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string; icon: 
 export async function PageShell({
   title,
   current,
+  fullWidth = false,
   children,
 }: {
   title: string;
   current: PageName;
+  // Drops the desktop content cap, for a page that lays out wider than a single column.
+  fullWidth?: boolean;
   children: ReactNode;
 }) {
   const watch = current === "alerts" ? null : await runWatch();
@@ -72,7 +75,7 @@ export async function PageShell({
           <AlertsLink urgent={urgent} current={current === "alerts"} />
         </header>
         {/* The 34rem cap is the 36rem column less its two 1rem paddings. The first child is the shell's title-and-banner div and must stay <main>'s first child. Dialogs keep their own width. */}
-        <main className="mx-auto w-full max-w-xl p-4 desk:mx-0 desk:max-w-none desk:px-7 desk:py-6 desk:[&>*:not(:first-child,dialog)]:max-w-[34rem]">
+        <main className={`mx-auto w-full max-w-xl p-4 desk:mx-0 desk:max-w-none desk:px-7 desk:py-6 ${fullWidth ? "" : "desk:[&>*:not(:first-child,dialog)]:max-w-[34rem]"}`}>
           <div>
             <h1 className="hidden text-2xl font-bold desk:mb-4 desk:block">{title}</h1>
             {/* A status container that is in the page before a save fills it, so a banner a save raises is announced. */}
