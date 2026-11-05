@@ -1,6 +1,6 @@
 # Spec: look-pricing-receiving
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the Constraints in the brief [`docs/product/briefs/ui-redesign.md`](../../product/briefs/ui-redesign.md); the look-and-shell spec [`../look-and-shell/spec.md`](../look-and-shell/spec.md) (the shell, its 34rem content cap, and its focus outlines); the menu-pricing spec [`../menu-pricing/spec.md`](../menu-pricing/spec.md) (its criteria for the advice and the one-press button); the receiving, receiving-refinements, and corrections specs (what `/receiving` shows and does); the alerts spec [`../alerts/spec.md`](../alerts/spec.md) (its saved-receipt banner criterion, whose test finds the banner's status container); the screen rules in the `src/app` row of [`docs/architecture/overview.md`](../../architecture/overview.md); [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §11; the `AGENTS.md` hard rules
@@ -84,44 +84,44 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 
 ### Width
 
-- [ ] **AC-0001.** At 1024 CSS px and wider, the content of `/pricing` and `/receiving` fills the width beside the side menu: no child of `<main>` has a computed max-width.
+- [x] **AC-0001.** At 1024 CSS px and wider, the content of `/pricing` and `/receiving` fills the width beside the side menu: no child of `<main>` has a computed max-width.
 
 ### Pricing list
 
-- [ ] **AC-0002.** Whenever `/pricing` shows its product list, three tiles show above it, in this order: "Needs a new price", "Priced", and "No cost yet". Each tile shows the number of products the list shows in its group, and 0 for an empty group. With no product list, no tile shows.
-- [ ] **AC-0003.** At 1280 px and wider, on `/pricing` and beside a product's details, each product's five figures (Cost per lb, List price, Suggested price, Margin at list price, Target margin) sit on one line, under one header line per group that names the five figures in that order. No figure's text runs past its cell.
-- [ ] **AC-0004.** Under 1280 px, each product's five figures each sit on their own line beside a visible label.
+- [x] **AC-0002.** Whenever `/pricing` shows its product list, three tiles show above it, in this order: "Needs a new price", "Priced", and "No cost yet". Each tile shows the number of products the list shows in its group, and 0 for an empty group. With no product list, no tile shows.
+- [x] **AC-0003.** At 1280 px and wider, on `/pricing` and beside a product's details, each product's five figures (Cost per lb, List price, Suggested price, Margin at list price, Target margin) sit on one line, under one header line per group that names the five figures in that order. No figure's text runs past its cell.
+- [x] **AC-0004.** Under 1280 px, each product's five figures each sit on their own line beside a visible label.
 
 ### Pricing details
 
-- [ ] **AC-0005.** At 1024 px and wider, `/pricing?product=<code>` for an active finished product shows the tiles and the list, and to the list's right a region named "Product details".
-- [ ] **AC-0006.** The "Product details" region holds that product's heading, its cost build-up with every label visible, the advice and the one-press button when it needs a new price, the two message regions, and the Target margin and List price forms.
-- [ ] **AC-0007.** Under 1024 px, `/pricing?product=<code>` shows the "Product details" region, and no tile and no product list.
-- [ ] **AC-0008.** While a product's details are open, that product's row in the list shows no advice and no one-press button.
-- [ ] **AC-0009.** At 1024 px and wider, on `/pricing?product=<code>`, Tab from the top of the page reaches every control in the "Product details" region before any link in the list.
-- [ ] **AC-0021.** `/pricing?product=<code>` shows no what-if section.
+- [x] **AC-0005.** At 1024 px and wider, `/pricing?product=<code>` for an active finished product shows the tiles and the list, and to the list's right a region named "Product details".
+- [x] **AC-0006.** The "Product details" region holds that product's heading, its cost build-up with every label visible, the advice and the one-press button when it needs a new price, the two message regions, and the Target margin and List price forms.
+- [x] **AC-0007.** Under 1024 px, `/pricing?product=<code>` shows the "Product details" region, and no tile and no product list.
+- [x] **AC-0008.** While a product's details are open, that product's row in the list shows no advice and no one-press button.
+- [x] **AC-0009.** At 1024 px and wider, on `/pricing?product=<code>`, Tab from the top of the page reaches every control in the "Product details" region before any link in the list.
+- [x] **AC-0021.** `/pricing?product=<code>` shows no what-if section.
 
 ### Receiving
 
-- [ ] **AC-0010.** With a product chosen, under 1024 px, `/receiving` shows from top to bottom the "New receipt" form, the card holding the product's stock (On hand, Average cost) and suggested prices, and Recent receipts.
-- [ ] **AC-0011.** With a product chosen, at 1024 px and wider, the page title sits above the form and the stock card, and the "New receipt" form sits to the left of the stock card and of Recent receipts.
-- [ ] **AC-0012.** At 1280 px and wider, at the browser's default text size, each recent receipt's six figures (Lot number, Received, Vendor, Weight, Cost per lb, Remaining) sit on one line, under one header line that names them in that order. No figure's text runs past its cell.
-- [ ] **AC-0013.** Under 1280 px, each recent receipt's six figures each sit on their own line beside a visible label.
-- [ ] **AC-0022.** With the browser's text size at 20 px, Recent receipts show as cards, each label beside its value, at 1280 px and 1440 px, and as the table at 1920 px.
-- [ ] **AC-0023.** With the browser's text size at 20 px, at 1280 px, 1440 px, and 1920 px, every Void and Correct button sits inside the Recent receipts section.
+- [x] **AC-0010.** With a product chosen, under 1024 px, `/receiving` shows from top to bottom the "New receipt" form, the card holding the product's stock (On hand, Average cost) and suggested prices, and Recent receipts.
+- [x] **AC-0011.** With a product chosen, at 1024 px and wider, the page title sits above the form and the stock card, and the "New receipt" form sits to the left of the stock card and of Recent receipts.
+- [x] **AC-0012.** At 1280 px and wider, at the browser's default text size, each recent receipt's six figures (Lot number, Received, Vendor, Weight, Cost per lb, Remaining) sit on one line, under one header line that names them in that order. No figure's text runs past its cell.
+- [x] **AC-0013.** Under 1280 px, each recent receipt's six figures each sit on their own line beside a visible label.
+- [x] **AC-0022.** With the browser's text size at 20 px, Recent receipts show as cards, each label beside its value, at 1280 px and 1440 px, and as the table at 1920 px.
+- [x] **AC-0023.** With the browser's text size at 20 px, at 1280 px, 1440 px, and 1920 px, every Void and Correct button sits inside the Recent receipts section.
 
 ### Tokens and icons
 
-- [ ] **AC-0014.** No class in `src/app` uses an arbitrary value for a radius or for text: no class, with or without a variant prefix, starts `rounded-[`, `rounded-<side>-[`, or `text-[`.
-- [ ] **AC-0015.** Exactly one file in `src/app` contains `<svg`: the shared icon component.
-- [ ] **AC-0016.** That icon component sets `aria-hidden="true"` on every icon it draws.
+- [x] **AC-0014.** No class in `src/app` uses an arbitrary value for a radius or for text: no class, with or without a variant prefix, starts `rounded-[`, `rounded-<side>-[`, or `text-[`.
+- [x] **AC-0015.** Exactly one file in `src/app` contains `<svg`: the shared icon component.
+- [x] **AC-0016.** That icon component sets `aria-hidden="true"` on every icon it draws.
 
 ### Look and regressions
 
-- [ ] **AC-0017.** `npm test` passes.
-- [ ] **AC-0018.** The verification ledger records the owner's "match" verdict for each of the five spec 2 boards on the canvas at revision 1793856599-9c48, each compared whole with the built screen set to the board's state, and a "no match" on any fails this criterion. The states: `/pricing` at 390 px wide with products in all three groups (S2-Pricing-Phone); `/receiving` at 390 px and at 1280 px with a product chosen and three recent receipts, one of them void (S2-Receiving-Phone, S2-Receiving-Desktop); the "Receipt saved" result card alone at 390 px (S2-BeforeAfter); and `/pricing?product=<code>` at 1280 px for a product that needs a new price (S2-Pricing-Desktop). Three differences do not count: the names, numbers, dates, and how many products, receipts, or cost build-up rows are listed are the test data's; a drawn text color shown as its nearest `globals.css` color token; and focus outlines.
-- [ ] **AC-0019.** Read from the branch point with `main`, for the same props, `facts.tsx` and `before-after.tsx` render the same elements in the same nesting, with the same attributes other than `class` and the same text. A new prop may only choose classes.
-- [ ] **AC-0020.** Read from the branch point with `main`, tracked and untracked, the only changed expectations in existing browser test files scope a locator on `/pricing?product=<code>` to the "Product details" region. The values, names, and orders they assert are unchanged.
+- [x] **AC-0017.** `npm test` passes.
+- [x] **AC-0018.** The verification ledger records the owner's "match" verdict for each of the five spec 2 boards on the canvas at revision 1793856599-9c48, each compared whole with the built screen set to the board's state, and a "no match" on any fails this criterion. The states: `/pricing` at 390 px wide with products in all three groups (S2-Pricing-Phone); `/receiving` at 390 px and at 1280 px with a product chosen and three recent receipts, one of them void (S2-Receiving-Phone, S2-Receiving-Desktop); the "Receipt saved" result card alone at 390 px (S2-BeforeAfter); and `/pricing?product=<code>` at 1280 px for a product that needs a new price (S2-Pricing-Desktop). Three differences do not count: the names, numbers, dates, and how many products, receipts, or cost build-up rows are listed are the test data's; a drawn text color shown as its nearest `globals.css` color token; and focus outlines.
+- [x] **AC-0019.** Read from the branch point with `main`, for the same props, `facts.tsx` and `before-after.tsx` render the same elements in the same nesting, with the same attributes other than `class` and the same text. A new prop may only choose classes.
+- [x] **AC-0020.** Read from the branch point with `main`, tracked and untracked, the only changed expectations in existing browser test files scope a locator on `/pricing?product=<code>` to the "Product details" region. The values, names, and orders they assert are unchanged.
 
 ## Follow-ons
 

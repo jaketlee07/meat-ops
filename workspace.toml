@@ -57,14 +57,12 @@ name = "Look E UI redesign"
 status = "active"
 
 [ini-001.work]
-active = [
-  { path = "docs/specs/look-pricing-receiving/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "2d9f923", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 2 of look E: Pricing and Receiving, the shared label-and-value list and before-and-after table, and look E's tokens and icon; approved 2026-11-05, implementing", needs = [] },
-]
 shipped = [
+  { path = "docs/specs/look-pricing-receiving/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "2d9f923", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 2 of look E: Pricing and Receiving, the shared label-and-value list and before-and-after table, and look E's tokens and icon; shipped", needs = [] },
   { path = "docs/specs/look-and-shell/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "9e3c158", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 1 of look E: colors, the side menu and phone top bar, and the sign-in, not-allowed, and error cards; merged in PR #45, cooling until 2026-12-04", needs = [] },
 ]
 
 [ini-001.brief_queue]
 executing = [
-  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Look E brief, three specs in order: look and shell (shipped, PR #45), Pricing and Receiving next, then the other seven pages", needs = [] },
+  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Look E brief, three specs in order: look and shell (shipped, PR #45), Pricing and Receiving (shipped), then the other seven pages", needs = [] },
 ]

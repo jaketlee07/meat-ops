@@ -128,3 +128,9 @@ No asserted value, name, count, or order changed.
 - AC-0017 at the head: the `c4da51b` run above.
 - AC-0019 at the head: `git diff 2d9f923 c4da51b -- src/app/facts.tsx src/app/before-after.tsx` differs from the T6 read at `21a6886` only in the comment above `VALUE_CLASS`; `Facts` with `rows` alone still renders `main`'s elements, nesting, attributes other than `class`, and text.
 - AC-0020 at the head: since `21a6886` no existing test file changed (only `test/e2e/look-pages.spec.ts`), and `git ls-files --others --exclude-standard -- test` lists nothing, so the T6 AC-0020 record holds at `c4da51b`.
+
+## Ship (2026-11-05)
+
+- Post-gates review round 4 (delta of the amendment and T7): quality-engineer Clean; adversarial-reviewer and frontend-reviewer each one Nit, deferred with its citation (the owner-decision list at line 13 above, which the later sections supersede, and the wording of the comment above `VALUE_CLASS`). No Blocker or Concern remains after four rounds (retry 3 of 5 recorded).
+- Gates on the final code `c4da51b`: `npm test` passed (Vitest 1047, Playwright 794); `npm run typecheck` passes; `npm run audit` finds 0 vulnerabilities; `package.json`, `package-lock.json`, and `supabase/` are unchanged from `2d9f923`.
+- All 23 criteria are checked; the spec is Shipped and the plan Done. The branch changes 1,317 lines added and 215 removed under `src/` and `test/`, below the 2,000-line review-shape threshold.

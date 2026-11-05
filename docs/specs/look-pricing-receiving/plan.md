@@ -1,7 +1,7 @@
 # Plan: look-pricing-receiving
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the shell in `src/app/page-header.tsx` (`PageShell`, its `desk` content cap) and its suite `test/e2e/shell.spec.ts`; the Pricing page in `src/app/pricing/` with `test/e2e/pricing-page.ts` and `pricing.spec.ts`; the Receiving page in `src/app/receiving/` with `test/e2e/receiving-page.ts`, `receiving.spec.ts`, and `correct.spec.ts`; the shared parts `src/app/facts.tsx` and `before-after.tsx`; the tokens in `src/app/globals.css`. No precedent exists for one markup that reads as a table at desktop width and as cards on a phone; the design below names the mechanism and a probe grounds the Receiving half.
 
 > **Plan contract:** this is the implementation strategy. It may change

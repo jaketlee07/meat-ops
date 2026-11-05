@@ -77,7 +77,7 @@ None.
 | Spec | Status |
 | --- | --- |
 | `look-and-shell` | Shipped |
-| `look-pricing-receiving` | Implementing |
+| `look-pricing-receiving` | Shipped |
 
 ## Source
 
