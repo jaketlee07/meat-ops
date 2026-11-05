@@ -72,3 +72,9 @@ The spec's Assumptions record each of these as a Product line:
   - `shell.spec.ts`: the content-cap test checks the 544 px cap on `/ask`'s examples section and keeps its 448 px check-step check on `/production`.
   - `pricing-page.ts` and `pricing.spec.ts`: `detail().main` is renamed `region` with every use (AC-0021); the asserted values are unchanged.
   - Everything else in `test/e2e` is added tests: `look-floor-pages.spec.ts` (new) and the AC-0017 and AC-0031 tests in `look-pages.spec.ts`.
+
+## Post-gates review round 1 and the task 6 amendment (2026-11-05)
+
+- Round 1 reviewed `git diff 9e661f8 3669082` (adversarial, quality, frontend); reports and adjudications sit under `.context/reviews/c3f5e50e-7b0f-434e-8b69-cbdbefb337d0/`. Sustained: adversarial 5 (1 Concern: commit `e7912b3` changes `src/app/before-after.tsx` and `src/app/receiving/result-panel.tsx`, which no task's Touches names), quality 8 (1 Concern: Recent sales' sale-number fit check measures the link, not its cell), frontend 2. Refuted: adversarial 2, quality 4.
+- A probe against a build of `e7912b3` (`1-probe-result-gap.spec.ts` and its log in that folder) measured the gap from the form to the saved result with ten recent rows: Production 1960 px at 1024x768, 16 px at 1280x720, 2065 px at 1280x720 with a 20 px root font; Receiving 2606 px, 37 px, and 3081 px. The grid rows `auto auto 1fr auto` give a long list's extra height to the row above the result.
+- The owner approved on 2026-11-05 a plan amendment that adds task T6 for every sustained finding, the code tidy-ups included, and that the result-gap fix covers Receiving as well as Production.
