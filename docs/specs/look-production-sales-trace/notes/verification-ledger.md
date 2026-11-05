@@ -41,3 +41,9 @@ The spec's Assumptions record each of these as a Product line:
 - With the new source stashed, 12 new tests failed (AC-0001 to AC-0005, AC-0007 with AC-0027, and the AC-0007 refusal case); AC-0006 and AC-0029 passed, since the old page was always cards.
 - Changed lines in an existing test file: `shell.spec.ts`'s content-cap test now checks the 544 px cap on `/ask`'s examples section and keeps its 448 px check-step check on `/production` (AC-0026).
 - `npm test`: Vitest 55 files, 1050 passed; Playwright 820 passed in 11.3 min. A first full run failed `receiving.spec.ts:998` (an expired access token refreshes and voids), which T2 does not touch; it passed alone and in the second full run.
+
+## T3 (2026-11-05)
+
+- Commit `d8fc603`. `/sales` uses the same grid (form and result left, Recent sales right). Recent sales is the size container `sales`; the custom variant `sale-table` (`@container sales (min-width: 40rem)`, no screen gate) carries its table look on the tracks `6rem 5.5rem 1fr 4rem 5.5rem 5.25rem 5.75rem`; the table shows at 1280 and 1440 px, and cards at 1024 px (about 23rem) and at 1280 px with 20 px text (about 34rem). `facts.tsx` is unchanged. The AC-0010 row check compares the values' vertical middles, since the sale-number link is a 44 px target.
+- With the new source stashed, AC-0001, AC-0008, AC-0010, and AC-0012 failed; AC-0009, AC-0011, and AC-0030 passed, since they assert layouts the old page already had. No existing test file changed.
+- `npm test`: Vitest 55 files, 1050 passed; Playwright 837 passed in 11.8 min.
