@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { resetTestData } from "../db";
+import { resetTestData, saleFixture } from "../db";
 import { checkDesktopWalk, checkPageState } from "./a11y";
 import { box, boxes, expectNoCap, expectTablesFit, measureCells, withTextSize } from "./look-checks";
 import {
@@ -13,6 +13,8 @@ import {
   seedFixture,
   seedLines,
 } from "./invoices-page";
+import { ask, askControls, modelAnswer, openAsk } from "./ask-page";
+import { fakeModel } from "./invoices-page";
 import {
   addFinished,
   addRaw,
@@ -935,6 +937,57 @@ test.describe("a draft's review page state", () => {
     test(`AC-0016: a draft just saved passes the page-state check at ${width}x${height}`, async ({ page }) => {
       await savesThreeLines(page, width, height, false);
       expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+      if (width === 1280) await checkDesktopWalk(page);
+    });
+  }
+});
+
+// ---- Ask ----
+
+// The sale fixture makes one product sellable now, so the fake model's sellable_now answer shows an
+// answer with a list and a link.
+async function showsAnswer(page: Page, baseURL: string | undefined, width: number, height: number) {
+  await saleFixture();
+  const model = fakeModel(baseURL);
+  await model.reset();
+  await model.answer(modelAnswer({ query: "sellable_now" }));
+  await page.setViewportSize({ width, height });
+  const p = await openAsk(page);
+  await ask(p, "What can I sell right now?");
+  await expect(p.answer).toBeVisible();
+  await expect(p.link).toHaveText("See it on the Menu");
+  return p;
+}
+
+test.describe("the Ask layout", () => {
+  test("AC-0001: at 1280 px with an answer, /ask's form, answer, and examples end within 544 px of <main>'s content", async ({
+    page,
+    baseURL,
+  }) => {
+    const p = await showsAnswer(page, baseURL, 1280, 720);
+    const content = await page.locator("main").evaluate((el) => {
+      const style = getComputedStyle(el);
+      return el.getBoundingClientRect().left + el.clientLeft + parseFloat(style.paddingLeft);
+    });
+    for (const [name, target] of [
+      ["form", page.locator("main form")],
+      ["answer", p.answer],
+      ["examples", p.examples],
+    ] as const) {
+      const b = await box(target);
+      expect(b.x + b.width - content, `${name} right edge from the content's left edge`).toBeLessThanOrEqual(544.5);
+    }
+  });
+});
+
+test.describe("the Ask page state", () => {
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0016: /ask with an answer passes the page-state check at ${width}x${height}`, async ({ page, baseURL }) => {
+      await showsAnswer(page, baseURL, width, height);
+      expect(await checkPageState(page)).toEqual(askControls("a See it on the Menu"));
       if (width === 1280) await checkDesktopWalk(page);
     });
   }
