@@ -82,7 +82,7 @@ None.
 | `look-and-shell` | Shipped |
 | `look-pricing-receiving` | Shipped |
 | `look-production-sales-trace` | Shipped |
-| `look-menu-invoices-ask-alerts` | Implementing |
+| `look-menu-invoices-ask-alerts` | Shipped |
 
 ## Source
 

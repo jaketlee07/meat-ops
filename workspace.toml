@@ -57,10 +57,9 @@ name = "Look E UI redesign"
 status = "active"
 
 [ini-001.work]
-active = [
-  { path = "docs/specs/look-menu-invoices-ask-alerts/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "3703c8d", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 3b of look E: Menu, Invoices, Ask, and Alerts", needs = [] },
-]
+active = []
 shipped = [
+  { path = "docs/specs/look-menu-invoices-ask-alerts/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "3703c8d", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 3b of look E: Menu, Invoices, Ask, and Alerts; shipped", needs = [] },
   { path = "docs/specs/look-production-sales-trace/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "9e661f8", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 3a of look E: Production, Sales, and Trace, with the spec 2 leftovers; shipped", needs = [] },
   { path = "docs/specs/look-pricing-receiving/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "2d9f923", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 2 of look E: Pricing and Receiving, the shared label-and-value list and before-and-after table, and look E's tokens and icon; shipped", needs = [] },
   { path = "docs/specs/look-and-shell/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "9e3c158", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 1 of look E: colors, the side menu and phone top bar, and the sign-in, not-allowed, and error cards; merged in PR #45, cooling until 2026-12-04", needs = [] },
@@ -68,5 +67,5 @@ shipped = [
 
 [ini-001.brief_queue]
 executing = [
-  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Look E brief: look and shell (shipped, PR #45), Pricing and Receiving (shipped), Production, Sales, and Trace (shipped), then Menu, Invoices, Ask, and Alerts", needs = [] },
+  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Look E brief: all four specs shipped (look and shell, Pricing and Receiving, Production, Sales, and Trace, and Menu, Invoices, Ask, and Alerts); awaiting close-out", needs = [] },
 ]

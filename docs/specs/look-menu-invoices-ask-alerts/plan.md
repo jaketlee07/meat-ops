@@ -1,7 +1,7 @@
 # Plan: look-menu-invoices-ask-alerts
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** spec 3a's built pages: `src/app/trace/page.tsx` and `find-forms.tsx` (`fullWidth`, two forms side by side from `desk` with `grid desk:grid-cols-2`), `src/app/production/recent-batches.tsx` and `src/app/sales/recent-sales.tsx` (a named size container, an `aria-hidden` header line, and the row's column rules through a custom variant), and the container variants in `src/app/globals.css`; `src/app/alerts/alert-card.tsx` for a waiting button that stays focusable (`pendingRef`, `aria-disabled`, colors at 60% alpha); the checks in `test/e2e/look-floor-pages.spec.ts` (`expectTable`, `expectNoSpill`, `expectCards`, `measureCells`, `expectButtonsInside`, `expectTablesFit`, `withTextSize`); the page helpers `test/e2e/menu-page.ts`, `invoices-page.ts` (`seedDraft`, `seedLines`, `openReview`, `review`), `ask-page.ts`, and `alerts-page.ts` (`dropActionRequests` shows how a test holds or drops a server action request).
 
 > **Plan contract:** this is the implementation strategy. It may change
