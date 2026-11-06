@@ -37,15 +37,10 @@ async function childWidthCaps(page: Page, least: number) {
   return widths;
 }
 
-// AC-0001: no child of <main> but a dialog has a computed max-width; the page shows more than two.
-export async function expectNoCap(page: Page) {
-  const widths = await childWidthCaps(page, 3);
-  expect(widths.filter((value) => value !== "none")).toEqual([]);
-}
-
-// AC-0001 without the count of children: at least two, none with a computed max-width.
-export async function expectUncountedNoCap(page: Page) {
-  const widths = await childWidthCaps(page, 2);
+// AC-0001: no child of <main> but a dialog has a computed max-width; the page shows at least `minChildren`
+// of them (3 unless the caller says fewer: Menu and Alerts show two).
+export async function expectNoCap(page: Page, minChildren = 3) {
+  const widths = await childWidthCaps(page, minChildren);
   expect(widths.filter((value) => value !== "none")).toEqual([]);
 }
 
@@ -58,6 +53,12 @@ export function cardStyle(target: Locator) {
     const css = getComputedStyle(node);
     return { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius };
   });
+}
+
+// Whether the element's style has every value of WHITE_CARD, compared by value and not by key order.
+export async function isWhiteCard(target: Locator) {
+  const style = await cardStyle(target);
+  return (Object.keys(WHITE_CARD) as Array<keyof typeof WHITE_CARD>).every((key) => style[key] === WHITE_CARD[key]);
 }
 
 export async function expectWhiteCard(target: Locator, what: string) {

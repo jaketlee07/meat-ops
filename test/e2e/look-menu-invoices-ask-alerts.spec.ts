@@ -10,10 +10,9 @@ import {
   expectButtonsInside,
   expectNoCap,
   expectTablesFit,
-  expectUncountedNoCap,
   expectWhiteCard,
+  isWhiteCard,
   measureCells,
-  WHITE_CARD,
   withTextSize,
 } from "./look-checks";
 import {
@@ -197,7 +196,7 @@ test.describe("the Menu layout", () => {
       page,
     }) => {
       await opensMenu(page, width, height);
-      await expectUncountedNoCap(page);
+      await expectNoCap(page, 2);
     });
   }
 
@@ -1023,9 +1022,8 @@ test.describe("the draft's waiting buttons", () => {
 
   // The press train: from the first press, on each tick, Save receipts and then Discard draft are both pressed
   // in one task, until the first press's outcome shows or 5 s after the held request is released. A press that
-  // lands after the action settles and before the outcome renders meets neither the ref nor the waiting state.
-  // `TICK` is the gap between ticks in ms; 0 runs a tick on every task.
-  const TICK = 10;
+  // lands after the action settles and before the outcome renders is refused by `pending`, which holds over
+  // that span. A tick runs every 10 ms.
   for (const [first, outcome] of [
     ["Save receipts", "Saved 1 receipt."],
     ["Discard draft", "Draft discarded."],
@@ -1037,7 +1035,7 @@ test.describe("the draft's waiting buttons", () => {
       const r = await openReview(page, await seedDraft({}));
       const held = await holdActions(page);
       await page.evaluate(
-        ({ name, tick }) => {
+        ({ name }) => {
           const w = window as unknown as { __train: { released: number | null; done: boolean; shown: boolean; ticks: number } };
           w.__train = { released: null, done: false, shown: false, ticks: 0 };
           const press = (label: string) => [...document.querySelectorAll("button")].find((node) => node.textContent === label)?.click();
@@ -1055,15 +1053,9 @@ test.describe("the draft's waiting buttons", () => {
             w.__train.ticks += 1;
             return true;
           };
-          if (tick > 0) {
-            const id = setInterval(() => step() || clearInterval(id), tick);
-          } else {
-            const channel = new MessageChannel();
-            channel.port1.onmessage = () => step() && channel.port2.postMessage(0);
-            channel.port2.postMessage(0);
-          }
+          const id = setInterval(() => step() || clearInterval(id), 10);
         },
-        { name: first, tick: TICK },
+        { name: first },
       );
       await expect.poll(() => held.seen.count).toBe(1);
       await page.waitForTimeout(200);
@@ -1283,7 +1275,7 @@ test.describe("the Alerts layout", () => {
       page,
     }) => {
       await opensAlerts(page, width, height);
-      await expectUncountedNoCap(page);
+      await expectNoCap(page, 2);
     });
   }
 
@@ -1403,20 +1395,14 @@ test.describe("the three style details of the boards", () => {
   test("AC-0017: at 1280x720 the Drafts to confirm heading and all three draft links sit in one white card", async ({ page }) => {
     const p = await opensInvoices(page, 1280, 720);
     const heading = page.getByRole("heading", { name: "Drafts to confirm", level: 2 });
-    // The heading's ancestors, nearest first, each with its card style and how many draft links it holds.
-    const ancestors = await heading.evaluate((node) => {
-      const found = [];
-      for (let el = node.parentElement; el; el = el.parentElement) {
-        const css = getComputedStyle(el);
-        found.push({
-          style: { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius },
-          links: el.querySelectorAll("a[href^='/invoices?draft=']").length,
-        });
-      }
-      return found;
-    });
-    const card = ancestors.find((ancestor) => JSON.stringify(ancestor.style) === JSON.stringify(WHITE_CARD));
-    expect(card?.links, "one card holds the heading and the three drafts").toBe(3);
+    // The heading's ancestors, nearest first: the first white card holds the heading and the draft links.
+    const ancestors = heading.locator("xpath=ancestor::*");
+    let card: Locator | null = null;
+    for (let at = (await ancestors.count()) - 1; at >= 0 && card === null; at -= 1) {
+      if (await isWhiteCard(ancestors.nth(at))) card = ancestors.nth(at);
+    }
+    const links = card === null ? undefined : await card.locator("a[href^='/invoices?draft=']").count();
+    expect(links, "one card holds the heading and the three drafts").toBe(3);
     await expect(p.draftLinks).toHaveCount(3);
   });
 

@@ -58,7 +58,7 @@ const RADIUS_ALLOWED =
 
 function radiusClasses(text: string): Array<{ prefix: string; cls: string }> {
   const found: Array<{ prefix: string; cls: string }> = [];
-  for (const token of text.split(/[\s"'`${}]+/)) {
+  const judge = (token: string) => {
     let depth = 0;
     let cut = -1;
     for (const [at, char] of [...token].entries()) {
@@ -66,8 +66,26 @@ function radiusClasses(text: string): Array<{ prefix: string; cls: string }> {
       else if (char === "]") depth -= 1;
       else if (char === ":" && depth === 0) cut = at;
     }
-    const cls = token.slice(cut + 1).replace(/^!/, "");
+    const cls = token.slice(cut + 1).replace(/^!|!$/g, "");
     if (cls.startsWith("rounded")) found.push({ prefix: token.slice(0, cut + 1), cls });
+  };
+  // Every piece between quotes and the other breaks, so a class string a quote marks off stays visible.
+  for (const token of text.split(/[\s"'`${}]+/)) judge(token);
+  // A quote inside a class's square brackets is part of the class, so those tokens are also read whole.
+  for (const token of text.split(/[\s`${}]+/)) {
+    const whole = [...token].reduce(
+      (state, char) => {
+        if (char === "[") state.depth += 1;
+        else if (char === "]") state.depth -= 1;
+        const quote = /["']/.test(char);
+        if (quote && state.depth <= 0) state.parts.push("");
+        else state.parts[state.parts.length - 1] += char;
+        if (quote && state.depth > 0) state.quoted = true;
+        return state;
+      },
+      { depth: 0, quoted: false, parts: [""] },
+    );
+    if (whole.quoted) whole.parts.forEach(judge);
   }
   return found;
 }
@@ -92,6 +110,18 @@ const PREFIX_FORMS: Array<[form: string, prefix: string]> = [
   ["@min-[...]:", "@min-[30rem]:"],
   ["name/label:", "group/item:"],
   ["stacked", "md:hover:[&>li]:aria-[current=page]:@sm:"],
+  ["quoted [...]: single", "data-[state='open']:"],
+  ["quoted [...]: double", 'aria-[sort="ascending"]:'],
+  ["quoted nested [...]:", "[&[data-x='1']]:"],
+];
+
+// Each form of important mark: the class is judged as it would be without the mark. Tailwind 4 accepts the
+// mark before the class and, as its older spelling, after it.
+const MARKS: Array<[form: string, lead: string, trail: string]> = [
+  ["leading !", "!", ""],
+  ["leading ! behind a prefix", "md:!", ""],
+  ["trailing !", "", "!"],
+  ["trailing ! behind a prefix", "md:", "!"],
 ];
 
 it("AC-0014: the search flags a disallowed radius class and passes an allowed one behind every prefix form", () => {
@@ -107,6 +137,18 @@ it("AC-0014: the search flags a disallowed radius class and passes an allowed on
       expect(radiusClasses(`"${prefix}${allowed}"`), `${form}: ${allowed} is seen`).toHaveLength(1);
     }
   }
+  for (const [form, lead, trail] of MARKS) {
+    expect(disallowed(`"p-2 ${lead}rounded-lg${trail}"`), `${form}: a disallowed class is flagged`).toEqual([
+      `${lead.slice(0, lead.lastIndexOf(":") + 1)}rounded-lg`,
+    ]);
+    expect(disallowed(`"p-2 ${lead}rounded-card${trail}"`), `${form}: an allowed class passes`).toEqual([]);
+    expect(radiusClasses(`"${lead}rounded-card${trail}"`), `${form}: an allowed class is seen`).toHaveLength(1);
+  }
+  // A quote that marks off a class string still leaves the class visible.
+  expect(disallowed(`["rounded-lg", 'md:rounded-md']`), "classes in a quoted array are seen").toEqual([
+    "rounded-lg",
+    "md:rounded-md",
+  ]);
   expect(disallowed('"bg-[color:var(--x)] [&>p]:text-sm rounded-md"'), "a colon inside brackets is not a prefix").toEqual([
     "rounded-md",
   ]);
