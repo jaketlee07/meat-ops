@@ -20,19 +20,19 @@ export function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
         <tr className="bg-page">
           <th
             scope="col"
-            className="rounded-l-control py-2 pr-2 text-left text-sm font-semibold text-ink-secondary result-snug:pr-0.5 result-snug:text-xs result-tight:pr-0 result-tight:wrap-anywhere"
+            className="rounded-l-control py-2 pr-2 text-left text-sm font-semibold text-ink-secondary result-snug:pr-0.5 result-snug:text-xs result-tight:pr-0 result-tight:text-xs result-tight:wrap-anywhere"
           >
             {title}
           </th>
           <th
             scope="col"
-            className="px-2 py-2 text-right text-sm font-semibold text-ink-secondary result-snug:px-0.5 result-snug:text-xs result-tight:px-0"
+            className="px-2 py-2 text-right text-sm font-semibold text-ink-secondary result-snug:px-0.5 result-snug:text-xs result-tight:px-0 result-tight:text-xs"
           >
             Before
           </th>
           <th
             scope="col"
-            className="rounded-r-control py-2 pl-2 text-right text-sm font-semibold text-ink-secondary result-snug:pl-0.5 result-snug:text-xs result-tight:pl-0"
+            className="rounded-r-control py-2 pl-2 text-right text-sm font-semibold text-ink-secondary result-snug:pl-0.5 result-snug:text-xs result-tight:pl-0 result-tight:text-xs"
           >
             After
           </th>
