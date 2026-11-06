@@ -113,6 +113,19 @@
   }
 }
 
+/* Invoices' "Drafts to confirm" reads as a table only when its section is wide enough for a row: fixed
+   tracks, gaps, and padding (about 20.75rem: a date of 7.5rem, a source of 4rem, a line count of 5rem,
+   three gaps of 0.75rem, and 2rem of padding) plus a first-words column that wraps (about 13rem). The section
+   is the container named drafts. The width is in rem, so a larger browser text size keeps the cards until the
+   section has grown to fit. <main>'s content box is 45.5rem at 1024 px (about 44.4rem with a 17 px scrollbar),
+   61.5rem at 1280 px, and 71.5rem at 1440 px, so the table shows at each; with a 20 px root it is 32.7rem at
+   1024 px (cards) and 45.5rem at 1280 px (the table). It has no screen gate. */
+@custom-variant draft-table {
+  @container drafts (min-width: 34rem) {
+    @slot;
+  }
+}
+
 /* Trace's lot result: the section is the container named tracelot. Where it is at least 53rem wide
    (the Customers column of 16.25rem, a gap, and Sales' table at 35rem) Customers sits beside "Sales from
    this lot" and the lot's facts run in three columns. The page has no column grid, so the section is the

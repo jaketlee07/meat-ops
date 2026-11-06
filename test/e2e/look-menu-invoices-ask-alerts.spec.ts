@@ -1,7 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetTestData } from "../db";
 import { checkDesktopWalk, checkPageState } from "./a11y";
-import { box, boxes, measureCells, withTextSize } from "./look-checks";
+import { box, boxes, expectNoCap, measureCells, withTextSize } from "./look-checks";
+import { FORM_CONTROLS, openInvoices, seedDraft, seedFixture, seedLines } from "./invoices-page";
 import {
   addFinished,
   addRaw,
@@ -235,5 +236,243 @@ test.describe("the Menu layout", () => {
       document.documentElement.style.paddingRight = "17px";
     });
     await expectMenuTable(page, SIX.length);
+  });
+});
+
+// ---- Invoices ----
+
+const DRAFT_COLUMNS = ["Captured", "From", "Lines", "First words"];
+
+// Three waiting drafts, newest first: a text capture of three lines, a photo of one line, and a text
+// capture of two lines.
+const THREE = [
+  { date: "Oct 9, 2026", source: "Text", lines: "3 lines", words: "NEWEST TURKEY DRUMS 40# CASE" },
+  { date: "Oct 8, 2026", source: "Photo", lines: "1 line", words: "PHOTO WORDS" },
+  { date: "Oct 1, 2026", source: "Text", lines: "2 lines", words: "FIRST receipt line of the day" },
+] as const;
+
+async function seedThree(): Promise<void> {
+  await seedFixture();
+  // The list is newest capture time first, so the oldest is made first.
+  await seedDraft({ capturedOn: "2026-10-01", words: ["FIRST receipt line of the day", "second line"] });
+  await seedDraft({ source: "photo", capturedOn: "2026-10-08", words: ["PHOTO WORDS"] });
+  await seedLines([{ words: "NEWEST TURKEY DRUMS 40# CASE" }, { words: "b" }, { words: "c" }], { source: "text" });
+}
+
+async function opensInvoices(page: Page, width: number, height: number) {
+  await page.setViewportSize({ width, height });
+  await seedThree();
+  const p = await openInvoices(page);
+  await expect(p.draftLinks).toHaveCount(3);
+  return p;
+}
+
+function draftsHeader(page: Page): Locator {
+  return page.getByRole("region", { name: "Drafts to confirm" }).locator("div[aria-hidden='true']");
+}
+
+// The boxes of named locators.
+async function namedBoxes<K extends string>(targets: Record<K, Locator>): Promise<Record<K, Awaited<ReturnType<typeof box>>>> {
+  const found = await Promise.all(Object.entries<Locator>(targets).map(async ([key, target]) => [key, await box(target)] as const));
+  return Object.fromEntries(found) as Record<K, Awaited<ReturnType<typeof box>>>;
+}
+
+// A draft's parts: the date, the source, the comma, the line count, and the first words.
+function draftParts(link: Locator) {
+  return {
+    date: link.locator(":scope > span:nth-child(1)"),
+    source: link.locator(":scope > span:nth-child(2) > span:nth-child(1)"),
+    comma: link.locator(":scope > span:nth-child(2) > span:nth-child(2)"),
+    lines: link.locator(":scope > span:nth-child(2) > span:nth-child(3)"),
+    words: link.locator(":scope > span:nth-child(3)"),
+  };
+}
+
+// AC-0022: each draft is one link whose text is its date, source, ", ", line count, and first words.
+async function expectLinkText(p: Awaited<ReturnType<typeof opensInvoices>>): Promise<void> {
+  const links = await p.draftLinks.all();
+  expect(links).toHaveLength(THREE.length);
+  for (const [index, link] of links.entries()) {
+    const row = THREE[index]!;
+    expect(await link.textContent(), `draft ${index}`).toBe(`${row.date}${row.source}, ${row.lines}${row.words}`);
+  }
+  await expect(p.draftsSection.locator("li")).toHaveCount(THREE.length);
+  await expect(p.draftsSection.locator("li > a")).toHaveCount(THREE.length);
+}
+
+// No part's text runs past its cell.
+async function expectDraftsNoSpill(p: Awaited<ReturnType<typeof opensInvoices>>): Promise<void> {
+  for (const link of await p.draftLinks.all()) {
+    const { date, source, lines, words } = draftParts(link);
+    for (const part of [date, source, lines, words]) {
+      expect(await part.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+    }
+    const edge = await box(link);
+    for (const part of [date, source, lines, words]) {
+      const shown = await box(part);
+      expect(shown.x + shown.width).toBeLessThanOrEqual(edge.x + edge.width + 0.5);
+    }
+  }
+}
+
+// The drafts read as one table: one header line naming the columns in order, each draft on one line with
+// its parts under those columns, the comma hidden visually, and no text past its cell.
+async function expectDraftsTable(page: Page, p: Awaited<ReturnType<typeof opensInvoices>>): Promise<void> {
+  const header = draftsHeader(page);
+  await expect(header).toBeVisible();
+  expect((await header.locator("span").allTextContents()).map((text) => text.trim())).toEqual(DRAFT_COLUMNS);
+  const headerBox = await box(header);
+  const columns = await boxes(header.locator("span"));
+  for (const link of await p.draftLinks.all()) {
+    const edge = await box(link);
+    expect(edge.y, "the header line is above the draft").toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1);
+    const { date, source, comma, lines, words } = draftParts(link);
+    const cells = await Promise.all([date, source, lines, words].map(box));
+    const middles = cells.map((cell) => cell.y + cell.height / 2);
+    expect(Math.max(...middles) - Math.min(...middles), "one line").toBeLessThanOrEqual(6);
+    cells.forEach((cell, index) => {
+      expect(Math.abs(cell.x - columns[index]!.x), `column ${index} left`).toBeLessThanOrEqual(1);
+      expect(Math.abs(cell.width - columns[index]!.width), `column ${index} width`).toBeLessThanOrEqual(1);
+    });
+    expect((await box(comma)).width, "the comma is hidden visually").toBeLessThanOrEqual(1);
+    expect(await comma.textContent()).toBe(", ");
+  }
+  await expectDraftsNoSpill(p);
+}
+
+// The drafts read as cards: no header line; each draft is a white card showing its date, then its source
+// and line count, then its first words, each on its own line.
+async function expectDraftsCards(page: Page, p: Awaited<ReturnType<typeof opensInvoices>>): Promise<void> {
+  await expect(draftsHeader(page), "the table is off").toBeHidden();
+  for (const link of await p.draftLinks.all()) {
+    const { date, source, comma, lines, words } = draftParts(link);
+    const { date: dateBox, source: sourceBox, comma: commaBox, lines: linesBox, words: wordsBox } = await namedBoxes({
+      date,
+      source,
+      comma,
+      lines,
+      words,
+    });
+    expect(sourceBox.y, "source below the date").toBeGreaterThanOrEqual(dateBox.y + dateBox.height - 1);
+    expect(Math.abs(linesBox.y - sourceBox.y), "line count on the source's line").toBeLessThanOrEqual(4);
+    expect(commaBox.width, "the comma is shown").toBeGreaterThan(1);
+    expect(linesBox.x, "line count after the source").toBeGreaterThanOrEqual(sourceBox.x + sourceBox.width - 1);
+    expect(wordsBox.y, "words below the source and count").toBeGreaterThanOrEqual(sourceBox.y + sourceBox.height - 1);
+    const style = await link.evaluate((node) => {
+      const css = getComputedStyle(node);
+      return { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius };
+    });
+    expect(style, "a draft is a white card").toEqual({ background: "rgb(255, 255, 255)", border: "1px", radius: "14px" });
+  }
+}
+
+async function expectDraftsEither(page: Page, p: Awaited<ReturnType<typeof opensInvoices>>): Promise<void> {
+  if (await draftsHeader(page).isVisible()) return expectDraftsTable(page, p);
+  await expectDraftsNoSpill(p);
+  return expectDraftsCards(page, p);
+}
+
+test.describe("the Invoices layout", () => {
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0001: /invoices lifts the 34rem cap on every child of main in the read view and a draft's review at ${width}x${height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await seedFixture();
+      const id = await seedDraft({});
+      await openInvoices(page);
+      await expectNoCap(page);
+      await page.goto(`/invoices?draft=${id}`);
+      await expect(page.getByRole("heading", { name: "Draft review" })).toBeVisible();
+      await expectNoCap(page);
+    });
+
+    test(`AC-0004: at ${width}x${height} the read forms sit side by side with their tops and their buttons' tops level, above Drafts to confirm`, async ({
+      page,
+    }) => {
+      const p = await opensInvoices(page, width, height);
+      const { photo, text, photoButton, textButton, drafts } = await namedBoxes({
+        photo: p.photoSection,
+        text: p.textSection,
+        photoButton: p.readPhoto,
+        textButton: p.readText,
+        drafts: p.draftsSection,
+      });
+      expect(photo.x + photo.width, "Read an invoice is left of Type a receipt").toBeLessThanOrEqual(text.x + 1);
+      expect(Math.abs(photo.y - text.y), "form tops level").toBeLessThanOrEqual(1);
+      expect(Math.abs(photoButton.y - textButton.y), "button tops level").toBeLessThanOrEqual(1);
+      expect(drafts.y, "drafts below both").toBeGreaterThanOrEqual(Math.max(photo.y + photo.height, text.y + text.height) - 1);
+    });
+  }
+
+  test("AC-0023: at 390x844 Read an invoice sits above Type a receipt, above Drafts to confirm", async ({ page }) => {
+    const p = await opensInvoices(page, 390, 844);
+    const { photo, text, drafts } = await namedBoxes({ photo: p.photoSection, text: p.textSection, drafts: p.draftsSection });
+    expect(text.y).toBeGreaterThanOrEqual(photo.y + photo.height - 1);
+    expect(drafts.y).toBeGreaterThanOrEqual(text.y + text.height - 1);
+  });
+
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`AC-0005: at ${width}x${height} each draft is a row under one header line`, async ({ page }) => {
+      const p = await opensInvoices(page, width, height);
+      await expectDraftsTable(page, p);
+    });
+  }
+
+  test("AC-0005: at 390x844 each draft is a card with its date, its source and line count, and its first words on their own lines", async ({
+    page,
+  }) => {
+    const p = await opensInvoices(page, 390, 844);
+    await expectDraftsCards(page, p);
+  });
+
+  test("AC-0005: at 1280x720 with 20 px text no draft's text runs past its row or card", async ({ page }) => {
+    const p = await opensInvoices(page, 1280, 720);
+    await withTextSize(page, 1280, 720, 20);
+    await expectDraftsEither(page, p);
+  });
+
+  for (const [width, height] of [
+    [390, 844],
+    [1024, 768],
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`AC-0022: at ${width}x${height} each draft is one link whose text is its date, source, count, and words`, async ({
+      page,
+    }) => {
+      const p = await opensInvoices(page, width, height);
+      await expectLinkText(p);
+    });
+  }
+
+  test("AC-0022: at 1280x720 with 20 px text each draft is one link whose text is its date, source, count, and words", async ({
+    page,
+  }) => {
+    const p = await opensInvoices(page, 1280, 720);
+    await withTextSize(page, 1280, 720, 20);
+    await expectLinkText(p);
+  });
+
+  test("AC-0016: /invoices with three drafts waiting passes the page-state check at 390x844", async ({ page }) => {
+    await opensInvoices(page, 390, 844);
+    const labels = await checkPageState(page);
+    expect(labels.slice(0, FORM_CONTROLS.length)).toEqual(FORM_CONTROLS);
+    expect(labels.slice(FORM_CONTROLS.length)).toHaveLength(3);
+  });
+
+  test("AC-0016: /invoices with three drafts waiting passes the page-state check at 1280x720", async ({ page }) => {
+    await opensInvoices(page, 1280, 720);
+    // The side menu's stops come first at this width; the form's four controls and the three drafts end the walk.
+    const labels = await checkDesktopWalk(page);
+    expect(labels.slice(-7, -3)).toEqual(FORM_CONTROLS.slice(-4));
+    expect(labels.slice(-3)).toHaveLength(3);
   });
 });
