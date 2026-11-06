@@ -9,10 +9,11 @@ interface Row {
 // the page scroll sideways on a phone. The card that holds the table is the container named `result` on
 // Production, Sales, and Receiving (their saved-result cards and the "Batch reversed" and "Receipt
 // corrected" panels); the /invoices saved result is not one, so its tables do not tighten. Where the
-// container is under 18rem wide (the `result-snug` variant in globals.css) the text and cell padding
-// tighten, and under 13rem (`result-tight`) they tighten again and a row label may break inside a word, so
-// long figures (six-digit weights with three decimals, costs of $10 or more) stay inside it. The two
-// variants never overlap, so `result-tight` wins whatever the order of their rules.
+// container is from 13rem up to 18rem wide (the `result-snug` variant in globals.css) the text and cell
+// padding tighten, and under 13rem (`result-tight`) they tighten further and a row label may break inside a
+// word, so long figures (six-digit weights with three decimals, costs of $10 or more) stay inside it. The two
+// variants never overlap, so a `result-snug:` class does nothing under 13rem: a class meant to hold there
+// too is also set under `result-tight:`.
 export function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <table className="w-full border-collapse text-base tabular-nums result-snug:text-sm result-tight:text-xs">

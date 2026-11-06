@@ -1031,11 +1031,15 @@ async function expectTablesFit(name: string, item: Locator, minimum: number, num
     return { tables: tables.length, problems };
   });
   expect(report.tables, `${name}: tables`).toBeGreaterThanOrEqual(minimum);
-  // Each Before and After cell is measured; `numbers` of them hold a figure number the fixture put there.
-  const cells = await measureCells(item.locator("table th, table tbody td"));
-  expect(cells.filter((cell) => cell.figure).length, `${name}: figure cells measured`).toBeGreaterThanOrEqual(numbers);
-  for (const cell of cells) {
+  // Every cell, the row labels and column names included, keeps its text inside it; a row label may wrap.
+  for (const cell of await measureCells(item.locator("table th, table tbody td"))) {
     if (!cell.fits) report.problems.push(`"${cell.text}" runs past its cell`);
+  }
+  // Only the Before and After cells must keep their number in one piece; `numbers` of them hold a figure
+  // number the fixture put there.
+  const values = await measureCells(item.locator("table tbody td"));
+  expect(values.filter((cell) => cell.figure).length, `${name}: figure cells measured`).toBeGreaterThanOrEqual(numbers);
+  for (const cell of values) {
     if (cell.pieces !== 1) report.problems.push(`the number in "${cell.text}" splits across lines`);
   }
   expect.soft(report.problems, name).toEqual([]);
@@ -1078,7 +1082,7 @@ test.describe("before-and-after tables in saved results", () => {
     await fillSale(f, { lbs: "123456.789", price: "12.34", customer: "Fulton Market Deli", date: "2026-10-08" });
     await f.save.click();
     await expect(f.result.getByRole("heading", { name: "Sale saved" })).toBeVisible();
-    for (const size of RESULT_SIZES) await expectTablesFit(`sales ${await atSize(page, size)}`, f.result, 1, 3);
+    for (const size of RESULT_SIZES) await expectTablesFit(`sales ${await atSize(page, size)}`, f.result, 1, 2);
   });
 
   test("AC-0033: /receiving, the saved result's tables fit the card at every size with long figures", async ({ page }) => {
@@ -1089,7 +1093,7 @@ test.describe("before-and-after tables in saved results", () => {
     await fillReceipt(f, { weight: "123456.789", cost: "12.5" });
     await f.save.click();
     await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
-    for (const size of RESULT_SIZES) await expectTablesFit(`receiving ${await atSize(page, size)}`, f.result, 2, 7);
+    for (const size of RESULT_SIZES) await expectTablesFit(`receiving ${await atSize(page, size)}`, f.result, 2, 6);
   });
 
   test("AC-0034: /production, the Batch reversed panel's tables fit its batch at every size with long figures", async ({
@@ -1104,7 +1108,7 @@ test.describe("before-and-after tables in saved results", () => {
     const item = batchItem(page, number);
     await reverseThrough(page, item, number, "entered twice");
     await expect(reversePanel(item).getByRole("heading", { name: "Batch reversed" })).toBeVisible();
-    for (const size of PANEL_SIZES) await expectTablesFit(`production panel ${await atSize(page, size)}`, item, 2, 7);
+    for (const size of PANEL_SIZES) await expectTablesFit(`production panel ${await atSize(page, size)}`, item, 2, 6);
   });
 
   test("AC-0034: /receiving, the Receipt corrected panel's tables fit its receipt at every size with long figures", async ({
@@ -1119,6 +1123,6 @@ test.describe("before-and-after tables in saved results", () => {
     await correctThrough(page, item, lot, { cost: "12.5", weight: "999999.999" });
     await expect(correctPanel(item).getByRole("heading", { name: "Receipt corrected" })).toBeVisible();
     await expect(item.locator("th", { hasText: "Cost per finished lb" }), "the batch table shows").toBeVisible();
-    for (const size of PANEL_SIZES) await expectTablesFit(`receiving panel ${await atSize(page, size)}`, item, 3, 15);
+    for (const size of PANEL_SIZES) await expectTablesFit(`receiving panel ${await atSize(page, size)}`, item, 3, 14);
   });
 });
