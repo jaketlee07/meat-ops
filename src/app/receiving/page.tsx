@@ -9,16 +9,20 @@ import {
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
+import { FORM_COLUMN_GRID } from "../form-column-grid";
 import { PageShell } from "../page-header";
 import { ProductRegion } from "./product-region";
 import { ReceiptForm } from "./receipt-form";
 
-// From desk up, <main> is a grid: the shell's title-and-banner div across the top, the
-// form and the result in the 340 px left column, and the stock card and Recent receipts in
-// the right one (#product-region is display: contents, so its two sections are grid items).
-// The DOM order, and so Tab order, stays form, result, region. Each child names its area.
-const MAIN_GRID =
-  "desk:grid desk:grid-cols-[340px_minmax(0,1fr)] desk:grid-rows-[auto_auto_1fr_auto] desk:items-start desk:gap-x-4 desk:[grid-template-areas:'head_head'_'form_stock'_'form_recent'_'result_recent'] desk:[&>div:first-child]:[grid-area:head]";
+// The form-column grid (see form-column-grid.ts) with four rows, laid out as on Production: the form spans
+// the two middle rows beside the stock card and Recent receipts, and the result sits in the last row, which
+// takes whatever height a long list has left. The result starts right under the form while the form is
+// taller than the "Stock and prices" card, which lists every finished product made from the raw product;
+// once the card is taller, the result starts under the card (the owner accepted this on 2026-11-05). A probe
+// found six finished products fit under the form at every size it measured, and ten only at 1280 px at the
+// default text size. #product-region is
+// display: contents, so its two sections are grid items. The DOM order stays form, result, region.
+const MAIN_GRID = `${FORM_COLUMN_GRID} desk:grid-rows-[auto_auto_auto_1fr] desk:[grid-template-areas:'head_head'_'form_stock'_'form_recent'_'result_recent']`;
 
 // Every page settles who is asking. The proxy only refreshes the session.
 // The chosen product lives in the URL (?product=<code>), so the server renders

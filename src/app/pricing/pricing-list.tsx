@@ -14,14 +14,15 @@ const GROUPS = [
   { heading: "No cost yet", pick: (row: PricingRow) => !row.hasCost && !row.needsNewPrice },
 ] as const;
 
-// One template for a group's header line and every product row, so the columns line up.
-const TABLE_COLUMNS = "wide:grid-cols-[minmax(0,2.2fr)_repeat(5,minmax(0,1fr))] wide:gap-x-2 wide:px-3.5";
+// One template for a group's header line and every product row, so the columns line up. Where the
+// list is a table (the `price-table` variant, see globals.css) each product is one row of it.
+const TABLE_COLUMNS = "price-table:grid-cols-[minmax(0,2.2fr)_repeat(5,minmax(0,1fr))] price-table:gap-x-2 price-table:px-3.5";
 const COLUMN_NAMES = ["Cost per lb", "List price", "Suggested price", "Margin at list price", "Target margin"];
 
 // The open product's row: a tint and an accent edge on the left.
-// From wide up the edge is an inset shadow, so it takes no room from the row's content and
+// Where the list is a table the edge is an inset shadow, so it takes no room from the row's content and
 // the row's columns stay under the header line's.
-const OPEN_ROW = "bg-page border-l-4 border-l-primary wide:shadow-[inset_4px_0_0_0_var(--color-primary)]";
+const OPEN_ROW = "bg-page border-l-4 border-l-primary price-table:shadow-[inset_4px_0_0_0_var(--color-primary)]";
 
 const TILE_EDGES = {
   "Needs a new price": "border-t-status-needs",
@@ -74,7 +75,7 @@ export function PricingList({ rows, openCode }: { rows: PricingRow[]; openCode?:
   }
 
   return (
-    <div className="space-y-6">
+    <div className="@container/pricing space-y-6">
       {/* Both regions are in the page before they have text, so each message is announced.
           Beside the details panel, with no message the first group sits at the panel's top. */}
       <div className={openCode === undefined ? undefined : "mb-0 has-[[role]:not(:empty)]:mb-6"}>
@@ -102,18 +103,18 @@ export function PricingList({ rows, openCode }: { rows: PricingRow[]; openCode?:
           <section
             key={heading}
             aria-labelledby={`group-${heading.replaceAll(" ", "-")}`}
-            className="wide:overflow-hidden wide:rounded-card wide:border wide:border-card-border wide:bg-surface"
+            className="price-table:overflow-hidden price-table:rounded-card price-table:border price-table:border-card-border price-table:bg-surface"
           >
             <h2
               id={`group-${heading.replaceAll(" ", "-")}`}
-              className="mb-2.5 text-lg font-bold wide:mb-0 wide:px-3.5 wide:py-3 wide:text-base"
+              className="mb-2.5 text-lg font-bold price-table:mb-0 price-table:px-3.5 price-table:py-3 price-table:text-base"
             >
               {heading}
             </h2>
-            {/* From wide up the header line names the columns; each row's own labels are hidden visually and stay in the page. */}
+            {/* Where the list is a table the header line names the columns; each row's own labels are hidden visually and stay in the page. */}
             <div
               aria-hidden="true"
-              className={`hidden border-t border-card-border bg-page py-2 text-xs font-semibold text-ink-secondary wide:grid ${TABLE_COLUMNS}`}
+              className={`hidden border-t border-card-border bg-page py-2 text-xs font-semibold text-ink-secondary price-table:grid ${TABLE_COLUMNS}`}
             >
               <span>Product</span>
               {COLUMN_NAMES.map((name) => (
@@ -122,7 +123,7 @@ export function PricingList({ rows, openCode }: { rows: PricingRow[]; openCode?:
                 </span>
               ))}
             </div>
-            <ul className="space-y-3 wide:space-y-0">
+            <ul className="space-y-3 price-table:space-y-0">
               {group.map((row) => (
                 <ProductCard key={row.productId} row={row} open={row.code === openCode} onResult={show} />
               ))}
@@ -145,9 +146,9 @@ function ProductCard({
 }) {
   return (
     <li
-      className={`rounded-card border border-card-border p-3.5 wide:grid wide:items-center wide:rounded-none wide:border-0 wide:border-t wide:py-2 ${TABLE_COLUMNS} ${open ? OPEN_ROW : "bg-surface"}`}
+      className={`rounded-card border border-card-border p-3.5 price-table:grid price-table:items-center price-table:rounded-none price-table:border-0 price-table:border-t price-table:py-2 ${TABLE_COLUMNS} ${open ? OPEN_ROW : "bg-surface"}`}
     >
-      <h3 className="text-lg font-bold break-words wide:text-base">
+      <h3 className="text-lg font-bold break-words price-table:text-base">
         <Link
           href={`/pricing?product=${encodeURIComponent(row.code)}`}
           aria-current={open ? "page" : undefined}
@@ -156,7 +157,7 @@ function ProductCard({
           {row.code} {row.description}
         </Link>
       </h3>
-      <dl className="mt-2.5 flex flex-col gap-y-1.5 text-note tabular-nums wide:col-span-5 wide:mt-0 wide:grid wide:grid-cols-subgrid wide:gap-y-0 wide:text-sm wide:[&>div]:contents wide:[&_dd]:text-right wide:[&_dt]:sr-only">
+      <dl className="mt-2.5 flex flex-col gap-y-1.5 text-note tabular-nums price-table:col-span-5 price-table:mt-0 price-table:grid price-table:grid-cols-subgrid price-table:gap-y-0 price-table:text-sm price-table:[&>div]:contents price-table:[&_dd]:text-right price-table:[&_dt]:sr-only">
         <Figure
           label="Cost per lb"
           value={!row.hasCost || row.costPerLb === null ? "None yet" : formatCostPerLb(row.costPerLb)}

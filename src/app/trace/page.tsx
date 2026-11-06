@@ -59,7 +59,7 @@ export default async function TracePage({
   }
 
   return (
-    <PageShell title="Trace" current="trace">
+    <PageShell title="Trace" current="trace" fullWidth>
       <FindForms
         sale={sale ?? ""}
         lot={lot}
@@ -69,7 +69,7 @@ export default async function TracePage({
         lotErrors={lotErrors}
       />
       {/* No live region: a trace can list over 1,000 sales. A move to a new lookup focuses the result's heading instead. */}
-      <div className="mt-8">{result}</div>
+      <div className="mt-4">{result}</div>
     </PageShell>
   );
 }

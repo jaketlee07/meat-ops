@@ -3,10 +3,16 @@ import { isOperator } from "../../lib/rpc";
 import { listCustomers, listRecentSales, listSaleProducts } from "../../lib/sales";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
+import { FORM_COLUMN_GRID } from "../form-column-grid";
 import { PageShell } from "../page-header";
 import { RecentSales } from "./recent-sales";
 import { SaleForm } from "./sale-form";
 import { VoidedSalesProvider } from "./voided-sales";
+
+// The form-column grid (see form-column-grid.ts) with three rows: the form and then the result in the left
+// column, Recent sales spanning both beside them. The result's row takes the list's extra height and the
+// result starts at its top. The DOM order stays form, result, Recent sales.
+const MAIN_GRID = `${FORM_COLUMN_GRID} desk:grid-rows-[auto_auto_1fr] desk:[grid-template-areas:'head_head'_'form_recent'_'result_recent']`;
 
 // Every page settles who is asking. The proxy only refreshes the session.
 // /sales?product=<code> renders the same page: the form asks for it to get a
@@ -27,12 +33,10 @@ export default async function SalesPage() {
   ]);
 
   return (
-    <PageShell title="Sales" current="sales">
+    <PageShell title="Sales" current="sales" fullWidth mainClassName={MAIN_GRID}>
       <VoidedSalesProvider>
         <SaleForm products={products} customers={customers} />
-        <div className="mt-8">
-          <RecentSales {...recent} />
-        </div>
+        <RecentSales {...recent} />
       </VoidedSalesProvider>
     </PageShell>
   );

@@ -4,9 +4,17 @@ import { getStock } from "../../lib/receiving";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
+import { FORM_COLUMN_GRID } from "../form-column-grid";
 import { PageShell } from "../page-header";
 import { ProductionForm } from "./production-form";
 import { ProductRegion } from "./product-region";
+
+// The form-column grid (see form-column-grid.ts) with four rows: the form spans the two middle rows beside the
+// stock card and Recent batches, and the result sits in the last row, which takes whatever height the long
+// list has left, so the result starts right under the form at any list length. #product-region is
+// display: contents, so the stock card and Recent batches are grid items. The DOM order stays form, check
+// step, result, region.
+const MAIN_GRID = `${FORM_COLUMN_GRID} desk:grid-rows-[auto_auto_auto_1fr] desk:[grid-template-areas:'head_head'_'form_stock'_'form_recent'_'result_recent']`;
 
 // Every page settles who is asking. The proxy only refreshes the session.
 // The chosen product lives in the URL (?product=<code>), so the server renders
@@ -50,7 +58,7 @@ export default async function ProductionPage({
   }
 
   return (
-    <PageShell title="Production" current="production">
+    <PageShell title="Production" current="production" fullWidth mainClassName={MAIN_GRID}>
       <ProductionForm
         products={products.map(({ code, description, shrinkPct }) => ({ code, description, shrinkPct }))}
         urlCode={requested}

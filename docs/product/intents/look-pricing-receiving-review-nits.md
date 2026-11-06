@@ -13,7 +13,9 @@ Pricing and Receiving lay out to the space and text size they actually have: bet
 - At 1280 px and the default text size the receipts table's Vendor column is about 54 px wide, so a vendor word of eight or more letters breaks inside the word; with an always-visible scrollbar the Recent receipts section clears the `receipt-table` threshold (38rem, in `src/app/globals.css`) by only 1 to 3 px.
 - `/pricing?product=<code>` waits for `getPricingDetail` before it starts `listPricing`; the two reads can run together.
 - The `detail(page).main` helper in `test/e2e/pricing-page.ts` returns the "Product details" region, not `<main>`; the comment above `VALUE_CLASS` in `src/app/facts.tsx` says "below the table" where it means "where the section is not a table"; the "In use" pill in `src/app/receiving/recent-receipts.tsx` uses the card-border token as its fill.
+- The owner answered the Pricing question on 2026-11-05: between 1024 and 1279 px the list shows its table whenever it has room, and cards when it does not.
 - Spec 2's review set these aside (PR #47); the owner queued all of them at its close-out on 2026-11-05.
+- The owner settled "dynamic" on 2026-11-05: every table or card layout picks its look from the room its own section has (its width and the text size), not the screen width alone, on Pricing and Receiving and on every page spec 3 builds.
 - What each screen does, and every word and control name, stays the same. At the default text size Recent receipts still read as a table from 1280 px, and with a 20 px text size they stay cards at 1280 and 1440 px with every Void and Correct inside the section.
 
 ## Owner
@@ -22,12 +24,11 @@ Pricing and Receiving lay out to the space and text size they actually have: bet
 
 ## Unresolved questions
 
-- What does "ensure everything is dynamic" cover: layouts that size to their own container and the text size instead of fixed screen widths, on Pricing and Receiving only, or on every look E page spec 3 builds too?
-- Between 1024 and 1279 px, should the Pricing cards be capped in width, sit two to a row, or switch to the table look when the list has room?
+None.
 
 ## Projection
 
-- A small spec or direct-light change of its own, or folded into spec 3 of `docs/product/briefs/ui-redesign.md` if its pages share the fix.
+- Built in spec 3a (`look-production-sales-trace`) of `docs/product/briefs/ui-redesign.md`, by the owner's choice on 2026-11-05.
 
 
 ## Source

@@ -111,7 +111,7 @@ export function detail(page: Page) {
   // Every read is inside the "Product details" region: the list beside it has links and headings too.
   const region = page.getByRole("region", { name: "Product details" });
   return {
-    main: region,
+    region,
     heading: region.getByRole("heading", { level: 2 }).first(),
     target: region.getByRole("textbox", { name: "Target margin %" }),
     price: region.getByRole("textbox", { name: "List price per lb" }),

@@ -230,7 +230,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
       </div>
 
       {/* The panel is in a status region that is in the page before the correction fills it. */}
-      <div role="status" aria-label={`Correction of lot ${lotNumber}`} className={corrected ? "mt-2 space-y-4" : undefined}>
+      <div role="status" aria-label={`Correction of lot ${lotNumber}`} className={corrected ? "@container/result mt-2 space-y-4" : undefined}>
         {corrected && (
           <>
             <h3 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">

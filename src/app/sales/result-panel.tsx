@@ -8,7 +8,7 @@ import { Facts } from "../facts";
 import type { SaleSaveState } from "./save-sale";
 import { useVoidedSales } from "./voided-sales";
 
-const LINK = "inline-flex min-h-control min-w-control items-center rounded-md text-primary underline";
+const LINK = "inline-flex min-h-control min-w-control items-center rounded-control text-primary underline";
 
 // A stock figure as the database gave it, or a word where the menu had no row.
 function stock(lbs: number | null): string {
@@ -39,17 +39,25 @@ export function ResultPanel({ state, headingRef }: { state: SaleSaveState; headi
   }
 
   return (
-    <div role="status" aria-label="Sale result" className="mt-6 space-y-4">
+    <div
+      role="status"
+      aria-label="Sale result"
+      className={
+        sale
+          ? "@container/result mt-4 space-y-4 rounded-card border border-card-border bg-surface p-2.5 desk:p-4 desk:[grid-area:result]"
+          : "desk:[grid-area:result]"
+      }
+    >
       {sale && (
         <>
-          <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">
+          <h2 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-success">
             Sale saved
           </h2>
           <Facts rows={rows} />
           {wasVoided && <p className="font-medium">This sale was voided.</p>}
           {details ? (
             <>
-              <h3 className="text-lg font-semibold">Finished lots drawn</h3>
+              <h3 className="text-base font-bold">Finished lots drawn</h3>
               <ol className="space-y-3">
                 {details.lots.map((lot) => (
                   <li key={lot.saleItemId}>

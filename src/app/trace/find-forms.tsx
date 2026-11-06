@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseLotFinder, parseSaleNumber } from "../../lib/sale-input";
 
-const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
-const BUTTON = "w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary";
+const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
+const BUTTON = "mt-auto w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary";
+const CARD = "flex flex-col rounded-card border border-card-border bg-surface p-3.5 desk:p-4";
+const FORM = "flex flex-1 flex-col gap-3";
 const SALE_ID = "find-sale-number";
 const RAW_ID = "find-raw-code";
 const RECEIVED_ID = "find-received";
@@ -60,7 +62,7 @@ export function FindForms({
   }, [lookup]);
 
   return (
-    <div className="space-y-8">
+    <div className="grid gap-4 desk:grid-cols-2">
       <FindSale sale={sale} urlError={saleError} />
       <FindLot rawCode={rawCode} received={received} urlErrors={lotErrors} />
     </div>
@@ -97,11 +99,11 @@ function FindSale({ sale, urlError }: { sale: string; urlError?: string }) {
   }
 
   return (
-    <section aria-labelledby="find-sale-heading">
-      <h2 id="find-sale-heading" className="mb-3 text-xl font-semibold">
+    <section aria-labelledby="find-sale-heading" className={CARD}>
+      <h2 id="find-sale-heading" className="mb-3 text-lg font-bold">
         Find a sale
       </h2>
-      <form onSubmit={submit} noValidate className="space-y-4">
+      <form onSubmit={submit} noValidate className={FORM}>
         <div>
           <label htmlFor={SALE_ID} className="block text-base font-medium">
             Sale number
@@ -164,11 +166,11 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
   }
 
   return (
-    <section aria-labelledby="find-lot-heading">
-      <h2 id="find-lot-heading" className="mb-3 text-xl font-semibold">
+    <section aria-labelledby="find-lot-heading" className={CARD}>
+      <h2 id="find-lot-heading" className="mb-3 text-lg font-bold">
         Find a raw lot
       </h2>
-      <form onSubmit={submit} noValidate className="space-y-4">
+      <form onSubmit={submit} noValidate className={FORM}>
         <div>
           <label htmlFor={RAW_ID} className="block text-base font-medium">
             Raw product code

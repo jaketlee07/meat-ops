@@ -186,18 +186,18 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
   }
 
   return (
-    <div className="min-w-0 max-w-full">
+    <div className={`min-w-0 max-w-full ${done || refusal ? "basis-full" : ""}`}>
       {/* Until the list shows the reversal, this control marks its own batch as
           reversed. The action skips the re-render when a read after the write
           failed, or when no finished lbs on hand come back because the product
           was made inactive. */}
-      {done && !reversed && <p className="break-words font-medium">{`Reversed: ${sentReason}`}</p>}
+      {done && !reversed && <p className="break-words font-semibold text-error batch-table:text-right">{`Reversed: ${sentReason}`}</p>}
       {!reversed && !done && (
         <button
           type="button"
           onClick={open}
           aria-label={`Reverse batch ${batchNumber}`}
-          className="rounded-md border border-error bg-surface px-4 text-base font-medium text-error"
+          className="rounded-control border border-error bg-surface px-4 text-base font-medium text-error"
         >
           Reverse
         </button>
@@ -214,7 +214,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
       </div>
 
       {/* The panel is in a status region that is in the page before the reversal fills it. */}
-      <div role="status" aria-label={`Reversal of batch ${batchNumber}`} className={done ? "mt-2 space-y-4" : undefined}>
+      <div role="status" aria-label={`Reversal of batch ${batchNumber}`} className={done ? "@container/result mt-2 space-y-4" : undefined}>
         {done && (
           <>
             <h3 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">
@@ -240,7 +240,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
             // Escape must not hide a reversal that is already on its way.
             if (pending) event.preventDefault();
           }}
-          className="m-auto w-full max-w-md rounded-md border border-field-border bg-surface p-4 text-ink backdrop:bg-ink/50"
+          className="m-auto w-full max-w-md rounded-card border border-card-border bg-surface p-4 text-ink backdrop:bg-ink/50"
         >
           <form onSubmit={confirm} noValidate className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -251,7 +251,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
                 type="button"
                 disabled={pending}
                 onClick={() => dialogRef.current?.close()}
-                className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
+                className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -289,7 +289,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
                   onChange={(event) => setReason(event.target.value)}
                   aria-invalid={invalid ? true : undefined}
                   aria-describedby={invalid ? errorId : undefined}
-                  className="mt-1 block w-full rounded-md border border-field-border bg-surface px-3 py-2 text-base font-normal text-ink"
+                  className="mt-1 block w-full rounded-control border border-field-border bg-surface px-3 py-2 text-base font-normal text-ink"
                 />
               </label>
               {invalid && (
@@ -306,7 +306,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
             <button
               type="submit"
               aria-disabled={pending ? true : undefined}
-              className="w-full rounded-md bg-error px-4 text-base font-medium text-on-primary aria-disabled:bg-error/60"
+              className="w-full rounded-control bg-error px-4 text-base font-medium text-on-primary aria-disabled:bg-error/60"
             >
               Reverse batch
             </button>

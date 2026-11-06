@@ -53,7 +53,7 @@ export function CheckStep({ input, product, saving, onClose, onConfirm }: Props)
         // Escape must not hide a save that is already on its way.
         if (saving) event.preventDefault();
       }}
-      className="m-auto w-full max-w-md rounded-md border border-field-border bg-surface p-4 text-ink backdrop:bg-ink/50"
+      className="m-auto w-full max-w-md rounded-card border border-card-border bg-surface p-4 text-ink backdrop:bg-ink/50"
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -66,7 +66,7 @@ export function CheckStep({ input, product, saving, onClose, onConfirm }: Props)
             onClick={() => {
               if (!saving) dialogRef.current?.close();
             }}
-            className="rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
+            className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
           >
             Go back
           </button>
@@ -92,7 +92,7 @@ export function CheckStep({ input, product, saving, onClose, onConfirm }: Props)
           onClick={() => {
             if (!saving) onConfirm();
           }}
-          className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+          className="w-full rounded-control bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
         >
           Save batch
         </button>

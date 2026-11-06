@@ -21,10 +21,18 @@ export function ResultPanel({
 }) {
   const view = state.status === "saved" ? resultView(state) : null;
   return (
-    <div role="status" aria-label="Batch result" className="mt-6 space-y-4">
+    <div
+      role="status"
+      aria-label="Batch result"
+      className={
+        view
+          ? "@container/result mt-4 space-y-4 rounded-card border border-card-border bg-surface p-2.5 desk:p-4 desk:[grid-area:result]"
+          : "desk:[grid-area:result]"
+      }
+    >
       {view && (
         <>
-          <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-success">
+          <h2 ref={headingRef} tabIndex={-1} className="text-lg font-bold text-success">
             {view.heading}
           </h2>
           <Facts rows={view.lines.map((line) => [line.label, line.value] as const)} />
@@ -32,7 +40,7 @@ export function ResultPanel({
           {!reversed && view.notice && <p>{view.notice}</p>}
           {!reversed && view.sections && (
             <>
-              <h3 className="text-lg font-semibold">Lots used</h3>
+              <h3 className="text-base font-bold">Lots used</h3>
               <ol className="space-y-3">
                 {view.sections.lotsUsed.map((lot) => (
                   <li key={lot.lotNumber}>
@@ -48,7 +56,7 @@ export function ResultPanel({
                   </li>
                 ))}
               </ol>
-              <h3 className="text-lg font-semibold">Finished stock added</h3>
+              <h3 className="text-base font-bold">Finished stock added</h3>
               <Facts
                 rows={[
                   ["Finished lbs added", view.sections.finishedStock.lbs],

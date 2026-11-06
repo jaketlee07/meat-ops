@@ -54,7 +54,7 @@ export function ResultPanel({
       aria-label="Receipt result"
       className={
         state.status === "saved"
-          ? "mt-4 space-y-4 rounded-card border border-card-border bg-surface p-2.5 desk:p-4 desk:[grid-area:result]"
+          ? "@container/result mt-4 space-y-4 rounded-card border border-card-border bg-surface p-2.5 desk:p-4 desk:[grid-area:result]"
           : "desk:[grid-area:result]"
       }
     >
