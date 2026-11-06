@@ -50,3 +50,21 @@ it("AC-0022: the In use mark's fill token appears in no border- or divide- class
   const rules = css.split("\n").filter((line) => /border/.test(line) && line.includes(`--color-${token}`));
   expect(rules).toEqual([]);
 });
+
+it("AC-0014: the four page folders hold no radius class other than control, card, mark, full, or none", () => {
+  const allowed = /^rounded(?:-(?:t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?-(?:control|card|mark)$|^rounded-(?:full|none)$/;
+  // A radius class with its leading variant prefixes (name: or [...]:) kept apart from its name.
+  const radius = /(?<![\w:\]-])((?:(?:[\w-]+|\[[^\]\s]*\]):)*)(rounded[\w./[\]-]*)/g;
+  const offenders: string[] = [];
+  for (const folder of ["menu", "invoices", "ask", "alerts"]) {
+    for (const path of sourceFiles(join(APP, folder))) {
+      const name = relative(ROOT, path);
+      for (const [, prefix, cls] of readFileSync(path, "utf8").matchAll(radius)) {
+        if (allowed.test(cls!)) continue;
+        if (name === "src/app/invoices/read-forms.tsx" && prefix === "file:" && cls === "rounded-md") continue;
+        offenders.push(`${name}: ${prefix}${cls}`);
+      }
+    }
+  }
+  expect(offenders, "radius classes other than the allowed ones").toEqual([]);
+});
