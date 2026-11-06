@@ -67,3 +67,9 @@ The spec's Assumptions record each of these as a Product line:
 - Commit `29fe060`. `test/look-tidy.test.ts` gains the AC-0014 test: every class under the four page folders that starts `rounded` after its variant prefixes is stripped must match `rounded(-side or corner)?-(control|card|mark)`, `rounded-full`, or `rounded-none`; the only exception is `file:rounded-md` in `src/app/invoices/read-forms.tsx`. The four existing tests in the file are unchanged.
 - Seen failing: a `rounded-md` class and, separately, a `desk:rounded-lg` class added to `src/app/menu/error.tsx` each failed the test naming that class; `git diff --stat src` was empty after both.
 - `npm test` after the slot fix (log `.context/s3b-t6-npmtest.log`): Vitest 55 files, 1051 passed; Playwright 975 passed in 12.6 min; no flake.
+
+## T7 captures and the T8 amendment (2026-11-06)
+
+- The ten AC-0017 states were captured at `10cb96b` (code as at `29fe060`) with `.context/recorded-run/s3b-captures.spec.ts` through the suite's own web servers (a fresh build and the fake model) and placed on the canvas beside the boards (version 1793954751-bfb1, row "Spec 3b as built" at y 29000).
+- The owner answered on 2026-11-06 "Match; fix the 3 first": the layouts match, and three style details must match the boards before the verdict is recorded: the "Drafts to confirm" heading sits outside its card; a line's "Line n" legend sits on its card's top border; each saved lot card starts with a rule above "Lot number". The checkboxes' 44 px boxes and the links' indents stay as the app has them.
+- Controlled amendment on the owner's approval: a new task T8 fixes the three details with pins in the suite; T7 runs after T8 and its records name a commit at or after T8's last commit. The spec is unchanged.
