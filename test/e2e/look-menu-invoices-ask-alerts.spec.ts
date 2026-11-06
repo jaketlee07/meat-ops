@@ -1,8 +1,18 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetTestData } from "../db";
 import { checkDesktopWalk, checkPageState } from "./a11y";
-import { box, boxes, expectNoCap, measureCells, withTextSize } from "./look-checks";
-import { FORM_CONTROLS, openInvoices, seedDraft, seedFixture, seedLines } from "./invoices-page";
+import { box, boxes, expectNoCap, expectTablesFit, measureCells, withTextSize } from "./look-checks";
+import {
+  FORM_CONTROLS,
+  NAV_CONTROLS,
+  openInvoices,
+  openReview,
+  review,
+  reviewControls,
+  seedDraft,
+  seedFixture,
+  seedLines,
+} from "./invoices-page";
 import {
   addFinished,
   addRaw,
@@ -475,4 +485,457 @@ test.describe("the Invoices layout", () => {
     expect(labels.slice(-7, -3)).toEqual(FORM_CONTROLS.slice(-4));
     expect(labels.slice(-3)).toHaveLength(3);
   });
+});
+
+// ---- A draft's review ----
+
+// AC-0001 for a draft's review is checked by the "Invoices" tests above (the draft's review at 1024 and 1280 px).
+
+const REVIEW_WORDS = ["TKY DRUMS 40# CASE", "TKY WING 40# CS", "CHICKEN THIGH 40#"];
+const FIELDS = ["product", "vendor", "weight", "cost", "date"] as const;
+type Kind = "photo" | "typed";
+
+// The sizes AC-0006 names, in the order its two looks use them: beside the lines, then above them.
+const BESIDE = [
+  { width: 1024, height: 768, px: 16 },
+  { width: 1280, height: 720, px: 16 },
+  { width: 1440, height: 900, px: 16 },
+  { width: 1280, height: 720, px: 20 },
+] as const;
+const ABOVE = [
+  { width: 390, height: 844, px: 16 },
+  { width: 1024, height: 768, px: 20 },
+] as const;
+
+// A three-line photo draft or a one-line typed draft, opened at the size.
+async function opensReview(page: Page, width: number, height: number, kind: Kind) {
+  await page.setViewportSize({ width, height });
+  await seedFixture();
+  const id = kind === "photo" ? await seedDraft({ source: "photo", words: REVIEW_WORDS }) : await seedDraft({});
+  return { id, r: await openReview(page, id) };
+}
+
+async function atTextSize(page: Page, width: number, height: number, px: number): Promise<void> {
+  if (px !== 16) await withTextSize(page, width, height, px);
+}
+
+function capture(page: Page, kind: Kind): Locator {
+  return page.getByRole("region", { name: kind === "photo" ? "Invoice photo" : "You typed", exact: true });
+}
+
+function linesForm(page: Page): Locator {
+  return page.getByRole("form", { name: "Lines", exact: true });
+}
+
+// The capture section is the first column and the Lines form the second, with their tops level.
+async function expectBeside(page: Page, kind: Kind): Promise<void> {
+  const { shown, lines } = await namedBoxes({ shown: capture(page, kind), lines: linesForm(page) });
+  expect(shown.x + shown.width, "the capture section is left of the form").toBeLessThanOrEqual(lines.x + 1);
+  expect(Math.abs(shown.y - lines.y), "tops level").toBeLessThanOrEqual(1);
+}
+
+async function expectAbove(page: Page, kind: Kind): Promise<void> {
+  const { shown, lines } = await namedBoxes({ shown: capture(page, kind), lines: linesForm(page) });
+  expect(lines.y, "the form is below the capture section").toBeGreaterThanOrEqual(shown.y + shown.height - 1);
+}
+
+const control = (page: Page, n: number, field: (typeof FIELDS)[number]) => page.locator(`#line-${n}-${field}`);
+
+// Each line's fields: side by side in two rows, or each below the one before in today's order.
+async function expectFieldRows(page: Page, lineCount: number, rows: boolean): Promise<void> {
+  for (let n = 1; n <= lineCount; n += 1) {
+    const [product, vendor, weight, cost, date] = await Promise.all(FIELDS.map((field) => box(control(page, n, field))));
+    const after = (next: typeof product, previous: typeof product) =>
+      expect(next!.y, `line ${n}: below`).toBeGreaterThanOrEqual(previous!.y + previous!.height - 1);
+    const right = (next: typeof product, previous: typeof product) =>
+      expect(next!.x, `line ${n}: right of`).toBeGreaterThanOrEqual(previous!.x + previous!.width - 1);
+    if (rows) {
+      expect(Math.abs(product!.y - vendor!.y), `line ${n}: Product and Vendor tops`).toBeLessThanOrEqual(1);
+      right(vendor, product);
+      expect(Math.abs(weight!.y - cost!.y), `line ${n}: Weight and Cost tops`).toBeLessThanOrEqual(1);
+      expect(Math.abs(cost!.y - date!.y), `line ${n}: Cost and Date tops`).toBeLessThanOrEqual(1);
+      right(cost, weight);
+      right(date, cost);
+      after(weight, product);
+    } else {
+      after(vendor, product);
+      after(weight, vendor);
+      after(cost, weight);
+      after(date, cost);
+    }
+  }
+}
+
+// Every field's control ends inside its line, and its label sits above it.
+async function expectFieldsInside(page: Page, lineCount: number): Promise<void> {
+  const r = review(page);
+  for (let n = 1; n <= lineCount; n += 1) {
+    const line = await box(r.line(n).group);
+    for (const field of FIELDS) {
+      const shown = await box(control(page, n, field));
+      expect(shown.x, `line ${n} ${field}: starts inside`).toBeGreaterThanOrEqual(line.x);
+      expect(shown.x + shown.width, `line ${n} ${field}: ends inside`).toBeLessThanOrEqual(line.x + line.width);
+      expect(shown.y + shown.height, `line ${n} ${field}: ends inside, bottom`).toBeLessThanOrEqual(line.y + line.height);
+      const label = await box(page.locator(`label[for="line-${n}-${field}"]`));
+      expect(label.y + label.height, `line ${n} ${field}: label above`).toBeLessThanOrEqual(shown.y + 1);
+      expect(label.x, `line ${n} ${field}: label over its control`).toBeLessThan(shown.x + shown.width);
+      expect(label.x + label.width, `line ${n} ${field}: label over its control, right`).toBeGreaterThan(shown.x);
+    }
+  }
+}
+
+test.describe("a draft's review layout", () => {
+  for (const kind of ["photo", "typed"] as const) {
+    for (const { width, height, px } of BESIDE) {
+      test(`AC-0006: the ${kind} review at ${width}x${height} with ${px} px text keeps its capture section left of the Lines form`, async ({
+        page,
+      }) => {
+        await opensReview(page, width, height, kind);
+        await atTextSize(page, width, height, px);
+        await expectBeside(page, kind);
+      });
+    }
+    for (const { width, height, px } of ABOVE) {
+      test(`AC-0006: the ${kind} review at ${width}x${height} with ${px} px text keeps its capture section above the Lines form`, async ({
+        page,
+      }) => {
+        await opensReview(page, width, height, kind);
+        await atTextSize(page, width, height, px);
+        await expectAbove(page, kind);
+      });
+    }
+  }
+
+  test("AC-0007: at 1280x720 the whole Invoice photo section is in view once Save receipts is", async ({ page }) => {
+    const { r } = await opensReview(page, 1280, 720, "photo");
+    await r.save.scrollIntoViewIfNeeded();
+    await expect.poll(async () => (await box(capture(page, "photo"))).y).toBeGreaterThanOrEqual(0);
+    const shown = await box(capture(page, "photo"));
+    expect(shown.y + shown.height, "the section ends inside the viewport").toBeLessThanOrEqual(720);
+    const save = await box(r.save);
+    expect(save.y + save.height, "Save receipts is in view").toBeLessThanOrEqual(720);
+    expect(await page.evaluate(() => window.scrollY), "the page scrolled").toBeGreaterThan(0);
+  });
+
+  for (const { width, height } of [
+    { width: 1280, height: 720 },
+    { width: 1440, height: 900 },
+  ]) {
+    test(`AC-0008: at ${width}x${height} each line's fields sit in two rows, inside their line, labels above`, async ({
+      page,
+    }) => {
+      await opensReview(page, width, height, "photo");
+      await expectFieldRows(page, REVIEW_WORDS.length, true);
+      await expectFieldsInside(page, REVIEW_WORDS.length);
+    });
+  }
+
+  for (const { width, height } of [
+    { width: 390, height: 844 },
+    { width: 1024, height: 768 },
+  ]) {
+    test(`AC-0008: at ${width}x${height} each of a line's fields sits below the one before, inside its line, label above`, async ({
+      page,
+    }) => {
+      await opensReview(page, width, height, "photo");
+      await expectFieldRows(page, REVIEW_WORDS.length, false);
+      await expectFieldsInside(page, REVIEW_WORDS.length);
+    });
+  }
+
+  for (const { width, height } of [
+    { width: 1280, height: 720 },
+    { width: 1024, height: 768 },
+  ]) {
+    test(`AC-0008: at ${width}x${height} with 20 px text every control ends inside its line and every label sits above it`, async ({
+      page,
+    }) => {
+      await opensReview(page, width, height, "photo");
+      await withTextSize(page, width, height, 20);
+      await expectFieldsInside(page, REVIEW_WORDS.length);
+    });
+  }
+
+  // AC-0025: a 17 px always-visible scrollbar takes 17 px of the width, so the view is about 1rem narrower.
+  test("AC-0025: at 1024x768 with 17 px of the width taken, the capture section stays left of the Lines form", async ({
+    page,
+  }) => {
+    await opensReview(page, 1024, 768, "photo");
+    await page.evaluate(() => {
+      document.documentElement.style.paddingRight = "17px";
+    });
+    await expectBeside(page, "photo");
+  });
+});
+
+// ---- Saved receipts ----
+
+const RAW_CHK_LABEL = "RAW-CHK Chicken Thighs (raw)";
+
+// Three lines saved: the first two for RAW-TOM and the third, chosen in its Product field, for RAW-CHK.
+// `heavy` types six-digit weights with three decimals and costs of $10 or more into every line first.
+async function savesThreeLines(page: Page, width: number, height: number, heavy: boolean) {
+  await page.setViewportSize({ width, height });
+  await seedFixture();
+  const id = await seedDraft({ source: "photo", words: REVIEW_WORDS });
+  const r = await openReview(page, id);
+  await r.line(3).product.selectOption({ label: RAW_CHK_LABEL });
+  if (heavy) {
+    for (let n = 1; n <= 3; n += 1) {
+      await r.line(n).weight.fill("123456.789");
+      await r.line(n).cost.fill("12.5");
+    }
+  }
+  await r.save.click();
+  await expect(r.result).toContainText("Saved 3 receipts.");
+  await expect(r.details).toBeVisible();
+  return r;
+}
+
+test.describe("saved receipts layout", () => {
+  for (const { width, height, pair } of [
+    { width: 1280, height: 720, pair: true },
+    { width: 1440, height: 900, pair: true },
+    { width: 390, height: 844, pair: false },
+    { width: 1024, height: 768, pair: false },
+  ]) {
+    test(`AC-0009: at ${width}x${height} the saved lots and tables ${pair ? "sit two to a row" : "each sit below the one before"}`, async ({
+      page,
+    }) => {
+      const r = await savesThreeLines(page, width, height, false);
+      const lots = await boxes(r.details.locator(":scope > ul > li"));
+      expect(lots).toHaveLength(3);
+      const tables = await boxes(r.details.locator("table"));
+      expect(tables).toHaveLength(2);
+      const below = (next: (typeof lots)[number], previous: (typeof lots)[number], what: string) =>
+        expect(next.y, what).toBeGreaterThanOrEqual(previous.y + previous.height - 1);
+      if (pair) {
+        expect(lots[0]!.x + lots[0]!.width, "the second lot is right of the first").toBeLessThanOrEqual(lots[1]!.x + 1);
+        expect(Math.abs(lots[0]!.y - lots[1]!.y), "lot tops level").toBeLessThanOrEqual(1);
+        below(lots[2]!, lots[0]!, "the third lot is below the first");
+        expect(Math.abs(lots[2]!.x - lots[0]!.x), "the third lot is in the first column").toBeLessThanOrEqual(1);
+        expect(tables[0]!.x + tables[0]!.width, "the second table is right of the first").toBeLessThanOrEqual(tables[1]!.x + 1);
+        expect(Math.abs(tables[0]!.y - tables[1]!.y), "table tops level").toBeLessThanOrEqual(1);
+      } else {
+        below(lots[1]!, lots[0]!, "the second lot is below the first");
+        below(lots[2]!, lots[1]!, "the third lot is below the second");
+        below(tables[1]!, tables[0]!, "the second table is below the first");
+      }
+      below(tables[0]!, lots[2]!, "the tables are below the lots");
+    });
+  }
+
+  for (const { width, height, px } of [
+    { width: 1024, height: 768, px: 16 },
+    { width: 1280, height: 720, px: 16 },
+    { width: 1440, height: 900, px: 16 },
+    { width: 1280, height: 720, px: 20 },
+  ]) {
+    test(`AC-0021: at ${width}x${height} with ${px} px text six-digit weights and costs of $10 or more stay inside their tables`, async ({
+      page,
+    }) => {
+      const r = await savesThreeLines(page, width, height, true);
+      await atTextSize(page, width, height, px);
+      const cards = r.details.locator("table").locator("xpath=..");
+      await expect(cards).toHaveCount(2);
+      for (const [index, card] of (await cards.all()).entries()) {
+        await expectTablesFit(`table ${index}`, card, 1, 3);
+      }
+    });
+  }
+});
+
+// ---- The draft's buttons ----
+
+// The alpha of a computed color: `rgba(...)`, or a `color(...)` or `oklab(...)` ending in `/ alpha)`.
+function alphaOf(color: string): number {
+  const slash = color.match(/\/\s*([\d.]+)(%?)\s*\)$/);
+  if (slash) return slash[2] ? Number(slash[1]) / 100 : Number(slash[1]);
+  const rgba = color.match(/^rgba\(([^)]*)\)$/);
+  const parts = rgba?.[1]?.split(",") ?? [];
+  return parts.length === 4 ? Number(parts[3]) : 1;
+}
+
+// Holds every server action request the page sends until `release`, and counts them as the route sees them.
+async function holdActions(page: Page) {
+  const seen = { count: 0 };
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/invoices**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) {
+      seen.count += 1;
+      await gate;
+    }
+    await route.continue();
+  });
+  return { seen, release };
+}
+
+async function countActions(page: Page) {
+  const seen = { count: 0 };
+  await page.route("**/invoices**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) seen.count += 1;
+    await route.continue();
+  });
+  return seen;
+}
+
+async function buttonState(button: Locator) {
+  return button.evaluate((node) => {
+    const css = getComputedStyle(node);
+    return {
+      disabled: node.hasAttribute("disabled"),
+      ariaDisabled: node.getAttribute("aria-disabled"),
+      opacity: css.opacity,
+      fill: css.backgroundColor,
+      text: css.color,
+      border: css.borderTopColor,
+      focused: document.activeElement === node,
+    };
+  });
+}
+
+test.describe("the draft's waiting buttons", () => {
+  test("AC-0010: while a save is held both buttons stay focusable, faded by color, and the pressed one keeps focus", async ({
+    page,
+  }) => {
+    await seedFixture();
+    const r = await openReview(page, await seedDraft({}));
+    const rest = { save: await buttonState(r.save), discard: await buttonState(r.discard) };
+    expect(rest.save).toMatchObject({ disabled: false, ariaDisabled: null, opacity: "1" });
+    expect(alphaOf(rest.save.fill), "the fill at rest").toBe(1);
+    const held = await holdActions(page);
+    await r.save.focus();
+    await page.keyboard.press("Enter");
+    await expect(r.save).toHaveAttribute("aria-disabled", "true");
+    const save = await buttonState(r.save);
+    const discard = await buttonState(r.discard);
+    for (const state of [save, discard]) {
+      expect(state.disabled, "no disabled attribute").toBe(false);
+      expect(state.ariaDisabled).toBe("true");
+      expect(state.opacity, "opacity stays 1").toBe("1");
+    }
+    expect(alphaOf(save.fill), "Save receipts' fill").toBeCloseTo(0.6, 2);
+    expect(alphaOf(discard.text), "Discard draft's text").toBeCloseTo(0.6, 2);
+    expect(alphaOf(discard.border), "Discard draft's border").toBeCloseTo(0.6, 2);
+    expect(save.focused, "the pressed button keeps focus").toBe(true);
+    expect(await page.evaluate(() => document.activeElement?.textContent)).toBe("Save receipts");
+    held.release();
+    await expect(r.result).toContainText("Saved 1 receipt.");
+  });
+
+  test("AC-0010: while a discard is held both buttons stay focusable, faded by color, and the pressed one keeps focus", async ({
+    page,
+  }) => {
+    await seedFixture();
+    const r = await openReview(page, await seedDraft({}));
+    const held = await holdActions(page);
+    await r.discard.focus();
+    await page.keyboard.press("Enter");
+    await expect(r.discard).toHaveAttribute("aria-disabled", "true");
+    const save = await buttonState(r.save);
+    const discard = await buttonState(r.discard);
+    for (const state of [save, discard]) {
+      expect(state.disabled, "no disabled attribute").toBe(false);
+      expect(state.ariaDisabled).toBe("true");
+      expect(state.opacity, "opacity stays 1").toBe("1");
+    }
+    expect(alphaOf(save.fill), "Save receipts' fill").toBeCloseTo(0.6, 2);
+    expect(alphaOf(discard.text), "Discard draft's text").toBeCloseTo(0.6, 2);
+    expect(alphaOf(discard.border), "Discard draft's border").toBeCloseTo(0.6, 2);
+    expect(await page.evaluate(() => document.activeElement?.textContent)).toBe("Discard draft");
+    held.release();
+    await expect(r.result).toContainText("Draft discarded.");
+  });
+
+  // Playwright treats aria-disabled as disabled, so a press is forced as a finger would make it.
+  test("AC-0020: a second press of Save receipts or Discard draft while a save runs sends no request", async ({ page }) => {
+    await seedFixture();
+    const r = await openReview(page, await seedDraft({}));
+    const held = await holdActions(page);
+    await r.save.focus();
+    await page.keyboard.press("Enter");
+    await expect(r.save).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Enter");
+    await r.save.click({ force: true });
+    await r.discard.click({ force: true });
+    await expect.poll(() => held.seen.count).toBe(1);
+    held.release();
+    // Soft, so a build that lets a second press through is also counted: its second outcome replaces the first.
+    await expect.soft(r.result).toContainText("Saved 1 receipt.");
+    await page.waitForTimeout(1000);
+    expect(held.seen.count, "action requests from the first press to one second after its outcome").toBe(1);
+  });
+
+  test("AC-0020: a second press of Discard draft or Save receipts while a discard runs sends no request", async ({
+    page,
+  }) => {
+    await seedFixture();
+    const r = await openReview(page, await seedDraft({}));
+    const held = await holdActions(page);
+    await r.discard.focus();
+    await page.keyboard.press("Enter");
+    await expect(r.discard).toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("Enter");
+    await r.discard.click({ force: true });
+    await r.save.click({ force: true });
+    await expect.poll(() => held.seen.count).toBe(1);
+    held.release();
+    // Soft, so a build that lets a second press through is also counted: its second outcome replaces the first.
+    await expect.soft(r.result).toContainText("Draft discarded.");
+    await page.waitForTimeout(1000);
+    expect(held.seen.count, "action requests from the first press to one second after its outcome").toBe(1);
+  });
+
+  test("AC-0020: a save the page refuses before sending leaves both buttons usable, and one press after the fix sends one request", async ({
+    page,
+  }) => {
+    await seedFixture();
+    const r = await openReview(page, await seedLines([{ words: "TKY DRUMS 40#", weight_lbs: null }]));
+    const seen = await countActions(page);
+    await expect(r.line(1).weight).toHaveValue("");
+    await r.save.click();
+    await expect(r.line(1).weight).toBeFocused();
+    await expect(r.line(1).weight).toHaveAttribute("aria-invalid", "true");
+    for (const button of [r.save, r.discard]) await expect(button).not.toHaveAttribute("aria-disabled", /.*/);
+    expect(seen.count, "a refused save sends nothing").toBe(0);
+    await r.line(1).weight.fill("100");
+    await r.save.click();
+    await expect(r.result).toContainText("Saved 1 receipt.");
+    await expect(r.details).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(seen.count, "one request after the weight is filled").toBe(1);
+  });
+});
+
+// ---- Page state ----
+
+test.describe("a draft's review page state", () => {
+  test("AC-0016: the review of a draft read from a photo passes the page-state check at 390x844", async ({ page }) => {
+    await opensReview(page, 390, 844, "photo");
+    expect(await checkPageState(page)).toEqual(reviewControls(REVIEW_WORDS.length));
+  });
+
+  test("AC-0016: the review of a draft read from a photo passes the page-state check at 1280x720", async ({ page }) => {
+    await opensReview(page, 1280, 720, "photo");
+    expect(await checkPageState(page)).toEqual(reviewControls(REVIEW_WORDS.length));
+    const walked = await checkDesktopWalk(page);
+    const own = reviewControls(REVIEW_WORDS.length).slice(NAV_CONTROLS.length);
+    expect(walked.slice(-own.length)).toEqual(own);
+  });
+
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0016: a draft just saved passes the page-state check at ${width}x${height}`, async ({ page }) => {
+      await savesThreeLines(page, width, height, false);
+      expect(await checkPageState(page)).toEqual(NAV_CONTROLS);
+      if (width === 1280) await checkDesktopWalk(page);
+    });
+  }
 });

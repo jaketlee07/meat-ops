@@ -35,7 +35,7 @@ export default async function InvoicesPage({
       <PageShell title="Invoices" current="invoices" fullWidth>
         <Link
           href="/invoices"
-          className="mb-4 inline-flex min-h-control min-w-control items-center rounded-md px-3 text-base font-medium text-primary underline"
+          className="mb-4 inline-flex min-h-control min-w-control items-center rounded-control px-3 text-base font-medium text-primary underline"
         >
           {BACK_TO_INVOICES}
         </Link>
