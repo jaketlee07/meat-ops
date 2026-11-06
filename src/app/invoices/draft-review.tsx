@@ -168,7 +168,8 @@ export function DraftReview({ draft, products, vendors }: Props) {
   const discardedRef = useRef<HTMLParagraphElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
   // Set at once on press, because state updates land a render later; a second press of either button
-  // is refused here and never reaches dispatch, where Next.js would queue it behind the first.
+  // is refused here and never reaches dispatch, where Next.js would queue it behind the first. The ref clears
+  // when the action settles, a render before the outcome shows, so both handlers also refuse while `pending`.
   const pressRef = useRef(false);
 
   const errors = state.status === "invalid" ? state.fieldErrors : NO_ERRORS;
@@ -204,7 +205,7 @@ export function DraftReview({ draft, products, vendors }: Props) {
   // checks and sends the new day.
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pressRef.current) return;
+    if (pressRef.current || pending) return;
     pressRef.current = true;
     const release = () => {
       pressRef.current = false;
@@ -213,7 +214,7 @@ export function DraftReview({ draft, products, vendors }: Props) {
   }
 
   function discard() {
-    if (pressRef.current) return;
+    if (pressRef.current || pending) return;
     pressRef.current = true;
     const release = () => {
       pressRef.current = false;
@@ -303,7 +304,8 @@ export function DraftReview({ draft, products, vendors }: Props) {
                 const id = (field: LineField) => fieldId(line.lineNo, field);
                 return (
                   // Each line is the container named line: where it has room (`line-pair`) Product and Vendor
-                  // share a row, and Weight, Cost per lb, and Received date share a row.
+                  // share a row, Product on the wider track so its chosen name shows whole, and Weight, Cost per
+                  // lb, and Received date share a row.
                   <fieldset key={line.id} className={`@container/line min-w-0 space-y-3 ${CARD}`}>
                     <legend className="float-left mb-3 w-full text-lg font-semibold">Line {line.lineNo}</legend>
                     {/* The invoice's words are the model's reading of a photo: text, never markup. */}
@@ -320,7 +322,7 @@ export function DraftReview({ draft, products, vendors }: Props) {
                       />
                       Save this line
                     </label>
-                    <div className="grid grid-cols-1 gap-3 line-pair:grid-cols-2 line-pair:items-start">
+                    <div className="grid grid-cols-1 gap-3 line-pair:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] line-pair:items-start">
                       <LineBox
                         id={id("product")}
                         label={LABELS.product}

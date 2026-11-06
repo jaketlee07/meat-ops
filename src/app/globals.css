@@ -138,11 +138,13 @@
   }
 }
 
-/* One line of a draft's review: its fieldset is the container named line. Where it is at least 32rem wide
-   (2.125rem of padding and border, and three fields of at least 9.5rem with two gaps of 0.75rem, so a date
-   field holds its text and picker) Product and Vendor share a row, and Weight, Cost per lb, and Received date
-   share a row. In rem, no screen gate. The form (a form column of 40.5rem at 1280 px, 23.4rem at 1024 px) shows
-   rows at 1280 px and 1440 px and stacks at 1024 px. */
+/* One line of a draft's review: its fieldset is the container named line, and a container query measures its
+   content box (the fieldset's width less its 1rem padding and 1px border on each side, 2.125rem). Where that
+   box is at least 32rem wide (three fields of about 10.2rem with two gaps of 0.75rem, so a date field holds its
+   text and picker) Product and Vendor share a row, Product on the wider track, and Weight, Cost per lb, and
+   Received date share a row. In rem, no screen gate. Without a scrollbar the Lines form is 40.5rem wide at
+   1280 px and 24.5rem at 1024 px, so the box is 38.4rem (rows) and 22.4rem (stacked); the box is 48.4rem at
+   1440 px. */
 @custom-variant line-pair {
   @container line (min-width: 32rem) {
     @slot;
@@ -169,11 +171,11 @@
 }
 
 /* Alerts' "Urgent" and "Other alerts" lists: each section is the container named alerts. Where it is at least
-   44rem wide (two cards of at least 21.5rem and a 1rem gap, so a card still holds a title, a sentence, and its
-   buttons) the cards sit two to a row, never more; narrower, one to a row. In rem, no screen gate, so a larger
-   text size keeps one column until the section has grown to fit. <main>'s content box is 45.5rem at 1024 px
-   (about 44.4rem with a 17 px scrollbar, so it pairs), 61.5rem at 1280 px, and 71.5rem at 1440 px; with a 20 px
-   root it is 32.7rem at 1024 px (one column) and 45.5rem at 1280 px (pairs). */
+   44rem wide (two cards of at least 21.625rem and a 0.75rem gap, `gap-3`, so a card still holds a title, a
+   sentence, and its buttons) the cards sit two to a row, never more; narrower, one to a row. In rem, no screen
+   gate, so a larger text size keeps one column until the section has grown to fit. <main>'s content box is
+   45.5rem at 1024 px (about 44.4rem with a 17 px scrollbar, so it pairs), 61.5rem at 1280 px, and 71.5rem at
+   1440 px; with a 20 px root it is 32.7rem at 1024 px (one column) and 45.5rem at 1280 px (pairs). */
 @custom-variant alert-pair {
   @container alerts (min-width: 44rem) {
     @slot;

@@ -2,10 +2,22 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { buildFiveAlertFixture } from "../alert-fixtures";
 import { resetTestData, saleFixture } from "../db";
 import { checkDesktopWalk, checkPageState } from "./a11y";
-import { alertGroup, digestRegion, NAV_CONTROLS as ALERTS_NAV, opens } from "./alerts-page";
+import { alertGroup, digestRegion, MARGIN_TITLE, NAV_CONTROLS as ALERTS_NAV, opens } from "./alerts-page";
 import { appDate } from "./app-time";
-import { box, boxes, expectButtonsInside, expectNoCap, expectTablesFit, measureCells, withTextSize } from "./look-checks";
 import {
+  box,
+  boxes,
+  expectButtonsInside,
+  expectNoCap,
+  expectTablesFit,
+  expectUncountedNoCap,
+  expectWhiteCard,
+  measureCells,
+  WHITE_CARD,
+  withTextSize,
+} from "./look-checks";
+import {
+  fakeModel,
   FORM_CONTROLS,
   NAV_CONTROLS,
   openInvoices,
@@ -17,7 +29,6 @@ import {
   seedLines,
 } from "./invoices-page";
 import { ask, askControls, modelAnswer, openAsk } from "./ask-page";
-import { fakeModel } from "./invoices-page";
 import {
   addFinished,
   addRaw,
@@ -165,17 +176,9 @@ async function expectMenuCards(page: Page, rows: number): Promise<void> {
       await expect(labels.nth(index)).toBeVisible();
     }
     expect(await labels.allTextContents()).toEqual(FIGURE_LABELS);
-    const style = await row.evaluate((node) => {
-      const css = getComputedStyle(node);
-      return { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius };
-    });
-    expect(style, "a product is a white card").toEqual({ background: "rgb(255, 255, 255)", border: "1px", radius: "14px" });
+    await expectWhiteCard(row, "a product is a white card");
   }
-  const label = await sellableSwitch(page).locator("..").evaluate((node) => {
-    const css = getComputedStyle(node);
-    return { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius };
-  });
-  expect(label, "the switch is its own white card").toEqual({ background: "rgb(255, 255, 255)", border: "1px", radius: "14px" });
+  await expectWhiteCard(sellableSwitch(page).locator(".."), "the switch is its own white card");
   await expectMenuNoSpill(page, rows);
 }
 
@@ -194,11 +197,7 @@ test.describe("the Menu layout", () => {
       page,
     }) => {
       await opensMenu(page, width, height);
-      const widths = await page.locator("main > *").evaluateAll((children) =>
-        children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
-      );
-      expect(widths.length).toBeGreaterThanOrEqual(2);
-      expect(widths.filter((value) => value !== "none")).toEqual([]);
+      await expectUncountedNoCap(page);
     });
   }
 
@@ -252,6 +251,50 @@ test.describe("the Menu layout", () => {
     });
     await expectMenuTable(page, SIX.length);
   });
+
+  // The switch's focus ring (the checkbox's box grown by the outline's offset and width) sits inside the card's
+  // padding box, which clips, and the offset is not negative, so the ring keeps the card's white behind it.
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`Always do: at ${width}x${height} the Sellable only switch's focus ring sits inside the table's card`, async ({ page }) => {
+      await opensMenu(page, width, height);
+      const checkbox = sellableSwitch(page);
+      for (let presses = 0; presses < 30; presses += 1) {
+        if (await checkbox.evaluate((node) => node === document.activeElement)) break;
+        await page.keyboard.press("Tab");
+      }
+      await expect(checkbox).toBeFocused();
+      const ring = await checkbox.evaluate((node) => {
+        const css = getComputedStyle(node);
+        const card = node.parentElement!.parentElement!;
+        const cardCss = getComputedStyle(card);
+        const rect = node.getBoundingClientRect();
+        const outer = card.getBoundingClientRect();
+        const offset = parseFloat(css.outlineOffset);
+        const grow = offset + parseFloat(css.outlineWidth);
+        return {
+          style: css.outlineStyle,
+          offset,
+          grow,
+          overflow: cardCss.overflow,
+          top: rect.top - grow - (outer.top + parseFloat(cardCss.borderTopWidth)),
+          left: rect.left - grow - (outer.left + parseFloat(cardCss.borderLeftWidth)),
+          bottom: outer.bottom - parseFloat(cardCss.borderBottomWidth) - (rect.bottom + grow),
+          right: outer.right - parseFloat(cardCss.borderRightWidth) - (rect.right + grow),
+        };
+      });
+      expect(ring.overflow, "the table's card clips").toBe("hidden");
+      expect(ring.style, "a focus ring is drawn").not.toBe("none");
+      expect(ring.offset, "the outline offset is not negative").toBeGreaterThanOrEqual(0);
+      expect(ring.grow).toBeGreaterThan(0);
+      for (const side of ["top", "left", "bottom", "right"] as const) {
+        expect(ring[side], `the ring's ${side} edge is inside the card's padding box`).toBeGreaterThanOrEqual(-0.5);
+      }
+    });
+  }
 });
 
 // ---- Invoices ----
@@ -373,11 +416,7 @@ async function expectDraftsCards(page: Page, p: Awaited<ReturnType<typeof opensI
     expect(commaBox.width, "the comma is shown").toBeGreaterThan(1);
     expect(linesBox.x, "line count after the source").toBeGreaterThanOrEqual(sourceBox.x + sourceBox.width - 1);
     expect(wordsBox.y, "words below the source and count").toBeGreaterThanOrEqual(sourceBox.y + sourceBox.height - 1);
-    const style = await link.evaluate((node) => {
-      const css = getComputedStyle(node);
-      return { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius };
-    });
-    expect(style, "a draft is a white card").toEqual({ background: "rgb(255, 255, 255)", border: "1px", radius: "14px" });
+    await expectWhiteCard(link, "a draft is a white card");
   }
 }
 
@@ -485,6 +524,10 @@ test.describe("the Invoices layout", () => {
 
   test("AC-0016: /invoices with three drafts waiting passes the page-state check at 1280x720", async ({ page }) => {
     await opensInvoices(page, 1280, 720);
+    // The axe scan runs here, on the drafts' table look; the phone-width walk it returns ends with the three drafts.
+    const phone = await checkPageState(page);
+    expect(phone.slice(0, FORM_CONTROLS.length)).toEqual(FORM_CONTROLS);
+    expect(phone.slice(FORM_CONTROLS.length)).toHaveLength(3);
     // The side menu's stops come first at this width; the form's four controls and the three drafts end the walk.
     const labels = await checkDesktopWalk(page);
     expect(labels.slice(-7, -3)).toEqual(FORM_CONTROLS.slice(-4));
@@ -671,6 +714,61 @@ test.describe("a draft's review layout", () => {
     });
     await expectBeside(page, "photo");
   });
+
+  // Each line's closed Product picker is at least as wide as a copy of it holding only the chosen option at
+  // its own natural width, so the arrow and the whole chosen name fit; Product and Vendor stay side by side.
+  async function expectProductWhole(page: Page): Promise<void> {
+    for (let n = 1; n <= REVIEW_WORDS.length; n += 1) {
+      const widths = await control(page, n, "product").evaluate((node) => {
+        const picker = node as HTMLSelectElement;
+        const copy = picker.cloneNode(false) as HTMLSelectElement;
+        copy.removeAttribute("id");
+        copy.style.width = "auto";
+        copy.style.position = "absolute";
+        copy.style.visibility = "hidden";
+        copy.append(new Option(picker.selectedOptions[0]!.text));
+        picker.parentElement!.append(copy);
+        const natural = copy.getBoundingClientRect().width;
+        copy.remove();
+        return { shown: picker.getBoundingClientRect().width, natural };
+      });
+      expect(widths.natural, `line ${n}: the copy has a width`).toBeGreaterThan(100);
+      expect(widths.shown, `line ${n}: the Product picker holds its chosen option`).toBeGreaterThanOrEqual(widths.natural - 0.5);
+    }
+  }
+
+  async function productBesideVendor(page: Page): Promise<boolean> {
+    for (let n = 1; n <= REVIEW_WORDS.length; n += 1) {
+      const product = await box(control(page, n, "product"));
+      const vendor = await box(control(page, n, "vendor"));
+      if (Math.abs(product.y - vendor.y) > 1 || vendor.x < product.x + product.width - 1) return false;
+    }
+    return true;
+  }
+
+  test("Always do: at 1280x720 each Product picker shows its chosen option whole, beside Vendor with tops level", async ({ page }) => {
+    await opensReview(page, 1280, 720, "photo");
+    expect(await productBesideVendor(page), "Product beside Vendor").toBe(true);
+    await expectProductWhole(page);
+  });
+
+  test("Always do: at the narrowest viewport where Product sits beside Vendor each Product picker shows its chosen option whole", async ({
+    page,
+  }) => {
+    await opensReview(page, 1280, 720, "photo");
+    // Step down 1 px at a time until Product drops below Vendor; measure at the last width where they sat side by side.
+    let narrowest = 1280;
+    for (let width = 1279; width >= 1024; width -= 1) {
+      await page.setViewportSize({ width, height: 720 });
+      if (!(await productBesideVendor(page))) break;
+      narrowest = width;
+    }
+    expect(narrowest, "the paired layout ends above 1024 px").toBeGreaterThan(1024);
+    expect(narrowest, "the paired layout ends below 1280 px").toBeLessThan(1280);
+    await page.setViewportSize({ width: narrowest, height: 720 });
+    expect(await productBesideVendor(page), `Product beside Vendor at ${narrowest} px`).toBe(true);
+    await expectProductWhole(page);
+  });
 });
 
 // ---- Saved receipts ----
@@ -813,6 +911,9 @@ test.describe("the draft's waiting buttons", () => {
     const rest = { save: await buttonState(r.save), discard: await buttonState(r.discard) };
     expect(rest.save).toMatchObject({ disabled: false, ariaDisabled: null, opacity: "1" });
     expect(alphaOf(rest.save.fill), "the fill at rest").toBe(1);
+    expect(rest.discard).toMatchObject({ disabled: false, ariaDisabled: null, opacity: "1" });
+    expect(alphaOf(rest.discard.text), "Discard draft's text at rest").toBe(1);
+    expect(alphaOf(rest.discard.border), "Discard draft's border at rest").toBe(1);
     const held = await holdActions(page);
     await r.save.focus();
     await page.keyboard.press("Enter");
@@ -895,6 +996,93 @@ test.describe("the draft's waiting buttons", () => {
     await page.waitForTimeout(1000);
     expect(held.seen.count, "action requests from the first press to one second after its outcome").toBe(1);
   });
+
+  // A press that lands before React renders the waiting state meets only the press-time ref. Two clicks from one
+  // page.evaluate land in one task, so no render separates them; a build that guards on `pending` alone sends both.
+  for (const [button, outcome] of [
+    ["Save receipts", "Saved 1 receipt."],
+    ["Discard draft", "Draft discarded."],
+  ] as const) {
+    test(`AC-0020: two presses of ${button} dispatched in one task send one request`, async ({ page }) => {
+      await seedFixture();
+      const r = await openReview(page, await seedDraft({}));
+      const held = await holdActions(page);
+      await page.evaluate((name) => {
+        const target = [...document.querySelectorAll("button")].find((node) => node.textContent === name)!;
+        target.click();
+        target.click();
+      }, button);
+      await expect.poll(() => held.seen.count).toBe(1);
+      held.release();
+      // Soft, so a build that lets a second press through is also counted.
+      await expect.soft(r.result).toContainText(outcome);
+      await page.waitForTimeout(1000);
+      expect(held.seen.count, "action requests from the first press to one second after its outcome").toBe(1);
+    });
+  }
+
+  // The press train: from the first press, on each tick, Save receipts and then Discard draft are both pressed
+  // in one task, until the first press's outcome shows or 5 s after the held request is released. A press that
+  // lands after the action settles and before the outcome renders meets neither the ref nor the waiting state.
+  // `TICK` is the gap between ticks in ms; 0 runs a tick on every task.
+  const TICK = 10;
+  for (const [first, outcome] of [
+    ["Save receipts", "Saved 1 receipt."],
+    ["Discard draft", "Draft discarded."],
+  ] as const) {
+    test(`AC-0020: a press train of both buttons after a press of ${first} sends one request, and the outcome shows`, async ({
+      page,
+    }) => {
+      await seedFixture();
+      const r = await openReview(page, await seedDraft({}));
+      const held = await holdActions(page);
+      await page.evaluate(
+        ({ name, tick }) => {
+          const w = window as unknown as { __train: { released: number | null; done: boolean; shown: boolean; ticks: number } };
+          w.__train = { released: null, done: false, shown: false, ticks: 0 };
+          const press = (label: string) => [...document.querySelectorAll("button")].find((node) => node.textContent === label)?.click();
+          press(name);
+          const step = () => {
+            const result = document.querySelector("[aria-label='Draft result']");
+            const shown = (result?.textContent ?? "").trim() !== "";
+            const released = w.__train.released;
+            if (shown || (released !== null && performance.now() - released > 5000)) {
+              Object.assign(w.__train, { done: true, shown });
+              return false;
+            }
+            press("Save receipts");
+            press("Discard draft");
+            w.__train.ticks += 1;
+            return true;
+          };
+          if (tick > 0) {
+            const id = setInterval(() => step() || clearInterval(id), tick);
+          } else {
+            const channel = new MessageChannel();
+            channel.port1.onmessage = () => step() && channel.port2.postMessage(0);
+            channel.port2.postMessage(0);
+          }
+        },
+        { name: first, tick: TICK },
+      );
+      await expect.poll(() => held.seen.count).toBe(1);
+      await page.waitForTimeout(200);
+      held.release();
+      await page.evaluate(() => {
+        (window as unknown as { __train: { released: number } }).__train.released = performance.now();
+      });
+      await page.waitForFunction(() => (window as unknown as { __train: { done: boolean } }).__train.done, null, {
+        timeout: 15_000,
+      });
+      // One second after the outcome shows (or after the train gave up).
+      await page.waitForTimeout(1000);
+      const train = await page.evaluate(() => (window as unknown as { __train: { shown: boolean; ticks: number } }).__train);
+      expect(train.ticks, "the train pressed on many ticks").toBeGreaterThan(10);
+      expect.soft(held.seen.count, "action requests from the first press to one second after its outcome").toBe(1);
+      expect.soft(train.shown, "the first press's outcome shows").toBe(true);
+      await expect(r.result).toContainText(outcome);
+    });
+  }
 
   test("AC-0020: a save the page refuses before sending leaves both buttons usable, and one press after the fix sends one request", async ({
     page,
@@ -1095,11 +1283,7 @@ test.describe("the Alerts layout", () => {
       page,
     }) => {
       await opensAlerts(page, width, height);
-      const widths = await page.locator("main > *").evaluateAll((children) =>
-        children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
-      );
-      expect(widths.length).toBeGreaterThanOrEqual(2);
-      expect(widths.filter((value) => value !== "none")).toEqual([]);
+      await expectUncountedNoCap(page);
     });
   }
 
@@ -1206,7 +1390,7 @@ test.describe("the Alerts page state", () => {
       page,
     }) => {
       await opensAlerts(page, width, height);
-      await expect(alertGroup(page, "Margin below target: 502 Smoked Turkey Drums Tom")).toBeVisible();
+      await expect(alertGroup(page, MARGIN_TITLE)).toBeVisible();
       expect(await checkPageState(page)).toEqual([...ALERTS_NAV, ...ALERT_CONTROLS]);
       if (width === 1280) await checkDesktopWalk(page);
     });
@@ -1219,16 +1403,20 @@ test.describe("the three style details of the boards", () => {
   test("AC-0017: at 1280x720 the Drafts to confirm heading and all three draft links sit in one white card", async ({ page }) => {
     const p = await opensInvoices(page, 1280, 720);
     const heading = page.getByRole("heading", { name: "Drafts to confirm", level: 2 });
-    const card = await heading.evaluate((node) => {
+    // The heading's ancestors, nearest first, each with its card style and how many draft links it holds.
+    const ancestors = await heading.evaluate((node) => {
+      const found = [];
       for (let el = node.parentElement; el; el = el.parentElement) {
         const css = getComputedStyle(el);
-        if (css.backgroundColor === "rgb(255, 255, 255)" && css.borderTopWidth === "1px" && css.borderTopLeftRadius === "14px") {
-          return { found: true, links: el.querySelectorAll("a[href^='/invoices?draft=']").length };
-        }
+        found.push({
+          style: { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius },
+          links: el.querySelectorAll("a[href^='/invoices?draft=']").length,
+        });
       }
-      return { found: false, links: 0 };
+      return found;
     });
-    expect(card, "one card holds the heading and the three drafts").toEqual({ found: true, links: 3 });
+    const card = ancestors.find((ancestor) => JSON.stringify(ancestor.style) === JSON.stringify(WHITE_CARD));
+    expect(card?.links, "one card holds the heading and the three drafts").toBe(3);
     await expect(p.draftLinks).toHaveCount(3);
   });
 

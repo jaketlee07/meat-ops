@@ -1,7 +1,9 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
-// The layout checks the look E list pages share. They live here once, and every suite that checks a
-// table, a card, or a figure's fit imports them.
+// Layout checks for the look E pages: measuring a box, setting the root text size, the table, card, and
+// figure-fit checks for a list of rows, the before-and-after tables' fit, a white card's style, and the
+// cap on a page's children. A suite imports the ones it needs; a check written for one page's markup
+// stays in that page's suite.
 
 export async function box(target: Locator) {
   const found = await target.boundingBox();
@@ -24,16 +26,45 @@ export async function withTextSize(page: Page, width: number, height: number, px
   }, px);
 }
 
-// The shapes the three pages share. Each lives here once, and every test that checks the shape calls it.
+// ---- The cap on a page's children, and a white card ----
 
-// AC-0001: no child of <main> but a dialog has a computed max-width.
-export async function expectNoCap(page: Page) {
+// The computed max-width of every child of <main> but a dialog; the page must show at least `least` of them.
+async function childWidthCaps(page: Page, least: number) {
   const widths = await page.locator("main > *").evaluateAll((children) =>
     children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
   );
-  expect(widths.length).toBeGreaterThan(2);
+  expect(widths.length).toBeGreaterThanOrEqual(least);
+  return widths;
+}
+
+// AC-0001: no child of <main> but a dialog has a computed max-width; the page shows more than two.
+export async function expectNoCap(page: Page) {
+  const widths = await childWidthCaps(page, 3);
   expect(widths.filter((value) => value !== "none")).toEqual([]);
 }
+
+// AC-0001 without the count of children: at least two, none with a computed max-width.
+export async function expectUncountedNoCap(page: Page) {
+  const widths = await childWidthCaps(page, 2);
+  expect(widths.filter((value) => value !== "none")).toEqual([]);
+}
+
+// A white card as the pages draw one: a white fill, a 1 px border, and the 14 px card corner.
+export const WHITE_CARD = { background: "rgb(255, 255, 255)", border: "1px", radius: "14px" };
+
+// The style a white card has, read from an element.
+export function cardStyle(target: Locator) {
+  return target.evaluate((node) => {
+    const css = getComputedStyle(node);
+    return { background: css.backgroundColor, border: css.borderTopWidth, radius: css.borderTopLeftRadius };
+  });
+}
+
+export async function expectWhiteCard(target: Locator, what: string) {
+  expect(await cardStyle(target), what).toEqual(WHITE_CARD);
+}
+
+// ---- Lists of rows ----
 
 // One of the pages' lists of rows: its rows, its header line, and the names and figures in order.
 // `numbered` is true where each row opens with a number cell (an h3 or h4) before its figures.

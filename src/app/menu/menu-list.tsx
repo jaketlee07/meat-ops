@@ -45,9 +45,10 @@ export function MenuList({ items }: { items: MenuCard[] }) {
 
   return (
     <section className="@container/menu">
-      {/* The container cannot style itself, so this div carries the table's card edge. */}
+      {/* The container cannot style itself, so this div carries the table's card edge. It clips, so the switch's
+          label keeps 6px above and below its checkbox, inside the card, for the 4px focus ring. */}
       <div className="menu-table:overflow-hidden menu-table:rounded-card menu-table:border menu-table:border-card-border menu-table:bg-surface">
-        <label className="mb-3 flex min-h-control items-center gap-3 rounded-card border border-card-border bg-surface px-3 text-base font-medium menu-table:mb-0 menu-table:rounded-none menu-table:border-0 menu-table:px-4">
+        <label className="mb-3 flex min-h-control items-center gap-3 rounded-card border border-card-border bg-surface px-3 text-base font-medium menu-table:mb-0 menu-table:rounded-none menu-table:border-0 menu-table:px-4 menu-table:py-1.5">
           <input
             type="checkbox"
             checked={sellableOnly}

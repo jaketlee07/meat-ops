@@ -51,20 +51,86 @@ it("AC-0022: the In use mark's fill token appears in no border- or divide- class
   expect(rules).toEqual([]);
 });
 
+// AC-0014's search. A class token is what sits between whitespace, quotes, backticks, braces, and `$`. Its
+// variant prefix is everything up to its last colon outside square brackets; what is left is the class.
+const RADIUS_ALLOWED =
+  /^rounded(?:-(?:t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?-(?:control|card|mark)$|^rounded-(?:full|none)$/;
+
+function radiusClasses(text: string): Array<{ prefix: string; cls: string }> {
+  const found: Array<{ prefix: string; cls: string }> = [];
+  for (const token of text.split(/[\s"'`${}]+/)) {
+    let depth = 0;
+    let cut = -1;
+    for (const [at, char] of [...token].entries()) {
+      if (char === "[") depth += 1;
+      else if (char === "]") depth -= 1;
+      else if (char === ":" && depth === 0) cut = at;
+    }
+    const cls = token.slice(cut + 1).replace(/^!/, "");
+    if (cls.startsWith("rounded")) found.push({ prefix: token.slice(0, cut + 1), cls });
+  }
+  return found;
+}
+
+// Every radius class in the text that is not an allowed one, as `prefix` plus `cls`.
+const disallowed = (text: string) =>
+  radiusClasses(text)
+    .filter(({ cls }) => !RADIUS_ALLOWED.test(cls))
+    .map(({ prefix, cls }) => `${prefix}${cls}`);
+
+// Each form of variant prefix the search must see through: one class it must flag and one it must pass.
+const PREFIX_FORMS: Array<[form: string, prefix: string]> = [
+  ["none", ""],
+  ["name:", "md:"],
+  ["[...]:", "[&>dl]:"],
+  ["name-[...]: aria", "aria-[current=page]:"],
+  ["name-[...]: data", "data-[state=open]:"],
+  ["name-[...]: has", "has-[:checked]:"],
+  ["name-[...]: min", "min-[40rem]:"],
+  ["*:", "*:"],
+  ["@name:", "@sm:"],
+  ["@min-[...]:", "@min-[30rem]:"],
+  ["name/label:", "group/item:"],
+  ["stacked", "md:hover:[&>li]:aria-[current=page]:@sm:"],
+];
+
+it("AC-0014: the search flags a disallowed radius class and passes an allowed one behind every prefix form", () => {
+  for (const [form, prefix] of PREFIX_FORMS) {
+    expect(disallowed(`className="p-2 ${prefix}rounded-lg"`), `${form}: a disallowed class is flagged`).toEqual([
+      `${prefix}rounded-lg`,
+    ]);
+    expect(disallowed(`className={\`p-2 ${prefix}rounded-[3px] \${X}\`}`), `${form}: an arbitrary radius is flagged`).toEqual([
+      `${prefix}rounded-[3px]`,
+    ]);
+    for (const allowed of ["rounded-control", "rounded-t-card", "rounded-mark", "rounded-full", "rounded-none"]) {
+      expect(disallowed(`className="p-2 ${prefix}${allowed}"`), `${form}: ${allowed} passes`).toEqual([]);
+      expect(radiusClasses(`"${prefix}${allowed}"`), `${form}: ${allowed} is seen`).toHaveLength(1);
+    }
+  }
+  expect(disallowed('"bg-[color:var(--x)] [&>p]:text-sm rounded-md"'), "a colon inside brackets is not a prefix").toEqual([
+    "rounded-md",
+  ]);
+});
+
 it("AC-0014: the four page folders hold no radius class other than control, card, mark, full, or none", () => {
-  const allowed = /^rounded(?:-(?:t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?-(?:control|card|mark)$|^rounded-(?:full|none)$/;
-  // A radius class with its leading variant prefixes (name: or [...]:) kept apart from its name.
-  const radius = /(?<![\w:\]-])((?:(?:[\w-]+|\[[^\]\s]*\]):)*)(rounded[\w./[\]-]*)/g;
   const offenders: string[] = [];
+  let exception = false;
   for (const folder of ["menu", "invoices", "ask", "alerts"]) {
+    let seen = 0;
     for (const path of sourceFiles(join(APP, folder))) {
       const name = relative(ROOT, path);
-      for (const [, prefix, cls] of readFileSync(path, "utf8").matchAll(radius)) {
-        if (allowed.test(cls!)) continue;
-        if (name === "src/app/invoices/read-forms.tsx" && prefix === "file:" && cls === "rounded-md") continue;
+      for (const { prefix, cls } of radiusClasses(readFileSync(path, "utf8"))) {
+        seen += 1;
+        if (RADIUS_ALLOWED.test(cls)) continue;
+        if (name === "src/app/invoices/read-forms.tsx" && prefix === "file:" && cls === "rounded-md") {
+          exception = true;
+          continue;
+        }
         offenders.push(`${name}: ${prefix}${cls}`);
       }
     }
+    expect(seen, `${folder} holds at least one radius class`).toBeGreaterThan(0);
   }
+  expect(exception, "the file:rounded-md exception in read-forms.tsx is met").toBe(true);
   expect(offenders, "radius classes other than the allowed ones").toEqual([]);
 });
