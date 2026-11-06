@@ -168,6 +168,28 @@
   }
 }
 
+/* Alerts' "Urgent" and "Other alerts" lists: each section is the container named alerts. Where it is at least
+   44rem wide (two cards of at least 21.5rem and a 1rem gap, so a card still holds a title, a sentence, and its
+   buttons) the cards sit two to a row, never more; narrower, one to a row. In rem, no screen gate, so a larger
+   text size keeps one column until the section has grown to fit. <main>'s content box is 45.5rem at 1024 px
+   (about 44.4rem with a 17 px scrollbar, so it pairs), 61.5rem at 1280 px, and 71.5rem at 1440 px; with a 20 px
+   root it is 32.7rem at 1024 px (one column) and 45.5rem at 1280 px (pairs). */
+@custom-variant alert-pair {
+  @container alerts (min-width: 44rem) {
+    @slot;
+  }
+}
+
+/* One alert's card is the container named alert. Where its content box is at least 24rem wide (a reprice button
+   of about 17rem, a 0.75rem gap, and a Dismiss button of about 6rem) the reprice button and Dismiss sit in a row
+   at their own width; narrower, each spans the card. In rem, no screen gate. A paired card is about 28rem wide
+   inside at 1280 px (rows), about 20rem inside at 1280 px with a 20 px root (stacked), and 20.5rem inside at 390 px. */
+@custom-variant alert-row {
+  @container alert (min-width: 24rem) {
+    @slot;
+  }
+}
+
 /* Trace's lot result: the section is the container named tracelot. Where it is at least 53rem wide
    (the Customers column of 16.25rem, a gap, and Sales' table at 35rem) Customers sits beside "Sales from
    this lot" and the lot's facts run in three columns. The page has no column grid, so the section is the

@@ -50,11 +50,11 @@ export function AlertList({ alerts }: { alerts: OpenAlert[] }) {
         const group = alerts.filter(pick);
         if (group.length === 0) return null;
         return (
-          <section key={id} aria-labelledby={id}>
+          <section key={id} aria-labelledby={id} className="@container/alerts">
             <h2 id={id} className="mb-3 text-xl font-semibold">
               {heading}
             </h2>
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-1 gap-3 alert-pair:grid-cols-2">
               {group.map((alert) => (
                 <AlertCard key={alert.id} alert={alert} onResult={show} />
               ))}

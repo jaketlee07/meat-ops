@@ -1,7 +1,10 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { buildFiveAlertFixture } from "../alert-fixtures";
 import { resetTestData, saleFixture } from "../db";
 import { checkDesktopWalk, checkPageState } from "./a11y";
-import { box, boxes, expectNoCap, expectTablesFit, measureCells, withTextSize } from "./look-checks";
+import { alertGroup, digestRegion, NAV_CONTROLS as ALERTS_NAV, opens } from "./alerts-page";
+import { appDate } from "./app-time";
+import { box, boxes, expectButtonsInside, expectNoCap, expectTablesFit, measureCells, withTextSize } from "./look-checks";
 import {
   FORM_CONTROLS,
   NAV_CONTROLS,
@@ -988,6 +991,223 @@ test.describe("the Ask page state", () => {
     test(`AC-0016: /ask with an answer passes the page-state check at ${width}x${height}`, async ({ page, baseURL }) => {
       await showsAnswer(page, baseURL, width, height);
       expect(await checkPageState(page)).toEqual(askControls("a See it on the Menu"));
+      if (width === 1280) await checkDesktopWalk(page);
+    });
+  }
+});
+
+// ---- Alerts ----
+
+// What Tab reaches in the five cards, in order: Urgent (margin, cost), then Other alerts (yield, price, low stock).
+const ALERT_CONTROLS = [
+  "button Raise list price to $3.51/lb",
+  "button Dismiss",
+  "a Go to Receiving",
+  "button Dismiss",
+  "a Go to Production",
+  "button Dismiss",
+  "button Raise list price to $2.27/lb",
+  "button Dismiss",
+  "a Go to Receiving",
+  "button Dismiss",
+];
+
+const URGENT = "Urgent";
+const OTHER = "Other alerts";
+
+// The five-alert fixture (two urgent, three other) with a written digest, opened at the size.
+async function opensAlerts(page: Page, width: number, height: number): Promise<void> {
+  await page.setViewportSize({ width, height });
+  await buildFiveAlertFixture({ today: appDate(), watch: false });
+  await opens(page);
+  await expect(alertCards(page, URGENT)).toHaveCount(2);
+  await expect(alertCards(page, OTHER)).toHaveCount(3);
+}
+
+function alertCards(page: Page, section: string): Locator {
+  return page.getByRole("region", { name: section, exact: true }).getByRole("group");
+}
+
+// Every alert's group, in the order the page shows them.
+function allCards(page: Page): Locator {
+  return page.getByRole("region", { name: /^(Urgent|Other alerts)$/ }).getByRole("group");
+}
+
+function repriceOf(card: Locator): Locator {
+  return card.locator("button:not([aria-label])");
+}
+
+function dismissOf(card: Locator): Locator {
+  return card.getByRole("button", { name: /^Dismiss / });
+}
+
+// The second card sits to the right of the first with tops level, in each section; in "Other alerts" the
+// third sits below the first, in the first's column.
+async function expectPaired(page: Page, third: boolean): Promise<void> {
+  for (const section of [URGENT, OTHER]) {
+    const [first, second, next] = await boxes(alertCards(page, section));
+    expect(second!.x, `${section}: the second card is right of the first`).toBeGreaterThanOrEqual(first!.x + first!.width - 1);
+    expect(Math.abs(second!.y - first!.y), `${section}: tops level`).toBeLessThanOrEqual(1);
+    if (third && section === OTHER) {
+      expect(next!.y, "the third card is below the first").toBeGreaterThanOrEqual(first!.y + first!.height - 1);
+      expect(Math.abs(next!.x - first!.x), "the third card is in the first's column").toBeLessThanOrEqual(1);
+    }
+  }
+}
+
+// Each card sits below the one before, in one column.
+async function expectOneColumn(page: Page): Promise<void> {
+  const found = await boxes(allCards(page));
+  expect(found).toHaveLength(5);
+  for (let i = 1; i < found.length; i += 1) {
+    expect(found[i]!.y, `card ${i} is below card ${i - 1}`).toBeGreaterThanOrEqual(found[i - 1]!.y + found[i - 1]!.height - 1);
+    expect(Math.abs(found[i]!.x - found[0]!.x), `card ${i} is in the first card's column`).toBeLessThanOrEqual(1);
+  }
+}
+
+// A card's inner width: its client width less its padding.
+function innerWidth(card: Locator): Promise<number> {
+  return card.evaluate((node) => {
+    const css = getComputedStyle(node);
+    return node.clientWidth - parseFloat(css.paddingLeft) - parseFloat(css.paddingRight);
+  });
+}
+
+// Every card with a reprice button: the second alert of "Urgent" (margin) and of "Other alerts" (price).
+async function repriceCards(page: Page): Promise<Locator[]> {
+  const found: Locator[] = [];
+  for (const card of await allCards(page).all()) if ((await repriceOf(card).count()) > 0) found.push(card);
+  expect(found).toHaveLength(2);
+  return found;
+}
+
+// Every button and link sits inside its card.
+async function expectControlsInside(page: Page): Promise<void> {
+  for (const card of await allCards(page).all()) await expectButtonsInside(card, card.locator("button, a"), 2);
+}
+
+test.describe("the Alerts layout", () => {
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0001: /alerts lifts the 34rem cap on every child of main but a dialog at ${width}x${height}`, async ({
+      page,
+    }) => {
+      await opensAlerts(page, width, height);
+      const widths = await page.locator("main > *").evaluateAll((children) =>
+        children.filter((child) => child.tagName !== "DIALOG").map((child) => getComputedStyle(child).maxWidth),
+      );
+      expect(widths.length).toBeGreaterThanOrEqual(2);
+      expect(widths.filter((value) => value !== "none")).toEqual([]);
+    });
+  }
+
+  for (const [width, height] of [
+    [1024, 768],
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`AC-0011: at ${width}x${height} each section's cards sit two to a row`, async ({ page }) => {
+      await opensAlerts(page, width, height);
+      await expectPaired(page, true);
+    });
+  }
+
+  test("AC-0011: at 1280x720 with 20 px text each section's cards sit two to a row", async ({ page }) => {
+    await opensAlerts(page, 1280, 720);
+    await withTextSize(page, 1280, 720, 20);
+    await expectPaired(page, true);
+  });
+
+  test("AC-0011: at 390x844 each card sits below the one before", async ({ page }) => {
+    await opensAlerts(page, 390, 844);
+    await expectOneColumn(page);
+  });
+
+  test("AC-0011: at 1024x768 with 20 px text each card sits below the one before", async ({ page }) => {
+    await opensAlerts(page, 1024, 768);
+    await withTextSize(page, 1024, 768, 20);
+    await expectOneColumn(page);
+  });
+
+  for (const [width, height] of [
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`AC-0012: at ${width}x${height} Dismiss sits right of the reprice button with tops level, at their own width`, async ({
+      page,
+    }) => {
+      await opensAlerts(page, width, height);
+      for (const card of await repriceCards(page)) {
+        const reprice = await box(repriceOf(card));
+        const dismiss = await box(dismissOf(card));
+        const inner = await innerWidth(card);
+        expect(dismiss.x, "Dismiss is right of the reprice button").toBeGreaterThanOrEqual(reprice.x + reprice.width - 1);
+        expect(Math.abs(dismiss.y - reprice.y), "tops level").toBeLessThanOrEqual(1);
+        expect(reprice.width + dismiss.width, "the buttons keep their own width").toBeLessThan(inner);
+      }
+    });
+
+    test(`AC-0013: at ${width}x${height} every paragraph in Today's digest is at most 45rem wide`, async ({ page }) => {
+      await opensAlerts(page, width, height);
+      const paragraphs = await boxes(digestRegion(page).locator("p"));
+      expect(paragraphs.length).toBeGreaterThanOrEqual(1);
+      for (const paragraph of paragraphs) expect(paragraph.width).toBeLessThanOrEqual(720.5);
+    });
+  }
+
+  test("AC-0012: at 390x844 each of an alert's buttons spans its card's inner width", async ({ page }) => {
+    await opensAlerts(page, 390, 844);
+    for (const card of await allCards(page).all()) {
+      const inner = await innerWidth(card);
+      for (const button of await boxes(card.locator("button"))) {
+        expect(Math.abs(button.width - inner), "a button spans the card").toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  for (const [width, height] of [
+    [390, 844],
+    [1024, 768],
+    [1280, 720],
+    [1440, 900],
+  ] as const) {
+    test(`AC-0024: at ${width}x${height} every alert's buttons and link sit inside its card`, async ({ page }) => {
+      await opensAlerts(page, width, height);
+      await expectControlsInside(page);
+    });
+  }
+
+  test("AC-0024: at 1280x720 with 20 px text every alert's buttons and link sit inside its card", async ({ page }) => {
+    await opensAlerts(page, 1280, 720);
+    await withTextSize(page, 1280, 720, 20);
+    await expectControlsInside(page);
+  });
+
+  // AC-0025: a 17 px always-visible scrollbar takes 17 px of the width, so the section is about 1rem narrower.
+  test("AC-0025: at 1024x768 with 17 px of the width taken, each alerts section keeps its first two cards side by side", async ({
+    page,
+  }) => {
+    await opensAlerts(page, 1024, 768);
+    await page.evaluate(() => {
+      document.documentElement.style.paddingRight = "17px";
+    });
+    await expectPaired(page, false);
+  });
+});
+
+test.describe("the Alerts page state", () => {
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0016: /alerts with five alerts and a written digest passes the page-state check at ${width}x${height}`, async ({
+      page,
+    }) => {
+      await opensAlerts(page, width, height);
+      await expect(alertGroup(page, "Margin below target: 502 Smoked Turkey Drums Tom")).toBeVisible();
+      expect(await checkPageState(page)).toEqual([...ALERTS_NAV, ...ALERT_CONTROLS]);
       if (width === 1280) await checkDesktopWalk(page);
     });
   }
