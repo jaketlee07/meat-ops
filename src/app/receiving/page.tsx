@@ -16,7 +16,10 @@ import { ReceiptForm } from "./receipt-form";
 
 // The form-column grid (see form-column-grid.ts) with four rows, laid out as on Production: the form spans
 // the two middle rows beside the stock card and Recent receipts, and the result sits in the last row, which
-// takes whatever height a long list has left, so the result starts right under the form. #product-region is
+// takes whatever height a long list has left. The result starts right under the form while the form is
+// taller than the "Stock and prices" card, which holds up to about six finished products per raw product at
+// the default text size; with more, the result starts under that card (the owner accepted this on
+// 2026-11-05). #product-region is
 // display: contents, so its two sections are grid items. The DOM order stays form, result, region.
 const MAIN_GRID = `${FORM_COLUMN_GRID} desk:grid-rows-[auto_auto_auto_1fr] desk:[grid-template-areas:'head_head'_'form_stock'_'form_recent'_'result_recent']`;
 

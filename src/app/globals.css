@@ -137,21 +137,23 @@
   }
 }
 
-/* The before-and-after tables. A table answers only to the card that holds it: each saved-result card and
-   each "Batch reversed" and "Receipt corrected" panel is the container named result, so a list section's
-   container never reaches one. Under 18rem of card the table's text and cell padding tighten, and under
+/* The before-and-after tables. A table answers only to the card that holds it: Production's, Sales', and
+   Receiving's saved-result cards and the "Batch reversed" and "Receipt corrected" panels are the container
+   named result, so a list section's container never reaches one. The /invoices saved result is not one, so
+   its tables do not tighten. Under 18rem of card the table's text and cell padding tighten, and under
    13rem they tighten again, so long figures (six-digit weights with three decimals, costs of $10 or more)
-   stay inside it. In rem, so a larger text size tightens them sooner: at the default text size the
+   stay inside it. The two steps never overlap (result-snug is 13rem up to 18rem, result-tight is under
+   13rem), so result-tight wins whatever the order of these rules. In rem, so a larger text size tightens them sooner: at the default text size the
    280 px form column leaves a saved-result card about 15.4rem wide (the first step), and with a 20 px
    text size it is about 11.9rem (both steps). */
 @custom-variant result-snug {
-  @container result (max-width: 18rem) {
+  @container result (13rem <= width < 18rem) {
     @slot;
   }
 }
 
 @custom-variant result-tight {
-  @container result (max-width: 13rem) {
+  @container result (width < 13rem) {
     @slot;
   }
 }
