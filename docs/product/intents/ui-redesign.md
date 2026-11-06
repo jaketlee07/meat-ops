@@ -1,6 +1,6 @@
 # Redesign the screens in look E
 
-- **Status:** Accepted
+- **Status:** Fulfilled
 
 
 ## Outcome

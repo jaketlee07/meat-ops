@@ -1,7 +1,7 @@
 # Brief: Redesign the screens in look E
 
 - **Slug:** `ui-redesign`
-- **Status:** Executing
+- **Status:** Shipped
 - **Received:** 2026-11-03
 - **Owner:** jaketlee07
 

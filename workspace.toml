@@ -66,6 +66,7 @@ shipped = [
 ]
 
 [ini-001.brief_queue]
-executing = [
-  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Look E brief: all four specs shipped (look and shell, Pricing and Receiving, Production, Sales, and Trace, and Menu, Invoices, Ask, and Alerts); awaiting close-out", needs = [] },
+executing = []
+shipped = [
+  { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Look E brief: all four specs shipped (look and shell, Pricing and Receiving, Production, Sales, and Trace, and Menu, Invoices, Ask, and Alerts); closed 2026-11-06", needs = [] },
 ]
