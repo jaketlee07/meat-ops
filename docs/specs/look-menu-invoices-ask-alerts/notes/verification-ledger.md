@@ -29,3 +29,10 @@ The spec's Assumptions record each of these as a Product line:
 - The owner approved the spec and the plan in chat on 2026-11-06, kept AC-0025, and approved the stack A slot fix before each full test run for this build.
 - Work-loop run `1f080e1d-0bbe-4bfd-9914-5317f17e399b`. `approve-plan` recorded spec hash `f73c89872d97…` and plan hash `3e8d63a8f2eb…`. The schedule runs T1 to T7 in order.
 - Base: `3703c8d` on branch `feat/look-menu-invoices-ask-alerts` in the main folder, on stack A.
+
+## T1 (2026-11-06)
+
+- Commit `9900584`. `/menu` passes `fullWidth`; its list's section is the size container `menu`, and the `menu-table` variant (`@container menu (min-width: 42rem)`) switches it to one white-card table: tracks `minmax(0,1fr) 8rem 7.5rem 6.5rem 8rem`, 0.75rem gaps, 1rem padding, so 35rem of fixed width and 7rem for the product at the threshold. At 1024 px with 17 px taken the section is 44.44rem (AC-0025). `Facts` supplies the `dl`, so its two `dd`s stay Finished on hand then Raw on hand.
+- The layout checks moved from `look-floor-pages.spec.ts` to `test/e2e/look-checks.ts`: every removed line is in the new file once its added `export ` is stripped (`comm`, 0 lines differ); the spec file gained one import and no test changed.
+- Seen failing first (`src/app` stashed, log `.context/s3b-t1-red.log`): 11 of the 13 new tests (AC-0001, AC-0002, AC-0003, AC-0025); the two AC-0016 page-state tests passed on the old page, as expected.
+- `npm test` at `9900584` after the slot fix (log `.context/s3b-t1-npmtest.log`): Vitest 55 files, 1050 passed; Playwright 897 passed in 11.7 min; no flake.
