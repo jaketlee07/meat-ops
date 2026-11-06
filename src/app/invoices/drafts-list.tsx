@@ -16,14 +16,20 @@ const COLUMN_NAMES = ["Captured", "From", "Lines", "First words"];
 export function DraftsList({ drafts }: { drafts: WaitingDraft[] }) {
   return (
     <section aria-labelledby="drafts-heading" className="@container/drafts space-y-4">
-      <h2 id="drafts-heading" className="text-xl font-semibold">
-        Drafts to confirm
-      </h2>
       {drafts.length === 0 ? (
-        <p className="text-base">No drafts waiting.</p>
+        <>
+          <h2 id="drafts-heading" className="text-xl font-semibold">
+            Drafts to confirm
+          </h2>
+          <p className="text-base">No drafts waiting.</p>
+        </>
       ) : (
-        // The container cannot style itself, so this div carries the table's card edge.
-        <div className="draft-table:overflow-hidden draft-table:rounded-card draft-table:border draft-table:border-card-border draft-table:bg-surface">
+        // The container cannot style itself, so this div carries the table's card edge. The heading sits
+        // inside it: above the separate cards in the card look, in the table's card in the table look.
+        <div className="space-y-4 draft-table:space-y-0 draft-table:overflow-hidden draft-table:rounded-card draft-table:border draft-table:border-card-border draft-table:bg-surface">
+          <h2 id="drafts-heading" className="text-xl font-semibold draft-table:px-4 draft-table:pb-2 draft-table:pt-3.5">
+            Drafts to confirm
+          </h2>
           {/* Where the section is a table the header line names the columns; each draft's own parts stay in the link. */}
           <div
             aria-hidden="true"

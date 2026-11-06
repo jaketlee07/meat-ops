@@ -1212,3 +1212,55 @@ test.describe("the Alerts page state", () => {
     });
   }
 });
+
+// ---- The three style details ----
+
+test.describe("the three style details of the boards", () => {
+  test("AC-0017: at 1280x720 the Drafts to confirm heading and all three draft links sit in one white card", async ({ page }) => {
+    const p = await opensInvoices(page, 1280, 720);
+    const heading = page.getByRole("heading", { name: "Drafts to confirm", level: 2 });
+    const card = await heading.evaluate((node) => {
+      for (let el = node.parentElement; el; el = el.parentElement) {
+        const css = getComputedStyle(el);
+        if (css.backgroundColor === "rgb(255, 255, 255)" && css.borderTopWidth === "1px" && css.borderTopLeftRadius === "14px") {
+          return { found: true, links: el.querySelectorAll("a[href^='/invoices?draft=']").length };
+        }
+      }
+      return { found: false, links: 0 };
+    });
+    expect(card, "one card holds the heading and the three drafts").toEqual({ found: true, links: 3 });
+    await expect(p.draftLinks).toHaveCount(3);
+  });
+
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 720],
+  ] as const) {
+    test(`AC-0017: at ${width}x${height} each line's legend sits inside its card, below the fieldset's top border`, async ({ page }) => {
+      await opensReview(page, width, height, "photo");
+      const fieldsets = await page.locator("fieldset").all();
+      expect(fieldsets).toHaveLength(REVIEW_WORDS.length);
+      for (const [index, fieldset] of fieldsets.entries()) {
+        const { fieldsetTop, border, legendTop } = await fieldset.evaluate((node) => ({
+          fieldsetTop: node.getBoundingClientRect().top,
+          border: parseFloat(getComputedStyle(node).borderTopWidth),
+          legendTop: node.querySelector(":scope > legend")!.getBoundingClientRect().top,
+        }));
+        expect(legendTop, `line ${index + 1}'s legend top`).toBeGreaterThanOrEqual(fieldsetTop + border - 0.5);
+      }
+    });
+  }
+
+  test("AC-0017: at 1280x720 no saved lot card's facts list or its first row has a top border", async ({ page }) => {
+    const r = await savesThreeLines(page, 1280, 720, false);
+    const lots = await r.details.locator(":scope > ul > li").all();
+    expect(lots).toHaveLength(3);
+    for (const [index, lot] of lots.entries()) {
+      const tops = await lot.evaluate((node) => {
+        const list = node.querySelector("dl")!;
+        return [getComputedStyle(list).borderTopWidth, getComputedStyle(list.firstElementChild!).borderTopWidth];
+      });
+      expect(tops, `lot ${index + 1}: the list's and its first row's top borders`).toEqual(["0px", "0px"]);
+    }
+  });
+});

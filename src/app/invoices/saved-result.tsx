@@ -22,7 +22,7 @@ export function SavedResult({ saved }: { saved: Saved }) {
     <section aria-label="Saved receipts" className="@container/saved space-y-4">
       <ul className={PAIR}>
         {saved.lots.map((lot) => (
-          <li key={lot.lotNumber} className={CARD}>
+          <li key={lot.lotNumber} className={`${CARD} [&>dl]:border-t-0`}>
             <Facts
               rows={[
                 ["Lot number", lot.lotNumber],

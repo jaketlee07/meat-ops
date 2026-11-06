@@ -305,9 +305,9 @@ export function DraftReview({ draft, products, vendors }: Props) {
                   // Each line is the container named line: where it has room (`line-pair`) Product and Vendor
                   // share a row, and Weight, Cost per lb, and Received date share a row.
                   <fieldset key={line.id} className={`@container/line min-w-0 space-y-3 ${CARD}`}>
-                    <legend className="px-1 text-lg font-semibold">Line {line.lineNo}</legend>
+                    <legend className="float-left mb-3 w-full text-lg font-semibold">Line {line.lineNo}</legend>
                     {/* The invoice's words are the model's reading of a photo: text, never markup. */}
-                    <p className="break-words rounded-control bg-tint px-2.5 py-2 text-base tabular-nums">
+                    <p className="clear-both break-words rounded-control bg-tint px-2.5 py-2 text-base tabular-nums">
                       Invoice says: <span className="font-semibold">{line.words}</span>
                     </p>
                     <label className="flex min-h-control items-center gap-3 text-base font-semibold">
