@@ -22,7 +22,7 @@
 
 ## Approach
 
-Menu comes first, because it is the smallest page that sets this spec's table pattern and starts the new suite. Invoices follows in two tasks, the read forms and drafts list, then a draft's review with its saved receipts and its two buttons. Ask and Alerts come next, then the source check, then three style details the owner's comparison asked for, then a last task that records what only a person or a diff read can check.
+Menu comes first, because it is the smallest page that sets this spec's table pattern and starts the new suite. Invoices follows in two tasks, the read forms and drafts list, then a draft's review with its saved receipts and its two buttons. Ask and Alerts come next, then the source check, then three style details the owner's comparison asked for, then the fixes the post-gates review sustained, then a last task that records what only a person or a diff read can check.
 
 The riskiest part is keeping the existing Menu, Invoices, Ask, and Alerts suites green while the layout changes. The design keeps every element they find, by name and by position (the Constraints list the positions), and moves only how they are laid out.
 
@@ -44,9 +44,10 @@ Most construction tests live under **Tasks** below.
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| Overview `src/app` row: the four pages | T1, T2, T3, T4, T5, T8 | The row names each page's desktop layout, the pages that pass `fullWidth`, and that the draft review's buttons follow the waiting-control rule; its sentence that no test checks the faded colors names the draft review's check as the exception. | `close-work` reads the row whole against the code. |
-| Overview look notes and `globals.css`: the switches | T1, T2, T3, T5 | Each new variant has a `globals.css` comment naming the section it reads, and the notes list it. | `close-work` reads both. |
-| Overview `test/e2e/` row | T1 | The row lists `look-menu-invoices-ask-alerts.spec.ts` and any shared check module. | `close-work` reads the row whole. |
+| Overview `src/app` row: the four pages | T1, T2, T3, T4, T5, T8, T9 | The row names each page's desktop layout, the pages that pass `fullWidth`, and that the draft review's buttons follow the waiting-control rule; its sentence that no test checks the faded colors names the draft review's check as the exception. | `close-work` reads the row whole against the code. |
+| Overview look notes and `globals.css`: the switches | T1, T2, T3, T5, T9 | Each new variant has a `globals.css` comment naming the section it reads, and the notes list it. | `close-work` reads both. |
+| Overview `test/e2e/` row | T1, T9 | The row lists `look-menu-invoices-ask-alerts.spec.ts` and any shared check module. | `close-work` reads the row whole. |
+| Overview `test/` row | T9 | The row names `look-tidy.test.ts`'s AC-0014 search of the four page folders. | `close-work` reads the row whole. |
 | Intent `look-production-sales-trace-review-nits.md` | none (written at drafting) | Its Outcome covers the waiting buttons, and its Boundary's "Waiting buttons" bullet names the six. | `close-work` confirms it. |
 | Design reference: the canvas | T7 | The AC-0017 ledger entries name revision 1793945225-763f. | The brief still links the canvas. |
 
@@ -59,7 +60,7 @@ Most construction tests live under **Tasks** below.
 - **Invoices' read forms and drafts.** `/invoices` passes `fullWidth`. The two read forms sit in a grid of two from `desk` up, as Trace's finders do, with their buttons pushed to the card's bottom so they line up. Each draft's `li` holds one link; in the table look the link is the grid row and the comma between source and line count stays in the DOM, hidden visually, so the link's text content is unchanged. The photo field's `file:` classes stay as they are. Traces to: AC-0001, AC-0004, AC-0005, AC-0022, AC-0023.
 - **A draft's review.** The editing view (capture section and Lines form) is a size container. Where it has room for a 20rem capture column beside a lines column of at least about 22rem, the capture section is the first column and the form is the second. Only a photo is `position: sticky` near the top (a probe on 2026-11-06 showed a sticky column holding inside a size container, and a `<fieldset>` serving as a size container, in the suite's Chromium); a typed capture scrolls with the page, so a long one is never held partly below the fold. The photo's box stays the image's parent with its 3:4 shape. A line's "Invoice says: " stays the start of one `p`'s own text, with the words in a child `span` for their weight. Each line's fieldset is its own container: where it has room, Product and Vendor share a row and Weight, Cost per lb, and Received date share a row. Save receipts and Discard draft sit side by side where the form has room. Traces to: AC-0006, AC-0007, AC-0008, AC-0025.
 - **Saved receipts.** The "Saved receipts" section is a size container. Where it has room for two cards whose before-and-after tables hold six-digit weights without tightening (about 50rem), the lot cards and the tables each sit in a grid of two columns, never more. The lots keep their `ul`, whose items are exactly the lots; the tables sit outside it. The `/invoices` saved result stays outside the `result` container, so its tables keep their base size; the overview already says so. Traces to: AC-0009, AC-0021.
-- **The draft's buttons.** Save receipts and Discard draft drop the `disabled` attribute for `aria-disabled` while `pending`, and a ref set on press refuses a second press before the next render, as `alert-card.tsx`'s `pendingRef` does. The ref clears when the action settles, whatever its outcome, including `checkSave`'s refusal before anything is sent, so a corrected form can be saved without a reload. Because Next.js queues a second action until the first finishes, a refused press must never reach `dispatch`; counting requests only while the first is held would miss a queued one. Their colors fade at 60% alpha through `aria-disabled:` classes, never `opacity`. The draft's status, focus moves, and outcomes are unchanged. Traces to: AC-0010, AC-0020.
+- **The draft's buttons.** Save receipts and Discard draft drop the `disabled` attribute for `aria-disabled` while `pending`, and a ref set on press refuses a second press before the next render, as `alert-card.tsx`'s `pendingRef` does. The ref clears when the action settles, whatever its outcome, including `checkSave`'s refusal before anything is sent, so a corrected form can be saved without a reload; the handlers also refuse while `pending` is true, which holds until the outcome renders. Because Next.js queues a second action until the first finishes, a refused press must never reach `dispatch`; counting requests only while the first is held would miss a queued one. Their colors fade at 60% alpha through `aria-disabled:` classes, never `opacity`. The draft's status, focus moves, and outcomes are unchanged. Traces to: AC-0010, AC-0020.
 - **Ask.** `/ask` keeps the cap. The form, the answer, and the examples each become a white card; the message and choices area stays card-free text, since it is empty in most states and an empty card would show. The examples section stays a direct child of `<main>`. Traces to: AC-0001.
 - **Alerts.** `/alerts` passes `fullWidth`. Today's digest is a white card whose paragraphs are capped at 45rem. Each section's list is a size container whose cards sit in a grid of two columns where it has room (about 44rem, so 1024 px with a scrollbar still pairs them), never more; the board's auto-fill grid would put three in a row at 1440 px. Each card keeps its sentence as its first `p` and its reprice button as its only button without an `aria-label`. Each card is its own container: where it has room (about 24rem) its buttons sit in a row at their own width; otherwise each spans the card. Traces to: AC-0001, AC-0011, AC-0012, AC-0013, AC-0024, AC-0025.
 
@@ -196,14 +197,41 @@ Most construction tests live under **Tasks** below.
 
 **Done when:** the T8 tests pass and `npm test` passes.
 
+### T9: The post-gates round 1 fixes land
+
+**Depends on:** T8
+**Mode:** manual QA through the new browser suite for the AC-0020, AC-0010, and AC-0016 cases and the layout pins; goal-based check for the AC-0014 search
+**Touches:** `src/app/invoices/draft-review.tsx`, `src/app/menu/menu-list.tsx`, `src/app/globals.css`, `test/e2e/look-menu-invoices-ask-alerts.spec.ts`, `test/e2e/look-checks.ts`, `test/look-tidy.test.ts`, `docs/architecture/overview.md`
+
+**Tests:**
+- AC-0020, in `look-menu-invoices-ask-alerts.spec.ts`, two new cases, each run for a save and for a discard:
+  - a same-task case: two presses dispatched in one task (two clicks from one `page.evaluate`) send one request; shown failing on a build whose handlers guard on `pending` alone;
+  - a press-train case: from inside the page, on each tick from the first press until that press's outcome shows (or 5 s after the held request is released, whichever comes first), Save receipts and then Discard draft are both pressed in the same task; counted until one second after the outcome shows, the page sends exactly one request and the first press's outcome shows. The tick is every 10 ms, or every task if every 10 ms misses any of the red runs below. Shown failing on five runs each at `1535da4` (whose guard clears in `run`'s `finally`), on a build that adds the `pending` check to `save()` only, and on one that adds it to `discard()` only.
+- AC-0010: the rest-state read also asserts Discard draft's text and border at full alpha.
+- AC-0016: the `/invoices` three-drafts test at 1280 px runs `checkPageState` before `checkDesktopWalk`.
+- AC-0014, in `test/look-tidy.test.ts`: the search strips a class's variant prefix as everything up to its last colon outside square brackets, then judges what is left. A seeded list holds, for each of the forms none, `name:`, `[...]:`, `name-[...]:` (`aria-[...]:`, `data-[...]:`, `has-[...]:`, `min-[...]:`), `*:`, `@name:` and `@min-[...]:`, `name/label:`, and stacked prefixes, one disallowed class the matcher must flag and one allowed class (a `control`, `card`, or `mark` token, `rounded-full`, or `rounded-none`) it must pass. The test also fails when a folder yields no radius class or the `file:rounded-md` exception in `read-forms.tsx` is never met.
+- Pins traced to the brief's focus-outline constraint and the spec's Always-do rule, in `look-menu-invoices-ask-alerts.spec.ts`:
+  - at 1024, 1280, and 1440 px in Menu's table look, with the switch focused from the keyboard, its focus ring (the checkbox's box grown by the computed outline offset and width) sits inside the card's padding box (its border box less its border widths), and the outline offset is not negative, so the ring keeps the card's white behind it;
+  - in a draft's review at 1280 px, and at the narrowest paired viewport (the test steps the viewport down 1 px at a time from 1280 px until Product drops below Vendor at the default text size, and measures at the last width where they sat side by side), each line's closed Product picker is at least as wide as a copy of it holding only the chosen option at its own natural width (`width: auto`, same classes), so the browser's own sizing supplies the arrow's room, with Product and Vendor side by side, tops level. The 1280 px case is the one seen failing at `1535da4`.
+- The earlier tests in `look-menu-invoices-ask-alerts.spec.ts` and `test/look-tidy.test.ts`, and the existing suites, pass unchanged except for these named changes: the AC-0016 `checkPageState` call; the AC-0010 Discard draft rest assertion; T6's AC-0014 test rewritten as above; `MARGIN_TITLE` in place of the title literal in the Alerts AC-0016 test; and the repeated white-card and no-cap checks moved into one helper each, their checks unchanged.
+
+**Approach:**
+- `save()` and `discard()` also return while `pending` is true, as the base did; the press-time ref still closes the span before the waiting render.
+- Give Menu's switch room for its ring in the table look with vertical padding on its label; give Product the wider track where `line-pair` applies.
+- Correct the `line-pair` (content box, no-scrollbar reference widths) and `alert-pair` (0.75rem gap) comments, and add a ledger note correcting the T3 and T5 figures.
+- Tidy the suite: import `./invoices-page` once, use `MARGIN_TITLE`, check the white-card style and the uncounted no-cap shape each through one helper, and reword `look-checks.ts`'s header and section comments to say what the module holds.
+- In the overview: the `src/app` row says both draft buttons refuse a press while `pending` holds, until the outcome renders, and that a test checks their faded colors; the `test/e2e/` row describes the new suite as it stands; the look-note variant list names `alert-pair` and `alert-row`; the `test/` row names the AC-0014 search.
+
+**Done when:** the T9 tests pass and `npm test` passes.
+
 ### T7: The recorded checks are in the verification ledger
 
-**Depends on:** T1, T2, T3, T4, T5, T6, T8
+**Depends on:** T1, T2, T3, T4, T5, T6, T8, T9
 **Mode:** visual and manual QA
 **Touches:** `docs/specs/look-menu-invoices-ask-alerts/notes/verification-ledger.md`
 
 **Tests:**
-- AC-0017: the built app on `127.0.0.1` with the test data, captured at the head after T8, each screen in the state AC-0017 names, compared by the owner with its board; the ledger records each verdict.
+- AC-0017: the built app on `127.0.0.1` with the test data, captured at the head after T9, each screen in the state AC-0017 names, compared by the owner with its board; the ledger records each verdict.
 - AC-0015: `npm test` on the branch head, its pass counts and run time in the ledger.
 - AC-0018: `git diff "$(git merge-base main HEAD)" -- src/app/facts.tsx src/app/before-after.tsx` read in full; the ledger records the result.
 - AC-0019: `git diff "$(git merge-base main HEAD)" -- test/e2e` read in full, plus every file `git ls-files --others --exclude-standard -- test` lists; the ledger lists each changed expectation in an existing test file, or none.
@@ -211,7 +239,7 @@ Most construction tests live under **Tasks** below.
 **Approach:**
 - Reuse `.context/recorded-run/s3-captures.spec.ts`'s pattern for the screenshots, run with `PLAYWRIGHT_FORCE_ASYNC_LOADER=1` after `npm run build`, and stop every process it starts by its PID.
 
-**Done when:** the ledger records the owner's "match" for each of the ten boards, the AC-0015 pass, the AC-0018 read, and the AC-0019 list, and each of these records names the commit it read, at or after T8's last commit.
+**Done when:** the ledger records the owner's "match" for each of the ten boards, the AC-0015 pass, the AC-0018 read, and the AC-0019 list, and each of these records names the commit it read, at or after T9's last commit.
 
 ## Rollout
 
@@ -221,7 +249,7 @@ Big bang, in one PR. Rollback is a revert. No data, schema, or hosted setting ch
 
 - A container threshold set too close to a page's width flips with an always-visible scrollbar, as Receiving's did in spec 2; the design leaves about 1rem of room at 1024 px, and AC-0025 checks it.
 - A sticky photo stops sticking if a later change gives an ancestor of `<main>`'s content an `overflow` other than visible; AC-0007 catches it.
-- Moving the draft's buttons to `aria-disabled` lets a fast double press through unless the press-time ref refuses it; AC-0020 counts requests.
+- Moving the draft's buttons to `aria-disabled` lets a fast double press through unless the guard refuses it from the first press until the outcome renders; the ref covers the span before the waiting render and `pending` the span after the action settles, and AC-0020 counts requests in both.
 
 ## Changelog
 
@@ -230,3 +258,6 @@ Big bang, in one PR. Rollback is a revert. No data, schema, or hosted setting ch
 - 2026-11-06: after the round 2 reviews: the Approach and Risks lines follow the round 2 design (only a photo is sticky, Menu's single card in the table look only, AC-0020 counts requests), the intent rows say six, and AC-0020 counts until one second after the outcome.
 - 2026-11-06: controlled amendment after the owner's AC-0017 comparison, on the owner's approval: new task T8 makes the drafts heading, each line's legend, and each saved lot card's first row match the boards; T7 runs after T8.
 - 2026-11-06: after the amendment's round 1 reviews: the drafts heading moves inside the card only where the drafts read as a table, the lot-card pin measures the facts list's own top border, the T1 to T6 tests stay unchanged, and T8 updates the overview.
+- 2026-11-06: controlled amendment after the post-gates round 1 reviews, on the owner's approval: new task T9 fixes the twelve sustained issues (the press guard's span after the action settles, the AC-0016 scan, the AC-0014 search, AC-0020's early-press case, Menu's focus ring, the Product picker's width, comments, test tidying, and the overview); T7 reruns after T9.
+- 2026-11-06: after the T9 amendment's round 1 reviews: T9's modes follow the Testing Strategy; the press-train case presses until the outcome shows; the radius search covers every prefix form with allowed and disallowed samples; the ring pin bounds the card's padding box and keeps the ring outside the checkbox; the Product pin compares each picker with its chosen option's natural width; the earlier-test changes are a closed list; the overview's `src/app` row describes the fixed guard.
+- 2026-11-06: after the T9 amendment's round 2 reviews: the press train presses both buttons on each tick, its red shows on five runs each at `1535da4` and on both one-handler builds, and its cadence tightens to every task if 10 ms misses; the probe's record moves to the ledger; the paired-viewport case finds its width by stepping down; the radius strip is stated as a rule with `@` and `/name` samples; the overview `test/` row names T9 only.
