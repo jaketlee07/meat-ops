@@ -29,9 +29,12 @@ export default async function AlertsPage() {
   const digest = digestPage(alerts.length, row, now);
 
   return (
-    <PageShell title="Alerts" current="alerts">
+    <PageShell title="Alerts" current="alerts" fullWidth>
       {watch.status === "failed" && <p className="mb-4 text-base font-medium text-error">{WATCH_FAILED}</p>}
-      <section aria-labelledby="digest-heading" className="mb-6">
+      <section
+        aria-labelledby="digest-heading"
+        className="mb-6 rounded-card border border-card-border bg-surface p-3.5 desk:p-4"
+      >
         <h2 id="digest-heading" className="mb-3 text-xl font-semibold">
           Today&apos;s digest
         </h2>

@@ -28,7 +28,7 @@ export default async function MenuPage() {
   }));
 
   return (
-    <PageShell title="Menu" current="menu">
+    <PageShell title="Menu" current="menu" fullWidth>
       <MenuList items={items} />
     </PageShell>
   );

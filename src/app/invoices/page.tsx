@@ -32,10 +32,10 @@ export default async function InvoicesPage({
     // Only a waiting draft's pickers are shown, so only it reads the catalog.
     const catalog = draft?.status === "pending" ? await readCatalog(supabase) : { products: [], vendors: [] };
     return (
-      <PageShell title="Invoices" current="invoices">
+      <PageShell title="Invoices" current="invoices" fullWidth>
         <Link
           href="/invoices"
-          className="mb-4 inline-flex min-h-control min-w-control items-center rounded-md px-3 text-base font-medium text-primary underline"
+          className="mb-4 inline-flex min-h-control min-w-control items-center rounded-control px-3 text-base font-medium text-primary underline"
         >
           {BACK_TO_INVOICES}
         </Link>
@@ -59,7 +59,7 @@ export default async function InvoicesPage({
 
   const drafts = await listWaitingDrafts(supabase);
   return (
-    <PageShell title="Invoices" current="invoices">
+    <PageShell title="Invoices" current="invoices" fullWidth>
       <ReadForms />
       <DraftsList drafts={drafts} />
     </PageShell>

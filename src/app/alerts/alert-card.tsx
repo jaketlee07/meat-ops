@@ -54,21 +54,31 @@ export function AlertCard({ alert, onResult }: { alert: OpenAlert; onResult: (st
 
   return (
     <li>
-      <div role="group" aria-labelledby={titleId} className="rounded-md border border-field-border p-3">
+      <div
+        role="group"
+        aria-labelledby={titleId}
+        className="@container/alert h-full rounded-card border border-card-border bg-surface p-3.5 desk:p-4"
+      >
         <h3 id={titleId} className="break-words text-lg font-semibold">
           {title}
         </h3>
         <p className="mt-1 break-words text-base">{sentence}</p>
         {view.type === "margin_below_target" || view.type === "price_stale" ? (
-          <>
-            <p className="mt-2 text-base font-medium">Next step</p>
+          <p className="mt-2 text-base font-medium">Next step</p>
+        ) : (
+          <p className="mt-2 break-words text-base">
+            <span className="font-medium">Next step:</span> {nextStep}
+          </p>
+        )}
+        <div className="mt-2 flex flex-col gap-2 alert-row:flex-row alert-row:items-start">
+          {(view.type === "margin_below_target" || view.type === "price_stale") && (
             <form onSubmit={(event) => submit(event, "reprice", applyAlertPrice, CHANGE_UNKNOWN)}>
               <input type="hidden" name="alertId" value={alert.id} />
               <input type="hidden" name="value" value={priceFieldText(view.suggestedListPrice)} />
               <button
                 type="submit"
                 aria-disabled={pending !== null ? true : undefined}
-                className="w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+                className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60 alert-row:w-auto"
               >
                 {nextStep}
               </button>
@@ -76,35 +86,31 @@ export function AlertCard({ alert, onResult }: { alert: OpenAlert; onResult: (st
                 {pending === "reprice" ? "Saving…" : null}
               </p>
             </form>
-          </>
-        ) : (
-          <p className="mt-2 break-words text-base">
-            <span className="font-medium">Next step:</span> {nextStep}
-          </p>
-        )}
-        {destination && (
-          <Link
-            href={destination.href}
-            className="mt-2 inline-flex min-h-control min-w-control items-center rounded-md px-3 text-base font-medium text-primary underline"
-          >
-            {destination.name}
-          </Link>
-        )}
-        <form onSubmit={(event) => submit(event, "dismiss", dismissAlert, DISMISS_UNKNOWN)} className="mt-2">
-          <input type="hidden" name="alertId" value={alert.id} />
-          {/* The name starts with the visible word and adds the title, so two alerts' buttons differ (AC-0025). */}
-          <button
-            type="submit"
-            aria-label={`Dismiss ${title}`}
-            aria-disabled={pending !== null ? true : undefined}
-            className="w-full rounded-md border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
-          >
-            Dismiss
-          </button>
-          <p role="status" className="text-base text-ink-secondary">
-            {pending === "dismiss" ? "Dismissing…" : null}
-          </p>
-        </form>
+          )}
+          {destination && (
+            <Link
+              href={destination.href}
+              className="inline-flex min-h-control min-w-control items-center self-start rounded-control px-3 text-base font-medium text-primary underline"
+            >
+              {destination.name}
+            </Link>
+          )}
+          <form onSubmit={(event) => submit(event, "dismiss", dismissAlert, DISMISS_UNKNOWN)}>
+            <input type="hidden" name="alertId" value={alert.id} />
+            {/* The name starts with the visible word and adds the title, so two alerts' buttons differ (AC-0025). */}
+            <button
+              type="submit"
+              aria-label={`Dismiss ${title}`}
+              aria-disabled={pending !== null ? true : undefined}
+              className="w-full rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60 alert-row:w-auto"
+            >
+              Dismiss
+            </button>
+            <p role="status" className="text-base text-ink-secondary">
+              {pending === "dismiss" ? "Dismissing…" : null}
+            </p>
+          </form>
+        </div>
       </div>
     </li>
   );

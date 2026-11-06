@@ -20,7 +20,7 @@ export default async function AskPage() {
   return (
     <PageShell title="Ask" current="ask">
       <AskPanel />
-      <section aria-labelledby="examples-heading" className="mt-8 space-y-2">
+      <section aria-labelledby="examples-heading" className="mt-8 space-y-2 rounded-card border border-card-border bg-surface p-3.5 desk:p-4">
         <h2 id="examples-heading" className="text-xl font-semibold">
           Questions Ask can answer
         </h2>

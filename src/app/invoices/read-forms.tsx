@@ -19,12 +19,15 @@ const LONG_EDGE = 2576;
 const READING = "Reading. This can take up to two minutes.";
 
 const IDLE: ReadState = { status: "idle" };
-const CONTROL = "mt-1 block w-full rounded-md border border-field-border bg-surface px-3 text-base text-ink";
+const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 // The photo field's own selector button, styled to look like a button.
 const FILE_BUTTON =
   "file:mr-3 file:rounded-md file:border file:border-field-border file:bg-surface file:px-3 file:py-1 file:text-base file:font-medium file:text-ink";
+// The button sits at the card's bottom, so the two Read buttons' tops line up from `desk`.
 const BUTTON =
-  "w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60";
+  "mt-auto w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60";
+const CARD = "flex flex-col gap-4 rounded-card border border-card-border bg-surface p-3.5 desk:p-4";
+const FORM = "flex flex-1 flex-col gap-4";
 
 type Press =
   | { source: "photo"; file: File | undefined; today: string }
@@ -133,12 +136,12 @@ export function ReadForms() {
   const textError = fieldError("text");
 
   return (
-    <>
-      <section aria-labelledby="read-photo-heading" className="mb-8 space-y-4">
+    <div className="mb-8 grid gap-4 desk:grid-cols-2">
+      <section aria-labelledby="read-photo-heading" className={CARD}>
         <h2 id="read-photo-heading" className="text-xl font-semibold">
           Read an invoice
         </h2>
-        <form onSubmit={submitPhoto} noValidate className="space-y-4">
+        <form onSubmit={submitPhoto} noValidate className={FORM}>
           <div>
             <label htmlFor="invoice-photo" className="block text-base font-medium">
               Invoice photo
@@ -169,11 +172,11 @@ export function ReadForms() {
         </form>
       </section>
 
-      <section aria-labelledby="read-text-heading" className="mb-8 space-y-4">
+      <section aria-labelledby="read-text-heading" className={CARD}>
         <h2 id="read-text-heading" className="text-xl font-semibold">
           Type a receipt
         </h2>
-        <form onSubmit={submitText} noValidate className="space-y-4">
+        <form onSubmit={submitText} noValidate className={FORM}>
           <div>
             <label htmlFor="receipt-text" className="block text-base font-medium">
               Receipt text
@@ -203,6 +206,6 @@ export function ReadForms() {
           {reading("text")}
         </form>
       </section>
-    </>
+    </div>
   );
 }

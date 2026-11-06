@@ -78,22 +78,22 @@ export function DigestSection({ page }: { page: Exclude<DigestPage, { kind: "no-
   return (
     <>
       {/* In the page before it has text, so the message is announced (AC-0081). */}
-      <p role="status" className="text-base text-ink-secondary">
+      <p role="status" className="max-w-[45rem] text-base text-ink-secondary">
         {sending ? DIGEST_WRITING : null}
       </p>
       <div ref={outcomeRef} tabIndex={-1} aria-live="polite" className="space-y-3">
         {!sending && shown?.kind === "digest" && (
           <>
             {shown.paragraphs.map((paragraph, index) => (
-              <p key={index} className="break-words text-base">
+              <p key={index} className="max-w-[45rem] break-words text-base">
                 {paragraph}
               </p>
             ))}
-            <p className="text-base text-ink-secondary">{DIGEST_FOOTER}</p>
+            <p className="max-w-[45rem] text-base text-ink-secondary">{DIGEST_FOOTER}</p>
           </>
         )}
         {!sending && shown?.kind === "message" && (
-          <p className={`break-words text-base ${shown.failure ? "font-medium text-error" : ""}`}>{shown.text}</p>
+          <p className={`max-w-[45rem] break-words text-base ${shown.failure ? "font-medium text-error" : ""}`}>{shown.text}</p>
         )}
       </div>
       {shown?.kind === "message" && shown.retry && (
@@ -105,7 +105,7 @@ export function DigestSection({ page }: { page: Exclude<DigestPage, { kind: "no-
             focusRef.current = true;
             void send(false);
           }}
-          className="mt-3 w-full rounded-md bg-primary px-4 text-base font-medium text-on-primary aria-disabled:bg-primary/60"
+          className="mt-3 w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60 desk:w-auto"
         >
           Try again
         </button>

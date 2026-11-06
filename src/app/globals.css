@@ -101,6 +101,97 @@
   }
 }
 
+/* Menu's list reads as a table only when the list's section is wide enough for a row: fixed tracks,
+   gaps, and padding (about 35rem) plus a product column that wraps a long name (about 7rem). The section is
+   the container named menu. The width is in rem, so a larger browser text size keeps the cards until the
+   section has grown to fit. At the default size <main>'s content box is 45.5rem at 1024 px (about 44.4rem
+   with a 17 px scrollbar, so the table shows), 61.5rem at 1280 px, and 71.5rem at 1440 px; with a 20 px
+   root it is 32.7rem at 1024 px (cards) and 45.5rem at 1280 px (the table). It has no screen gate. */
+@custom-variant menu-table {
+  @container menu (min-width: 42rem) {
+    @slot;
+  }
+}
+
+/* Invoices' "Drafts to confirm" reads as a table only when its section is wide enough for a row: fixed
+   tracks, gaps, and padding (about 20.75rem: a date of 7.5rem, a source of 4rem, a line count of 5rem,
+   three gaps of 0.75rem, and 2rem of padding) plus a first-words column that wraps (about 13rem). The section
+   is the container named drafts. The width is in rem, so a larger browser text size keeps the cards until the
+   section has grown to fit. <main>'s content box is 45.5rem at 1024 px (about 44.4rem with a 17 px scrollbar),
+   61.5rem at 1280 px, and 71.5rem at 1440 px, so the table shows at each; with a 20 px root it is 32.7rem at
+   1024 px (cards) and 45.5rem at 1280 px (the table). It has no screen gate. */
+@custom-variant draft-table {
+  @container drafts (min-width: 34rem) {
+    @slot;
+  }
+}
+
+/* A draft's review: the editing view (the capture section and the Lines form) is the container named review.
+   Where it is at least 43rem wide (a 20rem capture column, a 1rem gap, and a Lines column of 22rem) the capture
+   section is the first column and the form the second. The width is in rem, so a larger browser text size
+   stacks them until the view has grown to fit. <main>'s content box is 45.5rem at 1024 px (about 44.4rem with
+   a 17 px scrollbar, so it splits), 61.5rem at 1280 px, and 71.5rem at 1440 px; with a 20 px root it is
+   32.7rem at 1024 px (stacked) and 45.5rem at 1280 px (split). It has no screen gate. */
+@custom-variant review-split {
+  @container review (min-width: 43rem) {
+    @slot;
+  }
+}
+
+/* One line of a draft's review: its fieldset is the container named line, and a container query measures its
+   content box (the fieldset's width less its 1rem padding and 1px border on each side, 2.125rem). Where that
+   box is at least 32rem wide (three fields of about 10.2rem with two gaps of 0.75rem, so a date field holds its
+   text and picker) Product and Vendor share a row, Product on the wider track, and Weight, Cost per lb, and
+   Received date share a row. In rem, no screen gate. Without a scrollbar the Lines form is 40.5rem wide at
+   1280 px and 24.5rem at 1024 px, so the box is 38.4rem (rows) and 22.4rem (stacked); the box is 48.4rem at
+   1440 px. */
+@custom-variant line-pair {
+  @container line (min-width: 32rem) {
+    @slot;
+  }
+}
+
+/* The review's Lines form is the container named lines. Where it is at least 20rem wide Save receipts and
+   Discard draft sit side by side at their own width; narrower, each spans the form. In rem, no screen gate. */
+@custom-variant lines-row {
+  @container lines (min-width: 20rem) {
+    @slot;
+  }
+}
+
+/* The /invoices saved receipts: the section is the container named saved. Where it is at least 50rem wide
+   (two cards of 24.5rem with a 1rem gap, each holding a before-and-after table with six-digit weights and costs
+   of $10 or more without tightening) the lot cards and the before-and-after tables each sit two to a row, never
+   more. In rem, no screen gate: <main>'s content box is 45.5rem at 1024 px (stacked), 61.5rem at 1280 px, and
+   71.5rem at 1440 px, and with a 20 px root 45.5rem at 1280 px (stacked). */
+@custom-variant saved-pair {
+  @container saved (min-width: 50rem) {
+    @slot;
+  }
+}
+
+/* Alerts' "Urgent" and "Other alerts" lists: each section is the container named alerts. Where it is at least
+   44rem wide (two cards of at least 21.625rem and a 0.75rem gap, `gap-3`, so a card still holds a title, a
+   sentence, and its buttons) the cards sit two to a row, never more; narrower, one to a row. In rem, no screen
+   gate, so a larger text size keeps one column until the section has grown to fit. <main>'s content box is
+   45.5rem at 1024 px (about 44.4rem with a 17 px scrollbar, so it pairs), 61.5rem at 1280 px, and 71.5rem at
+   1440 px; with a 20 px root it is 32.7rem at 1024 px (one column) and 45.5rem at 1280 px (pairs). */
+@custom-variant alert-pair {
+  @container alerts (min-width: 44rem) {
+    @slot;
+  }
+}
+
+/* One alert's card is the container named alert. Where its content box is at least 24rem wide (a reprice button
+   of about 17rem, a 0.75rem gap, and a Dismiss button of about 6rem) the reprice button and Dismiss sit in a row
+   at their own width; narrower, each spans the card. In rem, no screen gate. A paired card is about 28rem wide
+   inside at 1280 px (rows), about 20rem inside at 1280 px with a 20 px root (stacked), and 20.5rem inside at 390 px. */
+@custom-variant alert-row {
+  @container alert (min-width: 24rem) {
+    @slot;
+  }
+}
+
 /* Trace's lot result: the section is the container named tracelot. Where it is at least 53rem wide
    (the Customers column of 16.25rem, a gap, and Sales' table at 35rem) Customers sits beside "Sales from
    this lot" and the lot's facts run in three columns. The page has no column grid, so the section is the
