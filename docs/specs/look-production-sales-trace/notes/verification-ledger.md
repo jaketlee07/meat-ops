@@ -139,3 +139,11 @@ Wrong builds shown failing (each reverted):
 
 Tests: `look-floor-pages.spec.ts` alone 86 passed (58 s) at `6058dd7`. `npm test` at `6058dd7` (log `.context/s3a-r2fix-npmtest.log`): Vitest 55 files, 1050 passed; Playwright 884 passed in 11.9 min; no failures and no rerun. The slot fix ran clean after waiting out another project's test folder.
 - Commit `fbf4839` restores `text-xs` on the three before-and-after header cells under `result-tight`: once `result-snug` became a range (at least 13rem and under 18rem), the headers lost the small size they had taken from it under 13rem. Class strings only (AC-0025). `npm test` at `fbf4839`: Vitest 55 files, 1050 passed; Playwright 884 passed in 11.9 min.
+
+## Round 3 fixes (2026-11-05)
+
+- Round 3 reviewed `git diff baf4c9c bfd979c` (reports `3-post-gates-*-raw.md` in the run's review folder): 7 Nits, all comment or test-scope fixes, recorded from the raw reports and resolved in `9df57d2`.
+  - The two step comments (`src/app/globals.css` above the `result` variants, `src/app/before-after.tsx` above `BeforeAfter`) and the overview's `src/app` row now give `result-snug` its range (13rem up to 18rem), say the steps never overlap and only one applies, and that a class meant to hold under 13rem as well is set under both; the 11.9rem card takes `result-tight` only (frontend 1 and 2, quality 2, adversarial 2).
+  - `expectTablesFit` in `test/e2e/look-floor-pages.spec.ts` keeps its fit check on every `th` and `td` and runs its split check and figure count on the Before and After cells only, as AC-0033 and AC-0034 say; the minimums are 4, 2, 6, 6, and 14 Before and After figure cells (quality 1, adversarial 1).
+  - The comment above `MAIN_GRID` in `src/app/receiving/page.tsx` no longer implies a cap: the card lists every finished product, and the probe found six fit under the form at every size it measured and ten only at 1280 px at the default text size (adversarial 3). The "Post-gates review round 2" entry's "up to about six" means the same measured limit.
+- `npm test` at `9df57d2`: Vitest 55 files, 1050 passed; Playwright 884 passed in 15.7 min. The slot fix was skipped for this run because another project's browser session kept the folder check listing a folder; no flake occurred.
