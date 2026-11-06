@@ -22,7 +22,7 @@
 
 ## Approach
 
-Menu comes first, because it is the smallest page that sets this spec's table pattern and starts the new suite. Invoices follows in two tasks, the read forms and drafts list, then a draft's review with its saved receipts and its two buttons. Ask and Alerts come next, then the source check, then a last task that records what only a person or a diff read can check.
+Menu comes first, because it is the smallest page that sets this spec's table pattern and starts the new suite. Invoices follows in two tasks, the read forms and drafts list, then a draft's review with its saved receipts and its two buttons. Ask and Alerts come next, then the source check, then three style details the owner's comparison asked for, then a last task that records what only a person or a diff read can check.
 
 The riskiest part is keeping the existing Menu, Invoices, Ask, and Alerts suites green while the layout changes. The design keeps every element they find, by name and by position (the Constraints list the positions), and moves only how they are laid out.
 
@@ -44,7 +44,7 @@ Most construction tests live under **Tasks** below.
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| Overview `src/app` row: the four pages | T1, T2, T3, T4, T5 | The row names each page's desktop layout, the pages that pass `fullWidth`, and that the draft review's buttons follow the waiting-control rule; its sentence that no test checks the faded colors names the draft review's check as the exception. | `close-work` reads the row whole against the code. |
+| Overview `src/app` row: the four pages | T1, T2, T3, T4, T5, T8 | The row names each page's desktop layout, the pages that pass `fullWidth`, and that the draft review's buttons follow the waiting-control rule; its sentence that no test checks the faded colors names the draft review's check as the exception. | `close-work` reads the row whole against the code. |
 | Overview look notes and `globals.css`: the switches | T1, T2, T3, T5 | Each new variant has a `globals.css` comment naming the section it reads, and the notes list it. | `close-work` reads both. |
 | Overview `test/e2e/` row | T1 | The row lists `look-menu-invoices-ask-alerts.spec.ts` and any shared check module. | `close-work` reads the row whole. |
 | Intent `look-production-sales-trace-review-nits.md` | none (written at drafting) | Its Outcome covers the waiting buttons, and its Boundary's "Waiting buttons" bullet names the six. | `close-work` confirms it. |
@@ -175,14 +175,35 @@ Most construction tests live under **Tasks** below.
 
 **Done when:** the T6 test passes and `npm test` passes.
 
+### T8: The three style details match the boards
+
+**Depends on:** T6
+**Mode:** manual QA through the new browser suite
+**Touches:** `src/app/invoices/drafts-list.tsx`, `src/app/invoices/draft-review.tsx`, `src/app/invoices/saved-result.tsx`, `test/e2e/look-menu-invoices-ask-alerts.spec.ts`, `docs/architecture/overview.md`
+
+**Tests:**
+- Three pins in `look-menu-invoices-ask-alerts.spec.ts`, each traced to AC-0017 and seen failing at `29fe060` first:
+  - at 1280 px, where the drafts read as a table, one box with the card look the suite checks elsewhere (a white fill, a 1 px border, the 14 px card corner) holds the "Drafts to confirm" heading and all three draft links;
+  - at 390 px and 1280 px, each line's "Line n" legend's top sits at or below its fieldset's top plus the fieldset's top border width (a probe on 2026-11-06 showed a default legend's top equal to its fieldset's top, and a floated legend's below it);
+  - at 1280 px, in each saved lot card, neither the facts list (`dl`) nor its first row has a top border.
+- The T1 to T5 tests in `look-menu-invoices-ask-alerts.spec.ts` (including AC-0005's 390 px card check), T6's test in `test/look-tidy.test.ts`, and the existing `invoices.spec.ts` pass unchanged.
+
+**Approach:**
+- Where the drafts read as a table, move the "Drafts to confirm" heading inside the one white card, as S3b-Invoices-Desktop draws. In the card look the heading stays above the separate draft cards, as on Menu's phone layout; the owner chose that on 2026-11-06 over S3b-Invoices-Phone's one card (ledger, "T7 captures and the T8 amendment").
+- Float each line's legend inside its card, as S3b-Draft-Desktop draws, keeping it the fieldset's legend so the group keeps its name.
+- Take the top border off each saved lot card's facts list (its `dl` carries `border-y`) from `saved-result.tsx`, leaving `facts.tsx` unchanged (AC-0018).
+- Describe the drafts heading inside the table card in the overview's `src/app` row.
+
+**Done when:** the T8 tests pass and `npm test` passes.
+
 ### T7: The recorded checks are in the verification ledger
 
-**Depends on:** T1, T2, T3, T4, T5, T6
+**Depends on:** T1, T2, T3, T4, T5, T6, T8
 **Mode:** visual and manual QA
 **Touches:** `docs/specs/look-menu-invoices-ask-alerts/notes/verification-ledger.md`
 
 **Tests:**
-- AC-0017: the built app on `127.0.0.1` with the test data, captured at the head, each screen in the state AC-0017 names, compared by the owner with its board; the ledger records each verdict.
+- AC-0017: the built app on `127.0.0.1` with the test data, captured at the head after T8, each screen in the state AC-0017 names, compared by the owner with its board; the ledger records each verdict.
 - AC-0015: `npm test` on the branch head, its pass counts and run time in the ledger.
 - AC-0018: `git diff "$(git merge-base main HEAD)" -- src/app/facts.tsx src/app/before-after.tsx` read in full; the ledger records the result.
 - AC-0019: `git diff "$(git merge-base main HEAD)" -- test/e2e` read in full, plus every file `git ls-files --others --exclude-standard -- test` lists; the ledger lists each changed expectation in an existing test file, or none.
@@ -190,7 +211,7 @@ Most construction tests live under **Tasks** below.
 **Approach:**
 - Reuse `.context/recorded-run/s3-captures.spec.ts`'s pattern for the screenshots, run with `PLAYWRIGHT_FORCE_ASYNC_LOADER=1` after `npm run build`, and stop every process it starts by its PID.
 
-**Done when:** the ledger records the owner's "match" for each of the ten boards, the AC-0015 pass, the AC-0018 read, and the AC-0019 list, and each of these records names the commit it read, at or after T6's last commit.
+**Done when:** the ledger records the owner's "match" for each of the ten boards, the AC-0015 pass, the AC-0018 read, and the AC-0019 list, and each of these records names the commit it read, at or after T8's last commit.
 
 ## Rollout
 
@@ -207,3 +228,5 @@ Big bang, in one PR. Rollback is a revert. No data, schema, or hosted setting ch
 - 2026-11-06: initial plan, after the owner kept spec 3b to its four pages, chose full width where it helps with Ask kept narrow, approved the ten boards, and chose to bring the draft's buttons in line with the waiting-control rule.
 - 2026-11-06: after the round 1 reviews: criteria split one predicate each (AC-0020 to AC-0024), AC-0025 pins the scrollbar room, fixtures named for each state (the five-alert fixture, RAW-CHK, a typed draft), positional locators listed in the Constraints, only a photo is sticky, the draft buttons' ref clears on any outcome, and the radius check covers variant prefixes with the file button's tested corner as its one exception.
 - 2026-11-06: after the round 2 reviews: the Approach and Risks lines follow the round 2 design (only a photo is sticky, Menu's single card in the table look only, AC-0020 counts requests), the intent rows say six, and AC-0020 counts until one second after the outcome.
+- 2026-11-06: controlled amendment after the owner's AC-0017 comparison, on the owner's approval: new task T8 makes the drafts heading, each line's legend, and each saved lot card's first row match the boards; T7 runs after T8.
+- 2026-11-06: after the amendment's round 1 reviews: the drafts heading moves inside the card only where the drafts read as a table, the lot-card pin measures the facts list's own top border, the T1 to T6 tests stay unchanged, and T8 updates the overview.
