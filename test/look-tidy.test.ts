@@ -51,8 +51,8 @@ it("AC-0022: the In use mark's fill token appears in no border- or divide- class
   expect(rules).toEqual([]);
 });
 
-// AC-0014's search. A class token is what sits between whitespace, quotes, backticks, braces, and `$`. Its
-// variant prefix is everything up to its last colon outside square brackets; what is left is the class.
+// AC-0014's search. A class token is what sits between whitespace, quotes, backticks, braces, and `$`, except that
+// a quote inside square brackets belongs to its class (the second pass below). Its variant prefix is everything up to its last colon outside square brackets; what is left is the class.
 const RADIUS_ALLOWED =
   /^rounded(?:-(?:t|r|b|l|s|e|tl|tr|bl|br|ss|se|es|ee))?-(?:control|card|mark)$|^rounded-(?:full|none)$/;
 
@@ -115,8 +115,8 @@ const PREFIX_FORMS: Array<[form: string, prefix: string]> = [
   ["quoted nested [...]:", "[&[data-x='1']]:"],
 ];
 
-// Each form of important mark: the class is judged as it would be without the mark. Tailwind 4 accepts the
-// mark before the class and, as its older spelling, after it.
+// Each form of important mark: the class is judged as it would be without the mark. Tailwind 4 writes the mark
+// after the class and still accepts the older spelling before it.
 const MARKS: Array<[form: string, lead: string, trail: string]> = [
   ["leading !", "!", ""],
   ["leading ! behind a prefix", "md:!", ""],

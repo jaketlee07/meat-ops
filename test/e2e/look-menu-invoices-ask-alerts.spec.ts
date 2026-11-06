@@ -1395,7 +1395,8 @@ test.describe("the three style details of the boards", () => {
   test("AC-0017: at 1280x720 the Drafts to confirm heading and all three draft links sit in one white card", async ({ page }) => {
     const p = await opensInvoices(page, 1280, 720);
     const heading = page.getByRole("heading", { name: "Drafts to confirm", level: 2 });
-    // The heading's ancestors, nearest first: the first white card holds the heading and the draft links.
+    // The heading's ancestors: the locator returns them outermost first (document order), so the loop walks
+    // from the last one, nearest first, and the first white card it meets must hold the heading and the links.
     const ancestors = heading.locator("xpath=ancestor::*");
     let card: Locator | null = null;
     for (let at = (await ancestors.count()) - 1; at >= 0 && card === null; at -= 1) {
