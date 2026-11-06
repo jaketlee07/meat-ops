@@ -1,6 +1,6 @@
 # Look E spec 2 leftovers: layouts that fit their space, and four code tidy-ups
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome

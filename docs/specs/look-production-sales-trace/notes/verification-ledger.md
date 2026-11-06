@@ -152,3 +152,13 @@ Tests: `look-floor-pages.spec.ts` alone 86 passed (58 s) at `6058dd7`. `npm test
 
 - Round 4 reviewed `git diff bfd979c 812f2c0`: frontend Clean; quality and adversarial each raised one Nit on this ledger's round 3 entry (a cross-reference to the wrong entry, and the "Round 2 fixes" line still stating the old Receiving threshold), fixed in `f3c9ca3`. The round was recorded as direct-clean on the frontend report; the code is unchanged since the round 3 fixes' green `npm test`.
 - The spec is Shipped with all 34 criteria checked, the plan Done, the brief's Spec map row Shipped, and the workspace entry moved to shipped.
+
+## Close-out (2026-11-05)
+
+- PR #49 merged as `a31fafc` on 2026-11-06 at 02:55 UTC (2026-11-05 in Chicago). The owner confirmed the lasting facts are in the overview, `globals.css`, and code comments, and chose `cool-30-days` (review on 2026-12-05). The spec 2 leftovers intent, `look-pricing-receiving-review-nits.md`, is Fulfilled.
+- A probe on a fresh build of `a31fafc` (`5-probe-closeout.spec.ts` and its log in the run's review folder) measured the three states the frontend reviews of rounds 1 and 2 listed as not checked:
+  - Stock tiles: at 1024x768 with a 20 px root, Raw on hand and Average cost split inside the number on Production and Receiving with five-digit stock ("12,345." then "678 lbs"; "$1.7520" then "/lb"), and on Receiving also at 1280x720 with a 20 px root ("$1.7520/l" then "b"). With a seven-digit stock they split on a 390 px phone with a 20 px root too. No value runs past its tile, and at the default text size a five-digit value stays on one line.
+  - Sale trace: the sale's card runs the full content width, so each label sits at the card's left and its value at its right: 395 to 596 px apart at 1024 px, 651 to 852 px at 1280 px, 811 to 1012 px at 1440 px, and 1291 to 1492 px at 1920 px. The owner's AC-0024 comparison showed a sale's trace on a phone and a lot's trace on a desktop.
+  - Saved result at 1280x720 and 1440x900 with a 20 px root (the `result-tight` step): the table's row labels break inside words ("On" "han" "d", "Aver" "age" "cost") and its header "Raw stock" breaks as "Raw stoc" "k"; with a 123,456.789 lb batch the facts list above it splits "$1,524,148.1" then "3". The Before and After numbers stay whole, 8 to 14 px apart, as AC-0033 requires.
+- The owner queued all three into one Draft intent, `docs/product/intents/look-production-sales-trace-review-nits.md`, beside the Receiving limit accepted on 2026-11-05, which the overview now records too.
+- The known flakes seen in this build's full runs (`receiving.spec.ts:998` twice, `alerts.spec.ts:182` once) are added as sightings to `revoked-session-write.md` and `alerts-watch-test-race.md`, on the owner's choice.
