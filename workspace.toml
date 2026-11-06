@@ -57,7 +57,9 @@ name = "Look E UI redesign"
 status = "active"
 
 [ini-001.work]
-active = []
+active = [
+  { path = "docs/specs/look-menu-invoices-ask-alerts/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "3703c8d", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 3b of look E: Menu, Invoices, Ask, and Alerts", needs = [] },
+]
 shipped = [
   { path = "docs/specs/look-production-sales-trace/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "9e661f8", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 3a of look E: Production, Sales, and Trace, with the spec 2 leftovers; shipped", needs = [] },
   { path = "docs/specs/look-pricing-receiving/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-redesign.md", revision = "2d9f923", parent = "docs/product/briefs/ui-redesign.md" }, summary = "Spec 2 of look E: Pricing and Receiving, the shared label-and-value list and before-and-after table, and look E's tokens and icon; shipped", needs = [] },
