@@ -147,3 +147,8 @@ Tests: `look-floor-pages.spec.ts` alone 86 passed (58 s) at `6058dd7`. `npm test
   - `expectTablesFit` in `test/e2e/look-floor-pages.spec.ts` keeps its fit check on every `th` and `td` and runs its split check and figure count on the Before and After cells only, as AC-0033 and AC-0034 say; the minimums are 4, 2, 6, 6, and 14 Before and After figure cells (quality 1, adversarial 1).
   - The comment above `MAIN_GRID` in `src/app/receiving/page.tsx` no longer implies a cap: the card lists every finished product, and the probe found six fit under the form at every size it measured and ten only at 1280 px at the default text size (adversarial 3).
 - `npm test` at `9df57d2`: Vitest 55 files, 1050 passed; Playwright 884 passed in 15.7 min. The slot fix was skipped for this run because another project's browser session kept the folder check listing a folder; no flake occurred.
+
+## Review round 4 and ship (2026-11-05)
+
+- Round 4 reviewed `git diff bfd979c 812f2c0`: frontend Clean; quality and adversarial each raised one Nit on this ledger's round 3 entry (a cross-reference to the wrong entry, and the "Round 2 fixes" line still stating the old Receiving threshold), fixed in `f3c9ca3`. The round was recorded as direct-clean on the frontend report; the code is unchanged since the round 3 fixes' green `npm test`.
+- The spec is Shipped with all 34 criteria checked, the plan Done, the brief's Spec map row Shipped, and the workspace entry moved to shipped.

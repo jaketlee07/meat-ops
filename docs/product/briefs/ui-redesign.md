@@ -81,7 +81,7 @@ None.
 | --- | --- |
 | `look-and-shell` | Shipped |
 | `look-pricing-receiving` | Shipped |
-| `look-production-sales-trace` | Implementing |
+| `look-production-sales-trace` | Shipped |
 
 ## Source
 

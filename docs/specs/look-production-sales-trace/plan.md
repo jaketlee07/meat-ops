@@ -1,7 +1,7 @@
 # Plan: look-production-sales-trace
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** spec 2's built Receiving page (`src/app/receiving/`: `page.tsx`'s `MAIN_GRID` through `PageShell`'s `fullWidth` and `mainClassName`, `#product-region` as `display: contents`, `recent-receipts.tsx`'s table look and `status-has-message` full-row rule) and its suite `test/e2e/look-pages.spec.ts`; the `receipt-table` container variant in `src/app/globals.css`, whose 20 px text test shows a rem container threshold moving with the text size; the three pages in `src/app/production/`, `src/app/sales/`, and `src/app/trace/` with their helpers `test/e2e/production-page.ts`, `sales-page.ts`, and `trace-page.ts`.
 
 > **Plan contract:** this is the implementation strategy. It may change
