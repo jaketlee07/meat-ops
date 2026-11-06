@@ -138,3 +138,4 @@ Wrong builds shown failing (each reverted):
 - A `FIGURE` pattern that matches nothing (a no-break space required before the digits) failed the AC-0010 sale test ("row 0 column 4 is a figure") and the three AC-0033 tests that ran (production, sales, receiving: "figure cells measured"); 4 failed, 2 passed.
 
 Tests: `look-floor-pages.spec.ts` alone 86 passed (58 s) at `6058dd7`. `npm test` at `6058dd7` (log `.context/s3a-r2fix-npmtest.log`): Vitest 55 files, 1050 passed; Playwright 884 passed in 11.9 min; no failures and no rerun. The slot fix ran clean after waiting out another project's test folder.
+- Commit `fbf4839` restores `text-xs` on the three before-and-after header cells under `result-tight`: once `result-snug` became a range (at least 13rem and under 18rem), the headers lost the small size they had taken from it under 13rem. Class strings only (AC-0025). `npm test` at `fbf4839`: Vitest 55 files, 1050 passed; Playwright 884 passed in 11.9 min.
