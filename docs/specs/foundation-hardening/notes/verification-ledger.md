@@ -78,3 +78,14 @@ Execution observations, newest last. Each entry names the task, the command, and
 ## Learnings capture (2026-10-07)
 
 - project-knowledge unavailable: the knowledge store is not activated (`docs/knowledge/patterns.jsonl` is empty and holds no topics), and the work-loop producer gates (`spec-approved`, `plan-locked`) had already passed. Reusable lessons are listed in the PR description instead.
+
+## Day-30 review (2026-11-06)
+
+- The cooling record `docs/lifecycle/foundation-hardening.json` came due on 2026-11-06. The owner chose to keep this folder, with its next review on 2027-02-06.
+- **Delivery on main:** approve. PR #1's merge `adcb0a0` is on `main`.
+- **Lasting facts kept elsewhere:** refuse. This spec's criteria are the only home of the shipped ledger criteria that later specs amend.
+- **Still in use:** refuse. The corrections spec amended 8 of its criteria with notes (AC-0028 and its stock-on-hand average definition, AC-0031, AC-0032, AC-0033, AC-0035, AC-0038, AC-0039, AC-0054). The zero-stock-average spec amended 2 (AC-0029, AC-0053). In all, 20 files outside this folder cite it.
+- **Open obligations:** approve. No open intent or spec needs it as a hard dependency.
+- **Content unchanged:** uncertain. Three reviewed amendments on 2026-10-19 (`5848c64`, `13118f7`, `e812114`) changed `spec.md`, so the record's fingerprint, taken from the merged version, no longer matches.
+- **Write authority:** approve. The developer still maintains the repository.
+- Result: the record moves from Cooling to Retained, with the reason `dependency-obligation`, the owner role `repository-maintainer`, and the evidence `e812114`, the last amendment. Nothing is deleted.
