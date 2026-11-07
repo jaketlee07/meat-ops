@@ -128,3 +128,14 @@ Reviewed the working tree against HEAD. Raw and adjudication artifacts are under
 - Unresolved obligations: none in the accepted contract. Dependencies: none.
 - Completion-event candidate: the merge of the pull request for `feat/production`.
 - Authority facts: source and write authority are the owner's (jaketlee07); nothing here authorizes deletion; `close-work` owns closeout.
+
+## Day-30 review (2026-11-07)
+
+- The cooling record `docs/lifecycle/production.json` came due on 2026-11-07. The owner chose to keep this folder, with its next review on 2027-02-07.
+- **Delivery on main:** approve. PR #6's merge `bb229ac` is on `main`.
+- **Lasting facts kept elsewhere:** refuse. This spec's Acceptance Criteria definitions (operator, non-operator, signed-out visitor, host scope, active finished product, raw input) and its Assumptions are the only home that later specs cite.
+- **Still in use:** refuse. 7 specs cite this one: alerts, ask-your-data, corrections, invoice-entry, local-ports, menu-pricing, and sales. The corrections spec amended AC-0014 with a note: its AC-0151 replaces the check step's sentence.
+- **Open obligations:** approve. No open intent or spec needs it as a hard dependency. The Draft intent `docs/product/intents/shared-display-parts.md` names this ledger as its source, pinned at `3be979d`.
+- **Content unchanged:** uncertain. The reviewed amendment `57025ff` changed `spec.md`, so the record's fingerprint, taken from the merged version, no longer matches.
+- **Write authority:** approve. The developer still maintains the repository.
+- Result: the record moves from Cooling to Retained, with the reason `dependency-obligation`, the owner role `repository-maintainer`, and the evidence `57025ff`, the amendment. Nothing is deleted.

@@ -231,3 +231,14 @@ Owner decision, in chat on 2026-10-08:
 - Durable outputs: `docs/architecture/overview.md` (areas, access model, write path, app trust boundary with the Host check, failure handling, accepted residuals); `AGENTS.md` "Build and test commands" (start for daily use, dev for development only, the stop-first rule, the env command); `docs/costing.md` Rounding note (AC-0024 formats, AC-0067 texts); `src/lib/database.types.ts` regenerates with no diff (AC-0034).
 - Accepted residuals, each with its owner decision above: the dev-mode exposure to DNS rebinding (decision 5); the write-call clauses of AC-0072 and AC-0083 resting on unit rules (amendment approval); the narrow post-save window (decision 8); the 3600-second access-token residual and the shared sign-in limit (spec Assumptions).
 - Follow-ons: `docs/product/intents/app-https-hosting.md` and `docs/product/intents/receiving-test-refinements.md`.
+
+## Day-30 review (2026-11-07)
+
+- The cooling record `docs/lifecycle/receiving.json` came due on 2026-11-07. The owner chose to keep this folder, with its next review on 2027-02-07.
+- **Delivery on main:** approve. PR #4's merge `b1acf4b` is on `main`.
+- **Lasting facts kept elsewhere:** refuse. This spec's Acceptance Criteria definitions (ended session, focusable controls of a page state, privileged variable, non-void receipt) are the only home that later specs cite. Its cookie, Host check, privileged-variable guard, loopback-only, and env-reload criteria are the baseline that the app-hosting and next-security-upgrade specs build on.
+- **Still in use:** refuse. 13 specs cite this one: alerts, app-hosting, ask-your-data, corrections, invoice-entry, local-ports, look-and-shell, menu-pricing, next-security-upgrade, production, receiving-refinements, sales, and zero-stock-average. The app-hosting spec narrows its Host check without a note here (owner's choice), and the next-security-upgrade spec reruns its three check scripts under `test/e2e/checks/`.
+- **Open obligations:** approve. No open intent or spec needs it as a hard dependency. The Draft intent `docs/product/intents/app-https-hosting.md` names this spec as its source, pinned at `683782e`.
+- **Content unchanged:** approve. `spec.md` is unchanged since the merge, and its fingerprint matches the record.
+- **Write authority:** approve. The developer still maintains the repository.
+- Result: the record moves from Cooling to Retained, with the reason `dependency-obligation`, the owner role `repository-maintainer`, and the evidence `983ba55`, the app-hosting merge that narrows this spec's Host check. Nothing is deleted.
