@@ -70,3 +70,12 @@ executing = []
 shipped = [
   { path = "docs/product/briefs/ui-redesign.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-redesign.md", revision = "2595c24" }, summary = "Look E brief: all four specs shipped (look and shell, Pricing and Receiving, Production, Sales, and Trace, and Menu, Invoices, Ask, and Alerts); closed 2026-11-06", needs = [] },
 ]
+
+[ini-002]
+name = "UI polish and home screen"
+status = "active"
+
+[ini-002.brief_queue]
+ready = [
+  { path = "docs/product/briefs/ui-polish.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-polish.md", revision = "b28cf13" }, summary = "Ready brief for UI polish: the owner confirms the spec cut next (proposed: the polish pass with the look E leftovers, then a home screen and list search)", needs = [] },
+]
