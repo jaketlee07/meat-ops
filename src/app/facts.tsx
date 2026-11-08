@@ -9,8 +9,10 @@
 // above them (the heading draws the card's top edge); "card-cols" sets its pairs in three columns
 // where a trace's lot section has room (`lot-wide`). The sale trace's "card" and "plain" lay each pair out as a column,
 // label directly above value, the pairs in a row where the sale trace has room (`sale-cols`) and two to a row where
-// it does not; "plain" draws no card edge, for the facts inside a batch card or a raw lot block.
-type Look = "list" | "tiles" | "cells" | "card" | "card-cols" | "plain";
+// it does not; "plain" draws no card edge, for the facts inside a batch card or a raw lot block. "quiet" is "list"
+// with its values at weight 400, for the facts in the stock cards, where the tiles carry the figures; "list" keeps its
+// bold values for the saved results and the open panels and dialogs. "card", "card-cols", and the sale trace's values are weight 500.
+type Look = "list" | "quiet" | "tiles" | "cells" | "card" | "card-cols" | "plain";
 
 // Each distinct class string is written once here, and a look only picks which ones it uses.
 const DIVIDED = "divide-y divide-card-border";
@@ -18,11 +20,13 @@ const RULED_ROW = "flex justify-between gap-4 py-2.5";
 const LABEL = "min-w-0 flex-1 break-words text-ink-secondary";
 const COLUMN_LABEL = "min-w-0 break-words text-ink-secondary";
 const VALUE = "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums";
+const VALUE_MEDIUM = "max-w-[60%] shrink-0 break-words text-right font-medium tabular-nums";
+const VALUE_QUIET = "max-w-[60%] shrink-0 break-words text-right tabular-nums";
 const CARD_BOTTOM = "rounded-b-card border border-t-0 border-card-border bg-surface px-4 pb-4";
 const CARD_ROW = "-mb-px flex justify-between gap-4 border-y border-card-border py-2";
 // A sale trace's pairs: each a column, its label above its value, left-aligned.
 const COLUMN_ROW = "flex min-w-0 flex-col gap-0.5";
-const COLUMN_VALUE = "min-w-0 break-words font-semibold tabular-nums";
+const COLUMN_VALUE = "min-w-0 break-words font-medium tabular-nums";
 // The sale trace's grid: two pairs to a row, then every pair in its own column from `sale-cols` up.
 const COLUMN_GRID = "grid grid-cols-2 gap-x-6 gap-y-3 sale-cols:auto-cols-fr sale-cols:grid-flow-col sale-cols:grid-cols-none";
 
@@ -35,6 +39,7 @@ export const CARD_TOP = "-mb-4 break-words rounded-t-card border border-b-0 bord
 
 const LIST_CLASS: Record<Look, string> = {
   list: `${DIVIDED} border-y border-card-border`,
+  quiet: `${DIVIDED} border-y border-card-border`,
   tiles: "flex flex-wrap gap-2",
   cells: `${DIVIDED} receipt-table:grid receipt-table:grid-cols-subgrid receipt-table:divide-y-0 receipt-table:[&>div]:contents receipt-table:[&_dt]:sr-only`,
   card: `${CARD_BOTTOM} pt-3 ${COLUMN_GRID}`,
@@ -44,6 +49,7 @@ const LIST_CLASS: Record<Look, string> = {
 
 const ROW_CLASS: Record<Look, string> = {
   list: RULED_ROW,
+  quiet: RULED_ROW,
   tiles: "flex min-w-0 grow flex-col rounded-control bg-tint px-2.5 py-2",
   cells: RULED_ROW,
   card: COLUMN_ROW,
@@ -53,6 +59,7 @@ const ROW_CLASS: Record<Look, string> = {
 
 const LABEL_CLASS: Record<Look, string> = {
   list: LABEL,
+  quiet: LABEL,
   tiles: "min-w-0 break-words text-sm text-ink-secondary",
   cells: LABEL,
   card: COLUMN_LABEL,
@@ -66,10 +73,11 @@ const LABEL_CLASS: Record<Look, string> = {
 // section is a table, "cells" lets the value shrink to its column and wrap.
 const VALUE_CLASS: Record<Look, string> = {
   list: VALUE,
+  quiet: VALUE_QUIET,
   tiles: "whitespace-nowrap text-lg font-semibold tabular-nums",
   cells: `${VALUE} receipt-table:min-w-0 receipt-table:max-w-none receipt-table:shrink receipt-table:text-sm receipt-table:font-normal`,
   card: COLUMN_VALUE,
-  "card-cols": VALUE,
+  "card-cols": VALUE_MEDIUM,
   plain: "min-w-0 break-words tabular-nums",
 };
 

@@ -1,7 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { callAsOperator, idOf, PROD_502_ID, produceCall, RAW_TOM_ID, resetTestData, reverseCall, voidReceiptCall, voidSaleCall } from "../db";
-import { addFinished, addRaw, cardFor, produce } from "./menu-page";
-import { card as pricingCard, detail as pricingDetail, opensDetail } from "./pricing-page";
+import { addFinished, addRaw, cardFor, produce, sellableSwitch, setListPrice } from "./menu-page";
+import { seedDraft } from "./invoices-page";
+import { card as pricingCard, detail as pricingDetail, opensDetail, setTarget } from "./pricing-page";
 import { seedBatch } from "./production-page";
 import { factValue, lotNumberOf, seedReceipt } from "./receiving-page";
 import { fields as saleFields, saleNumbers, seedSale } from "./sales-page";
@@ -539,3 +540,294 @@ test("AC-0020: with 11 sales Recent sales shows the 10 most recently entered", a
   expect([...shown].sort()).toEqual(numbers.slice(1).sort());
   await expect(sales(page).getByText("Showing the 10 most recent of 11 sales.", { exact: true })).toBeVisible();
 });
+
+// ---- Pricing's advice, Menu's switch, and the weight pass ----
+
+// Reading a color with an alpha channel as it is drawn on a backdrop (a fill such as primary/60 is not used
+// by these checks, so the plain channels are enough).
+function sameColor(a: string, b: string) {
+  expect(channels(a)).toEqual(channels(b));
+}
+
+// 502 over RAW-TOM's one receipt at $1.68/lb, no list price: it needs a new price, so the Pricing list and its
+// details panel each show an advice sentence and a button.
+async function pricingWithAdvice() {
+  await seedReceipt(5000, 1.68, "2026-10-01");
+  await setTarget(PROD_502_ID, 0.2);
+  await setListPrice(PROD_502_ID, 2.68);
+}
+
+// What an advice sentence and its box draw: the sentence's weight and color, and the fill of the box it sits in
+// (the sentence's own element, or the nearest ancestor with a fill).
+function adviceStyle(sentence: Locator) {
+  return sentence.evaluate((node) => {
+    const css = getComputedStyle(node);
+    let box: HTMLElement | null = node as HTMLElement;
+    while (box && getComputedStyle(box).backgroundColor === "rgba(0, 0, 0, 0)") box = box.parentElement;
+    return { weight: css.fontWeight, color: css.color, fill: box ? getComputedStyle(box).backgroundColor : "none" };
+  });
+}
+
+for (const width of WIDTHS) {
+  test(`AC-0010: the apply button in the Pricing list is outlined in the primary color on the surface at ${width} px`, async ({ page }) => {
+    await pricingWithAdvice();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/pricing");
+    const button = pricingCard(page, "502").getByRole("button", { name: /list price to/ });
+    await expect(button).toHaveCount(1);
+    const style = await button.evaluate((node) => {
+      const css = getComputedStyle(node);
+      return {
+        color: css.color,
+        borders: [css.borderTopColor, css.borderRightColor, css.borderBottomColor, css.borderLeftColor],
+        widths: [css.borderTopWidth, css.borderRightWidth, css.borderBottomWidth, css.borderLeftWidth],
+        fill: css.backgroundColor,
+      };
+    });
+    const primary = await token(page, "--color-primary");
+    sameColor(style.color, primary);
+    for (const border of style.borders) sameColor(border, primary);
+    for (const w of style.widths) expect(parseFloat(w)).toBeGreaterThan(0);
+    sameColor(style.fill, await token(page, "--color-surface"));
+    expect(contrast(style.color, style.fill), "button text on its fill").toBeGreaterThanOrEqual(4.5);
+  });
+}
+
+test("AC-0011: the advice sentence in the Pricing list and in the details panel is weight 400 in the advice box", async ({ page }) => {
+  await pricingWithAdvice();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/pricing");
+  const fill = await token(page, "--color-advice-fill");
+  const text = await token(page, "--color-advice-text");
+  const inList = pricingCard(page, "502").getByText(/^Cost is /);
+  await expect(inList).toHaveCount(1);
+  const listStyle = await adviceStyle(inList);
+  expect(listStyle.weight, "list sentence weight").toBe("400");
+  sameColor(listStyle.fill, fill);
+  sameColor(listStyle.color, text);
+  expect(contrast(listStyle.color, listStyle.fill)).toBeGreaterThanOrEqual(4.5);
+
+  await opensDetail(page, "502");
+  const inPanel = pricingDetail(page).region.getByText(/^Cost is /);
+  await expect(inPanel).toHaveCount(1);
+  const panelStyle = await adviceStyle(inPanel);
+  expect(panelStyle.weight, "panel sentence weight").toBe("400");
+  sameColor(panelStyle.fill, fill);
+  sameColor(panelStyle.color, text);
+});
+
+// The switch's parts as drawn: the track is the checkbox, the knob is its ::before. Colors and the knob's size
+// come from computed styles. A pseudo-element has no box to measure, so the knob's left offset inside the track
+// is its computed `left` plus its translate (the knob is absolutely positioned in the track).
+function switchParts(box: Locator) {
+  return box.evaluate((input) => {
+    const track = input as HTMLInputElement;
+    const css = getComputedStyle(track);
+    const knob = getComputedStyle(track, "::before");
+    const rect = track.getBoundingClientRect();
+    const px = (value: string) => (value === "auto" || value === "normal" ? 0 : parseFloat(value));
+    const translate = knob.translate === "none" ? 0 : parseFloat(knob.translate.split(" ")[0]!);
+    const transform = knob.transform === "none" ? 0 : new DOMMatrixReadOnly(knob.transform).m41;
+    const left = knob.position === "absolute" ? px(knob.left) + px(knob.marginLeft) : px(knob.marginLeft);
+    const edges = [css.borderTopColor, css.borderRightColor, css.borderBottomColor, css.borderLeftColor];
+    return {
+      checked: track.checked,
+      role: track.getAttribute("type"),
+      trackW: rect.width,
+      trackH: rect.height,
+      trackFill: css.backgroundColor,
+      trackEdge: edges[0]!,
+      edgeWidth: parseFloat(css.borderTopWidth),
+      radius: parseFloat(css.borderTopLeftRadius),
+      knobW: px(knob.width),
+      knobH: px(knob.height),
+      knobFill: knob.backgroundColor,
+      knobContent: knob.content,
+      knobLeft: left + translate + transform,
+      borderLeft: parseFloat(css.borderLeftWidth),
+    };
+  });
+}
+
+async function behindSwitch(box: Locator) {
+  return box.evaluate((input) => {
+    let node: HTMLElement | null = input.parentElement;
+    while (node && getComputedStyle(node).backgroundColor === "rgba(0, 0, 0, 0)") node = node.parentElement;
+    return node ? getComputedStyle(node).backgroundColor : "rgb(255, 255, 255)";
+  });
+}
+
+for (const width of [390, 1280]) {
+  test(`AC-0012, AC-0021: Menu's Sellable only is a checkbox drawn as a switch with a visible edge and knob at ${width} px`, async ({ page }) => {
+    await build();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/menu");
+    const box = page.getByRole("checkbox", { name: "Sellable only" });
+    await expect(box).toHaveCount(1);
+    await expect(box).not.toBeChecked();
+    const surface = await token(page, "--color-surface");
+    const primary = await token(page, "--color-primary");
+    const border = await token(page, "--color-field-border");
+
+    const off = await switchParts(box);
+    expect(off.knobContent, "a knob drawn by ::before").not.toBe("none");
+    expect(off.radius, "a rounded-full track").toBeGreaterThanOrEqual(off.trackH / 2);
+    expect(off.knobW, "a round knob").toBe(off.knobH);
+    expect(off.knobW).toBeGreaterThan(0);
+    expect(off.knobW).toBeLessThan(off.trackH);
+    sameColor(off.trackFill, surface);
+    sameColor(off.trackEdge, border);
+    expect(off.edgeWidth, "an edge").toBeGreaterThan(0);
+    sameColor(off.knobFill, border);
+    const behind = await behindSwitch(box);
+    expect(contrast(off.trackEdge, behind), "off: edge against what is behind").toBeGreaterThanOrEqual(3);
+    expect(contrast(off.knobFill, off.trackFill), "off: knob against the track").toBeGreaterThanOrEqual(3);
+    const offLeft = off.knobLeft;
+
+    await box.check();
+    // The knob's move is a short transition (where motion is allowed): wait until it has stopped.
+    await expect.poll(async () => (await switchParts(box)).knobLeft, "the knob's move ends").toBeGreaterThan(off.knobLeft + 20);
+    await expect.poll(async () => {
+      const first = (await switchParts(box)).knobLeft;
+      await page.waitForTimeout(150);
+      return first === (await switchParts(box)).knobLeft;
+    }).toBe(true);
+    const on = await switchParts(box);
+    expect(on.checked).toBe(true);
+    sameColor(on.trackFill, primary);
+    sameColor(on.knobFill, surface);
+    expect(contrast(on.trackFill, behind), "on: track against what is behind").toBeGreaterThanOrEqual(3);
+    expect(contrast(on.knobFill, on.trackFill), "on: knob against the track").toBeGreaterThanOrEqual(3);
+
+    // The knob sits at the track's left when off and at its right when on: measured as the knob's offset
+    // from the track's inner left edge.
+    const inner = off.trackW - 2 * off.borderLeft;
+    expect(offLeft, "off: knob at the left").toBeLessThan(inner / 2 - off.knobW / 2);
+    expect(on.knobLeft, "on: knob at the right").toBeGreaterThan(inner / 2 - on.knobW / 2);
+    expect(on.knobLeft + on.knobW, "on: knob inside the track").toBeLessThanOrEqual(inner + 0.5);
+    expect(await box.getAttribute("type")).toBe("checkbox");
+  });
+}
+
+// ---- AC-0013: no text above weight 500 on the listed surfaces ----
+
+// Every text node under `root` with its computed weight (read from its parent element), leaving out only the
+// parts AC-0013 names, matched by structure: an element with the heading role, a list's header line (an
+// aria-hidden row of column names), a table row's first column (under the header's first name), the values in
+// a stock tile or a Pricing tile, a button, and a tag (a filled, fully rounded element). Returns the text nodes
+// that render above 500, and how many it read.
+function heavyText(root: Locator) {
+  return root.evaluate((section) => {
+    const heavy: { text: string; weight: string; where: string }[] = [];
+    let read = 0;
+    const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
+    const headerOf = (row: Element) => {
+      const scope = row.closest("section, [role=region]") ?? section;
+      const rowTop = row.getBoundingClientRect().top;
+      let best: Element | null = null;
+      for (const header of scope.querySelectorAll('div[aria-hidden="true"]')) {
+        const rect = header.getBoundingClientRect();
+        if (rect.width === 0 || header.children.length < 2 || rect.bottom > rowTop + 1) continue;
+        if (!best || rect.bottom > best.getBoundingClientRect().bottom) best = header;
+      }
+      return best;
+    };
+    const describe = (el: Element) => {
+      const path: string[] = [];
+      for (let n: Element | null = el; n && n !== section && path.length < 4; n = n.parentElement) {
+        path.push(n.tagName.toLowerCase() + (n.getAttribute("role") ? `[${n.getAttribute("role")}]` : ""));
+      }
+      return path.join(" < ");
+    };
+    const exempt = (el: Element, range: Range) => {
+      for (let n: Element | null = el; n && n !== section.parentElement; n = n.parentElement) {
+        const role = n.getAttribute("role");
+        if (/^h[1-6]$/i.test(n.tagName) || role === "heading") return true;
+        if (n.tagName === "BUTTON" || role === "button") return true;
+        if (n.getAttribute("aria-hidden") === "true") return true; // a header line
+        if (n.tagName === "UL" && n.getAttribute("aria-label") === "Product counts") return true;
+        const css = getComputedStyle(n);
+        const h = n.getBoundingClientRect().height;
+        if (css.backgroundColor !== "rgba(0, 0, 0, 0)" && h > 0 && parseFloat(css.borderTopLeftRadius) >= h / 2) return true; // a tag
+        if (n.tagName === "DL" || n.tagName === "DD" || n.tagName === "DT") continue;
+        // A stock tile: a filled box in a definition list that holds a label and its value.
+        if (n.tagName === "DIV" && n.parentElement?.tagName === "DL" && css.backgroundColor !== "rgba(0, 0, 0, 0)" && !n.closest("li")) return true;
+      }
+      // A table row's first column: the row is a list item under a header line, and the text lies within the
+      // header's first name.
+      const row = el.closest("li");
+      if (row) {
+        const header = headerOf(row);
+        const first = header?.children[0];
+        if (first) {
+          const a = first.getBoundingClientRect();
+          const r = range.getBoundingClientRect();
+          const mid = (r.left + r.right) / 2;
+          if (mid >= a.left - 0.5 && mid <= a.right + 0.5) return true;
+        }
+      }
+      return false;
+    };
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      if (!node.data.trim()) continue;
+      const el = node.parentElement!;
+      const css = getComputedStyle(el);
+      if (css.display === "none" || css.visibility === "hidden") continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) continue;
+      read += 1;
+      if (parseInt(css.fontWeight, 10) <= 500) continue;
+      if (exempt(el, range)) continue;
+      heavy.push({ text: node.data.trim().slice(0, 40), weight: css.fontWeight, where: describe(el) });
+    }
+    return { heavy, read };
+  });
+}
+
+// One surface of AC-0013: where it opens, how its root is found, and the text it must at least read (so a walk
+// that found nothing cannot pass).
+async function weightState(): Promise<{ lot: string; sale: string }> {
+  const lots = await build();
+  await seedDraft({ capturedOn: "2026-10-01", words: ["FIRST receipt line of the day", "second line"] });
+  return { lot: lots.untouched, sale: lots.sales[0]! };
+}
+
+const WEIGHT_SURFACES: {
+  name: string;
+  url: (s: { lot: string; sale: string }) => string;
+  root: (page: Page) => Locator;
+  minimum: number;
+}[] = [
+  { name: "Recent receipts", url: () => "/receiving?product=RAW-TOM", root: receipts, minimum: 10 },
+  { name: "Stock and prices", url: () => "/receiving?product=RAW-TOM", root: (p) => p.getByRole("region", { name: "Stock and prices" }), minimum: 4 },
+  { name: "Recent batches", url: () => "/production?product=502", root: batches, minimum: 8 },
+  { name: "Product and raw stock", url: () => "/production?product=502", root: (p) => p.getByRole("region", { name: "Product and raw stock" }), minimum: 4 },
+  { name: "Recent sales", url: () => "/sales", root: sales, minimum: 10 },
+  { name: "the Menu list", url: () => "/menu", root: (p) => sellableSwitch(p).locator("xpath=ancestor::section[1]"), minimum: 10 },
+  { name: "the Pricing tiles", url: () => "/pricing", root: (p) => p.getByRole("list", { name: "Product counts" }), minimum: 3 },
+  { name: "the Pricing list", url: () => "/pricing", root: (p) => p.locator("section[aria-labelledby^='group-']"), minimum: 8 },
+  { name: "Drafts to confirm", url: () => "/invoices", root: (p) => p.getByRole("region", { name: "Drafts to confirm" }), minimum: 3 },
+  { name: "a lot trace", url: (s) => `/trace?lot=${encodeURIComponent(s.lot)}`, root: (p) => p.locator("section[aria-labelledby='lot-trace-heading']"), minimum: 10 },
+  { name: "a sale trace", url: (s) => `/trace?sale=${encodeURIComponent(s.sale)}`, root: (p) => p.locator("section[aria-labelledby='sale-trace-heading']"), minimum: 10 },
+  { name: "a raw lot list", url: () => "/trace?raw=RAW-TOM", root: (p) => p.locator("section[aria-labelledby='lot-list-heading']"), minimum: 6 },
+];
+
+for (const surface of WEIGHT_SURFACES) {
+  test(`AC-0013: no text in ${surface.name} renders above weight 500 at 1280 px`, async ({ page }) => {
+    const state = await weightState();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(surface.url(state));
+    const root = surface.root(page);
+    await expect(root.first()).toBeVisible();
+    const seen = { heavy: [] as { text: string; weight: string; where: string }[], read: 0 };
+    for (const one of await root.all()) {
+      const part = await heavyText(one);
+      seen.heavy.push(...part.heavy);
+      seen.read += part.read;
+    }
+    expect(seen.read, "text nodes read").toBeGreaterThanOrEqual(surface.minimum);
+    expect(seen.heavy).toEqual([]);
+  });
+}

@@ -36,6 +36,17 @@ const FIGURE_CELLS = [
   "menu-table:[&>dl>div>dd]:min-w-0 menu-table:[&>dl>div>dd]:max-w-none menu-table:[&>dl>div>dd]:shrink menu-table:[&>dl>div>dd]:text-sm menu-table:[&>dl>div>dd]:font-normal",
 ].join(" ");
 
+// The checkbox drawn as a switch, still a native checkbox with its label. The input is the track (44 px tall, so
+// the control keeps its 44 px target and its focus ring) and its ::before is the round knob: at the track's left when
+// off, moved right when on. Off: a surface track with a field-border edge and knob. On: a primary track with a
+// surface knob. The knob's move is a transform transition, only where motion is allowed.
+const SWITCH = [
+  "relative h-control w-18 shrink-0 appearance-none rounded-full border-2 border-field-border bg-surface",
+  "before:absolute before:inset-y-0 before:left-1 before:my-auto before:size-8 before:rounded-full before:bg-field-border",
+  "checked:border-primary checked:bg-primary checked:before:translate-x-7 checked:before:bg-surface",
+  "motion-safe:before:transition-transform",
+].join(" ");
+
 // The switch filters the list in the browser, with no request, and starts off on
 // every load. The database decides which products are sellable; this only filters.
 export function MenuList({ items }: { items: MenuCard[] }) {
@@ -54,7 +65,7 @@ export function MenuList({ items }: { items: MenuCard[] }) {
             type="checkbox"
             checked={sellableOnly}
             onChange={(event) => setSellableOnly(event.target.checked)}
-            className="h-control w-control"
+            className={SWITCH}
           />
           Sellable only
         </label>
@@ -89,7 +100,7 @@ export function MenuList({ items }: { items: MenuCard[] }) {
                     className={`text-xl tabular-nums break-words menu-table:text-right menu-table:text-sm ${
                       item.listPrice === null
                         ? "font-normal text-ink-secondary"
-                        : "font-bold menu-table:font-semibold"
+                        : "font-bold menu-table:font-medium"
                     }`}
                   >
                     {item.listPrice === null ? "No list price yet" : formatPricePerLb(item.listPrice)}
