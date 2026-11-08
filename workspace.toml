@@ -76,11 +76,11 @@ name = "UI polish and home screen"
 status = "active"
 
 [ini-002.work]
-queue = [
+active = [
   { path = "docs/specs/polish-tables-status/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-polish.md", revision = "26d1047", parent = "docs/product/briefs/ui-polish.md" }, summary = "Spec 1a of UI polish: status tags, IDs and dates on one line, quiet row buttons, one main button on Pricing, Menu's switch, lighter weight, Recent sales by sale date, stock tiles, and the sale trace", needs = [] },
 ]
 
 [ini-002.brief_queue]
-ready = [
-  { path = "docs/product/briefs/ui-polish.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-polish.md", revision = "c98460e" }, summary = "Ready brief for UI polish: four specs in order (1a tables and status, then 1b forms, alerts, and page space, then 2a home screen and 2b search and filters)", needs = [] },
+executing = [
+  { path = "docs/product/briefs/ui-polish.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-polish.md", revision = "c98460e" }, summary = "Executing brief for UI polish: four specs in order (1a tables and status, then 1b forms, alerts, and page space, then 2a home screen and 2b search and filters)", needs = [] },
 ]

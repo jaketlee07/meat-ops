@@ -1,7 +1,7 @@
 # Plan: polish-tables-status
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the look E pages and their suites: Receiving's Recent receipts (`src/app/receiving/recent-receipts.tsx`, its `receipt-table` variant and its "In use" mark) and `test/e2e/look-pages.spec.ts`; Recent sales and Recent batches (`src/app/sales/recent-sales.tsx`, `src/app/production/recent-batches.tsx`, `src/app/production/reverse-control.tsx`) and `test/e2e/look-floor-pages.spec.ts` with `expectTable` in `test/e2e/look-checks.ts`; the shared label-and-value list `src/app/facts.tsx`, whose `look` prop only chooses classes; the lot card's three-column facts in `src/app/trace/lot-trace.tsx` (`card-cols`, the `lot-wide` variant). Uncertainty: whether Recent receipts still reads as a table at 1280 px with 33 px taken (see Risks).
 
 > **Plan contract:** this is the implementation strategy. It may change
