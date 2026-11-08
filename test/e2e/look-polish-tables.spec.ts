@@ -3,7 +3,7 @@ import { callAsOperator, idOf, PROD_502_ID, produceCall, RAW_TOM_ID, resetTestDa
 import { addFinished, addRaw, cardFor, produce } from "./menu-page";
 import { card as pricingCard, detail as pricingDetail, opensDetail } from "./pricing-page";
 import { seedBatch } from "./production-page";
-import { lotNumberOf, seedReceipt } from "./receiving-page";
+import { factValue, lotNumberOf, seedReceipt } from "./receiving-page";
 import { fields as saleFields, saleNumbers, seedSale } from "./sales-page";
 import { OPERATOR_STATE } from "./states";
 
@@ -254,3 +254,140 @@ test("AC-0024: No list price yet is at weight 400 in the Pricing list and the Pr
   await expectRegular(pricingDetail(page).region.getByText("No list price yet", { exact: true }));
   await expectRegular(pricingCard(page, "502").getByText("No list price yet", { exact: true }));
 });
+
+// ---- Stock tiles and the sale trace ----
+
+// The two stock cards, each with where it opens, its region name, and its two tile labels. Their on-hand tile
+// reads the raw product's stock, which one receipt of RAW-TOM sets.
+const STOCK_CARDS = [
+  { name: "Stock and prices", url: "/receiving?product=RAW-TOM", onHand: "On hand", average: "Average cost" },
+  { name: "Product and raw stock", url: "/production?product=502", onHand: "Raw on hand", average: "Raw average cost" },
+] as const;
+
+// The two stock amounts AC-0014 names, each bought at $1.7520/lb.
+const STOCKS = [12345.678, 1234567.891];
+
+const STOCK_WIDTHS = [390, 1024, 1280];
+
+// The size the browser's text size is set to for the second pass, as a larger setting would.
+async function setRootSize(page: Page, size: string) {
+  await page.evaluate((value) => {
+    document.documentElement.style.fontSize = value;
+  }, size);
+}
+
+// A tile's value as laid out: the lines its text holds (distinct line tops of a Range over the text before its
+// first space, or over all of it), how far its text and its box reach against the tile, and whether the value's
+// own content is cut (scroll width against client width).
+function tileMeasure(value: Locator, whole: boolean) {
+  return value.evaluate((node, all) => {
+    const text = node.firstChild as Text;
+    const end = all ? text.length : text.data.indexOf(" ") === -1 ? text.length : text.data.indexOf(" ");
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, end);
+    const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
+    const tops = new Set(rects.map((rect) => Math.round(rect.top)));
+    const tile = node.parentElement!.getBoundingClientRect();
+    const box = node.getBoundingClientRect();
+    const textRight = Math.max(...rects.map((rect) => rect.right));
+    const textLeft = Math.min(...rects.map((rect) => rect.left));
+    return {
+      lines: tops.size,
+      textInside: textLeft >= tile.left - 0.5 && textRight <= tile.right + 0.5,
+      boxInside: box.left >= tile.left - 0.5 && box.right <= tile.right + 0.5,
+      uncut: node.scrollWidth <= node.clientWidth,
+      tileUncut: node.parentElement!.scrollWidth <= node.parentElement!.clientWidth,
+      width: Math.round(tile.width),
+      top: Math.round(tile.top),
+    };
+  }, whole);
+}
+
+for (const card of STOCK_CARDS) {
+  for (const lbs of STOCKS) {
+    test(`AC-0014: ${card.name} keeps each tile number on one line inside its tile with ${lbs} lbs on hand`, async ({ page }) => {
+      await seedReceipt(lbs, 1.752, "2026-10-01");
+      for (const size of ["", "20px"]) {
+        for (const width of STOCK_WIDTHS) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.goto(card.url);
+          const region = page.getByRole("region", { name: card.name });
+          await expect(region).toBeVisible();
+          await setRootSize(page, size);
+          for (const label of [card.onHand, card.average]) {
+            const value = factValue(region, label);
+            await expect(value).toHaveCount(1);
+            const seen = await tileMeasure(value, false);
+            const where = `${card.name}, ${label}, ${width} px, text ${size || "default"}`;
+            expect(seen.lines, `${where}: one line box`).toBe(1);
+            expect(seen.textInside, `${where}: the number ends inside its tile`).toBe(true);
+            expect(seen.boxInside, `${where}: the value's box ends inside its tile`).toBe(true);
+            expect(seen.uncut, `${where}: the value is not cut`).toBe(true);
+            expect(seen.tileUncut, `${where}: the tile is not cut`).toBe(true);
+          }
+        }
+      }
+    });
+  }
+
+  test(`AC-0022: ${card.name} keeps 12,345.678 lbs on one line with its unit`, async ({ page }) => {
+    await seedReceipt(12345.678, 1.752, "2026-10-01");
+    for (const width of STOCK_WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(card.url);
+      const region = page.getByRole("region", { name: card.name });
+      const value = factValue(region, card.onHand);
+      await expect(value).toHaveText("12,345.678 lbs");
+      const seen = await tileMeasure(value, true);
+      expect(seen.lines, `${width} px: the number and its unit share a line`).toBe(1);
+      expect(seen.uncut, `${width} px: not cut`).toBe(true);
+    }
+  });
+}
+
+// Two batches of 502 and one sale that draws from both, so the sale trace holds a batch card for each and
+// raw lot blocks inside them. Returns the sale's number.
+async function sellFromTwoBatches(): Promise<string> {
+  await seedReceipt(1500, 1.68, "2026-10-01");
+  await seedReceipt(1500, 1.8, "2026-10-02");
+  await seedBatch(1000, "2026-10-03", 800);
+  await seedBatch(1000, "2026-10-04", 800);
+  await seedSale(1200, "2026-10-05");
+  return (await saleNumbers())[0]!;
+}
+
+for (const width of [1280, 1920]) {
+  test(`AC-0015: a sale trace puts every label directly above its value at ${width} px`, async ({ page }) => {
+    const number = await sellFromTwoBatches();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/trace?sale=${number}`);
+    const result = page.locator("section[aria-labelledby='sale-trace-heading']");
+    await expect(result).toBeVisible();
+    // The sale's card, two batch cards, and at least one raw lot block in each batch.
+    const lists = result.locator("dl");
+    expect(await lists.count()).toBeGreaterThanOrEqual(1 + 2 + 2);
+    const rows = await lists.evaluateAll((dls) =>
+      dls.flatMap((dl) =>
+        [...dl.children].map((row) => {
+          const label = row.querySelector("dt")!;
+          const value = row.querySelector("dd")!;
+          const a = label.getBoundingClientRect();
+          const b = value.getBoundingClientRect();
+          return {
+            text: label.textContent,
+            gap: b.top - a.bottom,
+            offset: Math.abs(a.left - b.left),
+            uncut: value.scrollWidth <= value.clientWidth,
+          };
+        }),
+      ),
+    );
+    expect(rows.length).toBeGreaterThanOrEqual(5 + 2 * 2 + 2 * 5);
+    for (const row of rows) {
+      expect(row.gap, `${row.text}: label bottom at or above value top`).toBeGreaterThanOrEqual(-0.5);
+      expect(row.offset, `${row.text}: left edges within 1 px`).toBeLessThanOrEqual(1);
+      expect(row.uncut, `${row.text}: value not cut`).toBe(true);
+    }
+  });
+}

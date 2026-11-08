@@ -41,3 +41,11 @@ The spec's Assumptions record each of these as a Product or Process line:
 - Bundled fix (owner-approved 2026-11-08): `test/look-tidy.test.ts`'s AC-0022 check found the "In use" mark's fill by reading a `p` in `recent-receipts.tsx`; it now confirms "In use" is a `StatusTag` and reads the fill token from `status-tag.tsx`. What it asserts is unchanged.
 - Slot fix before the full run: 0 dead `pg_class` rows after (slot age 13,694 before).
 - `npm test`: Vitest 55 files, 1052 passed in 134 s; Playwright 1007 passed in 14.3 min.
+
+## T3 (2026-11-08)
+
+- `Facts`' `tiles` look is a flex wrap: each value is `whitespace-nowrap`, and the second tile drops under the first only when both values do not fit side by side. The plan's design named a container variant for the stacking; a 26rem `tile-pair` variant failed `look-floor-pages.spec.ts` AC-0004's "two tiles side by side" checks at 390x844 and 1280x720, since one fixed width cannot tell small stock that fits side by side from 12,345.678 lbs that must stay on one line, so the wrap replaces it (the plan's Design is working material; its Touches, Tests, and Done when hold). With 12,345.678 lbs and 1,234,567.891 lbs, the tiles stack at 390 px with 20 px text on Receiving and at 1280 px on Production; small stock stays side by side at every AC-0014 size with default text.
+- The sale trace's `card` and `plain` looks, restyled in place and still classes-only: each pair a column, label above value, two pairs to a row, and every pair in its own column from the new `sale-cols` variant (`@container tracesale (min-width: 40rem)`, about 936 px of window at the default text size). `card` keeps `CARD_BOTTOM`; `plain` draws no card edge; `list`, `cells`, and `card-cols` keep their classes.
+- On the old tree, all four AC-0014 tests failed (a tile number split at 20 px text at 390 and 1024 px, and at 1280 px) and both AC-0015 tests failed (each label sat beside its value, 24 px short of above it). AC-0022, exempt from red-first, passed on the old tree for "Stock and prices" and failed for "Product and raw stock" at 1280 px.
+- Slot fix before the full run: 175,500 dead `pg_class` rows and slot age 19,878 before, 0 and 8 after.
+- `npm test`: Vitest 55 files, 1052 passed in 52 s; Playwright 1015 passed in 13.3 min. No existing test file changed.

@@ -203,6 +203,17 @@
   }
 }
 
+/* A sale trace's facts (the sale's card, each batch card, each raw lot block) put every pair in its own column,
+   label above value, where the sale trace's section is at least 40rem wide (five columns of about 6rem, with the
+   1.5rem gaps and the blocks' padding); narrower, two pairs to a row. The section is the container named
+   tracesale. In rem, no screen gate, so a larger text size goes back to two to a row until the section fits;
+   at the default size the section is the viewport less 296 px, so five columns from about 936 px. */
+@custom-variant sale-cols {
+  @container tracesale (min-width: 40rem) {
+    @slot;
+  }
+}
+
 /* Trace's "Sales from this lot" reads as a table only when its own wrapper is wide enough for a row:
    fixed tracks, gaps, and padding (about 31rem) plus a customer column that holds a short name (about
    3.75rem). The wrapper is the container named tracesales. In rem, no screen gate. */

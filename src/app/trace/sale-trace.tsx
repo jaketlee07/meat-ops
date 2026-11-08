@@ -15,7 +15,7 @@ export function SaleTraceView({ number, trace }: { number: string; trace: SaleTr
   if (!trace) return <p tabIndex={-1} data-result-focus className="break-words text-base">{`No sale has number ${number}.`}</p>;
   const { sale, lots } = trace;
   return (
-    <section aria-labelledby="sale-trace-heading" className={CARD_SECTION}>
+    <section aria-labelledby="sale-trace-heading" className={`@container/tracesale ${CARD_SECTION}`}>
       <h2 id="sale-trace-heading" tabIndex={-1} data-result-focus className={CARD_TOP}>
         {sale.saleNumber}
       </h2>
