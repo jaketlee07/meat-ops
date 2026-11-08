@@ -77,5 +77,5 @@ status = "active"
 
 [ini-002.brief_queue]
 ready = [
-  { path = "docs/product/briefs/ui-polish.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-polish.md", revision = "b28cf13" }, summary = "Ready brief for UI polish: four specs in order (1a tables and status, then 1b forms, alerts, and page space, then 2a home screen and 2b search and filters)", needs = [] },
+  { path = "docs/product/briefs/ui-polish.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-polish.md", revision = "c98460e" }, summary = "Ready brief for UI polish: four specs in order (1a tables and status, then 1b forms, alerts, and page space, then 2a home screen and 2b search and filters)", needs = [] },
 ]
