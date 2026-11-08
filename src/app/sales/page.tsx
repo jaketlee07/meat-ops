@@ -5,6 +5,7 @@ import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
 import { FORM_COLUMN_GRID } from "../form-column-grid";
 import { PageShell } from "../page-header";
+import { orderRecentSales } from "./recent-order";
 import { RecentSales } from "./recent-sales";
 import { SaleForm } from "./sale-form";
 import { VoidedSalesProvider } from "./voided-sales";
@@ -36,7 +37,7 @@ export default async function SalesPage() {
     <PageShell title="Sales" current="sales" fullWidth mainClassName={MAIN_GRID}>
       <VoidedSalesProvider>
         <SaleForm products={products} customers={customers} />
-        <RecentSales {...recent} />
+        <RecentSales sales={orderRecentSales(recent.sales)} total={recent.total} />
       </VoidedSalesProvider>
     </PageShell>
   );

@@ -968,9 +968,10 @@ test.describe("recent sales", () => {
     const f = await openForm(page);
     const items = f.recent.getByRole("listitem");
     await expect(items).toHaveCount(10);
-    await expect(items.getByRole("heading")).toHaveText(numbers.slice(2).reverse());
+    // The 10 last entered, by sale date newest first, then last entered first within a date.
+    await expect(items.getByRole("heading")).toHaveText([7, 3, 10, 5, 9, 6, 4, 8, 2, 11].map((i) => numbers[i] ?? ""));
     await expect(f.recent.getByText("Showing the 10 most recent of 12 sales.", { exact: true })).toBeVisible();
-    await expect(factValue(items.first(), "Sale date")).toHaveText("Oct 6, 2026");
+    await expect(factValue(items.last(), "Sale date")).toHaveText("Oct 6, 2026");
 
     // AC-0076: a saved sale joins the top of the list, and the count follows.
     await fillSale(f, { lbs: "20", date: "2026-10-08" });
@@ -978,7 +979,8 @@ test.describe("recent sales", () => {
     await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toBeVisible();
     const saved = await factValue(f.result, "Sale number").textContent();
     await expect(f.recent.getByText("Showing the 10 most recent of 13 sales.", { exact: true })).toBeVisible();
-    await expect(items.first().getByRole("heading")).toHaveText(saved ?? "");
+    // Dated Oct 8 and the last entered, it sits first among the Oct 8 sales, after the six later-dated ones.
+    await expect(items.nth(6).getByRole("heading")).toHaveText(saved ?? "");
   });
 
   test("AC-0074: with 10 sales there is no count line", async ({ page }) => {
@@ -989,14 +991,14 @@ test.describe("recent sales", () => {
     await expect(f.recent.getByText(/^Showing the/)).toHaveCount(0);
   });
 
-  test("AC-0071: the sales run last entered first, whatever their dates", async ({ page }) => {
+  test("AC-0071: the sales run by sale date, newest first, whatever their entry order", async ({ page }) => {
     await fixtureWithPrice();
     for (const date of ["2026-10-09", "2026-10-07", "2026-10-11"]) await seedSale(10, date);
     const numbers = await saleNumbers();
     const f = await openForm(page);
     const items = f.recent.getByRole("listitem");
-    await expect(items.getByRole("heading")).toHaveText([...numbers].reverse());
-    await expect(factValue(items, "Sale date")).toHaveText(["Oct 11, 2026", "Oct 7, 2026", "Oct 9, 2026"]);
+    await expect(items.getByRole("heading")).toHaveText([numbers[2] ?? "", numbers[0] ?? "", numbers[1] ?? ""]);
+    await expect(factValue(items, "Sale date")).toHaveText(["Oct 11, 2026", "Oct 9, 2026", "Oct 7, 2026"]);
   });
 
   test("AC-0072 and AC-0073: each sale shows its figures and links to its trace", async ({ page }) => {

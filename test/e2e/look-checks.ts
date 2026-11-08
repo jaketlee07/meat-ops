@@ -78,6 +78,9 @@ export type RowList = {
   figures: string[];
   numbered: boolean;
   numeric: string[];
+  // True where the row's number cell sits under its first figure in one stacked first column (Recent sales:
+  // the sale number under the sale date); the header line then has no column of its own for the number.
+  stacked?: boolean;
 };
 
 // Each row's number cell (a link or a heading) and its figures' values.
@@ -102,14 +105,26 @@ export async function expectTable(list: RowList, rows: number) {
     const heading = list.numbered ? [await box(numberCell(row))] : [];
     const cells = await boxes(values(row.locator(":scope > dl")));
     expect(cells).toHaveLength(list.figures.length);
-    // The sale number is a 44 px link, so each cell's middle, not its top, lines up.
-    const middles = [...heading, ...cells].map((cell) => cell.y + cell.height / 2);
-    expect(Math.max(...middles) - Math.min(...middles), "one line").toBeLessThanOrEqual(6);
-    if (heading[0]) expect(Math.abs(heading[0].x - columns[0]!.x), "number left").toBeLessThanOrEqual(1);
-    cells.forEach((cell, index) => {
-      expect(Math.abs(cell.x - columns[index + first]!.x), `column ${index + first} left`).toBeLessThanOrEqual(1);
-      expect(Math.abs(cell.width - columns[index + first]!.width), `column ${index + first} width`).toBeLessThanOrEqual(1);
-    });
+    if (list.stacked) {
+      // The number cell is under the first figure, in the first column; the figures share the first line.
+      const tops = cells.map((cell) => cell.y);
+      expect(Math.max(...tops) - Math.min(...tops), "one line").toBeLessThanOrEqual(6);
+      expect(heading[0]!.y, "the number under the first figure").toBeGreaterThanOrEqual(cells[0]!.y + cells[0]!.height - 1);
+      expect(Math.abs(heading[0]!.x - columns[0]!.x), "number left").toBeLessThanOrEqual(1);
+      cells.forEach((cell, index) => {
+        expect(Math.abs(cell.x - columns[index]!.x), `column ${index} left`).toBeLessThanOrEqual(1);
+        expect(Math.abs(cell.width - columns[index]!.width), `column ${index} width`).toBeLessThanOrEqual(1);
+      });
+    } else {
+      // The sale number is a 44 px link, so each cell's middle, not its top, lines up.
+      const middles = [...heading, ...cells].map((cell) => cell.y + cell.height / 2);
+      expect(Math.max(...middles) - Math.min(...middles), "one line").toBeLessThanOrEqual(6);
+      if (heading[0]) expect(Math.abs(heading[0].x - columns[0]!.x), "number left").toBeLessThanOrEqual(1);
+      cells.forEach((cell, index) => {
+        expect(Math.abs(cell.x - columns[index + first]!.x), `column ${index + first} left`).toBeLessThanOrEqual(1);
+        expect(Math.abs(cell.width - columns[index + first]!.width), `column ${index + first} width`).toBeLessThanOrEqual(1);
+      });
+    }
     for (const label of await boxes(row.locator(":scope > dl dt"))) expect(label.width).toBeLessThanOrEqual(1);
     expect(await row.locator(":scope > dl dt").allTextContents()).toEqual(list.figures);
   }

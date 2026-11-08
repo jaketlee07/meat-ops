@@ -526,6 +526,10 @@ test.describe("the product details beside the list", () => {
 // ---- Receiving: /receiving?product=RAW-TOM with three receipts, one of them void ----
 
 const RECEIPT_FIGURES = ["Lot number", "Received", "Vendor", "Weight", "Cost per lb", "Remaining"];
+// The table's header line: the Received date stacked over the lot number is one first column; each figure
+// below sits in the column this names (the lot number in the first column too).
+const RECEIPT_COLUMNS = ["Received", "Vendor", "Weight", "Cost per lb", "Remaining"];
+const RECEIPT_COLUMN_OF = [0, 0, 1, 2, 3, 4];
 
 // Three receipts of RAW-TOM, the middle one voided through the page. Returns nothing:
 // the page is left open on /receiving?product=RAW-TOM at the given size.
@@ -638,7 +642,7 @@ test.describe("the Receiving layout", () => {
       const header = recent.locator("div[aria-hidden='true']");
       await expect(header).toBeVisible();
       const names = (await header.locator("span").allTextContents()).map((text) => text.trim());
-      expect(names).toEqual([...RECEIPT_FIGURES, ""]);
+      expect(names).toEqual([...RECEIPT_COLUMNS, ""]);
       const columns = await boxes(header.locator("span"));
 
       const rows = await recent.locator("li").all();
@@ -646,13 +650,16 @@ test.describe("the Receiving layout", () => {
       for (const row of rows) {
         const cells = await boxes(values(row));
         expect(cells).toHaveLength(6);
-        // The six figures of every receipt, the long rows included, start at one top.
-        const tops = cells.map((cell) => cell.y);
+        // The date and the four figures of every receipt, the long rows included, start at one top; the lot
+        // number sits under the date.
+        const tops = cells.filter((_, index) => index !== 0).map((cell) => cell.y);
         expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
+        expect(cells[0]!.y, "the lot number under the date").toBeGreaterThanOrEqual(cells[1]!.y + cells[1]!.height - 1);
         // Each figure sits in the column the header line names.
         cells.forEach((cell, index) => {
-          expect(Math.abs(cell.x - columns[index]!.x), `column ${index} left`).toBeLessThanOrEqual(1);
-          expect(Math.abs(cell.width - columns[index]!.width), `column ${index} width`).toBeLessThanOrEqual(1);
+          const column = columns[RECEIPT_COLUMN_OF[index]!]!;
+          expect(Math.abs(cell.x - column.x), `column ${index} left`).toBeLessThanOrEqual(1);
+          expect(Math.abs(cell.width - column.width), `column ${index} width`).toBeLessThanOrEqual(1);
         });
         // The labels are hidden visually here: the header line names the columns.
         for (const label of await boxes(row.locator("dt"))) expect(label.width).toBeLessThanOrEqual(1);
@@ -798,8 +805,9 @@ test.describe("the Receiving layout", () => {
     await withTextSize(1920, 1080, 20);
     await expect(header, "the table is back once the section is wide enough").toBeVisible();
     for (const row of await recent.locator("li").all()) {
-      const tops = (await boxes(values(row))).map((cell) => cell.y);
-      expect(tops).toHaveLength(6);
+      const cells = await boxes(values(row));
+      expect(cells).toHaveLength(6);
+      const tops = cells.filter((_, index) => index !== 0).map((cell) => cell.y);
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(4);
       for (const label of await boxes(row.locator("dt"))) expect(label.width).toBeLessThanOrEqual(1);
     }

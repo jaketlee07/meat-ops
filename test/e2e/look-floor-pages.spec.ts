@@ -298,9 +298,10 @@ function saleList(page: Page): RowList {
   return {
     items: recent.locator(":scope > div > ul > li"),
     header: recent.locator("div[aria-hidden='true']"),
-    names: ["Sale number", ...SALE_FIGURES, ""],
+    names: [...SALE_FIGURES, ""],
     figures: SALE_FIGURES,
     numbered: true,
+    stacked: true,
     numeric: ["Lbs", "Price per lb"],
   };
 }

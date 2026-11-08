@@ -391,3 +391,151 @@ for (const width of [1280, 1920]) {
     }
   });
 }
+
+// ---- Recent receipts and Recent sales ----
+
+// One value shows whole: its text lies on a single line (a Range over the text holds one line top and is no
+// taller than one line box) and does not run past its cell (scroll width against client width, on the node and
+// on the cell that holds it).
+function oneLine(value: Locator) {
+  return value.evaluate((node) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
+    const lineBox = parseFloat(getComputedStyle(node).lineHeight);
+    const cell = node.parentElement!;
+    return {
+      text: node.textContent ?? "",
+      lines: new Set(rects.map((rect) => Math.round(rect.top))).size,
+      height: range.getBoundingClientRect().height,
+      lineBox,
+      uncut: node.scrollWidth <= node.clientWidth && cell.scrollWidth <= cell.clientWidth,
+    };
+  });
+}
+
+function expectWhole(seen: Awaited<ReturnType<typeof oneLine>>, expected: string) {
+  expect(seen.text, "the value read").toBe(expected);
+  expect(seen.lineBox, "a line box in px").toBeGreaterThan(0);
+  expect(seen.lines, `${expected}: one line`).toBe(1);
+  expect(seen.height, `${expected}: no taller than one line box`).toBeLessThanOrEqual(seen.lineBox + 1);
+  expect(seen.uncut, `${expected}: not past its cell`).toBe(true);
+}
+
+for (const width of WIDTHS) {
+  test(`AC-0006: every lot number and Received date, sale number and sale date shows whole on one line at ${width} px`, async ({ page }) => {
+    const lots = await build();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/receiving?product=RAW-TOM");
+    await expect(receipts(page).locator("div[aria-hidden='true']").first()).toBeVisible();
+    for (const lot of [lots.inUse, lots.untouched, lots.voided]) {
+      const item = receipts(page).locator("ul > li").filter({ hasText: lot });
+      await expect(item).toHaveCount(1);
+      expectWhole(await oneLine(item.locator("dd").nth(0)), lot);
+      expectWhole(await oneLine(item.locator("dd").nth(1)), await item.locator("dd").nth(1).innerText());
+    }
+    await page.goto("/sales");
+    await expect(sales(page).locator("div[aria-hidden='true']").first()).toBeVisible();
+    for (const number of lots.sales) {
+      const item = sales(page).locator("ul > li").filter({ has: page.getByRole("link", { name: number, exact: true }) });
+      await expect(item).toHaveCount(1);
+      expectWhole(await oneLine(item.getByRole("link", { name: number, exact: true })), number);
+      expectWhole(await oneLine(item.locator("dd").nth(0)), await item.locator("dd").nth(0).innerText());
+    }
+  });
+
+  test(`AC-0007: Void and Correct, and In use and Correct, sit side by side with their tops level at ${width} px`, async ({ page }) => {
+    const lots = await build();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/receiving?product=RAW-TOM");
+    await expect(receipts(page).locator("div[aria-hidden='true']").first()).toBeVisible();
+    const untouched = receipts(page).locator("ul > li").filter({ hasText: lots.untouched });
+    const first = await untouched.getByRole("button", { name: `Void lot ${lots.untouched}`, exact: true }).boundingBox();
+    const second = await untouched.getByRole("button", { name: `Correct lot ${lots.untouched}`, exact: true }).boundingBox();
+    expect(Math.abs(first!.y - second!.y), "Void and Correct tops").toBeLessThanOrEqual(1);
+    expect(first!.x + first!.width, "Void left of Correct").toBeLessThanOrEqual(second!.x + 1);
+
+    const inUse = receipts(page).locator("ul > li").filter({ hasText: lots.inUse });
+    const tag = inUse.getByText("In use", { exact: true });
+    // The tag's own cell is as tall as a button, so its top is the tag's top; the pill sits in its middle.
+    const cell = await tag.locator("..").boundingBox();
+    const pill = await tag.boundingBox();
+    const correct = await inUse.getByRole("button", { name: `Correct lot ${lots.inUse}`, exact: true }).boundingBox();
+    expect(Math.abs(cell!.y - correct!.y), "In use cell and Correct tops").toBeLessThanOrEqual(1);
+    expect(Math.abs(pill!.y + pill!.height / 2 - (correct!.y + correct!.height / 2)), "In use and Correct middles").toBeLessThanOrEqual(1);
+    expect(pill!.x + pill!.width, "In use left of Correct").toBeLessThanOrEqual(correct!.x + 1);
+  });
+
+  test(`AC-0008: no row's own Void button takes the error color at ${width} px`, async ({ page }) => {
+    const lots = await build();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/sales");
+    const error = await token(page, "--color-error");
+    const ink = await token(page, "--color-ink");
+    const surface = await token(page, "--color-surface");
+    const border = await token(page, "--color-field-border");
+    const lotNames = [`Void lot ${lots.untouched}`];
+    const saleNames = lots.sales.map((number) => `Void sale ${number}`);
+    for (const [url, names] of [["/receiving?product=RAW-TOM", lotNames], ["/sales", saleNames]] as const) {
+      await page.goto(url);
+      let seen = 0;
+      for (const name of names) {
+        const button = page.getByRole("button", { name, exact: true });
+        if ((await button.count()) === 0) continue; // the voided sale has no Void button
+        seen += 1;
+        const style = await button.evaluate((node) => {
+          const css = getComputedStyle(node);
+          return {
+            color: css.color,
+            borders: [css.borderTopColor, css.borderRightColor, css.borderBottomColor, css.borderLeftColor],
+            fill: css.backgroundColor,
+            height: node.getBoundingClientRect().height,
+            padding: [css.paddingLeft, css.paddingRight],
+          };
+        });
+        expect(style.color, `${name} text`).not.toBe(error);
+        expect(style.borders, `${name} border`).not.toContain(error);
+        expect(style.fill, `${name} fill`).not.toBe(error);
+        // The quiet look: ink on the surface with the field border, 44 px tall, px-3.
+        expect(style.color).toBe(ink);
+        expect(style.borders).toEqual([border, border, border, border]);
+        expect(style.fill).toBe(surface);
+        expect(style.height).toBe(44);
+        expect(style.padding).toEqual(["12px", "12px"]);
+      }
+      expect(seen, `Void buttons read on ${url}`).toBeGreaterThan(0);
+    }
+  });
+}
+
+// Three sales of 502 entered out of sale-date order, two on one date: entry order is A, B, C; the sale dates
+// are A and C on 10 Oct and B on 12 Oct, so the list reads B, then C (entered after A on the same date), then A.
+test("AC-0009: Recent sales lists by sale date, newest first, and by entry time within one date", async ({ page }) => {
+  await seedReceipt(5000, 1.68, "2026-09-30");
+  await seedBatch(2000, "2026-10-01");
+  await seedSale(100, "2026-10-10");
+  await seedSale(100, "2026-10-12");
+  await seedSale(100, "2026-10-10");
+  const [a, b, c] = await saleNumbers();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/sales");
+  const shown = await sales(page).locator("ul > li").getByRole("link").allTextContents();
+  expect(shown).toEqual([b, c, a]);
+});
+
+// 11 sales of 502, the first entered carrying the newest sale date: the 10 last-entered show, so it does not.
+test("AC-0020: with 11 sales Recent sales shows the 10 most recently entered", async ({ page }) => {
+  await seedReceipt(5000, 1.68, "2026-09-30");
+  await seedBatch(2000, "2026-10-01");
+  await seedSale(10, "2026-10-30");
+  for (let day = 1; day <= 10; day += 1) await seedSale(10, `2026-10-${String(day).padStart(2, "0")}`);
+  const numbers = await saleNumbers();
+  expect(numbers).toHaveLength(11);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/sales");
+  const shown = await sales(page).locator("ul > li").getByRole("link").allTextContents();
+  expect(shown).toHaveLength(10);
+  expect(shown).not.toContain(numbers[0]);
+  expect([...shown].sort()).toEqual(numbers.slice(1).sort());
+  await expect(sales(page).getByText("Showing the 10 most recent of 11 sales.", { exact: true })).toBeVisible();
+});

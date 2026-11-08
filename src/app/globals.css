@@ -52,11 +52,13 @@
 @custom-variant wide (@media (min-width: 1280px));
 
 /* Recent receipts read as a table only when the screen is wide and the section itself is wide
-   enough for the row's fixed tracks (about 35.75rem of columns, gaps, and padding) plus a vendor
-   column that holds a ten-letter word (about 4.75rem). The section is the container named
-   receipts. The width is in rem, so a larger browser text size keeps the receipts as cards until
-   the section has grown to fit; at the default size the section is about 43rem wide at 1280 px
-   (about 41rem with a 17 px scrollbar and 16 px to spare) and the table shows. */
+   enough for the row's fixed tracks (about 38.5rem: a 9rem first column that stacks the date over the
+   lot number, three figure columns of about 5.3rem, a 9.8rem actions column that holds "In use" and
+   Correct side by side, five gaps, and 2rem of padding) plus a vendor column. The section is the
+   container named receipts. The width is in rem, so a larger browser text size keeps the receipts as
+   cards until the section has grown to fit; at the default size the section is about 43rem wide at
+   1280 px (about 41rem with a 17 px scrollbar and 16 px to spare), where the vendor column is about
+   4.4rem and holds a ten-letter word at 43rem but not at 41rem, and the table shows. */
 @custom-variant receipt-table {
   @media (min-width: 1280px) {
     @container receipts (min-width: 40.5rem) {
@@ -90,8 +92,9 @@
 }
 
 /* Sales' Recent sales read as a table only when the section itself is wide enough for a row: fixed
-   tracks, gaps, and padding (about 36.25rem) plus a customer column that holds a short name (about
-   3.75rem). The section is the container named sales. The width is in rem, so a larger browser text
+   tracks, gaps, and padding (about 32.6rem, with a 9rem first column that stacks the sale date over
+   the sale number) plus a customer column that holds a short name (about 7rem). The section is the container
+   named sales. The width is in rem, so a larger browser text
    size keeps the cards until the section has grown to fit. It sits in the same right column as Recent
    batches (form-column-grid.ts): about 23rem wide at 1024 px, 39rem at 1279 px (under this threshold), and
    about 43rem from 1280 px, so at the default size the table shows from 1280 px. It has no screen gate. */
