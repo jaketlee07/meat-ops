@@ -87,7 +87,7 @@ None.
 
 | Spec | Status |
 | --- | --- |
-| `polish-tables-status` | Draft |
+| `polish-tables-status` | Approved |
 
 ## Source
 
