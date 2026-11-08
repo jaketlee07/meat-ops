@@ -12,7 +12,7 @@
 Anyone who sees a Meat Ops screen (the business owner, floor staff, customers, vendors, and inspectors) takes it for a finished business tool they can trust. Right after signing in, the business owner knows where the business stands today, and can find any past receipt, sale, or product fast. Every screen keeps what it does today, and every figure it shows stays the same; Part 2 adds the home screen and search.
 
 - **Input (steerable):** the number of gaps from the 2026-11-08 comparison still on the screens (the Boundary lists them; none left when done), and the number of pages the business owner opens to learn today's open alerts, low stock, and the day's receipts, batches, and sales (today at least three, since Receiving and Production list recent entries per product only; one when done).
-- **Outcome (lagging):** shown the finished screens beside the 2026-11-08 comparison, the business owner calls Meat Ops finished and would show any screen to a customer, vendor, or inspector. The proof fails if the business owner names a screen they would not show someone, or if a gap from the Boundary is still visible.
+- **Outcome (lagging):** shown the finished screens beside the 2026-11-08 comparison, the owner calls Meat Ops finished and would show any screen to the business owner, a customer, a vendor, or an inspector. The proof fails if the owner names a screen they would not show someone, or if a gap from the Boundary is still visible. The owner (the developer) makes this call, and the business owner gives no input to this work.
 - **Guardrail:** floor entry stays as quick and hard to mistype. Receiving, Production, and Sales keep their fields, Tab order, and 44 px controls, and saving a receipt, batch, or sale takes no more presses than today. Every figure still comes from the database through `src/lib/format.ts`, and the browser suite's contrast, axe, and focus checks and the golden costing suite stay green.
 
 ## Opportunity
@@ -77,7 +77,7 @@ Limits on both parts.
 
 ## Assumptions
 
-- Riskiest: the business owner judges "professional" by what the 2026-11-08 comparison found (status tags, calm tables, one main button, a home screen), not by something it missed, such as a logo, a web font, or charts. Showing the business owner the comparison page, or the polished Receiving and Sales screens before the rest, would test it.
+- Riskiest: what the 2026-11-08 comparison found (status tags, calm tables, one main button, a home screen) is what makes Meat Ops look professional, not something it missed, such as a logo, a web font, or charts. On 2026-11-08 the owner reviewed the comparison page and judged it right. The finished screens, shown beside the comparison, test it again.
 - Restyling tables and forms keeps floor entry as quick and hard to mistype. A More button adds one press before Void and Correct.
 - The home screen's figures come from existing views, or from new views that follow the engine rule, with no new costing math.
 - **Knowledge surface:** the in-repo doc set: `SYSTEM-SPEC.md` (§3 users and jobs, §11 boundaries), `docs/architecture/overview.md` (screen rules and look notes), and `workspace.toml` with the open intents in `docs/product/intents/` (in-flight work). No internal retrieval tool was detected. The product comparison used public web pages, which are not an internal surface.
