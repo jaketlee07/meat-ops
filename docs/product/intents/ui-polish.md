@@ -1,4 +1,4 @@
-# Meat Ops looks finished to anyone who sees it, and the owner sees the day at a glance
+# Meat Ops looks finished to anyone who sees it, and the business owner sees the day at a glance
 
 - **Status:** Accepted
 - **Slug:** `ui-polish`
@@ -9,9 +9,9 @@
 
 ## Outcome
 
-Anyone who sees a Meat Ops screen (the business owner, floor staff, customers, vendors, and inspectors) takes it for a finished business tool they can trust. Right after signing in, the owner knows where the business stands today, and can find any past receipt, sale, or product fast. What each screen does, and every figure it shows, stays the same.
+Anyone who sees a Meat Ops screen (the business owner, floor staff, customers, vendors, and inspectors) takes it for a finished business tool they can trust. Right after signing in, the business owner knows where the business stands today, and can find any past receipt, sale, or product fast. What each screen does, and every figure it shows, stays the same.
 
-- **Input (steerable):** the number of gaps from the 2026-11-08 comparison still on the screens (the Boundary lists them; none left when done), and the number of pages the owner opens to learn today's open alerts, low stock, and the day's receipts, batches, and sales (today at least three, since Receiving and Production list recent entries per product only; one when done).
+- **Input (steerable):** the number of gaps from the 2026-11-08 comparison still on the screens (the Boundary lists them; none left when done), and the number of pages the business owner opens to learn today's open alerts, low stock, and the day's receipts, batches, and sales (today at least three, since Receiving and Production list recent entries per product only; one when done).
 - **Outcome (lagging):** shown the finished screens beside the 2026-11-08 comparison, the business owner calls Meat Ops finished and would show any screen to a customer, vendor, or inspector. The proof fails if the business owner names a screen they would not show someone, or if a gap from the Boundary is still visible.
 - **Guardrail:** floor entry stays as quick and hard to mistype. Receiving, Production, and Sales keep their fields, Tab order, and 44 px controls, and saving a receipt, batch, or sale takes no more presses than today. Every figure still comes from the database through `src/lib/format.ts`, and the browser suite's contrast, axe, and focus checks and the golden costing suite stay green.
 
@@ -22,7 +22,7 @@ The business owner wants to run the day from one place, trust what the screens s
 - **Functional job:** know where the business stands today and act on it (what came in, what was made and sold, what needs a price or an order), and find a past receipt, sale, or product fast.
 - **Emotional job:** feel in control and sure the numbers are right, never unsure whether a screen is broken or half-finished.
 - **Social job:** be seen as a professional, well-run processor by everyone who sees a screen: floor staff, customers, vendors, and inspectors. The owner set this audience on 2026-11-08 ("professional for all").
-- **Struggling moment:** right after sign-in the owner lands on a mostly blank Receiving form under a red banner, and has to open Alerts, Sales, and each product's Receiving and Production pages to piece the day together. When showing a sale or lot to someone else, IDs broken across lines, stacked buttons, and four-line red notes make the business look unfinished.
+- **Struggling moment:** right after sign-in the business owner lands on a mostly blank Receiving form under a red banner, and has to open Alerts, Sales, and each product's Receiving and Production pages to piece the day together. When showing a sale or lot to someone else, IDs broken across lines, stacked buttons, and four-line red notes make the business look unfinished.
 
 ## Boundary
 
@@ -39,7 +39,7 @@ Part 1, the polish pass on look E. It adds no data and no screen.
 - Recent sales are ordered by entry time (`created_at` in `src/lib/sales.ts`), so the sale dates read out of order: Nov 5, Sep 30, Nov 4, Oct 8.
 - Alerts' daily digest is one block of paragraphs.
 - Blank space: Trace's and Invoices' cards hold gaps above or below their buttons, and Ask keeps its 544 px column.
-- The look E leftovers: this work takes in all six items of `docs/product/intents/look-production-sales-trace-review-nits.md` (stock tiles and saved results that split figures and words at 20 px text, sale trace labels far from their values on a desktop, Receiving's result under a tall stock card, six buttons that fade by opacity while waiting, the draft review's 167 px Vendor picker, and the Alerts AC-0001 test's block count). The owner chose on 2026-11-08 to fold it in. That intent leaves `[backlog].open` when the polish spec ships.
+- The look E leftovers: this work takes in every item in the Boundary of `docs/product/intents/look-production-sales-trace-review-nits.md` (stock tiles that split figures at 20 px text, saved results that split figures and words at 20 px text, sale trace labels far from their values on a desktop, Receiving's result under a tall stock card, six buttons that fade by opacity while waiting, the draft review's 167 px Vendor picker, and the Alerts AC-0001 test's block count). The owner chose on 2026-11-08 to fold it in. That intent leaves `[backlog].open` when the polish spec ships.
 
 Part 2, the new features.
 
@@ -64,7 +64,7 @@ Limits on both parts.
 - Does sign-in land on the home screen, or stay on Receiving so the floor reaches its form first?
 - What does the home screen show first: open alerts, stock and low stock, the day's entries, or money figures that need new views?
 - Should Recent sales list the 10 latest by sale date or by entry? By sale date, a back-dated sale can drop out of the 10, and Void sits only there.
-- Which lists get search and filters, and should search reach receipts, batches, and sales older than the 10 shown, so Correct, Reverse, and Void reach them too? That would reopen the limit the owner accepted on 2026-10-14.
+- Which lists get search and filters? Do Correct, Reverse, and Void follow search to rows older than the 10 shown? For Correct and Reverse, that would reopen the limit the owner accepted on 2026-10-14; no acceptance is recorded for Void.
 - Does the urgent banner become a slim bar, leave the work to the Alerts badge alone, or show only on the home screen?
 - Two questions carry over from the leftovers intent: does the accepted Receiving limit stand, and how should the sale trace's cards lay out on a desktop?
 - Does this work join `[ini-001]` (look E, kept active until its day-30 reviews on 2026-12-04 to 2026-12-06), or start a new initiative?
