@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatDate, formatPricePerLb, formatWeight } from "../../lib/format";
 import type { RecentSales as Sales, SaleSummary } from "../../lib/sales";
 import { Facts } from "../facts";
+import { StatusTag } from "../status-tag";
 import { voidSale } from "./actions";
 import { VoidDialog } from "./void-dialog";
 
@@ -32,12 +33,18 @@ const ACTIONS = "sale-table:col-start-7 sale-table:row-start-1 sale-table:justif
 const MESSAGE_ROW =
   "sale-table:status-has-message:col-span-full sale-table:status-has-message:col-start-1 sale-table:status-has-message:row-start-auto sale-table:status-has-message:justify-start sale-table:status-has-message:pb-2";
 
-// The database's mark: a Void button on a sale that is not void, the reason on
-// one that is.
+// The database's mark: a Void button on a sale that is not void, a "Voided" tag and the
+// reason on one that is.
 function Status({ sale }: { sale: SaleSummary }) {
   if (sale.voidedAt !== null) {
+    // The "Voided" tag sits in the actions column; the reason is its own quiet line, across the row below the figures.
     return (
-      <p className={`min-w-0 break-words font-semibold text-error ${ACTIONS} sale-table:text-right`}>{`Void: ${sale.voidReason ?? ""}`}</p>
+      <>
+        <p className={`flex ${ACTIONS}`}>
+          <StatusTag tone="nocost">Voided</StatusTag>
+        </p>
+        <p className="min-w-0 break-words text-sm text-ink-secondary sale-table:col-span-full">{sale.voidReason ?? ""}</p>
+      </>
     );
   }
   return (

@@ -157,7 +157,11 @@ function ProductCard({
           {row.code} {row.description}
         </Link>
       </h3>
-      <dl className="mt-2.5 flex flex-col gap-y-1.5 text-note tabular-nums price-table:col-span-5 price-table:mt-0 price-table:grid price-table:grid-cols-subgrid price-table:gap-y-0 price-table:text-sm price-table:[&>div]:contents price-table:[&_dd]:text-right price-table:[&_dt]:sr-only">
+      <dl
+        className={`mt-2.5 flex flex-col gap-y-1.5 text-note tabular-nums${
+          row.listPrice === null ? " [&>div:nth-child(2)>dd]:font-normal [&>div:nth-child(2)>dd]:text-ink-secondary" : ""
+        } price-table:col-span-5 price-table:mt-0 price-table:grid price-table:grid-cols-subgrid price-table:gap-y-0 price-table:text-sm price-table:[&>div]:contents price-table:[&_dd]:text-right price-table:[&_dt]:sr-only`}
+      >
         <Figure
           label="Cost per lb"
           value={!row.hasCost || row.costPerLb === null ? "None yet" : formatCostPerLb(row.costPerLb)}

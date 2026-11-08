@@ -884,7 +884,8 @@ test.describe("keyboard, focus, and names", () => {
     await expect(dialog.getByRole("button", { name: "Void sale", exact: true })).toBeFocused();
     await page.keyboard.press("Space");
 
-    await expect(recentItem(page, number).getByText("Void: wrong customer", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number).getByText("Voided", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number).getByText("wrong customer", { exact: true })).toBeVisible();
     await expect(f.recent.getByRole("heading", { name: "Recent sales" })).toBeFocused();
     const [row] = await query<{ id: string }>("select id from sales");
     expect(await saleState(row?.id ?? "")).toEqual({ voided: true, reason: "wrong customer" });
@@ -897,7 +898,8 @@ test.describe("keyboard, focus, and names", () => {
     const [number] = await saleNumbers();
     await voidThrough(page, number ?? "", "keyed twice");
 
-    await expect(recentItem(page, number ?? "").getByText("Void: keyed twice", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number ?? "").getByText("Voided", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number ?? "").getByText("keyed twice", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Recent sales" })).toBeFocused();
   });
 
@@ -1047,7 +1049,8 @@ test.describe("recent sales", () => {
     await expect(voidButtonOf(page, open)).toBeVisible();
     await expect(openItem.getByText(/^Void: /)).toHaveCount(0);
     const voidItem = recentItem(page, voided);
-    await expect(voidItem.getByText("Void: wrong customer", { exact: true })).toBeVisible();
+    await expect(voidItem.getByText("Voided", { exact: true })).toBeVisible();
+    await expect(voidItem.getByText("wrong customer", { exact: true })).toBeVisible();
     await expect(voidItem.getByRole("button")).toHaveCount(0);
   });
 });
@@ -1131,7 +1134,8 @@ test.describe("voiding", () => {
 
     await voidThrough(page, number, "wrong customer");
 
-    await expect(recentItem(page, number).getByText("Void: wrong customer", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number).getByText("Voided", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number).getByText("wrong customer", { exact: true })).toBeVisible();
     await f.code.fill(CODE);
     await expect(factValue(f.facts, "Finished on hand")).toHaveText("5,390 lbs");
   });
@@ -1212,7 +1216,8 @@ test.describe("voiding", () => {
     expect(hold.held).toBe(1);
 
     hold.release();
-    await expect(recentItem(page, number).getByText("Void: keyed twice", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number).getByText("Voided", { exact: true })).toBeVisible();
+    await expect(recentItem(page, number).getByText("keyed twice", { exact: true })).toBeVisible();
     await expect(dialog).toBeHidden();
     expect(await saleState(id)).toEqual({ voided: true, reason: "keyed twice" });
     expect(hold.held).toBe(1);

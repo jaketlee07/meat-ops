@@ -1,6 +1,7 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { RecentReceipt, RecentReceipts as Receipts } from "../../lib/receiving";
 import { Facts } from "../facts";
+import { StatusTag } from "../status-tag";
 import { correctReceipt, voidReceipt } from "./actions";
 import { CorrectDialog } from "./correct-dialog";
 import { VoidDialog } from "./void-dialog";
@@ -37,12 +38,22 @@ const MESSAGE_ROW =
 // keeps the state of each.
 function Status({ receipt }: { receipt: RecentReceipt }) {
   if (receipt.status === "void") {
-    return <p className={`break-words font-semibold text-error ${ACTIONS} receipt-table:text-right`}>{`Void: ${receipt.voidReason ?? ""}`}</p>;
+    // The "Voided" tag sits in the actions column; the reason is its own quiet line, across the row below the figures.
+    return (
+      <>
+        <p className={`flex ${ACTIONS}`}>
+          <StatusTag tone="nocost">Voided</StatusTag>
+        </p>
+        <p className="break-words text-sm text-ink-secondary receipt-table:col-span-full">{receipt.voidReason ?? ""}</p>
+      </>
+    );
   }
   return (
     <div className={`flex flex-wrap items-start gap-2 ${ACTIONS} ${MESSAGE_ROW}`}>
       {receipt.status === "in-use" ? (
-        <p className="flex min-h-control items-center rounded-full bg-mark-fill px-2.5 text-sm font-semibold">In use</p>
+        <p className="flex min-h-control items-center">
+          <StatusTag tone="nocost">In use</StatusTag>
+        </p>
       ) : (
         <VoidDialog
           lotNumber={receipt.lotNumber}

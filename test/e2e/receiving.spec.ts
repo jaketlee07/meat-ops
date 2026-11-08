@@ -710,17 +710,18 @@ test.describe("recent receipts", () => {
     const untouchedItem = await item(untouched);
     await expect(voidButton(untouchedItem)).toBeVisible();
     await expect(untouchedItem.getByText("In use")).toHaveCount(0);
-    await expect(untouchedItem.getByText(/^Void: /)).toHaveCount(0);
+    await expect(untouchedItem.getByText("Voided", { exact: true })).toHaveCount(0);
 
     for (const id of [consumed, adjusted]) {
       const inUse = await item(id);
       await expect(inUse.getByText("In use", { exact: true })).toBeVisible();
       await expect(voidButton(inUse)).toHaveCount(0);
-      await expect(inUse.getByText(/^Void: /)).toHaveCount(0);
+      await expect(inUse.getByText("Voided", { exact: true })).toHaveCount(0);
     }
 
     const voidItem = await item(voided);
-    await expect(voidItem.getByText("Void: entered twice", { exact: true })).toBeVisible();
+    await expect(voidItem.getByText("Voided", { exact: true })).toBeVisible();
+    await expect(voidItem.getByText("entered twice", { exact: true })).toBeVisible();
     await expect(voidButton(voidItem)).toHaveCount(0);
     await expect(voidItem.getByText("In use")).toHaveCount(0);
 
@@ -798,7 +799,7 @@ test.describe("the void confirmation", () => {
     expect(posts).toEqual([]);
     expect(await voidMarks()).toBe(0);
     expect(await lotState(id)).toEqual(before);
-    await expect(item.getByText(/^Void: /)).toHaveCount(0);
+    await expect(item.getByText("Voided", { exact: true })).toHaveCount(0);
   });
 
   test("AC-0051: a blank or spaces-only reason shows its message and changes nothing", async ({ page }) => {
@@ -843,7 +844,8 @@ test.describe("voiding", () => {
     const item = receiptItem(page, await lotNumberOf(second));
     await voidThrough(page, item, "keyed twice");
 
-    await expect(item.getByText("Void: keyed twice", { exact: true })).toBeVisible();
+    await expect(item.getByText("Voided", { exact: true })).toBeVisible();
+    await expect(item.getByText("keyed twice", { exact: true })).toBeVisible();
     await expect(voidButton(item)).toHaveCount(0);
     await expect(factValue(f.region, "On hand")).toHaveText("1,000 lbs");
     await expect(factValue(f.region, "Average cost")).toHaveText("$1.6800/lb");
@@ -897,7 +899,8 @@ test.describe("voiding", () => {
     await expect(factValue(f.region, "On hand")).toHaveText("0 lbs");
     await expect(factValue(f.region, "Average cost")).toHaveText("None yet");
     await expect(factValue(f.region, "502 Smoked Turkey Drums Tom")).toHaveText("No price yet");
-    await expect(f.region.getByText("Void: wrong product", { exact: true })).toBeVisible();
+    await expect(f.region.getByText("Voided", { exact: true })).toBeVisible();
+    await expect(f.region.getByText("wrong product", { exact: true })).toBeVisible();
   });
 
   test("the zero-stock-average spec's AC-0016: voiding an 18.00 receipt after a lot adjusted to 0 shows that lot's $2.0000/lb", async ({
@@ -942,7 +945,7 @@ test.describe("voiding", () => {
     await expect(voidDialog(page)).toBeHidden();
     expect(await lotState(id)).toEqual(before);
     expect(await voidMarks()).toBe(0);
-    await expect(item.getByText(/^Void: /)).toHaveCount(0);
+    await expect(item.getByText("Voided", { exact: true })).toHaveCount(0);
 
     // The list after the refusal: the message is in the page, the dialog is closed.
     expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct"]);
@@ -1018,7 +1021,8 @@ test.describe("voiding after the session ended", () => {
       // it ahead of the action, so the action sees the new session and voids.
       await context.addCookies(withExpiredAccessToken(await sessionCookies()));
       await voidThrough(page, firstItem, "keyed twice");
-      await expect(firstItem.getByText("Void: keyed twice", { exact: true })).toBeVisible();
+      await expect(firstItem.getByText("Voided", { exact: true })).toBeVisible();
+      await expect(firstItem.getByText("keyed twice", { exact: true })).toBeVisible();
       expect(await voidMarks()).toBe(1);
 
       // End the session at the auth server, then age the access token so the

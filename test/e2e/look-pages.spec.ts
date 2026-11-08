@@ -551,7 +551,8 @@ async function opensReceiving(page: Page, width: number, height: number, long = 
   await expect(recentReceipts(page)).toBeVisible();
   await expect(recentReceipts(page).locator("li")).toHaveCount(long ? 5 : 3);
   await voidThrough(page, receiptItem(page, await lotNumberOf(middle)), "entered twice");
-  await expect(recentReceipts(page).getByText("Void: entered twice")).toBeVisible();
+  await expect(recentReceipts(page).getByText("Voided", { exact: true })).toBeVisible();
+  await expect(recentReceipts(page).getByText("entered twice", { exact: true })).toBeVisible();
 }
 
 function receivingForm(page: Page): Locator {

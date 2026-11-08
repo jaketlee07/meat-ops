@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatPricePerLb, formatWeight } from "../../lib/format";
 import { Facts } from "../facts";
+import { StatusTag } from "../status-tag";
 
 export interface MenuCard {
   id: string;
@@ -84,7 +85,13 @@ export function MenuList({ items }: { items: MenuCard[] }) {
                   <h2 className="text-lg font-bold break-words menu-table:text-base">
                     {item.code} {item.description}
                   </h2>
-                  <p className="text-xl font-bold tabular-nums break-words menu-table:text-right menu-table:text-sm menu-table:font-semibold">
+                  <p
+                    className={`text-xl tabular-nums break-words menu-table:text-right menu-table:text-sm ${
+                      item.listPrice === null
+                        ? "font-normal text-ink-secondary"
+                        : "font-bold menu-table:font-semibold"
+                    }`}
+                  >
                     {item.listPrice === null ? "No list price yet" : formatPricePerLb(item.listPrice)}
                   </p>
                   <Facts
@@ -93,8 +100,10 @@ export function MenuList({ items }: { items: MenuCard[] }) {
                       ["Raw on hand", formatWeight(item.rawLbs)],
                     ]}
                   />
-                  <p className="font-semibold break-words menu-table:text-sm">
-                    {item.sellable ? "Sellable now" : "Not sellable now"}
+                  <p className="break-words menu-table:text-sm">
+                    <StatusTag tone={item.sellable ? "priced" : "nocost"}>
+                      {item.sellable ? "Sellable now" : "Not sellable now"}
+                    </StatusTag>
                   </p>
                 </li>
               ))}

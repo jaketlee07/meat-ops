@@ -1,6 +1,7 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { RecentBatches as Batches } from "../../lib/production";
 import { Facts } from "../facts";
+import { StatusTag } from "../status-tag";
 import { reverseBatch } from "./actions";
 import { ReverseControl, type Preview } from "./reverse-control";
 
@@ -88,7 +89,9 @@ export function RecentBatches({
                   />
                   <div className={`flex flex-wrap items-start gap-x-2 ${ACTIONS} ${MESSAGE_ROW}`}>
                     {batch.reversedAt !== null && (
-                      <p className="min-w-0 basis-full break-words font-semibold text-error batch-table:text-right">{`Reversed: ${batch.reversalReason ?? ""}`}</p>
+                      <p className="flex">
+                        <StatusTag tone="nocost">Reversed</StatusTag>
+                      </p>
                     )}
                     <ReverseControl
                       batchNumber={batch.batchNumber}
@@ -100,6 +103,9 @@ export function RecentBatches({
                       reverseAction={reverseBatch.bind(null, batch.id, productId)}
                     />
                   </div>
+                  {batch.reversedAt !== null && (
+                    <p className="min-w-0 break-words text-sm text-ink-secondary batch-table:col-span-full">{batch.reversalReason ?? ""}</p>
+                  )}
                 </li>
               ))}
             </ul>

@@ -322,7 +322,8 @@ async function opensSales(page: Page, width: number, height: number) {
   await expect(recentSales(page).locator("li")).toHaveCount(3);
   const [first = "", second = "", third = ""] = await saleNumbers();
   await voidThrough(page, second, "keyed twice");
-  await expect(recentItem(page, second).getByText("Void: keyed twice", { exact: true })).toBeVisible();
+  await expect(recentItem(page, second).getByText("Voided", { exact: true })).toBeVisible();
+  await expect(recentItem(page, second).getByText("keyed twice", { exact: true })).toBeVisible();
   await page.setViewportSize({ width, height });
   return { f, first, firstId, second, third };
 }

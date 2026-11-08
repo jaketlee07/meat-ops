@@ -8,6 +8,7 @@ import type { ReversalPreview } from "../../lib/production";
 import type { SaleSummary } from "../../lib/sales";
 import { BeforeAfter } from "../before-after";
 import { Facts } from "../facts";
+import { StatusTag } from "../status-tag";
 import { showAverage, showOnHand, stockView } from "../stock-view";
 import type { ReversalState } from "./actions";
 import type { ReversalDetails, ReversalStock } from "./reverse-batch";
@@ -191,7 +192,14 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
           reversed. The action skips the re-render when a read after the write
           failed, or when no finished lbs on hand come back because the product
           was made inactive. */}
-      {done && !reversed && <p className="break-words font-semibold text-error batch-table:text-right">{`Reversed: ${sentReason}`}</p>}
+      {done && !reversed && (
+        <>
+          <p className="flex batch-table:justify-end">
+            <StatusTag tone="nocost">Reversed</StatusTag>
+          </p>
+          <p className="break-words text-sm text-ink-secondary batch-table:text-right">{sentReason}</p>
+        </>
+      )}
       {!reversed && !done && (
         <button
           type="button"

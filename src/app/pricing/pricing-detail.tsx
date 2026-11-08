@@ -95,7 +95,11 @@ export function PricingDetail({ detail }: { detail: Detail }) {
           />
         </dl>
         {detail.targetMargin === null && <p className="break-words text-sm">{NO_TARGET_SENTENCE}</p>}
-        <dl className="flex flex-col gap-1.5 text-sm tabular-nums">
+        <dl
+          className={`flex flex-col gap-1.5 text-sm tabular-nums${
+            detail.listPrice === null ? " [&>div:first-child>dd]:font-normal [&>div:first-child>dd]:text-ink-secondary" : ""
+          }`}
+        >
           <Figure
             label="List price"
             value={detail.listPrice === null ? "No list price yet" : formatPricePerLb(detail.listPrice)}

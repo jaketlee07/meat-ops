@@ -105,7 +105,7 @@ test.describe("the list", () => {
       await expect(correctButton(item)).toBeVisible();
     }
     await expect(correctButton(itemD)).toHaveCount(0);
-    await expect(itemD.getByText(/^Void: /)).toBeVisible();
+    await expect(itemD.getByText("Voided", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Correct", exact: false })).toHaveCount(3);
 
     expect(await checkPageState(page)).toEqual([
