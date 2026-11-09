@@ -14,7 +14,7 @@ The spec's Assumptions record each of these as a Product line:
 - The digest shows each paragraph as its own list item with a gray dot; the model and the stored text stay as they are.
 - Ask uses the full content width.
 - The photo picker shows a "Choose photo" button and the chosen file's name, or "No photo chosen".
-- The read cards on `/invoices` drop their reserved status line, so a read in flight grows its card by the reading message's height and moves down whatever sits below that card.
+- The read cards on `/invoices` drop their reserved status line, so a read in flight grows its card to hold the reading message and moves down whatever sits below that card.
 
 ## Spec-stage review
 
@@ -22,6 +22,7 @@ The spec's Assumptions record each of these as a Product line:
 | ---: | --- | --- |
 | 1 (at `4e7e5d3`) | 16 findings: 10 sustained and accepted, 5 refuted, 1 indeterminate | 12 findings, all accepted |
 | 2 (delta `4e7e5d3..dfee0d9`) | 6 findings: 4 sustained and accepted, 2 refuted | 8 findings, all accepted |
+| 3 (delta `dfee0d9..a102622`) | 2 findings: 2 sustained and accepted | 4 findings, all accepted |
 
 - Round 1's indeterminate adversarial finding asked how much room a date box's text keeps once the calendar icon is in place. Two throwaway Chromium probes on 2026-11-09 answered it: with 12 px left padding and 40 px right padding for the icon, 11/09/2026 shows whole from a 102 px content box (156 px overall) and is cut at 98 px; `getComputedStyle` does not report the styled `::-webkit-calendar-picker-indicator`; and `elementFromPoint` at the icon's center returns the date box. The owner chose on 2026-11-09 to proceed to round 2 with the probes as the evidence.
 - Round 1 refuted (no change): finding 5 (keyboard presses fall under AC-0020's unqualified "second press"), 11 (the digest's 45rem width is held by the overview and AC-0029), 13 (the Always-do bullet keeps every role, the empty live regions included), 14 (keeping or removing the shell's unused cap is a build-time choice), and 16 (Receiving and Sales show money at two decimals in their price lines).
