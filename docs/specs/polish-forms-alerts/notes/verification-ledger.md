@@ -141,3 +141,13 @@ Every record below reads commit `4679b9e`, the branch's last commit that changes
 ## Post-gates review round 5 (2026-11-09)
 
 - Round 5 reviewed the fix delta `git diff d075a99 7e29f03` (adversarial and quality). Reports sit under `.context/reviews/66ead429-0279-4602-ad5e-19d0896a98a3/` as `5-post-gates-*`. Quality was Clean. Adversarial raised 1 Nit, sustained: the round 4 entry did not say that the one-Before-for-each-After count check was removed. It is corrected above as a ledger-only change, which re-opens no T7 record; this was the loop's fifth and last review round.
+
+## T7 after review (2026-11-09)
+
+Every record below reads commit `7e29f03`, now the branch's last commit that changes a file other than those under `docs/specs/polish-forms-alerts/`, `docs/product/briefs/ui-polish.md`, and `workspace.toml`. Since `4679b9e` the code changes touch the saved-result table (`before-after.tsx`, `facts.tsx`) and the hidden photo input's attributes (`read-forms.tsx`); no AC-0029 screen and no date box changed.
+
+- AC-0029: the owner confirmed on 2026-11-09 that the six "Match" verdicts stand for `7e29f03`.
+- AC-0008: the owner confirmed on 2026-11-09 that the check by hand was done with the window about 1280 px wide and a click on the middle of each calendar icon, and that each of the five date boxes opened the browser's date picker.
+- AC-0031: `git diff 0966245 7e29f03 -- test/` read in full, with no untracked file under `test/`. The changed expectations in existing test files are those the T7 entry lists, with the digest width test measuring `li, p` (only AC-0022's change remains), the Ask width test's title naming the right edge it checks, and the in-flight test's `console.log` removed; each is on AC-0031's list.
+- AC-0032: the nine `checkPageState` tests are unchanged and pass in the run below.
+- AC-0030: `npm test` at `958cbb7`, whose code and tests are `7e29f03`'s, passed: Vitest 55 files, 1052 passed in 71 s; Playwright 1144 passed, none failed or flaky, in 14.9 min. Slot fix before it: 166,017 dead `pg_class` rows and slot age 15,884 before, 0 and 1 after. The folder check listed only another project's folders.
