@@ -1157,24 +1157,29 @@ for (const { page: label, save } of SAVED) {
       await expect(cells.nth(i), `cell ${i}'s name has no column name`).not.toHaveAccessibleName(/Before|After/);
     }
     // A sighted reader still sees each stacked value's column name: the cell's aria-hidden label is shown, has width,
-    // and names its column.
+    // and names its own column, the header cell at the same position in its table's header row.
     const labels = await cells.evaluateAll((found) =>
       found.map((cell) => {
         const span = cell.querySelector(":scope > span[aria-hidden='true']");
+        const index = (cell as HTMLTableCellElement).cellIndex;
+        const column = cell.closest("table")?.tHead?.rows[0]?.cells[index]?.textContent?.trim() ?? null;
         return span
-          ? { label: span.getAttribute("data-label"), shown: getComputedStyle(span).display !== "none", width: span.getBoundingClientRect().width }
+          ? {
+              label: span.getAttribute("data-label"),
+              column,
+              shown: getComputedStyle(span).display !== "none",
+              width: span.getBoundingClientRect().width,
+            }
           : null;
       }),
     );
     for (const [i, found] of labels.entries()) {
       expect(found, `cell ${i} carries a column-name label`).not.toBeNull();
-      expect(["Before", "After"], `cell ${i}'s label names its column`).toContain(found!.label);
+      expect(["Before", "After"], `cell ${i}'s column is Before or After`).toContain(found!.column);
+      expect(found!.label, `cell ${i}'s label names its own column`).toBe(found!.column);
       expect(found!.shown, `cell ${i}'s label is shown`).toBe(true);
       expect(found!.width, `cell ${i}'s label is drawn`).toBeGreaterThan(0);
     }
-    expect(labels.filter((found) => found?.label === "Before").length, "a Before label for each After label").toBe(
-      labels.filter((found) => found?.label === "After").length,
-    );
   });
 }
 
