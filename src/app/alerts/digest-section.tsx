@@ -84,11 +84,14 @@ export function DigestSection({ page }: { page: Exclude<DigestPage, { kind: "no-
       <div ref={outcomeRef} tabIndex={-1} aria-live="polite" className="space-y-3">
         {!sending && shown?.kind === "digest" && (
           <>
-            {shown.paragraphs.map((paragraph, index) => (
-              <p key={index} className="max-w-[45rem] break-words text-base">
-                {paragraph}
-              </p>
-            ))}
+            <ul className="space-y-3">
+              {shown.paragraphs.map((paragraph, index) => (
+                <li key={index} className="flex max-w-[45rem] items-start gap-3 break-words text-base">
+                  <span aria-hidden="true" className="mt-2.5 size-2 shrink-0 rounded-full bg-status-nocost" />
+                  <span className="min-w-0">{paragraph}</span>
+                </li>
+              ))}
+            </ul>
             <p className="max-w-[45rem] text-base text-ink-secondary">{DIGEST_FOOTER}</p>
           </>
         )}

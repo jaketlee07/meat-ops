@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetTestData } from "../db";
+import { banner, marginCase, openDigest, seedDigest, withWatchRefused } from "./alerts-page";
 import { openAsk } from "./ask-page";
 import { openInvoices, openReview, seedDraft, seedFixture } from "./invoices-page";
 import { withTextSize } from "./look-checks";
@@ -33,8 +34,9 @@ import {
 import { OPERATOR_STATE } from "./states";
 import { open as openTrace } from "./trace-page";
 
-// Spec polish-forms-alerts, how the forms are drawn: the one label style (AC-0001), the number pairs that share
-// a line and hold a whole figure (AC-0002, AC-0004), and the floor forms' Tab order (AC-0028). Operator session;
+// Spec polish-forms-alerts, how the forms and alerts are drawn: the one label style (AC-0001), the number pairs that
+// share a line and hold a whole figure (AC-0002, AC-0004), the floor forms' Tab order (AC-0028), the quiet urgent
+// banner (AC-0012, AC-0013, AC-0014), and the digest list (AC-0022, AC-0023). Operator session;
 // data is reset before each test, then each test builds the state it reads with made-up data.
 
 test.use({ storageState: OPERATOR_STATE });
@@ -314,3 +316,157 @@ for (const { page: label, open, names } of ORDERS) {
     });
   }
 }
+
+// ---- The quiet banner and the digest list ----
+
+// What a design token computes to as a color, read through a probe so the test never guesses a literal.
+async function tokenColor(page: Page, token: string): Promise<string> {
+  return page.evaluate((name) => {
+    const probe = document.createElement("span");
+    probe.style.color = `var(${name})`;
+    document.body.append(probe);
+    const value = getComputedStyle(probe).color;
+    probe.remove();
+    return value;
+  }, token);
+}
+
+// The region's fill and the color of each of its four edges.
+async function bannerFrame(region: Locator) {
+  return region.evaluate((node) => {
+    const css = getComputedStyle(node);
+    return {
+      fill: css.backgroundColor,
+      edges: [css.borderTopColor, css.borderRightColor, css.borderBottomColor, css.borderLeftColor],
+    };
+  });
+}
+
+async function expectQuietFrame(page: Page, region: Locator) {
+  const surface = await tokenColor(page, "--color-surface");
+  const edge = await tokenColor(page, "--color-card-border");
+  const frame = await bannerFrame(region);
+  expect(frame.fill, "fill is --color-surface").toBe(surface);
+  expect(frame.edges, "every edge is --color-card-border").toEqual([edge, edge, edge, edge]);
+  for (const token of ["--color-error-wash", "--color-error-edge"]) {
+    const loud = await tokenColor(page, token);
+    expect(frame.fill, `fill is not ${token}`).not.toBe(loud);
+    expect(frame.edges, `no edge is ${token}`).not.toContain(loud);
+  }
+}
+
+test("AC-0012: the Urgent alerts region with an urgent alert is a surface card with a card-border edge", async ({ page }) => {
+  await marginCase();
+  await page.goto("/receiving");
+  await expect(banner(page).getByText("1 urgent alert needs you.", { exact: true })).toBeVisible();
+  await expectQuietFrame(page, banner(page));
+});
+
+test("AC-0012: the Urgent alerts region with the alert check failed is a surface card with a card-border edge", async ({ page }) => {
+  await withWatchRefused(async () => {
+    await page.goto("/receiving");
+    await expect(banner(page).getByText("Alerts couldn't be checked.", { exact: true })).toBeVisible();
+    await expectQuietFrame(page, banner(page));
+  });
+});
+
+for (const width of [390, 1280]) {
+  test(`AC-0013: at ${width} px the banner's sentence is regular ink after an error-colored dot, with its link`, async ({ page }) => {
+    await marginCase();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/receiving");
+    const region = banner(page);
+    const sentence = region.getByText("1 urgent alert needs you.", { exact: true });
+    await expect(sentence).toBeVisible();
+    await expect(region.getByRole("link", { name: "See alerts", exact: true })).toBeVisible();
+    const ink = await tokenColor(page, "--color-ink");
+    const error = await tokenColor(page, "--color-error");
+    const read = await sentence.evaluate((node) => {
+      const css = getComputedStyle(node);
+      const text = document.createRange();
+      text.selectNodeContents(Array.from(node.childNodes).find((child) => child.nodeType === Node.TEXT_NODE)!);
+      const dots = Array.from(node.querySelectorAll("[aria-hidden=true]")).map((dot) => ({
+        fill: getComputedStyle(dot).backgroundColor,
+        right: dot.getBoundingClientRect().right,
+        width: dot.getBoundingClientRect().width,
+        height: dot.getBoundingClientRect().height,
+      }));
+      return { weight: css.fontWeight, color: css.color, textLeft: text.getBoundingClientRect().left, dots };
+    });
+    expect(read.weight, "weight").toBe("400");
+    expect(read.color, "color").toBe(ink);
+    expect(read.dots, "one dot before the sentence").toHaveLength(1);
+    const [dot] = read.dots as [(typeof read.dots)[number]];
+    expect(dot.fill, "the dot's fill").toBe(error);
+    expect(dot.width, "the dot has a size").toBeGreaterThan(0);
+    expect(dot.right, "the dot is left of the sentence").toBeLessThanOrEqual(read.textLeft);
+  });
+
+  test(`AC-0014: at ${width} px the banner with an urgent alert is one line`, async ({ page }) => {
+    await marginCase();
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/receiving");
+    const region = banner(page);
+    await expect(region).toBeVisible();
+    const read = await region.evaluate((node) => {
+      const css = getComputedStyle(node);
+      return {
+        height: node.getBoundingClientRect().height,
+        borders: parseFloat(css.borderTopWidth) + parseFloat(css.borderBottomWidth),
+      };
+    });
+    expect(read.height, "height").toBeLessThanOrEqual(44 + read.borders);
+  });
+}
+
+const DIGEST = [
+  "The 502 margin is 1.8%, below your 20% target.",
+  "Two receipts came in above their usual cost.",
+  "Nothing else needs you today.",
+];
+
+async function openWrittenDigest(page: Page) {
+  await marginCase();
+  await seedDigest({ status: "written", paragraphs: DIGEST });
+  await openDigest(page);
+}
+
+test("AC-0022: a three-paragraph digest is a list of three items in order, with the footer after the list", async ({ page }) => {
+  await openWrittenDigest(page);
+  const region = page.getByRole("region", { name: "Today's digest", exact: true });
+  const list = region.getByRole("list");
+  await expect(list).toHaveCount(1);
+  await expect(list.getByRole("listitem")).toHaveText(DIGEST);
+  const footer = region.getByText("Written by Claude from the alerts open at the time.", { exact: false });
+  await expect(footer).toBeVisible();
+  expect(await list.getByText("Written by Claude").count(), "the footer is outside the list").toBe(0);
+  const after = await list.evaluate((node, text) => {
+    const foot = Array.from(node.ownerDocument.querySelectorAll("p")).find((p) => p.textContent?.includes(text));
+    return !!foot && !!(node.compareDocumentPosition(foot) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }, "Written by Claude");
+  expect(after, "the footer follows the list").toBe(true);
+});
+
+test("AC-0023: each digest item shows a --color-status-nocost dot before its text", async ({ page }) => {
+  await openWrittenDigest(page);
+  const nocost = await tokenColor(page, "--color-status-nocost");
+  const items = page.getByRole("region", { name: "Today's digest", exact: true }).getByRole("listitem");
+  await expect(items).toHaveCount(3);
+  for (const item of await items.all()) {
+    const read = await item.evaluate((node) => {
+      const dots = Array.from(node.querySelectorAll("[aria-hidden=true]")).map((dot) => ({
+        fill: getComputedStyle(dot).backgroundColor,
+        right: dot.getBoundingClientRect().right,
+        width: dot.getBoundingClientRect().width,
+      }));
+      const body = document.createRange();
+      body.selectNodeContents(node.lastElementChild!);
+      return { dots, textLeft: body.getBoundingClientRect().left };
+    });
+    expect(read.dots, "one dot").toHaveLength(1);
+    const [dot] = read.dots as [(typeof read.dots)[number]];
+    expect(dot.fill, "the dot's fill").toBe(nocost);
+    expect(dot.width, "the dot has a size").toBeGreaterThan(0);
+    expect(dot.right, "the dot is left of the text").toBeLessThanOrEqual(read.textLeft);
+  }
+});

@@ -1275,7 +1275,7 @@ test.describe("the Alerts layout", () => {
       page,
     }) => {
       await opensAlerts(page, width, height);
-      await expectNoCap(page, 2);
+      await expectNoCap(page, 3);
     });
   }
 
@@ -1327,7 +1327,7 @@ test.describe("the Alerts layout", () => {
 
     test(`AC-0013: at ${width}x${height} every paragraph in Today's digest is at most 45rem wide`, async ({ page }) => {
       await opensAlerts(page, width, height);
-      const paragraphs = await boxes(digestRegion(page).locator("p"));
+      const paragraphs = await boxes(digestRegion(page).locator("li"));
       expect(paragraphs.length).toBeGreaterThanOrEqual(1);
       for (const paragraph of paragraphs) expect(paragraph.width).toBeLessThanOrEqual(720.5);
     });
