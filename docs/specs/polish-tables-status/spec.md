@@ -98,7 +98,7 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 ### Recent receipts and Recent sales
 
 - [ ] **AC-0006.** At 1280 px and 1440 px at the default text size, every lot number and Received date in Recent receipts, and every sale number and sale date in Recent sales, shows whole on one line: its text lies on a single line and does not run past its cell.
-- [ ] **AC-0007.** At 1280 px and 1440 px at the default text size, a recent receipt that offers both Void and Correct shows them side by side with their tops level, and one that shows "In use" and Correct shows them side by side with their tops level.
+- [ ] **AC-0007.** At 1280 px and 1440 px at the default text size, a recent receipt that offers both Void and Correct shows them side by side with their tops level, and one that shows "In use" and Correct shows them side by side with the visible tag's vertical middle within 1 px of Correct's.
 - [ ] **AC-0008.** No row's own Void button in Recent receipts or Recent sales, the button named "Void lot <number>" or "Void sale <number>", takes `--color-error` for its text, its border, or its fill.
 - [ ] **AC-0009.** Recent sales orders the sales it shows by sale date, newest first, and by entry time, newest first, within one sale date.
 - [ ] **AC-0020.** With 11 sales on record, Recent sales shows the 10 most recently entered, as today: the sale entered first does not show, even when its sale date is the newest.
