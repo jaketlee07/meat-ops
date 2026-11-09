@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { callAsOperator, idOf, PROD_502_ID, produceCall, RAW_TOM_ID, resetTestData, reverseCall, voidReceiptCall, voidSaleCall } from "../db";
 import { addFinished, addRaw, cardFor, produce, sellableSwitch, setListPrice } from "./menu-page";
+import { checkPageState } from "./a11y";
 import { seedDraft } from "./invoices-page";
 import { card as pricingCard, detail as pricingDetail, opensDetail, setTarget } from "./pricing-page";
 import { seedBatch } from "./production-page";
@@ -831,3 +832,94 @@ for (const surface of WEIGHT_SURFACES) {
     expect(seen.heavy).toEqual([]);
   });
 }
+
+// ---- AC-0019: the page-state check on each screen state ----
+
+test("AC-0019: /receiving with a product chosen and a void, an in-use, and an untouched receipt passes the page-state check", async ({ page }) => {
+  await build();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/receiving?product=RAW-TOM");
+  await expect(receipts(page).locator("ul > li")).toHaveCount(3);
+  await expect(receipts(page).getByText("Voided", { exact: true })).toHaveCount(1);
+  await expect(receipts(page).getByText("In use", { exact: true })).toHaveCount(1);
+  await checkPageState(page);
+});
+
+test("AC-0019: /sales with three recent sales, one void, passes the page-state check", async ({ page }) => {
+  await build();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/sales");
+  await expect(sales(page).locator("ul > li")).toHaveCount(3);
+  await expect(sales(page).getByText("Voided", { exact: true })).toHaveCount(1);
+  await checkPageState(page);
+});
+
+test("AC-0019: /menu with a sellable, a not-sellable, and a no-list-price product passes the page-state check", async ({ page }) => {
+  await build();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/menu");
+  await expect(cardFor(page, "FIN-B").getByText("Sellable now", { exact: true })).toHaveCount(1);
+  await expect(cardFor(page, "FIN-C").getByText("Not sellable now", { exact: true })).toHaveCount(1);
+  await expect(cardFor(page, "502").getByText("No list price yet", { exact: true })).toHaveCount(1);
+  await checkPageState(page);
+});
+
+// The owner widened Menu's Status column to 9rem on 2026-11-08 so each tag's word stays on one line where the
+// list is a table. The word's own text node is measured, since the tag's dot sits on a different line top.
+test("Menu's status tags stay on one line where the list is a table, at 1280 px with default and 20 px text", async ({
+  page,
+}) => {
+  await build();
+  for (const size of ["", "20px"]) {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/menu");
+    if (size) await setRootSize(page, size);
+    await expect(page.locator("span", { hasText: /^Finished on hand$/ }), `${size || "default"}: the header line`).toBeVisible();
+    for (const [code, word] of [
+      ["502", "Sellable now"],
+      ["FIN-B", "Sellable now"],
+      ["FIN-C", "Not sellable now"],
+    ] as const) {
+      const seen = await cardFor(page, code)
+        .getByText(word, { exact: true })
+        .evaluate((node) => {
+          const text = [...node.childNodes].find((child) => child.nodeType === Node.TEXT_NODE) as Text;
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
+          const cell = node.parentElement!;
+          return {
+            lines: new Set(rects.map((rect) => Math.round(rect.top))).size,
+            uncut: node.scrollWidth <= node.clientWidth && cell.scrollWidth <= cell.clientWidth,
+          };
+        });
+      expect(seen.lines, `${code} ${size || "default"}: "${word}" on one line`).toBe(1);
+      expect(seen.uncut, `${code} ${size || "default"}: "${word}" not past its cell`).toBe(true);
+    }
+  }
+});
+
+test("AC-0019: /pricing with a product needing a new price passes the page-state check", async ({ page }) => {
+  await pricingWithAdvice();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/pricing");
+  await expect(page.getByText("Needs a new price").first()).toBeVisible();
+  await expect(pricingCard(page, "502").getByRole("button", { name: /list price to/ })).toHaveCount(1);
+  await checkPageState(page);
+});
+
+test("AC-0019: /production with a product chosen and a reversed batch passes the page-state check", async ({ page }) => {
+  await build();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/production?product=502");
+  await expect(batches(page).getByText("Reversed", { exact: true })).toHaveCount(1);
+  await checkPageState(page);
+});
+
+test("AC-0019: /trace showing a sale drawn from two batches passes the page-state check", async ({ page }) => {
+  const number = await sellFromTwoBatches();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`/trace?sale=${number}`);
+  await expect(page.locator("section[aria-labelledby='sale-trace-heading']")).toBeVisible();
+  await checkPageState(page);
+});
