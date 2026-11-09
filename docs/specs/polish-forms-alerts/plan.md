@@ -20,7 +20,7 @@
 
 The label style and the form parts come first, because the pickers, the saved results, and spec 2b's search and filters build on them. The pickers follow, then the saved results and Receiving's layout. The banner and digest, the waiting buttons, and the Ask, Trace, and Invoices space are independent of the forms. A last task records what only a person or a diff read can check.
 
-The riskiest part is fitting two fields in the 280 px form column. A throwaway Chromium probe on 2026-11-09 found that a date box needs about 148 px to show 11/09/2026 whole with 12 px side padding, while half the column is about 118 px. So the three number pairs share a line in the form column at every desktop width, and Customer and Sale date share a line only where the form is wide enough, which includes a phone.
+The riskiest part is fitting two fields in the 280 px form column. A throwaway Chromium probe on 2026-11-09 found that a date box needs about 148 px to show 11/09/2026 whole with 12 px side padding, while half the column is about 118 px. So only the three number pairs share a line; Customer and Sale date keep their own lines, as the owner chose on 2026-11-09 once a phone's half-line was found to cut "Fulton Market Deli".
 
 ## Constraints
 
@@ -42,7 +42,7 @@ Most construction tests live under **Tasks** below.
 | --- | --- | --- | --- |
 | Overview `src/app` row: the screens | T1 to T6 | The row names the label style, the pairs, the dropdown and date icons, the photo picker, the quiet banner, the digest list, Ask's full width, the Trace and Invoices cards, the Receiving result's place, and the waiting buttons; the sentence on the Receiving limit is gone. | `close-work` reads the row whole against the code. |
 | `globals.css` variant comments and the overview's look notes | T1, T2, T4 | Each new or changed variant's comment names its threshold and use. | `close-work` reads both. |
-| Overview `test/e2e/` row | T1 | The row lists `test/e2e/look-polish-forms.spec.ts`. | `close-work` reads the row whole. |
+| Overview `test/e2e/` and `test/` rows | T1, T2 | The `test/e2e/` row lists `test/e2e/look-polish-forms.spec.ts`; the `test/` row states the photo field's `look-tidy.test.ts` exception as it now stands. | `close-work` reads both rows whole. |
 | Intent `look-production-sales-trace-review-nits.md` | T2, T3, T4, T5, T7 | AC-0016, AC-0017, AC-0018, AC-0019, AC-0020, AC-0021, and AC-0024 pass, and the ledger names the gaps they close. | The intent is Fulfilled. |
 | Decision record: the banner and the Receiving limit | T3, T4 | The overview row states both as current behavior. | `close-work` reads the row. |
 | Design reference: the comparison page | T7 | The AC-0029 ledger entries name revision 1794121141-4df1. | The brief still links the page. |
@@ -52,17 +52,17 @@ Most construction tests live under **Tasks** below.
 ### Design decisions
 
 - **One source for form parts.** A new `src/app/form-parts.ts` holds the label classes (`block text-sm font-medium text-ink-secondary`) and the field box classes each form repeats today, and every form and dialog in AC-0001 imports them. Spec 2b's search and filters take the same parts. Traces to: AC-0001.
-- **Field pairs.** Each pair sits in a two-column grid that applies only above a container width set in rem on the form, so a larger text size stacks the pair. The number pairs apply from about 14rem of form: the 280 px column leaves about 15.5rem at the default text size and about 12.4rem at 20 px, where a pair's half could not hold 12,345.678. The Customer and Sale date pair applies from about 19.25rem: two halves of 9.25rem, the probe's 148 px at the default size, plus the gap. The DOM order of the fields does not change. T1 measures each form's inner width at each size before it fixes the two thresholds. Traces to: AC-0002, AC-0003, AC-0004, AC-0005, AC-0028.
+- **Field pairs.** Each pair sits in a two-column grid that applies only above a container width set in rem on the form, so a larger text size stacks the pair. The pairs apply from about 14rem of form: the 280 px column leaves about 15.5rem at the default text size and about 12.4rem at 20 px, where a pair's half could not hold 12,345.678. The DOM order of the fields does not change. T1 measures each form's inner width at each size before it fixes the threshold. Traces to: AC-0002, AC-0004, AC-0028.
 - **Dropdowns.** Each `select` takes `appearance-none` and room on its right, inside a `relative` wrapper that also holds a chevron `LineIcon`, `aria-hidden` and `pointer-events-none`. Traces to: AC-0006.
-- **Date boxes.** Each date box takes the same wrapper with a calendar `LineIcon`, and its `::-webkit-calendar-picker-indicator` is made transparent and stretched over the icon's area, so a press on the icon still opens the browser's picker. Traces to: AC-0007, AC-0008.
-- **Photo picker.** The file input stays in the form, named by its "Invoice photo" label, but is hidden and out of the Tab order. A visible "Choose photo" button opens it, and a text beside it shows "No photo chosen" or the chosen file's name. The button carries the field's error description, so the focused control is the visible one that `checkPageState` scores. Traces to: AC-0009, AC-0010, AC-0011.
+- **Date boxes.** Each date box takes the same wrapper with a calendar `LineIcon`, 12 px of left padding, and 40 px of right padding for the icon. Its `::-webkit-calendar-picker-indicator` is made transparent and stretched over that right padding, so a press on the icon still opens the browser's picker. A probe on 2026-11-09 with this setup showed 11/09/2026 whole from a 102 px content box (156 px overall) and cut at 98 px, and every date box sits on its own line, wider than that. Traces to: AC-0007, AC-0008.
+- **Photo picker.** The file input stays in the form, named by its "Invoice photo" label, but is hidden and out of the Tab order. A visible "Choose photo" button opens it, and a text beside it shows "No photo chosen" or the chosen file's name. The button's `aria-describedby` lists the label, that text, and the error, so the focused control is the visible one that `checkPageState` scores and a screen reader hears the field's name and state. A refused photo focuses the button. Traces to: AC-0009, AC-0010, AC-0011, AC-0034.
 - **Quiet banner.** The "Urgent alerts" region keeps its role, name, text, and link, and changes only its classes: a surface fill, a `--color-card-border` edge, an `aria-hidden` dot filled with `--color-error`, and the sentence at weight 400 in `--color-ink`. The failure message keeps its words and its `--color-error` text. Traces to: AC-0012, AC-0013, AC-0014.
 - **Digest list.** The written paragraphs render as a `ul` with one `li` each, an `aria-hidden` dot filled with `--color-status-nocost` before each, and the footer `p` after the list. The stored text and the model's request stay as they are. Traces to: AC-0022, AC-0023.
 - **Saved results.** `BeforeAfter`'s After column drops to weight 500, and below a new container width, under `result-tight`, each row stacks: its label on one line, then Before and After each on their own line. Every value stays `whitespace-nowrap`. Traces to: AC-0015, AC-0016, AC-0017.
 - **Receiving's result.** `#product-region` stops being `display: contents` and becomes one grid item in a right-hand area that spans the result's row, so the left column's rows hold only the form and the result. The DOM order stays form, result, region. Traces to: AC-0018.
-- **Waiting buttons.** The six buttons swap `disabled={pending}` for `aria-disabled`, with the color-only fade the overview's waiting-control rule names. A press ref and the pending state make a second press do nothing, as the draft review's Save receipts does. Traces to: AC-0019, AC-0020.
+- **Waiting buttons.** The six buttons swap `disabled={pending}` for `aria-disabled`, with the color-only fade the overview's waiting-control rule names. A press ref and the pending state make a second press do nothing, as the draft review's Save receipts does, and each Cancel returns early while its dialog's request waits, as `src/app/sales/void-dialog.tsx` does. Traces to: AC-0019, AC-0020, AC-0033.
 - **Vendor picker.** The `line-pair` threshold rises, and the pair splits its line evenly, so the Vendor picker is wide enough for "Heartland Wholesale Meats Inc" wherever it shares a line, and takes the full line where it does not. Traces to: AC-0021.
-- **Ask, Trace, and Invoices.** `/ask` passes `fullWidth`. The Trace finders' and Invoices' read cards take their own heights (`items-start`); their buttons lose `mt-auto` and their forms `flex-1`; Invoices' status line loses its reserved height; and an empty message element takes no place in its form's gap. Traces to: AC-0025, AC-0026, AC-0027.
+- **Ask, Trace, and Invoices.** `/ask` passes `fullWidth`. The Trace finders' and Invoices' read cards take their own heights (`items-start`); their buttons lose `mt-auto` and their forms `flex-1`; Invoices' status line loses its reserved height, so a read in flight grows its card (owner, 2026-11-09); and an empty message element takes no place in its form's gap. Traces to: AC-0025, AC-0026, AC-0027.
 
 ### Component / module decomposition
 
@@ -83,10 +83,10 @@ Most construction tests live under **Tasks** below.
 
 **Tests:**
 - no stub (manual QA): the checks are computed styles and boxes in a browser.
-- New `look-polish-forms.spec.ts`: AC-0001 opens each page, dialog, and panel it lists and reads every `label` whose control is not a checkbox; AC-0002, AC-0003, AC-0004, and AC-0005 at each width and text size they name, typing 12,345.678 into each number box; AC-0028 walks Tab from Product code on each floor form at 390 px and 1280 px. Each is seen failing on today's tree first, except AC-0028, which guards today's order.
+- New `look-polish-forms.spec.ts`: AC-0001 opens each page, dialog, and panel it lists and reads every `label` whose control is not a checkbox; AC-0002 and AC-0004 at each width and text size they name, typing 12,345.678 into each number box, AC-0004's test first asserting the shared line it measures; AC-0028 walks Tab from Product code on each floor form at 390 px and 1280 px. Each is seen failing on today's tree first, except AC-0028, which guards today's order.
 
 **Approach:**
-- Measure each form's inner width at 390, 1024, and 1280 px at both text sizes, then set the two pair thresholds.
+- Measure each form's inner width at 390, 1024, and 1280 px at both text sizes, then set the pair threshold.
 - Move every form to the shared parts and pair the neighbors.
 - Name the label style and the pairs in the overview's `src/app` row and the new variants in its look notes, and list the new suite in its `test/e2e/` row.
 
@@ -96,16 +96,17 @@ Most construction tests live under **Tasks** below.
 
 **Depends on:** T1
 **Mode:** manual QA through the browser suite
-**Touches:** `src/app/form-parts.ts`, `src/app/globals.css`, `src/app/receiving/receipt-form.tsx`, `src/app/production/production-form.tsx`, `src/app/sales/sale-form.tsx`, `src/app/pricing/what-if-form.tsx`, `src/app/trace/find-forms.tsx`, `src/app/invoices/read-forms.tsx`, `src/app/invoices/draft-review.tsx`, `test/e2e/look-polish-forms.spec.ts`, `test/e2e/invoices.spec.ts`, `docs/architecture/overview.md`
+**Touches:** `src/app/form-parts.ts`, `src/app/globals.css`, `src/app/receiving/receipt-form.tsx`, `src/app/production/production-form.tsx`, `src/app/sales/sale-form.tsx`, `src/app/pricing/what-if-form.tsx`, `src/app/trace/find-forms.tsx`, `src/app/invoices/read-forms.tsx`, `src/app/invoices/draft-review.tsx`, `test/e2e/look-polish-forms.spec.ts`, `test/e2e/invoices.spec.ts`, `test/e2e/invoices-page.ts`, `test/look-tidy.test.ts`, `docs/architecture/overview.md`, `docs/specs/polish-forms-alerts/notes/verification-ledger.md`
 
 **Tests:**
 - no stub (manual QA): each check is a computed style, a box, a press, or a request in a browser.
-- `look-polish-forms.spec.ts`: AC-0006 and AC-0007 on every dropdown and date box of the AC-0001 pages, reading `appearance`, the icon's `svg` and color, and the indicator's opacity; AC-0008 through `elementFromPoint` at each icon's center; AC-0009, AC-0010, and AC-0011 on `/invoices`, AC-0010 through Playwright's `filechooser` event for a mouse press, Space, and Enter, and AC-0011 by choosing a photo through that chooser and reading the image the fake model receives; AC-0021 with a vendor named "Heartland Wholesale Meats Inc", measuring the shown text with a canvas in the picker's computed font against its content box less its right padding. Each is seen failing on today's tree first.
-- `invoices.spec.ts`'s check of the photo field's file-selector button, at line 290, reads the "Choose photo" button instead (AC-0031).
+- `look-polish-forms.spec.ts`: AC-0006 and AC-0007 on every dropdown and date box of the AC-0001 pages, reading `appearance` and the icon's `svg` and color, and for AC-0007 hiding the icon and reading a screenshot's pixels right of the content box; AC-0034 through Playwright's accessible-description assertion before a photo is chosen, after, and with a refusal showing; AC-0009, AC-0010, and AC-0011 on `/invoices`, AC-0010 through Playwright's `filechooser` event for a mouse press, Space, and Enter, and AC-0011 by choosing a photo through that chooser and reading the image the fake model receives; AC-0021 with a vendor named "Heartland Wholesale Meats Inc", at the narrowest width found by stepping down 1 px at a time as the Product picker's narrowest-width test does, measuring the shown text with a canvas in the picker's computed font against its content box less its right padding. Each is seen failing on today's tree first.
+- These existing checks read the "Choose photo" button instead of the file input (AC-0031): `invoices.spec.ts`'s "the photo field's selector button looks like a button and the field stays 44 px tall"; the photo field's stop in `FORM_CONTROLS` in `invoices-page.ts`; the focus and description that `invoices.spec.ts`'s refused-photo test ("... is refused beside the Invoice photo field, and nothing is sent") reads; and `look-tidy.test.ts`'s `file:rounded-md` exception for `read-forms.tsx`, which goes or names the new button's class.
+- The ledger records the AC-0008 check by hand on each date box at 1280 px.
 
 **Approach:**
 - Add the chevron and calendar wrappers to the form parts and use them on every dropdown and date box; replace the photo field's visible input with the button and file name; widen the Vendor picker's pair.
-- Name each in the overview's `src/app` row.
+- Name each in the overview's `src/app` row, and state the photo field's `look-tidy.test.ts` exception as it now stands in its `test/` row.
 
 **Done when:** the T2 tests pass and `npm test` passes.
 
@@ -118,7 +119,7 @@ Most construction tests live under **Tasks** below.
 **Tests:**
 - no stub (manual QA): the checks are computed styles, boxes, and list structure in a browser.
 - `look-polish-forms.spec.ts`: AC-0012 with an urgent alert and with the alert check failed; AC-0013 and AC-0014 with an urgent alert, at 390 px and 1280 px; AC-0022 and AC-0023 with a three-paragraph digest seeded through `alerts-page.ts`. Each is seen failing on today's tree first.
-- `look-menu-invoices-ask-alerts.spec.ts` line 1278 counts the three `/alerts` blocks, and `expectNoCap`'s comment in `look-checks.ts` says so (AC-0024). A build that keeps one `/alerts` block at the cap turns that test red; the ledger records the run, and the build is reverted.
+- `look-menu-invoices-ask-alerts.spec.ts`'s `/alerts` cap test ("/alerts lifts the 34rem cap on every child of main but a dialog") passes 3 to `expectNoCap`, and `expectNoCap`'s comment in `look-checks.ts` says Alerts shows three (AC-0024). A build that leaves Today's digest out of `/alerts` turns that test red, where `expectNoCap(page, 2)` stays green on it; the ledger records both runs, and the build is reverted.
 - Any `alerts.spec.ts` check that reads the digest's paragraphs as `p` elements reads the list items instead (AC-0031).
 
 **Approach:**
@@ -131,7 +132,7 @@ Most construction tests live under **Tasks** below.
 
 **Depends on:** T1
 **Mode:** manual QA through the browser suite
-**Touches:** `src/app/before-after.tsx`, `src/app/facts.tsx`, `src/app/globals.css`, `src/app/receiving/result-panel.tsx`, `src/app/production/result-panel.tsx`, `src/app/sales/result-panel.tsx`, `src/app/receiving/page.tsx`, `src/app/receiving/product-region.tsx`, `test/e2e/look-polish-forms.spec.ts`, `docs/architecture/overview.md`
+**Touches:** `src/app/before-after.tsx`, `src/app/facts.tsx`, `src/app/globals.css`, `src/app/receiving/result-panel.tsx`, `src/app/production/result-panel.tsx`, `src/app/sales/result-panel.tsx`, `src/app/receiving/page.tsx`, `src/app/receiving/receipt-form.tsx`, `src/app/receiving/product-region.tsx`, `test/e2e/look-polish-forms.spec.ts`, `docs/architecture/overview.md`
 
 **Tests:**
 - no stub (manual QA): the checks are computed styles and boxes in a browser.
@@ -152,12 +153,12 @@ Most construction tests live under **Tasks** below.
 
 **Tests:**
 - no stub (manual QA): each check holds a server action's request with `page.route` on its `next-action` header and reads the button while it waits.
-- `look-polish-forms.spec.ts`: AC-0019 for each of the six buttons, reading the attribute, `aria-disabled`, `document.activeElement`, and computed opacity; AC-0020 by pressing Save, Void receipt, and Sign in twice while the first press is held and counting the action requests. Each is seen failing on today's tree first.
-- Any existing check that reads one of these buttons' `disabled` attribute, such as `receiving.spec.ts` line 488, reads `aria-disabled` instead if it fails (AC-0031).
+- `look-polish-forms.spec.ts`: AC-0019 for each of the six buttons, reading the attribute, `aria-disabled`, `document.activeElement`, and computed opacity; AC-0020 by pressing Save, Void receipt, and Sign in twice while the first press is held and counting the action requests; AC-0033 by pressing each dialog's Cancel while its request is held, then again after it settles. AC-0019 is seen failing on today's tree first; AC-0020 and AC-0033 guard today's behavior, which `disabled` gives.
+- Any existing check that reads one of these buttons' `disabled` attribute, such as `receiving.spec.ts`'s "pressing Save again while a save is pending writes no second lot", reads `aria-disabled` instead if it fails (AC-0031).
 
 **Approach:**
 - Swap each button's `disabled` for `aria-disabled` with the press guard and the color-only fade.
-- Remove the six buttons from the overview's list of exceptions to the waiting-control rule, if it has one, and name them under the rule.
+- Name the six buttons under the waiting-control rule in the overview's `src/app` row.
 
 **Done when:** the T5 tests pass and `npm test` passes.
 
@@ -165,12 +166,12 @@ Most construction tests live under **Tasks** below.
 
 **Depends on:** T2
 **Mode:** manual QA through the browser suite
-**Touches:** `src/app/ask/page.tsx`, `src/app/ask/ask-panel.tsx`, `src/app/trace/find-forms.tsx`, `src/app/invoices/read-forms.tsx`, `test/e2e/look-polish-forms.spec.ts`, `test/e2e/look-menu-invoices-ask-alerts.spec.ts`, `test/e2e/look-floor-pages.spec.ts`, `docs/architecture/overview.md`
+**Touches:** `src/app/ask/page.tsx`, `src/app/ask/ask-panel.tsx`, `src/app/trace/find-forms.tsx`, `src/app/invoices/read-forms.tsx`, `test/e2e/look-polish-forms.spec.ts`, `test/e2e/look-menu-invoices-ask-alerts.spec.ts`, `test/e2e/invoices.spec.ts`, `test/e2e/shell.spec.ts`, `docs/architecture/overview.md`
 
 **Tests:**
 - no stub (manual QA): the checks are element boxes and computed gaps in a browser.
 - `look-polish-forms.spec.ts`: AC-0025 at 1280 px with an answer; AC-0026 and AC-0027 at 1024 px and 1280 px, reading each form's computed `row-gap` and each card's padding and border. Each is seen failing on today's tree first.
-- `look-menu-invoices-ask-alerts.spec.ts`'s `/ask` 544 px test at line 1146 checks the full width instead, and its read-forms test at line 446 drops the level-button check; `look-floor-pages.spec.ts`'s Trace finder checks drop any level-button check and keep the level tops (AC-0031).
+- These existing checks change (AC-0031): `look-menu-invoices-ask-alerts.spec.ts`'s `/ask` width test ("at 1280 px with an answer, /ask's form, answer, and examples end within 544 px of <main>'s content") checks the full width instead, and so does `shell.spec.ts`'s desktop content cap test for `/ask`'s examples section, which keeps its check of the check step's own 28rem; its read-forms test ("the read forms sit side by side with their tops and their buttons' tops level, above Drafts to confirm") drops the level-button check; and `invoices.spec.ts`'s in-flight test ("while a <source> read is in flight ... the message sits by that Read button, nothing moves, and both buttons are disabled") expects the reading card to grow and the Drafts section to shift down by it, while each Read button stays where it was. `look-floor-pages.spec.ts`'s Trace finder checks pass unchanged.
 
 **Approach:**
 - Pass `fullWidth` on `/ask`; let the four cards take their own heights and drop their reserved space.
@@ -187,7 +188,7 @@ Most construction tests live under **Tasks** below.
 **Tests:**
 - no stub (visual and manual QA): the owner's verdicts and a diff read.
 - `look-polish-forms.spec.ts`: AC-0032 runs `checkPageState` on each AC-0029 state, on `/sign-in`, and on `/production` and `/sales` each with a saved result showing.
-- The ledger records the owner's verdict on each AC-0029 screen, the AC-0031 read of `git diff` from the branch point over `test/` with untracked files listed, and the leftovers gaps this spec closes.
+- The ledger records the owner's verdict on each AC-0029 screen, the AC-0008 check by hand if T2 did not record it, the AC-0031 read of `git diff` from the branch point over `test/` with untracked files listed, and the leftovers gaps this spec closes.
 - Each T7 record names the commit it read: the branch's last commit that changes a file other than those under `docs/specs/polish-forms-alerts/`, `docs/product/briefs/ui-polish.md`, and `workspace.toml`. A later commit that changes any other file re-opens every T7 record; one that changes only those files re-opens none.
 
 **Approach:**
@@ -201,10 +202,11 @@ Big bang, in one PR. Rollback is a revert. No data, schema, or hosted setting ch
 
 ## Risks
 
-- A pair threshold set in rem can land a pair on a line too narrow for its box at some size the criteria do not name. AC-0004 and AC-0005 check every width and text size they name; T1 measures the forms before it sets the thresholds.
+- A pair threshold set in rem can land a pair on a line too narrow for its box at some size the criteria do not name. AC-0004 checks every width and text size it names; T1 measures the forms before it sets the threshold.
 - Hiding the photo input moves keyboard focus to the "Choose photo" button. A test or a screen reader that expects the input itself to take focus would see a change; the label still names the input, so `getByLabel("Invoice photo")` still finds it for `setInputFiles`.
 - Turning `#product-region` into one grid item could move the stock card or Recent receipts at a width the look-pages suite checks. Those checks must pass unchanged.
 
 ## Changelog
 
 - 2026-11-09: initial plan, after the owner's answers on the banner, the Receiving limit, the label style, the field pairs, the digest, Ask's width, and the photo picker, and a Chromium probe of date box widths.
+- 2026-11-09: after shaping review round 1 and adversarial review round 1: the photo picker's description, the dialogs' Cancel guard, and the `/alerts` block count gained criteria; AC-0031 lists every existing check the photo picker and the read cards change; the owner chose to drop the read cards' reserved line and to keep Customer and Sale date on their own lines; a second date-box probe with the icon in place set the 102 px text room and showed the browser's indicator style cannot be read, so the icon's picker press is a check by hand; T2, T4, and T6 name the test and source files they must edit.
