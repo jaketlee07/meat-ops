@@ -157,8 +157,6 @@ export function ReadForms() {
               hidden
               tabIndex={-1}
               onChange={(event) => setPhotoName(event.target.files?.[0]?.name ?? "")}
-              aria-invalid={photoError ? true : undefined}
-              aria-describedby={photoError ? "invoice-photo-error" : undefined}
             />
             <div className="mt-1 flex flex-wrap items-center gap-3">
               <button

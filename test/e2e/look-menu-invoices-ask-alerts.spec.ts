@@ -1140,7 +1140,7 @@ async function showsAnswer(page: Page, baseURL: string | undefined, width: numbe
 }
 
 test.describe("the Ask layout", () => {
-  test("AC-0001: at 1280 px with an answer, /ask's form, answer, and examples span <main>'s content", async ({
+  test("AC-0001: at 1280 px with an answer, /ask's form, answer, and examples end at <main>'s content right edge", async ({
     page,
     baseURL,
   }) => {
@@ -1325,7 +1325,7 @@ test.describe("the Alerts layout", () => {
 
     test(`AC-0013: at ${width}x${height} every paragraph in Today's digest is at most 45rem wide`, async ({ page }) => {
       await opensAlerts(page, width, height);
-      const paragraphs = await boxes(digestRegion(page).locator("li"));
+      const paragraphs = await boxes(digestRegion(page).locator("li, p"));
       expect(paragraphs.length).toBeGreaterThanOrEqual(1);
       for (const paragraph of paragraphs) expect(paragraph.width).toBeLessThanOrEqual(720.5);
     });

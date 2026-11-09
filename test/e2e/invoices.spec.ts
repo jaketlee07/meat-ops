@@ -367,9 +367,6 @@ test.describe("the read forms", () => {
       const rowGrowth = stacked
         ? growth
         : Math.max(after.reading.height, after.beside.height) - Math.max(before.reading.height, before.beside.height);
-      console.log(
-        `AC-0014 ${source}${viewport ? " at 320 px" : " at 1280 px"}: ${stacked ? "stacked" : "side by side"}, reading card grew ${growth.toFixed(1)} px, its row grew ${rowGrowth.toFixed(1)} px, message ${message!.height.toFixed(1)} px tall`,
-      );
       // Kept in place: the pressed button and every box above the message.
       for (const name of ["reading", "heading", "field", "readButton"] as const) {
         expect({ name, x: after[name].x, y: after[name].y }).toEqual({ name, x: before[name].x, y: before[name].y });

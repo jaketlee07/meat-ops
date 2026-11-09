@@ -59,9 +59,11 @@ import { open as openTrace } from "./trace-page";
 
 // Spec polish-forms-alerts, how the forms and alerts are drawn: the one label style (AC-0001), the number pairs that
 // share a line and hold a whole figure (AC-0002, AC-0004), the floor forms' Tab order (AC-0028), the quiet urgent
-// banner (AC-0012, AC-0013, AC-0014), and the digest list (AC-0022, AC-0023), the dropdown and date icons (AC-0006,
-// AC-0007), the photo picker (AC-0009, AC-0010, AC-0011, AC-0034), and the Vendor picker (AC-0021). Operator session;
-// data is reset before each test, then each test builds the state it reads with made-up data.
+// banner (AC-0012, AC-0013, AC-0014), the digest list (AC-0022, AC-0023), the six waiting buttons (AC-0019, AC-0020,
+// AC-0033), the dropdown and date icons (AC-0006, AC-0007), the photo picker (AC-0009, AC-0010, AC-0011, AC-0034),
+// the Vendor picker (AC-0021), the saved results under the floor forms (AC-0015 to AC-0018), Ask's width (AC-0025),
+// the Trace and Invoices card gaps (AC-0026, AC-0027), and the page-state check on each screen (AC-0032). Operator
+// session; data is reset before each test, then each test builds the state it reads with made-up data.
 
 test.use({ storageState: OPERATOR_STATE });
 
@@ -238,16 +240,10 @@ const PAIRS: Pair[] = [
   },
 ];
 
-async function boxOf(target: Locator) {
-  const found = await target.boundingBox();
-  expect(found, "box").not.toBeNull();
-  return found!;
-}
-
 // The second box is right of the first with the tops of their boxes within 1 px.
 async function expectSharedLine(first: Locator, second: Locator) {
-  const a = await boxOf(first);
-  const b = await boxOf(second);
+  const a = await box(first);
+  const b = await box(second);
   expect(b.x, "the second field is right of the first").toBeGreaterThanOrEqual(a.x + a.width);
   expect(Math.abs(a.y - b.y), "the tops of the boxes").toBeLessThanOrEqual(1);
 }
@@ -281,7 +277,7 @@ for (const { page: label, open } of PAIRS) {
       const pair = await open(page);
       await withTextSize(page, width, 900, px);
       if (shares) await expectSharedLine(pair[0], pair[1]);
-      else expect((await boxOf(pair[1])).y, "the second field stacks under the first").toBeGreaterThan((await boxOf(pair[0])).y);
+      else expect((await box(pair[1])).y, "the second field stacks under the first").toBeGreaterThan((await box(pair[0])).y);
       for (const target of pair) {
         await target.fill(FIGURE);
         const fit = await target.evaluate((node) => ({ scroll: node.scrollWidth, client: node.clientWidth }));
@@ -689,6 +685,10 @@ test.describe("signed out and waiting", () => {
 
 // ---- AC-0006 and AC-0007: the dropdown and date box icons ----
 
+// The icon paths src/app/form-parts.ts draws for a dropdown and a date box.
+const CHEVRON_PATH = "m6 9 6 6 6-6";
+const CALENDAR_PATH = "M8 2v4M16 2v4M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM3 10h18";
+
 // Every dropdown and date box in `scope` with what the criteria read: the browser's appearance, the icon beside it
 // (its svg, its color, and its box against the control's), and the control's own box.
 async function iconReads(scope: Locator) {
@@ -709,6 +709,7 @@ async function iconReads(scope: Locator) {
         kind: control.tagName === "SELECT" ? "dropdown" : "date box",
         appearance: css.appearance,
         svgs: svgs.length,
+        path: svg?.querySelector("path")?.getAttribute("d") ?? "",
         hidden: svg?.closest("[aria-hidden=true]") !== null || svg?.getAttribute("aria-hidden") === "true",
         pointerEvents: svg ? getComputedStyle(svg).pointerEvents : "",
         color: svg ? getComputedStyle(svg).color : "",
@@ -726,15 +727,18 @@ async function iconReads(scope: Locator) {
 }
 
 // Each dropdown in `scope` draws no arrow of its own and a chevron in the secondary ink inside its right edge; each date
-// box shows a calendar icon there, right of its content box, with 12 px and 40 px of padding. Returns the widths of the
-// date boxes, each at least the 156 px that shows 11/09/2026 whole beside the icon.
-async function expectIcons(page: Page, scope: Locator, counts: { dropdowns: number; dates: number }): Promise<number[]> {
+// box shows a calendar icon there, right of its content box, with 12 px and 40 px of padding and at least the 156 px
+// that shows 11/09/2026 whole beside the icon. Each icon draws its own path: the chevron or the calendar.
+async function expectIcons(scope: Locator, counts: { dropdowns: number; dates: number }) {
   const reads = await iconReads(scope);
   expect(reads.filter((read) => read.kind === "dropdown")).toHaveLength(counts.dropdowns);
   expect(reads.filter((read) => read.kind === "date box")).toHaveLength(counts.dates);
   for (const read of reads) {
     const named = `${read.kind} ${read.id}`;
     expect(read.svgs, `${named} has one icon`).toBe(1);
+    expect(read.path, `${named}'s icon draws the ${read.kind === "dropdown" ? "chevron" : "calendar"}`).toBe(
+      read.kind === "dropdown" ? CHEVRON_PATH : CALENDAR_PATH,
+    );
     expect(read.hidden, `${named}'s icon is hidden from assistive technology`).toBe(true);
     expect(read.pointerEvents, `${named}'s icon takes no pointer events`).toBe("none");
     expect(read.color, `${named}'s icon is in --color-ink-secondary`).toBe(read.ink);
@@ -748,9 +752,6 @@ async function expectIcons(page: Page, scope: Locator, counts: { dropdowns: numb
       expect(read.width, `${named} is wide enough for its date`).toBeGreaterThanOrEqual(156);
     }
   }
-  const widths = reads.filter((read) => read.kind === "date box").map((read) => read.width);
-  console.log(`date box widths at ${page.viewportSize()?.width} px: ${widths.map((w) => w.toFixed(1)).join(", ")}`);
-  return widths;
 }
 
 // With the LineIcon hidden, a date box looks the same before and after a rule that hides the browser's calendar icon
@@ -776,7 +777,7 @@ test("AC-0006 and AC-0007: /receiving's Vendor and Received date carry their ico
   const form = page.getByRole("form", { name: "New receipt" });
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    await expectIcons(page, form, { dropdowns: 1, dates: 1 });
+    await expectIcons(form, { dropdowns: 1, dates: 1 });
   }
   await expectNoBrowserIcon(page, form);
 });
@@ -787,7 +788,7 @@ test("AC-0007: /production's Production date carries its icon", async ({ page })
   const form = page.getByRole("form", { name: "New batch" });
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    await expectIcons(page, form, { dropdowns: 0, dates: 1 });
+    await expectIcons(form, { dropdowns: 0, dates: 1 });
   }
   await expectNoBrowserIcon(page, form);
 });
@@ -798,7 +799,7 @@ test("AC-0006 and AC-0007: /sales' Customer and Sale date carry their icons", as
   const form = page.getByRole("form", { name: "New sale" });
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    await expectIcons(page, form, { dropdowns: 1, dates: 1 });
+    await expectIcons(form, { dropdowns: 1, dates: 1 });
   }
   await expectNoBrowserIcon(page, form);
 });
@@ -806,7 +807,7 @@ test("AC-0006 and AC-0007: /sales' Customer and Sale date carry their icons", as
 test("AC-0006: /pricing's what-if Raw product carries its chevron", async ({ page }) => {
   await seed502Fixture();
   await opensPricing(page);
-  await expectIcons(page, page.getByRole("region", { name: "What if raw cost changes?" }), { dropdowns: 1, dates: 0 });
+  await expectIcons(page.getByRole("region", { name: "What if raw cost changes?" }), { dropdowns: 1, dates: 0 });
 });
 
 test("AC-0007: /trace's raw lot finder Received date carries its icon", async ({ page }) => {
@@ -814,7 +815,7 @@ test("AC-0007: /trace's raw lot finder Received date carries its icon", async ({
   const main = page.getByRole("main");
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    await expectIcons(page, main, { dropdowns: 0, dates: 1 });
+    await expectIcons(main, { dropdowns: 0, dates: 1 });
   }
   await expectNoBrowserIcon(page, main);
 });
@@ -823,12 +824,10 @@ test("AC-0006 and AC-0007: a draft's review Product, Vendor, and Received date c
   await seedFixture();
   await openReview(page, await seedDraft({ words: ["TKY DRUMS 40# CASE"] }));
   const review = page.getByRole("region", { name: "Draft review" });
-  const widths: number[] = [];
   for (const width of [390, 1178, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    widths.push(...(await expectIcons(page, review, { dropdowns: 2, dates: 1 })));
+    await expectIcons(review, { dropdowns: 2, dates: 1 });
   }
-  console.log(`AC-0007 review Received date widths at 390, 1178, 1280, 1440 px: ${widths.map((w) => w.toFixed(1)).join(", ")}`);
   await expectNoBrowserIcon(page, review);
 });
 
@@ -851,7 +850,7 @@ async function chooserOpenedBy(page: Page, press: () => Promise<void>) {
   return opened;
 }
 
-test("AC-0009: the photo field shows its label above a Choose photo button, with No photo chosen beside it and no file input", async ({
+test("AC-0009: the photo field shows its label above a Choose photo button, with No photo chosen beside it, a hidden file input, and the chosen file's name", async ({
   page,
   baseURL,
 }) => {
@@ -951,14 +950,12 @@ test("AC-0021: the Vendor picker shows its prompt and a long vendor name whole a
     narrowest = width;
   }
   expect(narrowest, "Vendor stops sitting beside Product below 1280 px").toBeLessThan(1280);
-  const reads: string[] = [];
   for (const width of [1178, 1280, narrowest]) {
     await page.setViewportSize({ width, height: 720 });
     if (width === narrowest) {
       expect(await besideProduct(), `Vendor sits beside Product at ${width} px`).toBe(true);
       const date = await box(page.locator("#line-1-date"));
       expect(date.width, "Received date is wide enough for its date where it shares a line").toBeGreaterThanOrEqual(156);
-      reads.push(`Received date ${date.width.toFixed(1)} px wide at ${width} px`);
     }
     for (const label of ["Choose a vendor", LONG_VENDOR]) {
       await vendor.selectOption({ label });
@@ -966,10 +963,8 @@ test("AC-0021: the Vendor picker shows its prompt and a long vendor name whole a
       expect(fit.text).toBe(label);
       expect(fit.shown, `"${label}" fits the content box at ${width} px`).toBeLessThanOrEqual(fit.room);
       expect(fit.gap, `the chevron is right of "${label}" at ${width} px`).toBeGreaterThanOrEqual(0);
-      reads.push(`${width} px "${label}": text ${fit.shown.toFixed(1)}, room ${fit.room.toFixed(1)}, gap ${fit.gap.toFixed(1)}`);
     }
   }
-  console.log(`AC-0021 narrowest width beside Product: ${narrowest} px\n${reads.join("\n")}`);
 });
 
 // ---- AC-0015, AC-0016, AC-0017, AC-0018: the saved results under the floor forms ----
@@ -1133,18 +1128,26 @@ for (const { page: label, save } of SAVED) {
     await page.setViewportSize({ width: 1280, height: 900 });
     const saved = await save(page);
     for (const text of saved.shows) await expect(saved.result).toContainText(text);
-    const reads: string[] = [];
     const problems: string[] = [];
     for (const [width, px] of RESULT_VIEWS) {
       await withTextSize(page, width, 900, px);
       const found = await wholeWordsAndFigures(saved.result);
       expect(found.words, `words read at ${width} px, ${px} px text`).toBeGreaterThanOrEqual(5);
       expect(found.numbers, `numbers read at ${width} px, ${px} px text`).toBeGreaterThanOrEqual(6);
-      reads.push(`${width} px, ${px} px text: card ${found.width.toFixed(1)} px, ${found.words} words, ${found.numbers} numbers`);
       problems.push(...found.problems.map((problem) => `${width} px, ${px} px text: ${problem}`));
     }
-    console.log(`${label}\n${reads.join("\n")}`);
     expect(problems).toEqual([]);
+  });
+
+  test(`AC-0016: ${label}'s saved result keeps Before and After as column headers where its rows stack`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const saved = await save(page);
+    for (const text of saved.shows) await expect(saved.result).toContainText(text);
+    const card = await box(saved.result);
+    expect(card.width, "the card is under 20rem, so its rows stack").toBeLessThan(320);
+    for (const name of ["Before", "After"]) {
+      await expect(saved.result.getByRole("columnheader", { name }).first(), `${name} is still a column header`).toBeAttached();
+    }
   });
 }
 
@@ -1185,7 +1188,6 @@ for (const [width, px] of [
     await expect(priced).toHaveCount(18);
     await saveOnce();
     const many = await resultGap(form, f.result);
-    console.log(`AC-0018 ${width} px, ${px} px text: ${one.toFixed(2)} px with 1 finished product, ${many.toFixed(2)} px with 18`);
     expect(Math.abs(many - one), "the gap under the form with 18 against 1 finished products").toBeLessThanOrEqual(1);
   });
 }
@@ -1209,18 +1211,15 @@ test("AC-0025: at 1280 px with an answer, /ask's question card, answer card, and
     const left = el.getBoundingClientRect().left + el.clientLeft + parseFloat(style.paddingLeft);
     return { left, right: left + el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
   });
-  const reads: string[] = [];
   for (const [name, target] of [
     ["question card", page.locator("main form")],
     ["answer card", p.answer],
     ["examples section", p.examples],
   ] as const) {
     const own = await box(target);
-    reads.push(`${name} ${own.x.toFixed(1)} to ${(own.x + own.width).toFixed(1)}`);
     expect(Math.abs(own.x - content.left), `${name} left edge against <main>'s content`).toBeLessThanOrEqual(1);
     expect(Math.abs(own.x + own.width - content.right), `${name} right edge against <main>'s content`).toBeLessThanOrEqual(1);
   }
-  console.log(`AC-0025 content ${content.left.toFixed(1)} to ${content.right.toFixed(1)}: ${reads.join("; ")}`);
 });
 
 // ---- AC-0026 and AC-0027: the Trace and Invoices cards hold no gaps ----
@@ -1274,11 +1273,9 @@ for (const [label, width, height, names, open] of [
   }) => {
     await page.setViewportSize({ width, height });
     await open(page);
-    const reads: string[] = [];
     for (const name of names) {
       const card = page.getByRole("region", { name, exact: true });
       const g = await cardGaps(card);
-      reads.push(`${name}: button ${g.above.toFixed(1)} under its field (row gap ${g.rowGap}), card bottom ${g.below.toFixed(1)} under the button (padding and border ${g.room})`);
       expect(Math.abs(g.above - g.rowGap), `${name}: the button's top under the field above it, against the form's row gap`).toBeLessThanOrEqual(1);
       expect(Math.abs(g.below - g.room), `${name}: the card's bottom under the button, against its bottom padding and border`).toBeLessThanOrEqual(1);
     }
@@ -1295,7 +1292,6 @@ for (const [label, width, height, names, open] of [
       }
       await expect(page.getByRole("region", { name: "Read an invoice" }).getByRole("status")).toBeAttached();
     }
-    console.log(`AC-0026, AC-0027 ${label} ${width} px: ${reads.join("; ")}`);
   });
 }
 

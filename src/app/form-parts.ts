@@ -29,7 +29,7 @@ const ICON_PATHS = {
 };
 
 // The wrapper of a dropdown or date box: the box, then its icon over the box's right edge. The icon is decoration,
-// so it is hidden from assistive technology and takes no pointer events. `spacing` is the margin above the box. This file holds no markup of its own, so
+// so it is hidden from assistive technology and takes no pointer events. `spacing` is the margin above the box. This is a `.ts` module, which holds no JSX, so
 // the wrapper is built with createElement.
 export function IconBox({
   icon,

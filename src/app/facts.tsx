@@ -1,5 +1,6 @@
 // A list of label and value pairs in tabular figures; the value is right-aligned in "list", "quiet", "cells" (outside a
-// table), and "card-cols", and left-aligned in "tiles", "card", and "plain".
+// table), and "card-cols", and left-aligned in "tiles", "card", and "plain". A "list" value that drops under its label
+// (`result-stack`, below) is left-aligned there, under the label.
 // `look` only chooses classes: the elements, their order, and the text are the same in
 // every look, and each label stays in the page. "list" is the plain rows. "tiles" draws
 // the pairs as tinted tiles, label above value, each value whole on one line, side by side while both fit in the
@@ -26,9 +27,10 @@ const COLUMN_LABEL = "min-w-0 break-words text-ink-secondary";
 const VALUE = "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums";
 // The "list" look's value is weight 500. Where its card is the container named `result` and under 20rem wide
 // (`result-stack` in globals.css), the row wraps: the value takes up to the row's width and drops under its label
-// when the two do not share a line, so a long figure (1,234,567.891 lbs, $1,524,148.1300/lb) stays whole.
-const VALUE_LIST = "max-w-[60%] shrink-0 break-words text-right font-medium tabular-nums result-stack:max-w-full";
+// when the two do not share a line, so a long figure (1,234,567.891 lbs, $1,524,148.1300/lb) stays whole. Every
+// dropped value is left-aligned under its label.
 const VALUE_MEDIUM = "max-w-[60%] shrink-0 break-words text-right font-medium tabular-nums";
+const VALUE_LIST = `${VALUE_MEDIUM} result-stack:max-w-full result-stack:text-left`;
 const VALUE_QUIET = "max-w-[60%] shrink-0 break-words text-right tabular-nums";
 const CARD_BOTTOM = "rounded-b-card border border-t-0 border-card-border bg-surface px-4 pb-4";
 const CARD_ROW = "-mb-px flex justify-between gap-4 border-y border-card-border py-2";

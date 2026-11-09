@@ -15,8 +15,8 @@ interface Row {
 // `result-snug:` class does nothing under 13rem: a class meant to hold there too is also set under
 // `result-tight:`. Under 20rem (`result-stack`, which overlaps both) each row stacks: its label on one line,
 // then Before and After each on a line of their own with the column name before the value, and every value
-// on one line. The header keeps its title and hides Before and After (`display: none`), which the rows now name before each value; its cells and
-// the roles below keep the table's meaning where the display is no longer a table. The After column is
+// on one line. The header keeps its title and shrinks Before and After to no height (`h-0` with `overflow-hidden`, inside their cells), since the rows now name
+// each value; the two stay column headers in the accessibility tree, and the roles below keep the table's meaning where the display is no longer a table. The After column is
 // weight 500, like every figure in a saved result.
 export function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
   return (
@@ -36,14 +36,14 @@ export function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
           <th
             role="columnheader"
             scope="col"
-            className="px-2 py-2 text-right text-sm font-semibold text-ink-secondary result-snug:px-0.5 result-snug:text-xs result-tight:px-0 result-tight:text-xs result-stack:hidden"
+            className="px-2 py-2 text-right text-sm font-semibold text-ink-secondary result-snug:px-0.5 result-snug:text-xs result-tight:px-0 result-tight:text-xs result-stack:block result-stack:h-0 result-stack:overflow-hidden result-stack:p-0"
           >
             Before
           </th>
           <th
             role="columnheader"
             scope="col"
-            className="rounded-r-control py-2 pl-2 text-right text-sm font-semibold text-ink-secondary result-snug:pl-0.5 result-snug:text-xs result-tight:pl-0 result-tight:text-xs result-stack:hidden"
+            className="rounded-r-control py-2 pl-2 text-right text-sm font-semibold text-ink-secondary result-snug:pl-0.5 result-snug:text-xs result-tight:pl-0 result-tight:text-xs result-stack:block result-stack:h-0 result-stack:overflow-hidden result-stack:p-0"
           >
             After
           </th>
