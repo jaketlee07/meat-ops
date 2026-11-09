@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { CHANGE_UNKNOWN } from "../../lib/failures";
 import type { ValueParse } from "../../lib/price-input";
 import type { ChangeState } from "./save-change";
+import { LABEL } from "../form-parts";
 
 type ChangeAction = (formData: FormData) => Promise<ChangeState>;
 
@@ -98,7 +99,7 @@ export function ChangeForm({
       <form onSubmit={submit} noValidate className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2">
         {/* The field's parts sit straight on the form's grid: label above, input and Save on one line, then the error. */}
         <div className="contents">
-          <label htmlFor={id} className="col-span-2 row-start-1 mb-1.5 block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={id} className={`col-span-2 row-start-1 mb-1.5 ${LABEL}`}>
             {label}
           </label>
           <input

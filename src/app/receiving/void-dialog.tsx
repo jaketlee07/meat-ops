@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, useTransition, type FormEvent } fro
 import { VOID_UNKNOWN } from "../../lib/failures";
 import { parseVoidReason } from "../../lib/receipt-input";
 import type { VoidState } from "./actions";
+import { LABEL } from "../form-parts";
 
 interface Props {
   lotNumber: string;
@@ -145,7 +146,7 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
           <p id={sentenceId} className="break-words text-base">{`Lot ${lotNumber}, ${weight}, from ${vendor}. Voiding takes it out of stock and can't be undone.`}</p>
 
           <div>
-            <label className="block text-base font-medium">
+            <label className={LABEL}>
               Reason for the void
               <textarea
                 ref={reasonRef}

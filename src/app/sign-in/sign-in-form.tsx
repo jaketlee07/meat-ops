@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { signIn, type SignInState } from "./actions";
+import { LABEL } from "../form-parts";
 
 const INITIAL_STATE: SignInState = {};
 
@@ -20,7 +21,7 @@ export function SignInForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-semibold text-ink-secondary">
+        <label htmlFor="email" className={LABEL}>
           Email
         </label>
         <input
@@ -35,7 +36,7 @@ export function SignInForm() {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-semibold text-ink-secondary">
+        <label htmlFor="password" className={LABEL}>
           Password
         </label>
         <input

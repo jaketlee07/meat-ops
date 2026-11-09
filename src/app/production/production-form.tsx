@@ -15,6 +15,7 @@ import { saveBatch, type SaveState } from "./actions";
 import { CheckStep, type CheckedProduct } from "./check-step";
 import { FIELD_ORDER } from "./form-fields";
 import { ResultPanel } from "./result-panel";
+import { CONTROL, LABEL, PAIR, PAIR_FIELD } from "../form-parts";
 
 interface Props {
   // The page's product list: the active finished products as of the latest server render.
@@ -42,8 +43,6 @@ const IDLE: SaveState = { status: "idle" };
 const NO_ERRORS: Partial<Record<BatchField, string>> = {};
 
 const NO_BATCHES: readonly string[] = [];
-
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
 function deviceToday(): string {
@@ -255,7 +254,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         onSubmit={submit}
         aria-labelledby="production-form-heading"
         noValidate
-        className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
+        className="@container/fields space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
       >
         <h2 id="production-form-heading" className="text-lg font-bold">
           New batch
@@ -268,7 +267,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         )}
 
         <div>
-          <label htmlFor={FIELD_IDS.productCode} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.productCode} className={LABEL}>
             Product code
           </label>
           <input
@@ -290,44 +289,46 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
           {fieldError("productCode")}
         </div>
 
-        <div>
-          <label htmlFor={FIELD_IDS.rawLbs} className="block text-sm font-semibold text-ink-secondary">
-            Raw lbs
-          </label>
-          <input
-            id={FIELD_IDS.rawLbs}
-            name="rawLbs"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={rawLbs}
-            onChange={(event) => setRawLbs(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("rawLbs")}
-          />
-          {fieldError("rawLbs")}
+        <div className={PAIR}>
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.rawLbs} className={LABEL}>
+              Raw lbs
+            </label>
+            <input
+              id={FIELD_IDS.rawLbs}
+              name="rawLbs"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={rawLbs}
+              onChange={(event) => setRawLbs(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("rawLbs")}
+            />
+            {fieldError("rawLbs")}
+          </div>
+
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.finishedLbs} className={LABEL}>
+              Finished lbs (optional)
+            </label>
+            <input
+              id={FIELD_IDS.finishedLbs}
+              name="finishedLbs"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={finishedLbs}
+              onChange={(event) => setFinishedLbs(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("finishedLbs")}
+            />
+            {fieldError("finishedLbs")}
+          </div>
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.finishedLbs} className="block text-sm font-semibold text-ink-secondary">
-            Finished lbs (optional)
-          </label>
-          <input
-            id={FIELD_IDS.finishedLbs}
-            name="finishedLbs"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={finishedLbs}
-            onChange={(event) => setFinishedLbs(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("finishedLbs")}
-          />
-          {fieldError("finishedLbs")}
-        </div>
-
-        <div>
-          <label htmlFor={FIELD_IDS.productionDate} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.productionDate} className={LABEL}>
             Production date
           </label>
           <input
@@ -344,7 +345,7 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.notes} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.notes} className={LABEL}>
             Notes (optional)
           </label>
           <textarea

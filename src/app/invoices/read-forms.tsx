@@ -13,13 +13,13 @@ import {
 } from "../../lib/invoice-reading";
 import { readPhoto, readText, type ReadState } from "./actions";
 import { deviceToday, PHOTO_FIELD, TEXT_FIELD, TODAY_FIELD } from "./form-fields";
+import { CONTROL, LABEL } from "../form-parts";
 
 // The longest edge the model reads (AC-0013).
 const LONG_EDGE = 2576;
 const READING = "Reading. This can take up to two minutes.";
 
 const IDLE: ReadState = { status: "idle" };
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 // The photo field's own selector button, styled to look like a button.
 const FILE_BUTTON =
   "file:mr-3 file:rounded-md file:border file:border-field-border file:bg-surface file:px-3 file:py-1 file:text-base file:font-medium file:text-ink";
@@ -143,7 +143,7 @@ export function ReadForms() {
         </h2>
         <form onSubmit={submitPhoto} noValidate className={FORM}>
           <div>
-            <label htmlFor="invoice-photo" className="block text-base font-medium">
+            <label htmlFor="invoice-photo" className={LABEL}>
               Invoice photo
             </label>
             <input
@@ -178,7 +178,7 @@ export function ReadForms() {
         </h2>
         <form onSubmit={submitText} noValidate className={FORM}>
           <div>
-            <label htmlFor="receipt-text" className="block text-base font-medium">
+            <label htmlFor="receipt-text" className={LABEL}>
               Receipt text
             </label>
             <textarea

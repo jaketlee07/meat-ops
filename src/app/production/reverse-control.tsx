@@ -12,6 +12,7 @@ import { REASON_LINE, StatusTag } from "../status-tag";
 import { showAverage, showOnHand, stockView } from "../stock-view";
 import type { ReversalState } from "./actions";
 import type { ReversalDetails, ReversalStock } from "./reverse-batch";
+import { LABEL } from "../form-parts";
 
 // What the confirmation lists, read when the page was rendered.
 export type Preview = Pick<ReversalPreview, "lots" | "sales">;
@@ -287,7 +288,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
             )}
 
             <div>
-              <label className="block text-base font-medium">
+              <label className={LABEL}>
                 Reason for the reversal
                 <textarea
                   ref={reasonRef}

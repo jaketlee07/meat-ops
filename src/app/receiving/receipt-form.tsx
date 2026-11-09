@@ -17,6 +17,7 @@ import type { Vendor } from "../../lib/receiving";
 import { saveReceipt, type SaveState } from "./actions";
 import { FIELD_ORDER, readFields, readRecheck, RECHECK_FIELD } from "./form-fields";
 import { ResultPanel } from "./result-panel";
+import { CONTROL, LABEL, PAIR, PAIR_FIELD } from "../form-parts";
 
 export interface ProductChoice {
   code: string;
@@ -52,8 +53,6 @@ const FIELD_IDS: Record<ReceiptField, string> = {
 const IDLE: SaveState = { status: "idle" };
 const NO_ERRORS: Partial<Record<ReceiptField, string>> = {};
 const NO_LOTS: readonly string[] = [];
-
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
 function deviceToday(): string {
@@ -233,7 +232,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         onSubmit={submit}
         aria-labelledby="receipt-form-heading"
         noValidate
-        className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
+        className="@container/fields space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
       >
         <h2 id="receipt-form-heading" className="text-lg font-bold">
           New receipt
@@ -247,7 +246,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         )}
 
         <div>
-          <label htmlFor={FIELD_IDS.productCode} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.productCode} className={LABEL}>
             Product code
           </label>
           <input
@@ -270,7 +269,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.vendorId} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.vendorId} className={LABEL}>
             Vendor
           </label>
           <select
@@ -291,44 +290,46 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
           {fieldError("vendorId")}
         </div>
 
-        <div>
-          <label htmlFor={FIELD_IDS.weight} className="block text-sm font-semibold text-ink-secondary">
-            Weight (lbs)
-          </label>
-          <input
-            id={FIELD_IDS.weight}
-            name="weight"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={weight}
-            onChange={(event) => setWeight(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("weight")}
-          />
-          {fieldError("weight")}
+        <div className={PAIR}>
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.weight} className={LABEL}>
+              Weight (lbs)
+            </label>
+            <input
+              id={FIELD_IDS.weight}
+              name="weight"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={weight}
+              onChange={(event) => setWeight(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("weight")}
+            />
+            {fieldError("weight")}
+          </div>
+
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.cost} className={LABEL}>
+              Cost per lb ($)
+            </label>
+            <input
+              id={FIELD_IDS.cost}
+              name="cost"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={cost}
+              onChange={(event) => setCost(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("cost")}
+            />
+            {fieldError("cost")}
+          </div>
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.cost} className="block text-sm font-semibold text-ink-secondary">
-            Cost per lb ($)
-          </label>
-          <input
-            id={FIELD_IDS.cost}
-            name="cost"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={cost}
-            onChange={(event) => setCost(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("cost")}
-          />
-          {fieldError("cost")}
-        </div>
-
-        <div>
-          <label htmlFor={FIELD_IDS.receivedDate} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.receivedDate} className={LABEL}>
             Received date
           </label>
           <input
@@ -348,7 +349,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         {recheckCode && <input type="hidden" name={RECHECK_FIELD} value="1" />}
 
         <div>
-          <label htmlFor={FIELD_IDS.notes} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.notes} className={LABEL}>
             Notes (optional)
           </label>
           <textarea

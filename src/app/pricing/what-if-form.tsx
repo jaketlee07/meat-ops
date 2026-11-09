@@ -3,13 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { parseWhatIf, type WhatIfField } from "../../lib/price-input";
+import { CONTROL, LABEL } from "../form-parts";
 
 type Errors = Partial<Record<WhatIfField, string>>;
 
 const IDS: Record<WhatIfField, string> = { rawCode: "what-if-raw", cost: "what-if-cost" };
 const ORDER: WhatIfField[] = ["rawCode", "cost"];
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
-const LABEL = "block text-sm font-semibold text-ink-secondary";
 
 export interface RawChoice {
   code: string;

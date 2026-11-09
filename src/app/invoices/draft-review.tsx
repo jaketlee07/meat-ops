@@ -25,6 +25,7 @@ import {
   type LineField,
   type LineInput,
 } from "./save-draft";
+import { LABEL } from "../form-parts";
 
 interface Props {
   draft: Draft;
@@ -44,7 +45,6 @@ const IDLE: ReviewState = { status: "idle" };
 const NO_ERRORS: FieldErrors = {};
 
 const CONTROL = "mt-1.5 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
-const LABEL = "block text-sm font-semibold text-ink-secondary";
 const CARD = "rounded-card border border-card-border bg-surface p-4";
 // A waiting button keeps its focus and fades its colors, never its opacity: the fill of Save receipts, the text
 // and border of Discard draft. Where the form has room (`lines-row`) the two sit side by side at their own width.

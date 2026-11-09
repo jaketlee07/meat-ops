@@ -271,6 +271,19 @@
    receipt form's own `receipt-message` id. */
 @custom-variant status-has-message (&:has(> div > [role="alert"]:not(:empty), > div > [role="status"]:not(:empty)));
 
+/* Two neighboring number fields (PAIR in form-parts.ts) share a line only when the form around them, the
+   container named fields, is at least 14.75rem wide inside its padding; narrower, they stack. Each box of a
+   pair must hold 12,345.678 whole: 111 px a box at 16 px text (6.9rem), 136 px at 20 px (6.8rem), so two boxes
+   and the 0.75rem gap need 14.63rem at 16 px and 14.35rem at 20 px. In rem, no screen gate, so a larger text
+   size stacks them until the form has grown to fit.
+   The three floor forms are 20.5rem wide inside at 390 px, 19.1rem at 1024 px, and 15.4rem at 1280 px at the
+   default size; with a 20 px root 15.7rem, 14.9rem, and 11.9rem (stacked at 1280 px). */
+@custom-variant field-pair {
+  @container fields (min-width: 14.75rem) {
+    @slot;
+  }
+}
+
 /* Anything on the navy bar: white text, and a white focus ring. */
 @utility on-bar {
   background-color: var(--color-bar);
