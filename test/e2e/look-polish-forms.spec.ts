@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { query, RAW_TOM_ID, resetTestData, saleFixture } from "../db";
+import { checkPageState } from "./a11y";
 import { banner, marginCase, openDigest, seedDigest, withWatchRefused } from "./alerts-page";
 import { ask, modelAnswer, openAsk } from "./ask-page";
 import {
@@ -1295,5 +1296,78 @@ for (const [label, width, height, names, open] of [
       await expect(page.getByRole("region", { name: "Read an invoice" }).getByRole("status")).toBeAttached();
     }
     console.log(`AC-0026, AC-0027 ${label} ${width} px: ${reads.join("; ")}`);
+  });
+}
+
+// ---- AC-0032: the page-state check on each screen state this spec draws ----
+
+test("AC-0032: /receiving with a product chosen passes the page-state check at 1280 px", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const f = await openReceivingForm(page, RAW_TOM_URL);
+  await expect(f.code).toHaveValue("RAW-TOM");
+  await checkPageState(page);
+});
+
+test("AC-0032: /receiving with an urgent alert showing passes the page-state check at 1280 px", async ({ page }) => {
+  await marginCase();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/receiving");
+  await expect(banner(page).getByText("1 urgent alert needs you.", { exact: true })).toBeVisible();
+  await checkPageState(page);
+});
+
+test("AC-0032: /alerts with a written digest passes the page-state check at 1280 px", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openWrittenDigest(page);
+  await expect(page.getByRole("region", { name: "Today's digest", exact: true }).getByRole("listitem")).toHaveCount(3);
+  await checkPageState(page);
+});
+
+test("AC-0032: /invoices passes the page-state check at 1280 px", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await seedFixture();
+  const p = await openInvoices(page);
+  await expect(p.choosePhoto).toBeVisible();
+  await expect(page.getByRole("region", { name: "Type a receipt", exact: true })).toBeVisible();
+  await checkPageState(page);
+});
+
+test("AC-0032: /trace passes the page-state check at 1280 px", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openTrace(page);
+  await expect(page.getByRole("region", { name: "Find a sale", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Find a raw lot", exact: true })).toBeVisible();
+  await checkPageState(page);
+});
+
+test("AC-0032: /ask with an answer passes the page-state check at 1280 px", async ({ page, baseURL }) => {
+  await saleFixture();
+  const model = fakeModel(baseURL);
+  await model.reset();
+  await model.answer(modelAnswer({ query: "sellable_now" }));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const p = await openAsk(page);
+  await ask(p, "What can I sell right now?");
+  await expect(p.answer).toBeVisible();
+  await checkPageState(page);
+});
+
+test.describe("signed out, page-state check", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("AC-0032: /sign-in passes the page-state check at 1280 px", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/sign-in");
+    await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await checkPageState(page);
+  });
+});
+
+for (const { page: label, save } of SAVED.slice(1)) {
+  test(`AC-0032: ${label} with a saved result showing passes the page-state check at 1280 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const saved = await save(page);
+    await expect(saved.result).toBeVisible();
+    await checkPageState(page);
   });
 }
