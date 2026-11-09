@@ -86,7 +86,8 @@ test.describe("the list", () => {
     await op(reverseCall(fixture.batch2Id, "entered twice"));
     await openForm(page, BATCH_URL);
     const reversed = batchItem(page, batch2);
-    await expect(reversed.getByText("Reversed: entered twice", { exact: true })).toBeVisible();
+    await expect(reversed.getByText("Reversed", { exact: true })).toBeVisible();
+    await expect(reversed.locator("p", { hasText: /^entered twice$/ })).toBeVisible();
     await expect(reverseButton(reversed)).toHaveCount(0);
     await expect(reverseButton(batchItem(page, batch1))).toBeVisible();
     await expect(page.getByRole("button", { name: /^Reverse batch / })).toHaveCount(1);
@@ -192,7 +193,8 @@ test.describe("reversing", () => {
     await expect(panel.getByText("No sale was voided.")).toHaveCount(0);
 
     // AC-0138: the list shows the batch as reversed without a reload.
-    await expect(item2.getByText("Reversed: entered twice", { exact: true })).toBeVisible();
+    await expect(item2.getByText("Reversed", { exact: true })).toBeVisible();
+    await expect(item2.locator("p", { hasText: /^entered twice$/ })).toBeVisible();
     await expect(reverseButton(item2)).toHaveCount(0);
     await expect(reverseButton(item1)).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { __kept?: boolean }).__kept)).toBe(true);
@@ -295,7 +297,9 @@ test.describe("reversing", () => {
     await expect(beforeAfter(panel, /^502 finished lbs on hand/)).toHaveText(["Not available", "Not available"]);
     await expect(beforeAfter(panel, /^On hand/)).toHaveText(["1,000 lbs", "2,000 lbs"]);
     // AC-0138 in this state: the list shows the batch reversed without a reload.
-    await expect(item2.getByText("Reversed: entered twice", { exact: true })).toHaveCount(1);
+    await expect(item2.getByText("Reversed", { exact: true })).toHaveCount(1);
+    // The paragraph only: the open confirmation's reason field holds the same words.
+    await expect(item2.locator("p", { hasText: /^entered twice$/ })).toHaveCount(1);
     await expect(reverseButton(item2)).toHaveCount(0);
     expect(await reversedCount()).toBe(1);
   });
@@ -396,7 +400,8 @@ test.describe("a reversal that ends in the list", () => {
     }
 
     await expect(reversePanel(item2).getByRole("heading", { name: "Batch reversed" })).toBeVisible();
-    await expect(item2.getByText("Reversed: entered twice", { exact: true })).toHaveCount(1);
+    await expect(item2.getByText("Reversed", { exact: true })).toHaveCount(1);
+    await expect(item2.locator("p", { hasText: /^entered twice$/ })).toHaveCount(1);
     await expect(reverseButton(item2)).toHaveCount(0);
     expect(await reversalState(fixture.batch2Id)).toMatchObject({ reversed: true });
   });

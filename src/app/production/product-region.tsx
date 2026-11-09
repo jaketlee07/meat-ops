@@ -37,6 +37,7 @@ export function ProductRegion({
         </h2>
         <div className="min-w-0 grow basis-72">
           <Facts
+            look="quiet"
             rows={[
               ["Product", `${product.code} ${product.description}`],
               ["Raw input", raw ? `${raw.code} ${raw.description}` : "None"],

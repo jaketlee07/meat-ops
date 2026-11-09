@@ -1,7 +1,7 @@
 # Plan: polish-tables-status
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the look E pages and their suites: Receiving's Recent receipts (`src/app/receiving/recent-receipts.tsx`, its `receipt-table` variant and its "In use" mark) and `test/e2e/look-pages.spec.ts`; Recent sales and Recent batches (`src/app/sales/recent-sales.tsx`, `src/app/production/recent-batches.tsx`, `src/app/production/reverse-control.tsx`) and `test/e2e/look-floor-pages.spec.ts` with `expectTable` in `test/e2e/look-checks.ts`; the shared label-and-value list `src/app/facts.tsx`, whose `look` prop only chooses classes; the lot card's three-column facts in `src/app/trace/lot-trace.tsx` (`card-cols`, the `lot-wide` variant). Uncertainty: whether Recent receipts still reads as a table at 1280 px with 33 px taken (see Risks).
 
 > **Plan contract:** this is the implementation strategy. It may change
@@ -40,9 +40,9 @@ Most construction tests live under **Tasks** below.
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| Overview `src/app` row: the screens | T1, T2, T3, T4 | The row names the status tags, "No list price yet" as quiet text, the stacked first cell, side-by-side Void and Correct, Recent sales' order, the Pricing advice box, the Menu switch, the stock tiles, and the sale trace's columns. | `close-work` reads the row whole against the code. |
-| `globals.css` token comments and the overview's look notes | T1, T3, T4 | Each new token's and variant's comment names its use; the look notes name the tag, the switch, the new `quiet` look, and the restyled `card` and `plain` looks. | `close-work` reads both. |
-| Overview `test/e2e/` row | T1 | The row lists `test/e2e/look-polish-tables.spec.ts`. | `close-work` reads the row whole. |
+| Overview `src/app` row: the screens | T1, T2, T3, T4, T6 | The row names the status tags, "No list price yet" as quiet text, the stacked first cell, side-by-side Void and Correct, Recent sales' order, the Pricing advice box, the Menu switch, the stock tiles, and the sale trace's columns. | `close-work` reads the row whole against the code. |
+| `globals.css` token comments and the overview's look notes | T1, T3, T4, T6 | Each new token's and variant's comment names its use; the look notes name the tag, the switch, the new `quiet` look, and the restyled `card` and `plain` looks. | `close-work` reads both. |
+| Overview `test/e2e/` row | T1, T6 | The row lists `test/e2e/look-polish-tables.spec.ts`. | `close-work` reads the row whole. |
 | Intent `look-production-sales-trace-review-nits.md` | T3, T5 | AC-0014 and AC-0015 pass, and the ledger names the two gaps they close. | The intent stays open until spec 1b ships. |
 | Design reference: the comparison page | T5 | The AC-0016 ledger entries name revision 1794121141-4df1. | The brief still links the page. |
 
@@ -143,7 +143,7 @@ Most construction tests live under **Tasks** below.
 
 ### T5: The recorded checks are in the verification ledger
 
-**Depends on:** T1, T2, T3, T4
+**Depends on:** T1, T2, T3, T4, T6
 **Mode:** visual and manual QA, and the page-state check in the browser suite
 **Touches:** `docs/specs/polish-tables-status/notes/verification-ledger.md`, `test/e2e/look-polish-tables.spec.ts`
 
@@ -151,11 +151,36 @@ Most construction tests live under **Tasks** below.
 - no stub (visual and manual QA): the owner's verdicts and a diff read.
 - `look-polish-tables.spec.ts`: AC-0019 runs `checkPageState` on each AC-0016 state, on `/production` with a product chosen and a reversed batch, and on `/trace` showing a sale trace.
 - The ledger records the owner's verdict on each of the four AC-0016 screens, the AC-0018 read of `git diff` from the branch point over `test/e2e/` with untracked files listed, and the two leftovers gaps AC-0014 and AC-0015 close.
+- Each T5 record names the commit it read: the branch's last commit that changes a file other than those under `docs/specs/polish-tables-status/`, `docs/product/briefs/ui-polish.md`, and `workspace.toml`. A later commit that changes any other file re-opens every T5 record; one that changes only those files re-opens none.
 
 **Approach:**
 - Build the four AC-0016 screen states on the local stack with made-up data, show each to the owner beside the comparison page, and read the test diff.
 
 **Done when:** the ledger holds every entry above and `npm test` passes (AC-0017).
+
+### T6: Post-gates review round 1 fixes
+
+**Depends on:** T1, T2, T3, T4
+**Mode:** manual QA through the browser suite
+**Touches:** `src/app/sales/recent-sales.tsx`, `src/app/pricing/pricing-list.tsx`, `src/app/receiving/recent-receipts.tsx`, `src/app/production/recent-batches.tsx`, `src/app/production/reverse-control.tsx`, `src/app/status-tag.tsx`, `src/app/menu/menu-list.tsx`, `src/app/facts.tsx`, `src/app/globals.css`, `docs/architecture/overview.md`, `test/e2e/look-polish-tables.spec.ts`, `test/e2e/sales.spec.ts`, `test/e2e/look-floor-pages.spec.ts`, `docs/specs/polish-tables-status/notes/verification-ledger.md`
+
+**Tests:**
+- no stub (manual QA): each check is a press, a box, or a computed style in a browser.
+- `look-polish-tables.spec.ts`, each new check seen failing on the tree before T6 first:
+  - a pointer click on each sale number in Recent sales at 1280 px and 1440 px opens `/trace?sale=<number>`;
+  - AC-0007's "In use" case measures the visible tag's own box against Correct's, in place of its wrapper's top; this check is exempt from the red-first step, since the tag does not move and the suite already compares the visible tag's middle, and it guards the amended AC-0007;
+  - AC-0013's walk exempts only the value inside a stock tile or a Pricing tile, so a tile label above 500 fails it;
+  - with a vendor name that wraps at 1280 px, each receipt's lot number sits directly under its date;
+  - under `forcedColors: "active"`, the switch's knob shows its own outline at the track's left when off and at its right when on;
+  - with the browser's text size at 24 px, the switch's knob stays inside its track in both states.
+- `sales.spec.ts`'s two void-note absence checks, at lines 1052 and 1191, read the "Voided" tag or the reason's own text (AC-0018's void-text clause).
+
+**Approach:**
+- Let the sale number link take a pointer press in the table without changing the DOM order, the Tab order, or the stacked first cell; bring the Pricing tile labels to weight 500; keep each lot number under its date when the vendor wraps; draw the switch's knob outline under forced colors with a token color and size the switch on the track's px basis; give the four reason lines one shared class source in `status-tag.tsx`.
+- Correct the overview's `src/app` and `test/e2e/` rows, the `Facts` and `globals.css` comments, two test comments, and the ledger's T1 line, and record the round's dispositions in the ledger.
+- In `look-polish-tables.spec.ts`: name the quiet-look checks in the AC-0008 test's title, decide "outside any tag" with the suite's computed fill-and-radius test, use `withTextSize` from `look-checks.ts` in place of `setRootSize`, and make the suite's header comment name every area it checks. Sharing the contrast math with `a11y.ts` is declined, since `a11y.ts` is outside every task's Touches.
+
+**Done when:** the T6 tests pass and `npm test` passes.
 
 ## Rollout
 
@@ -175,3 +200,4 @@ Big bang, in one PR. Rollback is a revert. No data, schema, or hosted setting ch
 - 2026-11-08: after adversarial review round 2 and shaping round 5: AC-0018 adds the receipt one-top checks; the sale trace takes two looks so its card keeps its bottom half; AC-0024 sets "No list price yet" to weight 400 outside the New sale form, whose weights stay with spec 1b; AC-0016 leaves out the comparison page's dimmed row and "No list price yet" tag.
 - 2026-11-08: after adversarial review round 3: the owner confirmed an undimmed voided row and that the stacked-cell test approval covers the one-line and one-top checks, and ruled that the sale trace restyles `card` and `plain` in place (its only user, checked with `grep`) instead of adding two looks.
 - 2026-11-08: the owner accepted the comparison page at revision 1794121141-4df1 unchanged, with no business owner input, so AC-0016 keeps that revision and the spec no longer waits on a reaction.
+- 2026-11-09: amendment after post-gates review round 1: AC-0007 measures the "In use" tag's middle against Correct's (owner decision 2026-11-09); T6 holds the round's fixes; T5 depends on T6, so its records read a commit at or after T6's last.

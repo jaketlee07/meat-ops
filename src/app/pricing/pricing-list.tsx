@@ -39,7 +39,7 @@ export function ProductTiles({ rows }: { rows: PricingRow[] }) {
           key={heading}
           className={`flex flex-col-reverse gap-0.5 rounded-xl border border-t-3 border-card-border bg-surface px-2.5 py-2 desk:flex-col desk:gap-1 desk:rounded-card desk:px-4 desk:py-3 ${TILE_EDGES[heading]}`}
         >
-          <span className="text-xs font-semibold text-ink-secondary desk:text-sm">{heading}</span>
+          <span className="text-xs font-medium text-ink-secondary desk:text-sm">{heading}</span>
           <span className="text-2xl font-bold tabular-nums">{rows.filter(pick).length}</span>
         </li>
       ))}
@@ -157,7 +157,11 @@ function ProductCard({
           {row.code} {row.description}
         </Link>
       </h3>
-      <dl className="mt-2.5 flex flex-col gap-y-1.5 text-note tabular-nums price-table:col-span-5 price-table:mt-0 price-table:grid price-table:grid-cols-subgrid price-table:gap-y-0 price-table:text-sm price-table:[&>div]:contents price-table:[&_dd]:text-right price-table:[&_dt]:sr-only">
+      <dl
+        className={`mt-2.5 flex flex-col gap-y-1.5 text-note tabular-nums${
+          row.listPrice === null ? " [&>div:nth-child(2)>dd]:font-normal [&>div:nth-child(2)>dd]:text-ink-secondary" : ""
+        } price-table:col-span-5 price-table:mt-0 price-table:grid price-table:grid-cols-subgrid price-table:gap-y-0 price-table:text-sm price-table:[&>div]:contents price-table:[&_dd]:text-right price-table:[&_dt]:sr-only`}
+      >
         <Figure
           label="Cost per lb"
           value={!row.hasCost || row.costPerLb === null ? "None yet" : formatCostPerLb(row.costPerLb)}

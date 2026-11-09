@@ -21,14 +21,15 @@
   --color-tint: #f1f4fd;
   --color-error-wash: #fef2f2;
   --color-error-edge: #fecaca;
-  /* Pricing: the tiles' top edges by group, and the advice box. */
+  /* Pricing: the tiles' top edges by group, and the advice box. The priced and no-cost colors are also the dot
+     before each status tag's word (status-tag.tsx). */
   --color-status-needs: #d97706;
   --color-status-priced: #16a34a;
   --color-status-nocost: #94a3b8;
   --color-advice-fill: #fffbeb;
   --color-advice-text: #92400e;
-  /* Receiving: the fill of the "In use" mark. Same color as --color-card-border, kept apart so a border rule
-     never moves it. */
+  /* The fill of every status tag ("In use", "Voided", "Reversed", "Sellable now", "Not sellable now"). Same color
+     as --color-card-border, kept apart so a border rule never moves it. */
   --color-mark-fill: #e2e8f0;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
@@ -52,11 +53,13 @@
 @custom-variant wide (@media (min-width: 1280px));
 
 /* Recent receipts read as a table only when the screen is wide and the section itself is wide
-   enough for the row's fixed tracks (about 35.75rem of columns, gaps, and padding) plus a vendor
-   column that holds a ten-letter word (about 4.75rem). The section is the container named
-   receipts. The width is in rem, so a larger browser text size keeps the receipts as cards until
-   the section has grown to fit; at the default size the section is about 43rem wide at 1280 px
-   (about 41rem with a 17 px scrollbar and 16 px to spare) and the table shows. */
+   enough for the row's fixed tracks (about 38.5rem: a 9rem first column that stacks the date over the
+   lot number, three figure columns of about 5.3rem, a 9.8rem actions column that holds "In use" and
+   Correct side by side, five gaps, and 2rem of padding) plus a vendor column. The section is the
+   container named receipts. The width is in rem, so a larger browser text size keeps the receipts as
+   cards until the section has grown to fit; at the default size the section is about 43rem wide at
+   1280 px (about 41rem with a 17 px scrollbar and 16 px to spare), where the vendor column is about
+   4.4rem and holds a ten-letter word at 43rem but not at 41rem, and the table shows. */
 @custom-variant receipt-table {
   @media (min-width: 1280px) {
     @container receipts (min-width: 40.5rem) {
@@ -90,8 +93,9 @@
 }
 
 /* Sales' Recent sales read as a table only when the section itself is wide enough for a row: fixed
-   tracks, gaps, and padding (about 36.25rem) plus a customer column that holds a short name (about
-   3.75rem). The section is the container named sales. The width is in rem, so a larger browser text
+   tracks, gaps, and padding (about 32.6rem, with a 9rem first column that stacks the sale date over
+   the sale number) plus a customer column that holds a short name (about 7rem). The section is the container
+   named sales. The width is in rem, so a larger browser text
    size keeps the cards until the section has grown to fit. It sits in the same right column as Recent
    batches (form-column-grid.ts): about 23rem wide at 1024 px, 39rem at 1279 px (under this threshold), and
    about 43rem from 1280 px, so at the default size the table shows from 1280 px. It has no screen gate. */
@@ -102,7 +106,8 @@
 }
 
 /* Menu's list reads as a table only when the list's section is wide enough for a row: fixed tracks,
-   gaps, and padding (about 35rem) plus a product column that wraps a long name (about 7rem). The section is
+   gaps, and padding (36rem: 8rem, 7.5rem, 6.5rem, and 9rem of tracks, four 0.75rem gaps, and 2rem of padding) plus a product
+   column that wraps a long name (about 6rem at 42rem). The section is
    the container named menu. The width is in rem, so a larger browser text size keeps the cards until the
    section has grown to fit. At the default size <main>'s content box is 45.5rem at 1024 px (about 44.4rem
    with a 17 px scrollbar, so the table shows), 61.5rem at 1280 px, and 71.5rem at 1440 px; with a 20 px
@@ -199,6 +204,17 @@
    at 1280 px and 1440 px. In rem, so a larger text size stacks them until the section has grown to fit. */
 @custom-variant lot-wide {
   @container tracelot (min-width: 53rem) {
+    @slot;
+  }
+}
+
+/* A sale trace's facts (the sale's card, each batch card, each raw lot block) put every pair in its own column,
+   label above value, where the sale trace's section is at least 40rem wide (five columns of about 6rem, with the
+   1.5rem gaps and the blocks' padding); narrower, two pairs to a row. The section is the container named
+   tracesale. In rem, no screen gate, so a larger text size goes back to two to a row until the section fits;
+   at the default size the section is the viewport less 296 px, so five columns from about 936 px. */
+@custom-variant sale-cols {
+  @container tracesale (min-width: 40rem) {
     @slot;
   }
 }

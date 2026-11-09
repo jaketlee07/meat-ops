@@ -37,8 +37,11 @@ it("AC-0021: detail() in pricing-page.ts names its region property something oth
 });
 
 it("AC-0022: the In use mark's fill token appears in no border- or divide- class and no border rule", () => {
+  // The In use mark is a StatusTag, so its fill is the tag's own bg- token.
   const receipts = read("src", "app", "receiving", "recent-receipts.tsx");
-  const mark = receipts.match(/<p className="[^"]*\bbg-([a-z-]+)\b[^"]*">In use<\/p>/);
+  expect(receipts, "the In use mark is a StatusTag").toMatch(/<StatusTag\b[^>]*>In use<\/StatusTag>/);
+  const tag = read("src", "app", "status-tag.tsx");
+  const mark = tag.match(/<span className="[^"]*\brounded-full bg-([a-z-]+)\b[^"]*">/);
   expect(mark, "the In use mark has a bg- token").not.toBeNull();
   const token = mark![1]!;
 

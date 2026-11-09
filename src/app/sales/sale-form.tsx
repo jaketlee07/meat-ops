@@ -232,7 +232,11 @@ export function SaleForm({ products, customers }: Props) {
             aria-invalid={errors.productCode ? true : undefined}
             aria-describedby={errors.productCode ? `${FIELD_IDS.productCode}-error` : "product-facts"}
           />
-          <div id="product-facts" aria-live="polite" className="mt-2">
+          <div
+            id="product-facts"
+            aria-live="polite"
+            className={`mt-2${chosen?.listPricePerLb === null ? " [&_dl>div:nth-child(2)>dd]:text-ink-secondary" : ""}`}
+          >
             {chosen && (
               <Facts
                 rows={[

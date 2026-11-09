@@ -8,6 +8,13 @@ import { saveListPrice } from "./actions";
 import type { AdviceLook } from "./price-advice-block";
 import type { ChangeState } from "./save-change";
 
+// The row look is the secondary button: the primary color on the surface, outlined. The stacked look, in the
+// narrow panel, stays the solid primary button.
+const BUTTON_CLASS: Record<AdviceLook, string> = {
+  row: "border border-primary bg-surface text-primary aria-disabled:border-primary/60 aria-disabled:text-primary/60 price-table:min-h-control price-table:w-auto",
+  stacked: "bg-primary text-on-primary aria-disabled:bg-primary/60 wide:min-h-control",
+};
+
 // One press stores the price the button names, the suggested list price the
 // page showed (AC-0067). The result goes to the page's message region, which the
 // list owns, because a saved product leaves this card for another group.
@@ -54,7 +61,7 @@ export function ApplyButton({
       <button
         type="submit"
         aria-disabled={pending ? true : undefined}
-        className={`min-h-12 w-full rounded-control bg-primary px-3.5 text-base font-bold text-on-primary aria-disabled:bg-primary/60 ${look === "row" ? "price-table:min-h-control price-table:w-auto" : "wide:min-h-control"}`}
+        className={`min-h-12 w-full rounded-control px-3.5 text-base font-bold ${BUTTON_CLASS[look]}`}
       >
         {priceButtonName(action, suggestedListPrice)}
       </button>

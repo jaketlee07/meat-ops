@@ -1,6 +1,7 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { RecentReceipt, RecentReceipts as Receipts } from "../../lib/receiving";
 import { Facts } from "../facts";
+import { REASON_LINE, StatusTag } from "../status-tag";
 import { correctReceipt, voidReceipt } from "./actions";
 import { CorrectDialog } from "./correct-dialog";
 import { VoidDialog } from "./void-dialog";
@@ -9,21 +10,38 @@ const HEADING_ID = "recent-receipts-heading";
 
 // Where the section is a table (the `receipt-table` variant: 1280 px wide and the section wide
 // enough for these tracks at the current text size) it reads as one template for the header line
-// and every receipt: six figure columns and an actions column. Otherwise each receipt is a card.
-// The figure columns are sized for a six-digit weight with three decimals, or a cost of $10 or
-// more; a figure's unit may drop under its number. The lot number column holds "L-20261031-", so a
-// lot number may wrap at its second hyphen. The date and vendor may wrap, and the vendor takes
-// what is left.
+// and every receipt: a first column that stacks the Received date over the lot number, three figure
+// columns, the vendor, and an actions column. Otherwise each receipt is a card. The first column holds a
+// lot number ("L-20261031-" and six hex digits, up to about 141 px at 14 px text) on one line; the figure
+// columns hold a six-digit weight with three decimals (about 86 px) or a cost of $10 or more (about 81 px),
+// and a figure's unit may drop under its number; the actions column holds "In use" and Correct side by
+// side (about 155 px). The vendor takes what is left and may wrap.
 const TABLE_COLUMNS =
-  "receipt-table:grid-cols-[5.75rem_3.5rem_minmax(0,1fr)_5.5rem_5.5rem_5.5rem_5.75rem] receipt-table:gap-x-1.5 receipt-table:px-4";
-// The facts list spans the six figure columns. The first three values read left and the
-// figures read right; a lot number breaks only at its hyphen, any other value breaks inside
-// a word only when nothing else fits.
-const FIGURE_CELLS =
-  "receipt-table:[&>dl]:col-span-6 receipt-table:[&>dl>div:nth-child(-n+3)>dd]:text-left receipt-table:[&>dl>div:first-child>dd]:break-normal";
-const COLUMN_NAMES = ["Lot number", "Received", "Vendor", "Weight", "Cost per lb", "Remaining"];
+  "receipt-table:grid-cols-[9rem_minmax(0,1fr)_5.4rem_5.15rem_5.4rem_9.8rem] receipt-table:gap-x-1.5 receipt-table:px-4";
+// The facts list spans the five columns before the actions and places each value by hand: the date over
+// the lot number in the first column, the vendor and the figures on the date's line. Values read left in the
+// first two columns and right in the figures; no line of the first cell breaks, and any other value breaks
+// inside a word only when nothing else fits. The lot number is the second line, in quiet ink; the vendor spans
+// both lines, so a vendor that wraps onto a second line leaves the lot number directly under its date.
+const FIGURE_CELLS = [
+  "receipt-table:[&>dl]:col-span-5",
+  "receipt-table:[&>dl>div:nth-child(-n+3)>dd]:text-left",
+  "receipt-table:[&>dl>div:nth-child(-n+2)>dd]:whitespace-nowrap receipt-table:[&>dl>div:nth-child(-n+2)>dd]:break-normal",
+  "receipt-table:[&>dl>div:nth-child(1)>dd]:col-start-1 receipt-table:[&>dl>div:nth-child(1)>dd]:row-start-2 receipt-table:[&>dl>div:nth-child(1)>dd]:text-ink-secondary",
+  "receipt-table:[&>dl>div:nth-child(2)>dd]:col-start-1 receipt-table:[&>dl>div:nth-child(2)>dd]:row-start-1",
+  "receipt-table:[&>dl>div:nth-child(3)>dd]:col-start-2 receipt-table:[&>dl>div:nth-child(3)>dd]:row-start-1 receipt-table:[&>dl>div:nth-child(3)>dd]:row-span-2",
+  "receipt-table:[&>dl>div:nth-child(4)>dd]:col-start-3 receipt-table:[&>dl>div:nth-child(4)>dd]:row-start-1",
+  "receipt-table:[&>dl>div:nth-child(5)>dd]:col-start-4 receipt-table:[&>dl>div:nth-child(5)>dd]:row-start-1",
+  "receipt-table:[&>dl>div:nth-child(6)>dd]:col-start-5 receipt-table:[&>dl>div:nth-child(6)>dd]:row-start-1",
+].join(" ");
+const COLUMN_NAMES = ["Received", "Vendor", "Weight", "Cost per lb", "Remaining"];
 // The status and buttons sit in the last column, on the receipt's first line.
-const ACTIONS = "receipt-table:col-start-7 receipt-table:row-start-1 receipt-table:justify-end";
+const ACTIONS = "receipt-table:col-start-6 receipt-table:row-start-1 receipt-table:justify-end";
+// Void and Correct are two quiet outlined buttons side by side, a 6 px gap apart with their tops level.
+// The buttons live in the dialog components, so their look is set here, from the row that holds them:
+// ink on the surface with the field border, 44 px tall (the global button rule), and px-3.
+const QUIET_BUTTONS =
+  "[&>div>button]:border-field-border [&>div>button]:px-3 [&>div>button]:text-sm [&>div>button]:text-ink";
 // While a refusal or the "Receipt corrected" panel has text, the status area takes a row of its
 // own across the receipt, below the figures; its place in the page does not change.
 const MESSAGE_ROW =
@@ -37,12 +55,22 @@ const MESSAGE_ROW =
 // keeps the state of each.
 function Status({ receipt }: { receipt: RecentReceipt }) {
   if (receipt.status === "void") {
-    return <p className={`break-words font-semibold text-error ${ACTIONS} receipt-table:text-right`}>{`Void: ${receipt.voidReason ?? ""}`}</p>;
+    // The "Voided" tag sits in the actions column; the reason is its own quiet line, across the row below the figures.
+    return (
+      <>
+        <p className={`flex ${ACTIONS}`}>
+          <StatusTag tone="nocost">Voided</StatusTag>
+        </p>
+        <p className={`${REASON_LINE} receipt-table:col-span-full`}>{receipt.voidReason ?? ""}</p>
+      </>
+    );
   }
   return (
-    <div className={`flex flex-wrap items-start gap-2 ${ACTIONS} ${MESSAGE_ROW}`}>
+    <div className={`flex flex-wrap items-start gap-1.5 ${QUIET_BUTTONS} ${ACTIONS} ${MESSAGE_ROW}`}>
       {receipt.status === "in-use" ? (
-        <p className="flex min-h-control items-center rounded-full bg-mark-fill px-2.5 text-sm font-semibold">In use</p>
+        <p className="flex min-h-control items-center">
+          <StatusTag tone="nocost">In use</StatusTag>
+        </p>
       ) : (
         <VoidDialog
           lotNumber={receipt.lotNumber}
@@ -87,7 +115,7 @@ export function RecentReceipts({ receipts, total }: Receipts) {
             className={`hidden border-t border-card-border bg-page py-2 text-xs font-semibold text-ink-secondary receipt-table:grid ${TABLE_COLUMNS}`}
           >
             {COLUMN_NAMES.map((name, index) => (
-              <span key={name} className={index >= 3 ? "text-right" : undefined}>
+              <span key={name} className={index >= 2 ? "text-right" : undefined}>
                 {name}
               </span>
             ))}

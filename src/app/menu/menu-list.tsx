@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatPricePerLb, formatWeight } from "../../lib/format";
 import { Facts } from "../facts";
+import { StatusTag } from "../status-tag";
 
 export interface MenuCard {
   id: string;
@@ -24,7 +25,7 @@ const NOTHING_SELLABLE = "No product can be sold right now.";
 // fixed columns hold "No list price yet", a header that names finished stock, a header that names raw
 // stock, and "Not sellable now"; the product column takes what is left and wraps a long name.
 const TABLE_COLUMNS =
-  "menu-table:grid-cols-[minmax(0,1fr)_8rem_7.5rem_6.5rem_8rem] menu-table:gap-x-3 menu-table:px-4";
+  "menu-table:grid-cols-[minmax(0,1fr)_8rem_7.5rem_6.5rem_9rem] menu-table:gap-x-3 menu-table:px-4";
 const COLUMN_NAMES = ["Product", "List price", "Finished on hand", "Raw on hand", "Status"];
 // The Facts list sits on the two columns after the list price, the same "cells" way Production's does,
 // through the row's own classes: each pair becomes a cell, its label stays in the page and is hidden
@@ -33,6 +34,20 @@ const FIGURE_CELLS = [
   "menu-table:[&>dl]:grid menu-table:[&>dl]:col-span-2 menu-table:[&>dl]:grid-cols-subgrid menu-table:[&>dl]:border-y-0",
   "menu-table:[&>dl>div]:contents menu-table:[&>dl>div>dt]:sr-only",
   "menu-table:[&>dl>div>dd]:min-w-0 menu-table:[&>dl>div>dd]:max-w-none menu-table:[&>dl>div>dd]:shrink menu-table:[&>dl>div>dd]:text-sm menu-table:[&>dl>div>dd]:font-normal",
+].join(" ");
+
+// The checkbox drawn as a switch, still a native checkbox with its label. The input is the track (44 px tall, so
+// the control keeps its 44 px target and its focus ring) and its ::before is the round knob: at the track's left when
+// off, moved right when on. Off: a surface track with a field-border edge and knob. On: a primary track with a
+// surface knob. The width, knob, offset, and travel are in px (72, 32, 4, and 28), like the track's height,
+// so the knob stays inside the track at every text size. Under forced colors the system replaces backgrounds, so
+// the knob gets an outline (its color is replaced there) and on and off still differ by its place. The knob's move is a transform transition, only where motion is allowed.
+const SWITCH = [
+  "relative h-control w-[72px] shrink-0 appearance-none rounded-full border-2 border-field-border bg-surface",
+  "before:absolute before:inset-y-0 before:left-[4px] before:my-auto before:size-[32px] before:rounded-full before:bg-field-border",
+  "forced-colors:before:border-2 forced-colors:before:border-field-border",
+  "checked:border-primary checked:bg-primary checked:before:translate-x-[28px] checked:before:bg-surface",
+  "motion-safe:before:transition-transform",
 ].join(" ");
 
 // The switch filters the list in the browser, with no request, and starts off on
@@ -53,7 +68,7 @@ export function MenuList({ items }: { items: MenuCard[] }) {
             type="checkbox"
             checked={sellableOnly}
             onChange={(event) => setSellableOnly(event.target.checked)}
-            className="h-control w-control"
+            className={SWITCH}
           />
           Sellable only
         </label>
@@ -84,7 +99,13 @@ export function MenuList({ items }: { items: MenuCard[] }) {
                   <h2 className="text-lg font-bold break-words menu-table:text-base">
                     {item.code} {item.description}
                   </h2>
-                  <p className="text-xl font-bold tabular-nums break-words menu-table:text-right menu-table:text-sm menu-table:font-semibold">
+                  <p
+                    className={`text-xl tabular-nums break-words menu-table:text-right menu-table:text-sm ${
+                      item.listPrice === null
+                        ? "font-normal text-ink-secondary"
+                        : "font-bold menu-table:font-medium"
+                    }`}
+                  >
                     {item.listPrice === null ? "No list price yet" : formatPricePerLb(item.listPrice)}
                   </p>
                   <Facts
@@ -93,8 +114,10 @@ export function MenuList({ items }: { items: MenuCard[] }) {
                       ["Raw on hand", formatWeight(item.rawLbs)],
                     ]}
                   />
-                  <p className="font-semibold break-words menu-table:text-sm">
-                    {item.sellable ? "Sellable now" : "Not sellable now"}
+                  <p className="break-words menu-table:text-sm">
+                    <StatusTag tone={item.sellable ? "priced" : "nocost"}>
+                      {item.sellable ? "Sellable now" : "Not sellable now"}
+                    </StatusTag>
                   </p>
                 </li>
               ))}

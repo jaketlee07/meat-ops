@@ -32,6 +32,7 @@ export function ProductRegion({
         ) : (
           <div className="wide:col-start-2 wide:row-start-3">
             <Facts
+            look="quiet"
             rows={prices.map((row) => [
               `${row.code} ${row.description}`,
               showPrice(priceView(row, stock)),
