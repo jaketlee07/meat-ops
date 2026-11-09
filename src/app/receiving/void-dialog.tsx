@@ -39,6 +39,9 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
   const [invalid, setInvalid] = useState<Message | null>(null);
   const [refusal, setRefusal] = useState<Message | null>(null);
   const [pending, startVoid] = useTransition();
+  // Set at once on press, because `pending` lands a render later; a second press
+  // sends nothing. It clears when the action settles.
+  const pressRef = useRef(false);
 
   // A refusal closes the confirmation, so its message sits in the list, where
   // it takes focus (AC-0057). A blank reason keeps the confirmation open and
@@ -65,13 +68,14 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
   // action, which cannot trust this check.
   function confirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pending || pressRef.current) return;
     const checked = parseVoidReason(reason);
     if (!checked.ok) {
       setInvalid({ text: checked.error });
       return;
     }
     setInvalid(null);
+    pressRef.current = true;
     startVoid(async () => {
       let result: VoidState;
       try {
@@ -81,6 +85,8 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
         // (AC-0073). A rejected action reaches the error boundary, which would
         // unmount the list, so it is answered here like a refusal.
         result = { status: "refused", message: VOID_UNKNOWN };
+      } finally {
+        pressRef.current = false;
       }
       if (result.status === "invalid") {
         setInvalid({ text: result.error });
@@ -135,9 +141,11 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
             </h2>
             <button
               type="button"
-              disabled={pending}
-              onClick={() => dialogRef.current?.close()}
-              className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
+              aria-disabled={pending ? true : undefined}
+              onClick={() => {
+                if (!pending) dialogRef.current?.close();
+              }}
+              className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
             >
               Cancel
             </button>
@@ -168,8 +176,8 @@ export function VoidDialog({ lotNumber, weight, vendor, voidAction, listHeadingI
 
           <button
             type="submit"
-            disabled={pending}
-            className="w-full rounded-control bg-error px-4 text-base font-medium text-on-primary disabled:opacity-60"
+            aria-disabled={pending ? true : undefined}
+            className="w-full rounded-control bg-error px-4 text-base font-medium text-on-primary aria-disabled:bg-error/60"
           >
             Void receipt
           </button>

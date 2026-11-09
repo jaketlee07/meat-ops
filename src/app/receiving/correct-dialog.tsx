@@ -265,9 +265,11 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
             </h2>
             <button
               type="button"
-              disabled={pending}
-              onClick={() => dialogRef.current?.close()}
-              className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
+              aria-disabled={pending ? true : undefined}
+              onClick={() => {
+                if (!pending) dialogRef.current?.close();
+              }}
+              className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
             >
               Cancel
             </button>

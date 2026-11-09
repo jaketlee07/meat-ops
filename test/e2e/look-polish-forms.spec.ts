@@ -10,11 +10,14 @@ import {
   batchNumberOf,
   openForm as openProductionForm,
   openReversal,
+  reverseButton,
+  reverseDialog,
   seed502Fixture,
   seedBatch,
 } from "./production-page";
 import {
   correctButton,
+  fillReceipt,
   lotNumberOf,
   openCorrection,
   openForm as openReceivingForm,
@@ -22,6 +25,9 @@ import {
   receiptItem,
   seedReceipt,
   voidButton,
+  SAVE_UNKNOWN,
+  sendsActionRequest,
+  VOID_UNKNOWN,
   voidDialog as receiptVoidDialog,
 } from "./receiving-page";
 import {
@@ -469,4 +475,196 @@ test("AC-0023: each digest item shows a --color-status-nocost dot before its tex
     expect(dot.width, "the dot has a size").toBeGreaterThan(0);
     expect(dot.right, "the dot is left of the text").toBeLessThanOrEqual(read.textLeft);
   }
+});
+
+// ---- AC-0019, AC-0020, AC-0033: the six waiting buttons ----
+
+// Holds every server action request the page sends to `glob` until `release` is called, counting them. A released
+// request ends as a dropped connection (the form answers it as a refusal) or, with "continue", goes on to the server.
+async function holdActions(page: Page, glob: string, end: "abort" | "continue" = "abort") {
+  const held = { count: 0 };
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(glob, async (route) => {
+    const request = route.request();
+    if (request.method() === "POST" && "next-action" in request.headers()) {
+      held.count += 1;
+      await gate;
+      await (end === "abort" ? route.abort() : route.continue());
+    } else {
+      await route.continue();
+    }
+  });
+  return { held, release };
+}
+
+// What a waiting button shows: no disabled attribute, aria-disabled, focus, and opacity.
+async function waitingState(button: Locator) {
+  return button.evaluate((node) => ({
+    disabled: node.hasAttribute("disabled"),
+    ariaDisabled: node.getAttribute("aria-disabled"),
+    focused: node === document.activeElement,
+    opacity: getComputedStyle(node).opacity,
+  }));
+}
+
+const WAITING = { disabled: false, ariaDisabled: "true", focused: true, opacity: "1" };
+
+// Presses a held button a second time three ways, none of which may send a request: a mouse press, Enter, and Space.
+async function pressAgain(page: Page, button: Locator) {
+  const sent = sendsActionRequest(page);
+  await button.click({ force: true });
+  await button.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Space");
+  expect(await sent, "a second press sent a request").toBe(false);
+}
+
+test("AC-0019 and AC-0020: Save on /receiving waits focusable at full opacity and a second press sends nothing", async ({ page }) => {
+  const { held, release } = await holdActions(page, "**/receiving**");
+  const f = await openReceivingForm(page, RAW_TOM_URL);
+  await fillReceipt(f, {});
+  await f.save.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => held.count).toBe(1);
+  await expect(f.save).toHaveAttribute("aria-disabled", "true");
+  expect(await waitingState(f.save)).toEqual(WAITING);
+  await pressAgain(page, f.save);
+  const sent = sendsActionRequest(page);
+  await f.weight.press("Enter");
+  expect(await sent, "Enter in a field sent a request").toBe(false);
+  expect(held.count).toBe(1);
+  // A queued second save would leave as soon as the first settles, so the window spans the release.
+  const afterRelease = sendsActionRequest(page);
+  release();
+  await expect(f.message).toHaveText(SAVE_UNKNOWN);
+  expect(await afterRelease, "a second save left after the first settled").toBe(false);
+  expect(held.count).toBe(1);
+});
+
+test("AC-0019, AC-0020, and AC-0033: the receipt Void dialog's Cancel and Void receipt wait, and Cancel leaves the dialog open", async ({ page }) => {
+  const lot = await lotNumberOf(await seedReceipt(1000, 1.5));
+  const { held, release } = await holdActions(page, "**/receiving**");
+  await openReceivingForm(page, RAW_TOM_URL);
+  const item = receiptItem(page, lot);
+  const dialog = receiptVoidDialog(page);
+  const cancel = dialog.getByRole("button", { name: "Cancel" });
+  const confirm = dialog.getByRole("button", { name: "Void receipt" });
+
+  await voidButton(item).click();
+  await dialog.getByLabel("Reason for the void").fill("keyed twice");
+  await confirm.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => held.count).toBe(1);
+  await expect(confirm).toHaveAttribute("aria-disabled", "true");
+  expect(await waitingState(confirm)).toEqual(WAITING);
+  await cancel.focus();
+  expect(await waitingState(cancel)).toEqual(WAITING);
+
+  await pressAgain(page, confirm);
+  expect(held.count).toBe(1);
+  await cancel.click({ force: true });
+  await expect(dialog).toBeVisible();
+
+  // The request is dropped and answered as a refusal, which closes the dialog. A queued second void would
+  // leave as soon as the first settles, so the window spans the release.
+  const afterRelease = sendsActionRequest(page);
+  release();
+  await expect(dialog).toBeHidden();
+  expect(await afterRelease, "a second void left after the first settled").toBe(false);
+  expect(held.count).toBe(1);
+  await expect(item.getByText(VOID_UNKNOWN)).toBeVisible();
+  await voidButton(item).click();
+  await expect(dialog).toBeVisible();
+  await cancel.click();
+  await expect(dialog).toBeHidden();
+  await voidButton(item).click();
+  await expect(dialog).toBeVisible();
+  await cancel.click();
+  await expect(dialog).toBeHidden();
+});
+
+test("AC-0019 and AC-0033: the Correct dialog's Cancel waits focusable at full opacity and leaves the dialog open", async ({ page }) => {
+  const lot = await lotNumberOf(await seedReceipt(1000, 1.5));
+  const { held, release } = await holdActions(page, "**/receiving**");
+  await openReceivingForm(page, RAW_TOM_URL);
+  const item = receiptItem(page, lot);
+  const dialog = await openCorrection(page, item, lot, { cost: "1.75", reason: "invoice price" });
+  const cancel = dialog.getByRole("button", { name: "Cancel" });
+
+  await dialog.getByRole("button", { name: "Save correction" }).click();
+  await expect.poll(() => held.count).toBe(1);
+  await expect(cancel).toHaveAttribute("aria-disabled", "true");
+  await cancel.focus();
+  expect(await waitingState(cancel)).toEqual(WAITING);
+  await cancel.click({ force: true });
+  await expect(dialog).toBeVisible();
+
+  release();
+  await expect(dialog).toBeHidden();
+  await correctButton(item).click();
+  await expect(dialog).toBeVisible();
+  await cancel.click();
+  await expect(dialog).toBeHidden();
+  await correctButton(item).click();
+  await expect(dialog).toBeVisible();
+  await cancel.click();
+  await expect(dialog).toBeHidden();
+});
+
+test("AC-0019 and AC-0033: the Reverse dialog's Cancel waits focusable at full opacity and leaves the dialog open", async ({ page }) => {
+  await seed502Fixture();
+  const batch = await batchNumberOf(await seedBatch(1000, "2026-10-06"));
+  const { held, release } = await holdActions(page, "**/production**");
+  await openProductionForm(page, "/production?product=502");
+  const item = batchItem(page, batch);
+  const dialog = await openReversal(page, item, batch, "entered twice");
+  const cancel = dialog.getByRole("button", { name: "Cancel" });
+
+  await dialog.getByRole("button", { name: "Reverse batch", exact: true }).click();
+  await expect.poll(() => held.count).toBe(1);
+  await expect(cancel).toHaveAttribute("aria-disabled", "true");
+  await cancel.focus();
+  expect(await waitingState(cancel)).toEqual(WAITING);
+  await cancel.click({ force: true });
+  await expect(dialog).toBeVisible();
+
+  release();
+  await expect(dialog).toBeHidden();
+  await reverseButton(item).click();
+  await expect(reverseDialog(page, batch)).toBeVisible();
+  await cancel.click();
+  await expect(dialog).toBeHidden();
+  await reverseButton(item).click();
+  await expect(dialog).toBeVisible();
+  await cancel.click();
+  await expect(dialog).toBeHidden();
+});
+
+test.describe("signed out and waiting", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("AC-0019 and AC-0020: Sign in waits focusable at full opacity and a second press sends nothing", async ({ page }) => {
+    const { held, release } = await holdActions(page, "**/sign-in**", "continue");
+    await page.goto("/sign-in");
+    await page.getByLabel("Email").fill("operator@meat-ops.test");
+    await page.getByLabel("Password").fill("not-the-password");
+    const signIn = page.getByRole("button", { name: "Sign in" });
+    await signIn.focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(() => held.count).toBe(1);
+    await expect(signIn).toHaveAttribute("aria-disabled", "true");
+    expect(await waitingState(signIn)).toEqual(WAITING);
+    await pressAgain(page, signIn);
+    const sent = sendsActionRequest(page);
+    await page.getByLabel("Password").press("Enter");
+    await page.getByLabel("Email").press("Enter");
+    expect(await sent, "Enter in a field sent a request").toBe(false);
+    expect(held.count).toBe(1);
+    release();
+    await expect(page.getByText("Email or password is incorrect.")).toBeVisible();
+    expect(held.count).toBe(1);
+  });
 });

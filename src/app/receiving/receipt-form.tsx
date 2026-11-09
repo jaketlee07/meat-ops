@@ -102,19 +102,26 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
   // Only a form that passes them goes to the server. A marked form (its code is
   // missing from the product list) skips them: only the server knows the codes
   // active now, and it runs the same rules over the whole form.
+  // Set at once on press, because `pending` lands a render later; a second press
+  // sends nothing. It clears when the action settles, whatever its outcome.
+  const pressRef = useRef(false);
   const [state, formAction, pending] = useActionState(
     async (_previous: SaveState, formData: FormData): Promise<SaveState> => {
-      if (!readRecheck(formData)) {
-        const parsed = parseReceiptForm(readFields(formData), new Set(known.keys()));
-        if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
-      }
       try {
-        return await saveReceipt(formData);
-      } catch {
-        // A dropped connection or a server error: the save may have happened
-        // (AC-0071). A rejected action reaches the error boundary, which would
-        // unmount this form and lose every value, so it is answered here.
-        return { status: "refused", message: SAVE_UNKNOWN };
+        if (!readRecheck(formData)) {
+          const parsed = parseReceiptForm(readFields(formData), new Set(known.keys()));
+          if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
+        }
+        try {
+          return await saveReceipt(formData);
+        } catch {
+          // A dropped connection or a server error: the save may have happened
+          // (AC-0071). A rejected action reaches the error boundary, which would
+          // unmount this form and lose every value, so it is answered here.
+          return { status: "refused", message: SAVE_UNKNOWN };
+        }
+      } finally {
+        pressRef.current = false;
       }
     },
     IDLE,
@@ -129,7 +136,8 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
   // date field's `max` all take it.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pressRef.current || pending) return;
+    pressRef.current = true;
     const date = deviceToday();
     setToday(date);
     const formData = new FormData(event.currentTarget);
@@ -377,13 +385,12 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
 
         <button
           type="submit"
-          disabled={pending}
-          aria-disabled={blocked ? true : undefined}
+          aria-disabled={blocked || pending ? true : undefined}
           aria-describedby={blocked ? "setup-notice" : undefined}
           onClick={(event) => {
             if (blocked) event.preventDefault();
           }}
-          className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary disabled:opacity-60 aria-disabled:bg-primary/60"
+          className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60"
         >
           Save
         </button>
