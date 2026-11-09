@@ -13,6 +13,7 @@ A write sent after the owner's session is revoked at the auth server is always r
 - Likely cause, not yet proven: `checkCaller` verifies the access token locally with `getClaims`, which cannot see a revoked session until the token expires, and the browser may have held the refreshed, unexpired session cookie beside the test's aged one. Prove or rule out each part before changing code.
 - The alerts build on stack B saw the same class twice on 2026-10-16, each passing on the rerun: `receiving.spec.ts` "AC-0042 and AC-0046: an expired access token refreshes and saves, and a revoked session keeps the form" failed once in a full run, and the void test above failed once in a partial run. So the save path needs the same proof as the void path.
 - On 2026-11-05, during the look-production-sales-trace build on stack A, the void test above failed twice in full `npm test` runs (at T2 and at `eaaf4ed`) and passed alone each time. That build changed no auth, proxy, or receiving action code (`docs/specs/look-production-sales-trace/notes/verification-ledger.md`).
+- On 2026-11-08, during the polish-tables-status build on stack A, the void test above failed once in T2's full `npm test` run and passed alone on its rerun. That build changed no auth, proxy, or receiving action code (`docs/specs/polish-tables-status/notes/verification-ledger.md`).
 - Decide whether writes need a server-side session check (for example `getUser`) or a shorter access token lifetime, and make the test fail when a revoked session's write succeeds.
 
 ## Owner
