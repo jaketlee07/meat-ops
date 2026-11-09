@@ -87,7 +87,7 @@ None.
 
 | Spec | Status |
 | --- | --- |
-| `polish-tables-status` | Implementing |
+| `polish-tables-status` | Shipped |
 
 ## Source
 

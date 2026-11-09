@@ -76,7 +76,8 @@ name = "UI polish and home screen"
 status = "active"
 
 [ini-002.work]
-active = [
+active = []
+shipped = [
   { path = "docs/specs/polish-tables-status/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-polish.md", revision = "26d1047", parent = "docs/product/briefs/ui-polish.md" }, summary = "Spec 1a of UI polish: status tags, IDs and dates on one line, quiet row buttons, one main button on Pricing, Menu's switch, lighter weight, Recent sales by sale date, stock tiles, and the sale trace", needs = [] },
 ]
 
