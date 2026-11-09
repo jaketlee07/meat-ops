@@ -14,7 +14,7 @@ The spec's Assumptions record each of these as a Product line:
 - The digest shows each paragraph as its own list item with a gray dot; the model and the stored text stay as they are.
 - Ask uses the full content width.
 - The photo picker shows a "Choose photo" button and the chosen file's name, or "No photo chosen".
-- The read cards on `/invoices` drop their reserved status line, so a read in flight grows its card and moves the Drafts list down.
+- The read cards on `/invoices` drop their reserved status line, so a read in flight grows its card by the reading message's height and moves down whatever sits below that card.
 
 ## Spec-stage review
 
