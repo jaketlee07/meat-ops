@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseLotFinder, parseSaleNumber } from "../../lib/sale-input";
-import { CONTROL, LABEL } from "../form-parts";
+import { CONTROL, DATE_BOX, IconBox, LABEL } from "../form-parts";
 
 const BUTTON = "mt-auto w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary";
 const CARD = "flex flex-col rounded-card border border-card-border bg-surface p-3.5 desk:p-4";
@@ -191,15 +191,17 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
           <label htmlFor={RECEIVED_ID} className={LABEL}>
             Received date
           </label>
-          <input
-            id={RECEIVED_ID}
-            name="received"
-            type="date"
-            value={dateText}
-            onChange={(event) => setDateText(event.target.value)}
-            className={CONTROL}
-            {...describe(RECEIVED_ID, errors.received)}
-          />
+          <IconBox icon="calendar">
+            <input
+              id={RECEIVED_ID}
+              name="received"
+              type="date"
+              value={dateText}
+              onChange={(event) => setDateText(event.target.value)}
+              className={DATE_BOX}
+              {...describe(RECEIVED_ID, errors.received)}
+            />
+          </IconBox>
           <FieldError id={RECEIVED_ID} message={errors.received} />
         </div>
         <button type="submit" className={BUTTON}>

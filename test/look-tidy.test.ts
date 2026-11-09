@@ -159,7 +159,6 @@ it("AC-0014: the search flags a disallowed radius class and passes an allowed on
 
 it("AC-0014: the four page folders hold no radius class other than control, card, mark, full, or none", () => {
   const offenders: string[] = [];
-  let exception = false;
   for (const folder of ["menu", "invoices", "ask", "alerts"]) {
     let seen = 0;
     for (const path of sourceFiles(join(APP, folder))) {
@@ -167,15 +166,10 @@ it("AC-0014: the four page folders hold no radius class other than control, card
       for (const { prefix, cls } of radiusClasses(readFileSync(path, "utf8"))) {
         seen += 1;
         if (RADIUS_ALLOWED.test(cls)) continue;
-        if (name === "src/app/invoices/read-forms.tsx" && prefix === "file:" && cls === "rounded-md") {
-          exception = true;
-          continue;
-        }
         offenders.push(`${name}: ${prefix}${cls}`);
       }
     }
     expect(seen, `${folder} holds at least one radius class`).toBeGreaterThan(0);
   }
-  expect(exception, "the file:rounded-md exception in read-forms.tsx is met").toBe(true);
   expect(offenders, "radius classes other than the allowed ones").toEqual([]);
 });

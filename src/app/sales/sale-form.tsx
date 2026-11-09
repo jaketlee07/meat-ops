@@ -11,7 +11,7 @@ import { saveSale } from "./actions";
 import { FIELD_ORDER } from "./form-fields";
 import { ResultPanel } from "./result-panel";
 import type { SaleSaveState } from "./save-sale";
-import { CONTROL, LABEL, PAIR, PAIR_FIELD } from "../form-parts";
+import { CONTROL, DATE_BOX, IconBox, LABEL, PAIR, PAIR_FIELD, SELECT_BOX } from "../form-parts";
 
 interface Props {
   // The page's product list: the active finished products as of the latest server render.
@@ -294,21 +294,23 @@ export function SaleForm({ products, customers }: Props) {
           <label htmlFor={FIELD_IDS.customerId} className={LABEL}>
             Customer
           </label>
-          <select
-            id={FIELD_IDS.customerId}
-            name="customerId"
-            value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
-            className={CONTROL}
-            {...describe("customerId")}
-          >
-            <option value="">No customer</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
+          <IconBox icon="chevron">
+            <select
+              id={FIELD_IDS.customerId}
+              name="customerId"
+              value={customerId}
+              onChange={(event) => setCustomerId(event.target.value)}
+              className={SELECT_BOX}
+              {...describe("customerId")}
+            >
+              <option value="">No customer</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+          </IconBox>
           {fieldError("customerId")}
         </div>
 
@@ -316,16 +318,18 @@ export function SaleForm({ products, customers }: Props) {
           <label htmlFor={FIELD_IDS.saleDate} className={LABEL}>
             Sale date
           </label>
-          <input
-            id={FIELD_IDS.saleDate}
-            name="saleDate"
-            type="date"
-            max={today || undefined}
-            value={saleDate}
-            onChange={(event) => setSaleDate(event.target.value)}
-            className={CONTROL}
-            {...describe("saleDate")}
-          />
+          <IconBox icon="calendar">
+            <input
+              id={FIELD_IDS.saleDate}
+              name="saleDate"
+              type="date"
+              max={today || undefined}
+              value={saleDate}
+              onChange={(event) => setSaleDate(event.target.value)}
+              className={DATE_BOX}
+              {...describe("saleDate")}
+            />
+          </IconBox>
           {fieldError("saleDate")}
         </div>
 

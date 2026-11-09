@@ -287,14 +287,14 @@ test.describe("the read forms", () => {
     expect(sent).not.toContain("\\r");
   });
 
-  test("the photo field's selector button looks like a button and the field stays 44 px tall", async ({ page }) => {
+  test("the photo field's Choose photo button looks like a button and stays 44 px tall", async ({ page }) => {
     const p = await openInvoices(page);
-    const button = await p.photo.evaluate((input) => {
-      const style = getComputedStyle(input, "::file-selector-button");
+    const button = await p.choosePhoto.evaluate((node) => {
+      const style = getComputedStyle(node);
       return { border: style.borderTopWidth, radius: style.borderTopLeftRadius, padding: style.paddingLeft, weight: style.fontWeight };
     });
-    expect(button).toEqual({ border: "1px", radius: "6px", padding: "12px", weight: "500" });
-    expect((await p.photo.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect(button).toEqual({ border: "1px", radius: "10px", padding: "12px", weight: "500" });
+    expect((await p.choosePhoto.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   });
 
   // Boxes in page coordinates, so a scroll the press causes does not count as a move.
@@ -388,7 +388,7 @@ test.describe("the read forms", () => {
     const first = await draftIdFromUrl(page);
 
     await openInvoices(page);
-    await p.photo.focus();
+    await p.choosePhoto.focus();
     await p.photo.setInputFiles(pngFile(300, 200));
     await page.keyboard.press("Tab");
     await expect(p.readPhoto).toBeFocused();
@@ -425,8 +425,8 @@ test.describe("read refusals", () => {
       if (file) await p.photo.setInputFiles(file);
       await sleepless(page, () => p.readPhoto.click());
       await expect(p.photoError).toHaveText(message);
-      await expect(p.photo).toBeFocused();
-      await expect(p.photo).toHaveAttribute("aria-describedby", "invoice-photo-error");
+      await expect(p.choosePhoto).toBeFocused();
+      await expect(p.choosePhoto).toHaveAccessibleDescription(`Invoice photo ${file?.name ?? "No photo chosen"} ${message}`);
       expect(await draftCount()).toBe(0);
       expect(await model.requests()).toEqual([]);
     });

@@ -1,9 +1,20 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { resetTestData } from "../db";
+import { query, resetTestData } from "../db";
 import { banner, marginCase, openDigest, seedDigest, withWatchRefused } from "./alerts-page";
 import { openAsk } from "./ask-page";
-import { openInvoices, openReview, seedDraft, seedFixture } from "./invoices-page";
-import { withTextSize } from "./look-checks";
+import {
+  draftIdFromUrl,
+  fakeModel,
+  jpegSize,
+  openInvoices,
+  openReview,
+  pngFile,
+  seedDraft,
+  seedFixture,
+  sentImage,
+  TURKEY,
+} from "./invoices-page";
+import { box, withTextSize } from "./look-checks";
 import { opensDetail, opens as opensPricing } from "./pricing-page";
 import {
   batchItem,
@@ -42,7 +53,8 @@ import { open as openTrace } from "./trace-page";
 
 // Spec polish-forms-alerts, how the forms and alerts are drawn: the one label style (AC-0001), the number pairs that
 // share a line and hold a whole figure (AC-0002, AC-0004), the floor forms' Tab order (AC-0028), the quiet urgent
-// banner (AC-0012, AC-0013, AC-0014), and the digest list (AC-0022, AC-0023). Operator session;
+// banner (AC-0012, AC-0013, AC-0014), and the digest list (AC-0022, AC-0023), the dropdown and date icons (AC-0006,
+// AC-0007), the photo picker (AC-0009, AC-0010, AC-0011, AC-0034), and the Vendor picker (AC-0021). Operator session;
 // data is reset before each test, then each test builds the state it reads with made-up data.
 
 test.use({ storageState: OPERATOR_STATE });
@@ -667,4 +679,289 @@ test.describe("signed out and waiting", () => {
     await expect(page.getByText("Email or password is incorrect.")).toBeVisible();
     expect(held.count).toBe(1);
   });
+});
+
+// ---- AC-0006 and AC-0007: the dropdown and date box icons ----
+
+// Every dropdown and date box in `scope` with what the criteria read: the browser's appearance, the icon beside it
+// (its svg, its color, and its box against the control's), and the control's own box.
+async function iconReads(scope: Locator) {
+  return scope.locator("select, input[type=date]").evaluateAll((controls) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--color-ink-secondary)";
+    document.body.append(probe);
+    const ink = getComputedStyle(probe).color;
+    probe.remove();
+    return controls.map((control) => {
+      const css = getComputedStyle(control);
+      const svgs = Array.from(control.parentElement!.querySelectorAll("svg"));
+      const svg = svgs[0];
+      const own = control.getBoundingClientRect();
+      const icon = svg?.getBoundingClientRect();
+      return {
+        id: control.id,
+        kind: control.tagName === "SELECT" ? "dropdown" : "date box",
+        appearance: css.appearance,
+        svgs: svgs.length,
+        hidden: svg?.closest("[aria-hidden=true]") !== null || svg?.getAttribute("aria-hidden") === "true",
+        pointerEvents: svg ? getComputedStyle(svg).pointerEvents : "",
+        color: svg ? getComputedStyle(svg).color : "",
+        stroke: svg ? getComputedStyle(svg).stroke : "",
+        ink,
+        width: own.width,
+        inside: icon ? icon.left >= own.left && icon.right <= own.right && icon.top >= own.top && icon.bottom <= own.bottom : false,
+        rightOfCenter: icon ? icon.left >= own.left + own.width / 2 : false,
+        beyondContent:
+          icon ? icon.left >= own.right - parseFloat(css.borderRightWidth) - parseFloat(css.paddingRight) : false,
+        padding: { left: css.paddingLeft, right: css.paddingRight },
+      };
+    });
+  });
+}
+
+// Each dropdown in `scope` draws no arrow of its own and a chevron in the secondary ink inside its right edge; each date
+// box shows a calendar icon there, right of its content box, with 12 px and 40 px of padding. Returns the widths of the
+// date boxes, each at least the 156 px that shows 11/09/2026 whole beside the icon.
+async function expectIcons(page: Page, scope: Locator, counts: { dropdowns: number; dates: number }): Promise<number[]> {
+  const reads = await iconReads(scope);
+  expect(reads.filter((read) => read.kind === "dropdown")).toHaveLength(counts.dropdowns);
+  expect(reads.filter((read) => read.kind === "date box")).toHaveLength(counts.dates);
+  for (const read of reads) {
+    const named = `${read.kind} ${read.id}`;
+    expect(read.svgs, `${named} has one icon`).toBe(1);
+    expect(read.hidden, `${named}'s icon is hidden from assistive technology`).toBe(true);
+    expect(read.pointerEvents, `${named}'s icon takes no pointer events`).toBe("none");
+    expect(read.color, `${named}'s icon is in --color-ink-secondary`).toBe(read.ink);
+    expect(read.stroke, `${named}'s icon draws in that color`).toBe(read.ink);
+    expect(read.inside, `${named}'s icon is inside the control`).toBe(true);
+    expect(read.rightOfCenter, `${named}'s icon is at the right edge`).toBe(true);
+    if (read.kind === "dropdown") expect(read.appearance, `${named} draws no arrow of its own`).toBe("none");
+    else {
+      expect(read.beyondContent, `${named}'s icon is right of its content box`).toBe(true);
+      expect(read.padding, `${named}'s padding`).toEqual({ left: "12px", right: "40px" });
+      expect(read.width, `${named} is wide enough for its date`).toBeGreaterThanOrEqual(156);
+    }
+  }
+  const widths = reads.filter((read) => read.kind === "date box").map((read) => read.width);
+  console.log(`date box widths at ${page.viewportSize()?.width} px: ${widths.map((w) => w.toFixed(1)).join(", ")}`);
+  return widths;
+}
+
+// With the LineIcon hidden, a date box looks the same before and after a rule that hides the browser's calendar icon
+// is added to the page, so the browser's own icon is not visible anywhere in the box.
+async function expectNoBrowserIcon(page: Page, scope: Locator) {
+  await page.mouse.move(0, 0);
+  const dates = scope.locator("input[type=date]");
+  const count = await dates.count();
+  expect(count, "the scope holds a date box").toBeGreaterThan(0);
+  await page.addStyleTag({ content: "input[type=date] ~ span { visibility: hidden !important; }" });
+  const before: Buffer[] = [];
+  for (let i = 0; i < count; i += 1) before.push(await dates.nth(i).screenshot({ animations: "disabled" }));
+  await page.addStyleTag({ content: "input[type=date]::-webkit-calendar-picker-indicator { display: none !important; }" });
+  for (let i = 0; i < count; i += 1) {
+    const after = await dates.nth(i).screenshot({ animations: "disabled" });
+    expect(after.equals(before[i]!), `date box ${await dates.nth(i).getAttribute("id")} is identical without the browser's icon`).toBe(true);
+  }
+}
+
+test("AC-0006 and AC-0007: /receiving's Vendor and Received date carry their icons", async ({ page }) => {
+  await seed502Fixture();
+  await openReceivingForm(page);
+  const form = page.getByRole("form", { name: "New receipt" });
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectIcons(page, form, { dropdowns: 1, dates: 1 });
+  }
+  await expectNoBrowserIcon(page, form);
+});
+
+test("AC-0007: /production's Production date carries its icon", async ({ page }) => {
+  await seed502Fixture();
+  await openProductionForm(page, "/production?product=502");
+  const form = page.getByRole("form", { name: "New batch" });
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectIcons(page, form, { dropdowns: 0, dates: 1 });
+  }
+  await expectNoBrowserIcon(page, form);
+});
+
+test("AC-0006 and AC-0007: /sales' Customer and Sale date carry their icons", async ({ page }) => {
+  await fixtureWithPrice();
+  await openSalesForm(page);
+  const form = page.getByRole("form", { name: "New sale" });
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectIcons(page, form, { dropdowns: 1, dates: 1 });
+  }
+  await expectNoBrowserIcon(page, form);
+});
+
+test("AC-0006: /pricing's what-if Raw product carries its chevron", async ({ page }) => {
+  await seed502Fixture();
+  await opensPricing(page);
+  await expectIcons(page, page.getByRole("region", { name: "What if raw cost changes?" }), { dropdowns: 1, dates: 0 });
+});
+
+test("AC-0007: /trace's raw lot finder Received date carries its icon", async ({ page }) => {
+  await openTrace(page);
+  const main = page.getByRole("main");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectIcons(page, main, { dropdowns: 0, dates: 1 });
+  }
+  await expectNoBrowserIcon(page, main);
+});
+
+test("AC-0006 and AC-0007: a draft's review Product, Vendor, and Received date carry their icons", async ({ page }) => {
+  await seedFixture();
+  await openReview(page, await seedDraft({ words: ["TKY DRUMS 40# CASE"] }));
+  const review = page.getByRole("region", { name: "Draft review" });
+  const widths: number[] = [];
+  for (const width of [390, 1178, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    widths.push(...(await expectIcons(page, review, { dropdowns: 2, dates: 1 })));
+  }
+  console.log(`AC-0007 review Received date widths at 390, 1178, 1280, 1440 px: ${widths.map((w) => w.toFixed(1)).join(", ")}`);
+  await expectNoBrowserIcon(page, review);
+});
+
+// ---- AC-0009, AC-0010, AC-0011, and AC-0034: the photo picker ----
+
+const NO_PHOTO = "No photo chosen";
+
+// Opens /invoices, with the fake model reset.
+async function openPhotoPicker(page: Page, baseURL: string | undefined) {
+  await seedFixture();
+  const model = fakeModel(baseURL);
+  await model.reset();
+  return { p: await openInvoices(page), model };
+}
+
+// Presses `press`, which opens the file chooser, and returns the chooser.
+async function chooserOpenedBy(page: Page, press: () => Promise<void>) {
+  const opened = page.waitForEvent("filechooser", { timeout: 5000 });
+  await press();
+  return opened;
+}
+
+test("AC-0009: the photo field shows its label above a Choose photo button, with No photo chosen beside it and no file input", async ({
+  page,
+  baseURL,
+}) => {
+  const { p } = await openPhotoPicker(page, baseURL);
+  const label = page.locator("label", { hasText: "Invoice photo" });
+  const status = p.photoSection.locator("#photo-status");
+  await expect(p.choosePhoto).toBeVisible();
+  await expect(status).toHaveText(NO_PHOTO);
+  await expect(p.photo, "the browser's own file input is not visible").toBeHidden();
+  const [l, button, text] = [await box(label), await box(p.choosePhoto), await box(status)];
+  expect(button.y, "the button is below the label").toBeGreaterThanOrEqual(l.y + l.height - 1);
+  expect(text.x, "the text is right of the button").toBeGreaterThanOrEqual(button.x + button.width);
+  expect(Math.abs(text.y + text.height / 2 - (button.y + button.height / 2)), "the text is level with the button").toBeLessThanOrEqual(button.height / 2);
+  const chooser = await chooserOpenedBy(page, () => p.choosePhoto.click());
+  await chooser.setFiles(pngFile(300, 200, "front-of-invoice.png"));
+  await expect(status).toHaveText("front-of-invoice.png");
+});
+
+test("AC-0034: the Choose photo button's description is the label, the status text, then the error", async ({ page, baseURL }) => {
+  const { p } = await openPhotoPicker(page, baseURL);
+  await expect(p.choosePhoto).toHaveAccessibleDescription(`Invoice photo ${NO_PHOTO}`);
+  await p.photo.setInputFiles(pngFile(300, 200, "front.png"));
+  await expect(p.choosePhoto).toHaveAccessibleDescription("Invoice photo front.png");
+  await p.photo.setInputFiles({ name: "notes.png", mimeType: "image/png", buffer: Buffer.from("not an image") });
+  await p.readPhoto.click();
+  await expect(p.photoError).toBeVisible();
+  const error = (await p.photoError.textContent())!;
+  await expect(p.choosePhoto).toHaveAccessibleDescription(`Invoice photo notes.png ${error}`);
+  await expect(p.choosePhoto).toBeFocused();
+});
+
+test("AC-0010: a mouse press, Space, and Enter on Choose photo each open the file chooser", async ({ page, baseURL }) => {
+  const { p } = await openPhotoPicker(page, baseURL);
+  const presses: Array<[string, () => Promise<void>]> = [
+    ["a mouse press", () => p.choosePhoto.click()],
+    ["Space", async () => { await p.choosePhoto.focus(); await page.keyboard.press("Space"); }],
+    ["Enter", async () => { await p.choosePhoto.focus(); await page.keyboard.press("Enter"); }],
+  ];
+  for (const [name, press] of presses) {
+    const chooser = await chooserOpenedBy(page, press);
+    expect(await chooser.element().getAttribute("id"), `${name} opens the chooser of the photo input`).toBe("invoice-photo");
+  }
+});
+
+test("AC-0011: the photo chosen through the file chooser is the photo Read photo sends the model", async ({ page, baseURL }) => {
+  const { p, model } = await openPhotoPicker(page, baseURL);
+  await model.answer(TURKEY);
+  const chooser = await chooserOpenedBy(page, () => p.choosePhoto.click());
+  await chooser.setFiles(pngFile(321, 123, "chosen.png"));
+  await expect(p.photoSection.locator("#photo-status")).toHaveText("chosen.png");
+  await p.readPhoto.click();
+  await draftIdFromUrl(page);
+  const requests = await model.requests();
+  expect(requests).toHaveLength(1);
+  const image = sentImage(requests[0]!);
+  expect(image.mediaType).toBe("image/jpeg");
+  expect(jpegSize(image.bytes)).toEqual({ width: 321, height: 123 });
+});
+
+// ---- AC-0021: the Vendor picker ----
+
+const LONG_VENDOR = "Heartland Wholesale Meats Inc";
+
+// The shown text of the closed picker measured on a canvas in its own font, its content box, and its chevron.
+async function vendorFit(picker: Locator) {
+  return picker.evaluate((node) => {
+    const select = node as HTMLSelectElement;
+    const css = getComputedStyle(select);
+    const context = document.createElement("canvas").getContext("2d")!;
+    context.font = css.font;
+    const text = select.selectedOptions[0]!.text;
+    const shown = context.measureText(text).width;
+    const own = select.getBoundingClientRect();
+    const room = select.clientWidth - parseFloat(css.paddingLeft) - parseFloat(css.paddingRight);
+    const textEnd = own.left + parseFloat(css.borderLeftWidth) + parseFloat(css.paddingLeft) + shown;
+    const chevron = select.parentElement!.querySelector("svg")!.getBoundingClientRect();
+    return { text, shown, room, gap: chevron.left - textEnd };
+  });
+}
+
+test("AC-0021: the Vendor picker shows its prompt and a long vendor name whole at 1178 px, 1280 px, and the narrowest width beside Product", async ({
+  page,
+}) => {
+  await seedFixture();
+  await query("insert into vendors(id, name) values (gen_random_uuid(), $1)", [LONG_VENDOR]);
+  await openReview(page, await seedDraft({ source: "photo", words: ["TKY DRUMS 40# CASE"] }));
+  const vendor = page.locator("#line-1-vendor");
+  const besideProduct = async () => {
+    const [product, picker] = [await box(page.locator("#line-1-product")), await box(vendor)];
+    return Math.abs(product.y - picker.y) <= 1 && picker.x >= product.x + product.width - 1;
+  };
+  await page.setViewportSize({ width: 1280, height: 720 });
+  let narrowest = 1280;
+  for (let width = 1279; width >= 1024; width -= 1) {
+    await page.setViewportSize({ width, height: 720 });
+    if (!(await besideProduct())) break;
+    narrowest = width;
+  }
+  expect(narrowest, "Vendor stops sitting beside Product below 1280 px").toBeLessThan(1280);
+  const reads: string[] = [];
+  for (const width of [1178, 1280, narrowest]) {
+    await page.setViewportSize({ width, height: 720 });
+    if (width === narrowest) {
+      expect(await besideProduct(), `Vendor sits beside Product at ${width} px`).toBe(true);
+      const date = await box(page.locator("#line-1-date"));
+      expect(date.width, "Received date is wide enough for its date where it shares a line").toBeGreaterThanOrEqual(156);
+      reads.push(`Received date ${date.width.toFixed(1)} px wide at ${width} px`);
+    }
+    for (const label of ["Choose a vendor", LONG_VENDOR]) {
+      await vendor.selectOption({ label });
+      const fit = await vendorFit(vendor);
+      expect(fit.text).toBe(label);
+      expect(fit.shown, `"${label}" fits the content box at ${width} px`).toBeLessThanOrEqual(fit.room);
+      expect(fit.gap, `the chevron is right of "${label}" at ${width} px`).toBeGreaterThanOrEqual(0);
+      reads.push(`${width} px "${label}": text ${fit.shown.toFixed(1)}, room ${fit.room.toFixed(1)}, gap ${fit.gap.toFixed(1)}`);
+    }
+  }
+  console.log(`AC-0021 narrowest width beside Product: ${narrowest} px\n${reads.join("\n")}`);
 });

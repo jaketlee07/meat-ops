@@ -43,7 +43,7 @@ export const ZERO_ID = "00000000-0000-0000-0000-000000000000";
 // What Tab reaches on /invoices before any draft link, in order.
 export const FORM_CONTROLS = [
   ...HEADER_STOPS,
-  "input #invoice-photo",
+  "button #choose-photo",
   "button Read photo",
   "textarea #receipt-text",
   "button Read text",
@@ -178,6 +178,7 @@ export function parts(page: Page) {
     textSection: page.getByRole("region", { name: "Type a receipt" }),
     draftsSection: page.getByRole("region", { name: "Drafts to confirm" }),
     photo: page.getByLabel("Invoice photo"),
+    choosePhoto: page.getByRole("button", { name: "Choose photo" }),
     text: page.getByLabel("Receipt text"),
     readPhoto: page.getByRole("button", { name: "Read photo" }),
     readText: page.getByRole("button", { name: "Read text" }),

@@ -17,7 +17,7 @@ import type { Vendor } from "../../lib/receiving";
 import { saveReceipt, type SaveState } from "./actions";
 import { FIELD_ORDER, readFields, readRecheck, RECHECK_FIELD } from "./form-fields";
 import { ResultPanel } from "./result-panel";
-import { CONTROL, LABEL, PAIR, PAIR_FIELD } from "../form-parts";
+import { CONTROL, DATE_BOX, IconBox, LABEL, PAIR, PAIR_FIELD, SELECT_BOX } from "../form-parts";
 
 export interface ProductChoice {
   code: string;
@@ -280,21 +280,23 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
           <label htmlFor={FIELD_IDS.vendorId} className={LABEL}>
             Vendor
           </label>
-          <select
-            id={FIELD_IDS.vendorId}
-            name="vendorId"
-            value={vendorId}
-            onChange={(event) => setVendorId(event.target.value)}
-            className={CONTROL}
-            {...describe("vendorId")}
-          >
-            <option value="">Choose a vendor</option>
-            {vendors.map((vendor) => (
-              <option key={vendor.id} value={vendor.id}>
-                {vendor.name}
-              </option>
-            ))}
-          </select>
+          <IconBox icon="chevron">
+            <select
+              id={FIELD_IDS.vendorId}
+              name="vendorId"
+              value={vendorId}
+              onChange={(event) => setVendorId(event.target.value)}
+              className={SELECT_BOX}
+              {...describe("vendorId")}
+            >
+              <option value="">Choose a vendor</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
+                </option>
+              ))}
+            </select>
+          </IconBox>
           {fieldError("vendorId")}
         </div>
 
@@ -340,16 +342,18 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
           <label htmlFor={FIELD_IDS.receivedDate} className={LABEL}>
             Received date
           </label>
-          <input
-            id={FIELD_IDS.receivedDate}
-            name="receivedDate"
-            type="date"
-            max={today || undefined}
-            value={receivedDate}
-            onChange={(event) => setReceivedDate(event.target.value)}
-            className={CONTROL}
-            {...describe("receivedDate")}
-          />
+          <IconBox icon="calendar">
+            <input
+              id={FIELD_IDS.receivedDate}
+              name="receivedDate"
+              type="date"
+              max={today || undefined}
+              value={receivedDate}
+              onChange={(event) => setReceivedDate(event.target.value)}
+              className={DATE_BOX}
+              {...describe("receivedDate")}
+            />
+          </IconBox>
           {fieldError("receivedDate")}
         </div>
         {/* The server reads the device date from here, never from its own clock. */}

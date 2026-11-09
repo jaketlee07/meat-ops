@@ -20,9 +20,8 @@ const LONG_EDGE = 2576;
 const READING = "Reading. This can take up to two minutes.";
 
 const IDLE: ReadState = { status: "idle" };
-// The photo field's own selector button, styled to look like a button.
-const FILE_BUTTON =
-  "file:mr-3 file:rounded-md file:border file:border-field-border file:bg-surface file:px-3 file:py-1 file:text-base file:font-medium file:text-ink";
+// The photo field's visible "Choose photo" button, which opens the hidden file input.
+const CHOOSE_BUTTON = "rounded-control border border-field-border bg-surface px-3 text-base font-medium text-ink";
 // The button sits at the card's bottom, so the two Read buttons' tops line up from `desk`.
 const BUTTON =
   "mt-auto w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60";
@@ -90,6 +89,8 @@ export function ReadForms() {
   const [state, dispatch, pending] = useActionState(run, IDLE);
   const [text, setText] = useState("");
   const photoRef = useRef<HTMLInputElement>(null);
+  // The chosen file's name, for the text beside "Choose photo".
+  const [photoName, setPhotoName] = useState("");
   // Which Read button was pressed last, so the reading message sits beside it.
   const [pressed, setPressed] = useState<"photo" | "text" | null>(null);
 
@@ -98,7 +99,7 @@ export function ReadForms() {
 
   useEffect(() => {
     if (state.status === "invalid") {
-      document.getElementById(state.source === "photo" ? "invoice-photo" : "receipt-text")?.focus();
+      document.getElementById(state.source === "photo" ? "choose-photo" : "receipt-text")?.focus();
     } else if (state.status === "refused") {
       document.getElementById(state.source === "photo" ? "photo-message" : "text-message")?.focus();
     } else if (state.status === "read") {
@@ -143,19 +144,38 @@ export function ReadForms() {
         </h2>
         <form onSubmit={submitPhoto} noValidate className={FORM}>
           <div>
-            <label htmlFor="invoice-photo" className={LABEL}>
+            <label id="invoice-photo-label" htmlFor="invoice-photo" className={LABEL}>
               Invoice photo
             </label>
+            {/* The input stays in the form and is named by the label, but it is hidden and out of the Tab order:
+                the visible button below opens it. */}
             <input
               ref={photoRef}
               id="invoice-photo"
               name={PHOTO_FIELD}
               type="file"
               accept="image/*"
-              className={`${CONTROL} ${FILE_BUTTON} py-2`}
+              hidden
+              tabIndex={-1}
+              onChange={(event) => setPhotoName(event.target.files?.[0]?.name ?? "")}
               aria-invalid={photoError ? true : undefined}
               aria-describedby={photoError ? "invoice-photo-error" : undefined}
             />
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                id="choose-photo"
+                onClick={() => photoRef.current?.click()}
+                aria-invalid={photoError ? true : undefined}
+                aria-describedby={`invoice-photo-label photo-status${photoError ? " invoice-photo-error" : ""}`}
+                className={CHOOSE_BUTTON}
+              >
+                Choose photo
+              </button>
+              <span id="photo-status" className="min-w-0 break-all text-sm text-ink-secondary">
+                {photoName || "No photo chosen"}
+              </span>
+            </div>
             {photoError && (
               <p id="invoice-photo-error" className="mt-1 break-words text-base font-medium text-error">
                 {photoError}

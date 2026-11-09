@@ -15,7 +15,7 @@ import { saveBatch, type SaveState } from "./actions";
 import { CheckStep, type CheckedProduct } from "./check-step";
 import { FIELD_ORDER } from "./form-fields";
 import { ResultPanel } from "./result-panel";
-import { CONTROL, LABEL, PAIR, PAIR_FIELD } from "../form-parts";
+import { CONTROL, DATE_BOX, IconBox, LABEL, PAIR, PAIR_FIELD } from "../form-parts";
 
 interface Props {
   // The page's product list: the active finished products as of the latest server render.
@@ -331,16 +331,18 @@ export function ProductionForm({ products, urlCode, regionCode, region, reversed
           <label htmlFor={FIELD_IDS.productionDate} className={LABEL}>
             Production date
           </label>
-          <input
-            id={FIELD_IDS.productionDate}
-            name="productionDate"
-            type="date"
-            max={today || undefined}
-            value={productionDate}
-            onChange={(event) => setProductionDate(event.target.value)}
-            className={CONTROL}
-            {...describe("productionDate")}
-          />
+          <IconBox icon="calendar">
+            <input
+              id={FIELD_IDS.productionDate}
+              name="productionDate"
+              type="date"
+              max={today || undefined}
+              value={productionDate}
+              onChange={(event) => setProductionDate(event.target.value)}
+              className={DATE_BOX}
+              {...describe("productionDate")}
+            />
+          </IconBox>
           {fieldError("productionDate")}
         </div>
 
