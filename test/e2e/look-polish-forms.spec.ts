@@ -1108,7 +1108,7 @@ async function wholeWordsAndFigures(result: Locator) {
         if (rect.right > edge + 0.5) problems.push(`the number "${first.word}" ends at ${rect.right.toFixed(1)}, past the card's ${edge.toFixed(1)}`);
       }
     }
-    return { problems, words, numbers, width: card.getBoundingClientRect().width };
+    return { problems, words, numbers };
   }, FIGURE_NUMBER.source);
 }
 
@@ -1139,7 +1139,7 @@ for (const { page: label, save } of SAVED) {
     expect(problems).toEqual([]);
   });
 
-  test(`AC-0016: ${label}'s saved result keeps Before and After as column headers where its rows stack`, async ({ page }) => {
+  test(`Always do: ${label}'s saved result keeps Before and After as column headers where its rows stack, and a value cell is named by its value alone`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     const saved = await save(page);
     for (const text of saved.shows) await expect(saved.result).toContainText(text);
@@ -1147,6 +1147,14 @@ for (const { page: label, save } of SAVED) {
     expect(card.width, "the card is under 20rem, so its rows stack").toBeLessThan(320);
     for (const name of ["Before", "After"]) {
       await expect(saved.result.getByRole("columnheader", { name }).first(), `${name} is still a column header`).toBeAttached();
+    }
+    const cells = saved.result.getByRole("cell");
+    const count = await cells.count();
+    expect(count, "the saved result has value cells").toBeGreaterThan(0);
+    for (let i = 0; i < count; i += 1) {
+      const text = ((await cells.nth(i).textContent()) ?? "").trim();
+      await expect(cells.nth(i), `cell ${i} is named by its value alone`).toHaveAccessibleName(text);
+      await expect(cells.nth(i), `cell ${i}'s name has no column name`).not.toHaveAccessibleName(/Before|After/);
     }
   });
 }

@@ -25,11 +25,12 @@ const LABEL = "min-w-0 flex-1 break-words text-ink-secondary";
 const STACKING_LABEL = `${LABEL} result-stack:grow result-stack:basis-auto`;
 const COLUMN_LABEL = "min-w-0 break-words text-ink-secondary";
 const VALUE = "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums";
-// The "list" look's value is weight 500. Where its card is the container named `result` and under 20rem wide
+// Weight 500, up to 60% of the row, right-aligned.
+const VALUE_MEDIUM = "max-w-[60%] shrink-0 break-words text-right font-medium tabular-nums";
+// The "list" look's value is VALUE_MEDIUM. Where its card is the container named `result` and under 20rem wide
 // (`result-stack` in globals.css), the row wraps: the value takes up to the row's width and drops under its label
 // when the two do not share a line, so a long figure (1,234,567.891 lbs, $1,524,148.1300/lb) stays whole. Every
 // dropped value is left-aligned under its label.
-const VALUE_MEDIUM = "max-w-[60%] shrink-0 break-words text-right font-medium tabular-nums";
 const VALUE_LIST = `${VALUE_MEDIUM} result-stack:max-w-full result-stack:text-left`;
 const VALUE_QUIET = "max-w-[60%] shrink-0 break-words text-right tabular-nums";
 const CARD_BOTTOM = "rounded-b-card border border-t-0 border-card-border bg-surface px-4 pb-4";

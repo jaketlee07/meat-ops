@@ -14,7 +14,7 @@ interface Row {
 // with three decimals, costs of $10 or more) stay inside it. The two variants never overlap, so a
 // `result-snug:` class does nothing under 13rem: a class meant to hold there too is also set under
 // `result-tight:`. Under 20rem (`result-stack`, which overlaps both) each row stacks: its label on one line,
-// then Before and After each on a line of their own with the column name before the value, and every value
+// then Before and After each on a line of their own with the column name before the value (an empty `aria-hidden` span that draws it from its `data-label`, shown only here, so the cell's text and accessible name are the value alone), and every value
 // on one line. The header keeps its title and shrinks Before and After to no height (`h-0` with `overflow-hidden`, inside their cells), since the rows now name
 // each value; the two stay column headers in the accessibility tree, and the roles below keep the table's meaning where the display is no longer a table. The After column is
 // weight 500, like every figure in a saved result.
@@ -61,14 +61,16 @@ export function BeforeAfter({ title, rows }: { title: string; rows: Row[] }) {
             </th>
             <td
               role="cell"
-              className="px-2 py-2.5 text-right tabular-nums text-ink-secondary result-snug:px-0.5 result-tight:px-0 result-stack:flex result-stack:justify-between result-stack:whitespace-nowrap result-stack:px-0 result-stack:pb-0 result-stack:pt-1 result-stack:before:content-['Before']"
+              className="px-2 py-2.5 text-right tabular-nums text-ink-secondary result-snug:px-0.5 result-tight:px-0 result-stack:flex result-stack:justify-between result-stack:whitespace-nowrap result-stack:px-0 result-stack:pb-0 result-stack:pt-1"
             >
+              <span aria-hidden="true" data-label="Before" className="hidden result-stack:inline result-stack:before:content-[attr(data-label)]" />
               {row.before}
             </td>
             <td
               role="cell"
-              className="py-2.5 pl-2 text-right font-medium tabular-nums result-snug:pl-0.5 result-tight:pl-0 result-stack:flex result-stack:justify-between result-stack:whitespace-nowrap result-stack:pb-0 result-stack:pl-0 result-stack:pt-0.5 result-stack:before:font-normal result-stack:before:text-ink-secondary result-stack:before:content-['After']"
+              className="py-2.5 pl-2 text-right font-medium tabular-nums result-snug:pl-0.5 result-tight:pl-0 result-stack:flex result-stack:justify-between result-stack:whitespace-nowrap result-stack:pb-0 result-stack:pl-0 result-stack:pt-0.5"
             >
+              <span aria-hidden="true" data-label="After" className="hidden font-normal text-ink-secondary result-stack:inline result-stack:before:content-[attr(data-label)]" />
               {row.after}
             </td>
           </tr>
