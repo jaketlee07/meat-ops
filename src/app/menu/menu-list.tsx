@@ -25,7 +25,7 @@ const NOTHING_SELLABLE = "No product can be sold right now.";
 // fixed columns hold "No list price yet", a header that names finished stock, a header that names raw
 // stock, and "Not sellable now"; the product column takes what is left and wraps a long name.
 const TABLE_COLUMNS =
-  "menu-table:grid-cols-[minmax(0,1fr)_8rem_7.5rem_6.5rem_8rem] menu-table:gap-x-3 menu-table:px-4";
+  "menu-table:grid-cols-[minmax(0,1fr)_8rem_7.5rem_6.5rem_9rem] menu-table:gap-x-3 menu-table:px-4";
 const COLUMN_NAMES = ["Product", "List price", "Finished on hand", "Raw on hand", "Status"];
 // The Facts list sits on the two columns after the list price, the same "cells" way Production's does,
 // through the row's own classes: each pair becomes a cell, its label stays in the page and is hidden
