@@ -103,3 +103,13 @@ The spec's Assumptions record each of these as a Product or Process line:
 - On the tree before T6, the new click test failed at both widths (the `dl` intercepted it), the Pricing tiles walk failed on the three labels at 600, the forced-colors test failed (no knob outline), the 24 px test failed (a 48 px knob in a 40 px inside), and the lot-number test failed (a 23 px gap); the AC-0007 change is exempt from red-first.
 - Slot fix before the full run: 178,290 dead `pg_class` rows and slot age 25,165 before, 0 after.
 - `npm test` on the tree committed as T6: Vitest 55 files, 1052 passed in 58 s; Playwright 1052 passed in 13.6 min.
+
+## T5 after T6 (2026-11-09)
+
+Every record below reads commit `510f7d8`, the branch's last commit that changes a file other than those under `docs/specs/polish-tables-status/`, `docs/product/briefs/ui-polish.md`, and `workspace.toml`.
+
+- AC-0016: the four screens were retaken from `510f7d8` at 1280 x 800 with made-up data (Pricing is a 1280 x 1097 full-page capture) and placed on the check page (artifact `FjDNxQQ6dVDb4gVr9g96To`, version 1794208724-1be9) beside the comparison's own Meat Ops screens and its "Change" text, each compared with the comparison page at revision 1794121141-4df1: `/receiving`, `/sales`, and `/menu` with "Status, IDs, and dates" (leaving out its dimmed row and its "No list price yet" tag) and `/pricing` with "Advice and main buttons". The owner answered "All four still match" on 2026-11-09.
+- AC-0018: `git diff 3c70d69 510f7d8 -- test/` read in full, with no untracked file under `test/`. The changed expectations in existing browser test files are the T1 and T2 lines the earlier T5 entry lists, plus T6's two `sales.spec.ts` void-note absence checks (lines 1052 and 1191), which now read the "Voided" tag (AC-0018's void-text clause); T6 otherwise changed two comments in `sales.spec.ts` and `look-floor-pages.spec.ts`. Everything else is the new `look-polish-tables.spec.ts` and `test/look-tidy.test.ts`'s bundled fix.
+- AC-0019: the six `checkPageState` tests in `look-polish-tables.spec.ts` (commit `257cfd2`) are unchanged by T6 and pass at `510f7d8` in the run below.
+- The two leftovers gaps this spec closes are unchanged: stock tiles that split figures at 20 px text (AC-0014, AC-0022) and sale trace labels far from their values on a desktop (AC-0015).
+- AC-0017: `npm test` at `510f7d8` passed: Vitest 55 files, 1052 passed in 65 s; Playwright 1052 passed in 14.2 min. Slot fix before it: 138,960 dead `pg_class` rows and slot age 15,955 before, 0 after.
