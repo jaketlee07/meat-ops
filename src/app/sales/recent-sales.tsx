@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatDate, formatPricePerLb, formatWeight } from "../../lib/format";
 import type { RecentSales as Sales, SaleSummary } from "../../lib/sales";
 import { Facts } from "../facts";
-import { StatusTag } from "../status-tag";
+import { REASON_LINE, StatusTag } from "../status-tag";
 import { voidSale } from "./actions";
 import { VoidDialog } from "./void-dialog";
 
@@ -16,6 +16,8 @@ const HEADING_ID = "recent-sales-heading";
 // decimals, and a price; the customer takes what is left and may wrap.
 const TABLE_COLUMNS =
   "sale-table:grid-cols-[9rem_minmax(0,1fr)_4rem_5.5rem_5.25rem_5rem] sale-table:gap-x-1.5 sale-table:px-4";
+// The h3 is positioned so the link paints above the figures list, which spans its cell and comes later in
+// the page, and so takes a pointer press; the page order and the Tab order do not change.
 // The figures list sits on the five columns before the actions, the same "cells" way Production's does,
 // through the row's own classes: it takes the row's two lines (the date on the first, the sale number
 // under it on the second), each pair becomes a cell, its label stays in the page and is hidden visually,
@@ -50,7 +52,7 @@ function Status({ sale }: { sale: SaleSummary }) {
         <p className={`flex ${ACTIONS}`}>
           <StatusTag tone="nocost">Voided</StatusTag>
         </p>
-        <p className="min-w-0 break-words text-sm text-ink-secondary sale-table:col-span-full">{sale.voidReason ?? ""}</p>
+        <p className={`${REASON_LINE} sale-table:col-span-full`}>{sale.voidReason ?? ""}</p>
       </>
     );
   }
@@ -106,7 +108,7 @@ export function RecentSales({ sales, total }: Sales) {
                   key={sale.id}
                   className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 sale-table:grid sale-table:items-center sale-table:gap-y-0 sale-table:rounded-none sale-table:border-0 sale-table:border-t sale-table:py-1.5 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
                 >
-                  <h3 className="text-base font-bold sale-table:col-start-1 sale-table:row-start-2 sale-table:whitespace-nowrap sale-table:text-sm sale-table:font-medium">
+                  <h3 className="text-base font-bold sale-table:relative sale-table:col-start-1 sale-table:row-start-2 sale-table:whitespace-nowrap sale-table:text-sm sale-table:font-medium">
                     <Link
                       href={`/trace?sale=${encodeURIComponent(sale.saleNumber)}`}
                       className="inline-flex min-h-control min-w-control items-center break-all rounded-control text-primary underline sale-table:break-normal"

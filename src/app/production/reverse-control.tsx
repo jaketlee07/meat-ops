@@ -8,7 +8,7 @@ import type { ReversalPreview } from "../../lib/production";
 import type { SaleSummary } from "../../lib/sales";
 import { BeforeAfter } from "../before-after";
 import { Facts } from "../facts";
-import { StatusTag } from "../status-tag";
+import { REASON_LINE, StatusTag } from "../status-tag";
 import { showAverage, showOnHand, stockView } from "../stock-view";
 import type { ReversalState } from "./actions";
 import type { ReversalDetails, ReversalStock } from "./reverse-batch";
@@ -197,7 +197,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
           <p className="flex batch-table:justify-end">
             <StatusTag tone="nocost">Reversed</StatusTag>
           </p>
-          <p className="break-words text-sm text-ink-secondary batch-table:text-right">{sentReason}</p>
+          <p className={`${REASON_LINE} batch-table:text-right`}>{sentReason}</p>
         </>
       )}
       {!reversed && !done && (

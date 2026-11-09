@@ -21,14 +21,15 @@
   --color-tint: #f1f4fd;
   --color-error-wash: #fef2f2;
   --color-error-edge: #fecaca;
-  /* Pricing: the tiles' top edges by group, and the advice box. */
+  /* Pricing: the tiles' top edges by group, and the advice box. The priced and no-cost colors are also the dot
+     before each status tag's word (status-tag.tsx). */
   --color-status-needs: #d97706;
   --color-status-priced: #16a34a;
   --color-status-nocost: #94a3b8;
   --color-advice-fill: #fffbeb;
   --color-advice-text: #92400e;
-  /* Receiving: the fill of the "In use" mark. Same color as --color-card-border, kept apart so a border rule
-     never moves it. */
+  /* The fill of every status tag ("In use", "Voided", "Reversed", "Sellable now", "Not sellable now"). Same color
+     as --color-card-border, kept apart so a border rule never moves it. */
   --color-mark-fill: #e2e8f0;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
@@ -105,7 +106,8 @@
 }
 
 /* Menu's list reads as a table only when the list's section is wide enough for a row: fixed tracks,
-   gaps, and padding (about 35rem) plus a product column that wraps a long name (about 7rem). The section is
+   gaps, and padding (36rem: 8rem, 7.5rem, 6.5rem, and 9rem of tracks, four 0.75rem gaps, and 2rem of padding) plus a product
+   column that wraps a long name (about 6rem at 42rem). The section is
    the container named menu. The width is in rem, so a larger browser text size keeps the cards until the
    section has grown to fit. At the default size <main>'s content box is 45.5rem at 1024 px (about 44.4rem
    with a 17 px scrollbar, so the table shows), 61.5rem at 1280 px, and 71.5rem at 1440 px; with a 20 px

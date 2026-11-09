@@ -7,6 +7,10 @@ const DOT: Record<"priced" | "nocost", string> = {
   nocost: "bg-status-nocost",
 };
 
+// The reason line under a "Voided" or "Reversed" tag: quiet gray text that wraps inside its cell. Each place
+// that draws one adds only its own placement.
+export const REASON_LINE = "min-w-0 break-words text-sm text-ink-secondary";
+
 export function StatusTag({ tone, children }: { tone: "priced" | "nocost"; children: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-mark-fill px-2.5 py-0.5 text-sm font-medium text-ink">

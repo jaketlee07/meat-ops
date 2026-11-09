@@ -308,7 +308,7 @@ function saleList(page: Page): RowList {
 
 // Three sales of 502: the first two written through the engine (the first with no customer, the
 // second to the deli), the third saved through the page, then the second voided through the page.
-// The page is left on the third sale's "Sale saved" result and the second sale's "Void:" line, at the
+// The page is left on the third sale's "Sale saved" result and the second sale's "Voided" tag and its reason, at the
 // given size. The list reads, newest first: the third sale, the void second, the first.
 async function opensSales(page: Page, width: number, height: number) {
   await fixtureWithPrice();

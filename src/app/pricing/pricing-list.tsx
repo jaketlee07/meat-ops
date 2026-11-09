@@ -39,7 +39,7 @@ export function ProductTiles({ rows }: { rows: PricingRow[] }) {
           key={heading}
           className={`flex flex-col-reverse gap-0.5 rounded-xl border border-t-3 border-card-border bg-surface px-2.5 py-2 desk:flex-col desk:gap-1 desk:rounded-card desk:px-4 desk:py-3 ${TILE_EDGES[heading]}`}
         >
-          <span className="text-xs font-semibold text-ink-secondary desk:text-sm">{heading}</span>
+          <span className="text-xs font-medium text-ink-secondary desk:text-sm">{heading}</span>
           <span className="text-2xl font-bold tabular-nums">{rows.filter(pick).length}</span>
         </li>
       ))}

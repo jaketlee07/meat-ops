@@ -1,7 +1,7 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { RecentReceipt, RecentReceipts as Receipts } from "../../lib/receiving";
 import { Facts } from "../facts";
-import { StatusTag } from "../status-tag";
+import { REASON_LINE, StatusTag } from "../status-tag";
 import { correctReceipt, voidReceipt } from "./actions";
 import { CorrectDialog } from "./correct-dialog";
 import { VoidDialog } from "./void-dialog";
@@ -21,14 +21,15 @@ const TABLE_COLUMNS =
 // The facts list spans the five columns before the actions and places each value by hand: the date over
 // the lot number in the first column, the vendor and the figures on the date's line. Values read left in the
 // first two columns and right in the figures; no line of the first cell breaks, and any other value breaks
-// inside a word only when nothing else fits. The lot number is the second line, in quiet ink.
+// inside a word only when nothing else fits. The lot number is the second line, in quiet ink; the vendor spans
+// both lines, so a vendor that wraps onto a second line leaves the lot number directly under its date.
 const FIGURE_CELLS = [
   "receipt-table:[&>dl]:col-span-5",
   "receipt-table:[&>dl>div:nth-child(-n+3)>dd]:text-left",
   "receipt-table:[&>dl>div:nth-child(-n+2)>dd]:whitespace-nowrap receipt-table:[&>dl>div:nth-child(-n+2)>dd]:break-normal",
   "receipt-table:[&>dl>div:nth-child(1)>dd]:col-start-1 receipt-table:[&>dl>div:nth-child(1)>dd]:row-start-2 receipt-table:[&>dl>div:nth-child(1)>dd]:text-ink-secondary",
   "receipt-table:[&>dl>div:nth-child(2)>dd]:col-start-1 receipt-table:[&>dl>div:nth-child(2)>dd]:row-start-1",
-  "receipt-table:[&>dl>div:nth-child(3)>dd]:col-start-2 receipt-table:[&>dl>div:nth-child(3)>dd]:row-start-1",
+  "receipt-table:[&>dl>div:nth-child(3)>dd]:col-start-2 receipt-table:[&>dl>div:nth-child(3)>dd]:row-start-1 receipt-table:[&>dl>div:nth-child(3)>dd]:row-span-2",
   "receipt-table:[&>dl>div:nth-child(4)>dd]:col-start-3 receipt-table:[&>dl>div:nth-child(4)>dd]:row-start-1",
   "receipt-table:[&>dl>div:nth-child(5)>dd]:col-start-4 receipt-table:[&>dl>div:nth-child(5)>dd]:row-start-1",
   "receipt-table:[&>dl>div:nth-child(6)>dd]:col-start-5 receipt-table:[&>dl>div:nth-child(6)>dd]:row-start-1",
@@ -60,7 +61,7 @@ function Status({ receipt }: { receipt: RecentReceipt }) {
         <p className={`flex ${ACTIONS}`}>
           <StatusTag tone="nocost">Voided</StatusTag>
         </p>
-        <p className="break-words text-sm text-ink-secondary receipt-table:col-span-full">{receipt.voidReason ?? ""}</p>
+        <p className={`${REASON_LINE} receipt-table:col-span-full`}>{receipt.voidReason ?? ""}</p>
       </>
     );
   }

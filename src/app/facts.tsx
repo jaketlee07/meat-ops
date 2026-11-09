@@ -1,4 +1,5 @@
-// A list of label and value pairs, the value right-aligned in tabular figures.
+// A list of label and value pairs in tabular figures; the value is right-aligned in "list", "quiet", "cells" (outside a
+// table), and "card-cols", and left-aligned in "tiles", "card", and "plain".
 // `look` only chooses classes: the elements, their order, and the text are the same in
 // every look, and each label stays in the page. "list" is the plain rows. "tiles" draws
 // the pairs as tinted tiles, label above value, each value whole on one line, side by side while both fit in the
@@ -11,7 +12,8 @@
 // label directly above value, the pairs in a row where the sale trace has room (`sale-cols`) and two to a row where
 // it does not; "plain" draws no card edge, for the facts inside a batch card or a raw lot block. "quiet" is "list"
 // with its values at weight 400, for the facts in the stock cards, where the tiles carry the figures; "list" keeps its
-// bold values for the saved results and the open panels and dialogs. "card", "card-cols", and the sale trace's values are weight 500.
+// bold values for the saved results and the open panels and dialogs. Value weights: "list", "tiles", and "cells" (outside a table)
+// 600; "card" (the sale card) and "card-cols" (the lot card) 500; "quiet" and "plain" (a batch card or raw lot block) 400.
 type Look = "list" | "quiet" | "tiles" | "cells" | "card" | "card-cols" | "plain";
 
 // Each distinct class string is written once here, and a look only picks which ones it uses.

@@ -39,11 +39,14 @@ const FIGURE_CELLS = [
 // The checkbox drawn as a switch, still a native checkbox with its label. The input is the track (44 px tall, so
 // the control keeps its 44 px target and its focus ring) and its ::before is the round knob: at the track's left when
 // off, moved right when on. Off: a surface track with a field-border edge and knob. On: a primary track with a
-// surface knob. The knob's move is a transform transition, only where motion is allowed.
+// surface knob. The width, knob, offset, and travel are in px (72, 32, 4, and 28), like the track's height,
+// so the knob stays inside the track at every text size. Under forced colors the system replaces backgrounds, so
+// the knob gets an outline (its color is replaced there) and on and off still differ by its place. The knob's move is a transform transition, only where motion is allowed.
 const SWITCH = [
-  "relative h-control w-18 shrink-0 appearance-none rounded-full border-2 border-field-border bg-surface",
-  "before:absolute before:inset-y-0 before:left-1 before:my-auto before:size-8 before:rounded-full before:bg-field-border",
-  "checked:border-primary checked:bg-primary checked:before:translate-x-7 checked:before:bg-surface",
+  "relative h-control w-[72px] shrink-0 appearance-none rounded-full border-2 border-field-border bg-surface",
+  "before:absolute before:inset-y-0 before:left-[4px] before:my-auto before:size-[32px] before:rounded-full before:bg-field-border",
+  "forced-colors:before:border-2 forced-colors:before:border-field-border",
+  "checked:border-primary checked:bg-primary checked:before:translate-x-[28px] checked:before:bg-surface",
   "motion-safe:before:transition-transform",
 ].join(" ");
 

@@ -1,7 +1,7 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
 import type { RecentBatches as Batches } from "../../lib/production";
 import { Facts } from "../facts";
-import { StatusTag } from "../status-tag";
+import { REASON_LINE, StatusTag } from "../status-tag";
 import { reverseBatch } from "./actions";
 import { ReverseControl, type Preview } from "./reverse-control";
 
@@ -104,7 +104,7 @@ export function RecentBatches({
                     />
                   </div>
                   {batch.reversedAt !== null && (
-                    <p className="min-w-0 break-words text-sm text-ink-secondary batch-table:col-span-full">{batch.reversalReason ?? ""}</p>
+                    <p className={`${REASON_LINE} batch-table:col-span-full`}>{batch.reversalReason ?? ""}</p>
                   )}
                 </li>
               ))}

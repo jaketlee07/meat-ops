@@ -7,11 +7,19 @@ import { card as pricingCard, detail as pricingDetail, opensDetail, setTarget } 
 import { seedBatch } from "./production-page";
 import { factValue, lotNumberOf, seedReceipt } from "./receiving-page";
 import { fields as saleFields, saleNumbers, seedSale } from "./sales-page";
+import { withTextSize } from "./look-checks";
 import { OPERATOR_STATE } from "./states";
 
-// Spec polish-tables-status, the status tags and the quiet reasons: how a status word, a void's reason,
-// and "No list price yet" are drawn on Menu, Pricing, Sales, Receiving, and Production. Operator session;
-// data is reset before each test, then one fixed state is built with made-up data.
+// Spec polish-tables-status, how the lists and cards are drawn on Menu, Pricing, Sales, Receiving, Production,
+// and the trace: the status tags with a dot and the quiet reason lines (AC-0001 to AC-0005), "No list price yet"
+// as quiet regular text (AC-0023, AC-0024), the stock tiles' numbers on one line (AC-0014, AC-0022), the sale trace's
+// labels above their values (AC-0015), whole lot numbers, sale numbers, and dates, the sale number as a link that
+// takes a press, the lot number under its date, Void and Correct side by side, the quiet Void button, Recent
+// sales' order and its 10 sales (AC-0006 to AC-0009, AC-0020), Pricing's apply button and advice box
+// (AC-0010, AC-0011), Menu's switch, in normal colors, in forced colors, and at large text (AC-0012, AC-0021),
+// no text above weight 500 on twelve surfaces (AC-0013), Menu's status tags on one line, and the page-state
+// check on six screens (AC-0019). Operator session; data is reset before each test, then one fixed state is
+// built with made-up data.
 
 test.use({ storageState: OPERATOR_STATE });
 
@@ -201,10 +209,16 @@ for (const list of LISTS) {
 // "No list price yet" is gray text in --color-ink-secondary, outside any tag.
 async function expectQuiet(page: Page, word: Locator) {
   await expect(word).toHaveCount(1);
-  const style = await word.evaluate((node) => ({
-    color: getComputedStyle(node).color,
-    inTag: node.closest('[class*="rounded-full"]') !== null,
-  }));
+  // A tag is a filled element whose corners are at least half its height, the walk's own test (AC-0001).
+  const style = await word.evaluate((node) => {
+    let inTag = false;
+    for (let n: Element | null = node; n; n = n.parentElement) {
+      const css = getComputedStyle(n);
+      const h = n.getBoundingClientRect().height;
+      if (css.backgroundColor !== "rgba(0, 0, 0, 0)" && h > 0 && parseFloat(css.borderTopLeftRadius) >= h / 2) inTag = true;
+    }
+    return { color: getComputedStyle(node).color, inTag };
+  });
   expect(style.color).toBe(await token(page, "--color-ink-secondary"));
   expect(style.inTag, "outside any tag").toBe(false);
 }
@@ -271,13 +285,6 @@ const STOCKS = [12345.678, 1234567.891];
 
 const STOCK_WIDTHS = [390, 1024, 1280];
 
-// The size the browser's text size is set to for the second pass, as a larger setting would.
-async function setRootSize(page: Page, size: string) {
-  await page.evaluate((value) => {
-    document.documentElement.style.fontSize = value;
-  }, size);
-}
-
 // A tile's value as laid out: the lines its text holds (distinct line tops of a Range over the text before its
 // first space, or over all of it), how far its text and its box reach against the tile, and whether the value's
 // own content is cut (scroll width against client width).
@@ -310,18 +317,18 @@ for (const card of STOCK_CARDS) {
   for (const lbs of STOCKS) {
     test(`AC-0014: ${card.name} keeps each tile number on one line inside its tile with ${lbs} lbs on hand`, async ({ page }) => {
       await seedReceipt(lbs, 1.752, "2026-10-01");
-      for (const size of ["", "20px"]) {
+      for (const size of [16, 20]) {
         for (const width of STOCK_WIDTHS) {
           await page.setViewportSize({ width, height: 900 });
           await page.goto(card.url);
           const region = page.getByRole("region", { name: card.name });
           await expect(region).toBeVisible();
-          await setRootSize(page, size);
+          await withTextSize(page, width, 900, size);
           for (const label of [card.onHand, card.average]) {
             const value = factValue(region, label);
             await expect(value).toHaveCount(1);
             const seen = await tileMeasure(value, false);
-            const where = `${card.name}, ${label}, ${width} px, text ${size || "default"}`;
+            const where = `${card.name}, ${label}, ${width} px, text ${size} px`;
             expect(seen.lines, `${where}: one line box`).toBe(1);
             expect(seen.textInside, `${where}: the number ends inside its tile`).toBe(true);
             expect(seen.boxInside, `${where}: the value's box ends inside its tile`).toBe(true);
@@ -446,7 +453,7 @@ for (const width of WIDTHS) {
     }
   });
 
-  test(`AC-0007: Void and Correct, and In use and Correct, sit side by side with their tops level at ${width} px`, async ({ page }) => {
+  test(`AC-0007: Void and Correct, and In use and Correct, sit side by side, Void and Correct with their tops level and In use with its middle level with Correct's, at ${width} px`, async ({ page }) => {
     const lots = await build();
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/receiving?product=RAW-TOM");
@@ -459,16 +466,14 @@ for (const width of WIDTHS) {
 
     const inUse = receipts(page).locator("ul > li").filter({ hasText: lots.inUse });
     const tag = inUse.getByText("In use", { exact: true });
-    // The tag's own cell is as tall as a button, so its top is the tag's top; the pill sits in its middle.
-    const cell = await tag.locator("..").boundingBox();
+    // The visible tag's own box (the pill), not its wrapper's.
     const pill = await tag.boundingBox();
     const correct = await inUse.getByRole("button", { name: `Correct lot ${lots.inUse}`, exact: true }).boundingBox();
-    expect(Math.abs(cell!.y - correct!.y), "In use cell and Correct tops").toBeLessThanOrEqual(1);
     expect(Math.abs(pill!.y + pill!.height / 2 - (correct!.y + correct!.height / 2)), "In use and Correct middles").toBeLessThanOrEqual(1);
     expect(pill!.x + pill!.width, "In use left of Correct").toBeLessThanOrEqual(correct!.x + 1);
   });
 
-  test(`AC-0008: no row's own Void button takes the error color at ${width} px`, async ({ page }) => {
+  test(`AC-0008: no row's own Void button takes the error color and each is ink on the surface with the field border, 44 px tall, with 12 px padding at ${width} px`, async ({ page }) => {
     const lots = await build();
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/sales");
@@ -509,6 +514,51 @@ for (const width of WIDTHS) {
     }
   });
 }
+
+for (const width of WIDTHS) {
+  test(`a pointer click on each sale number in Recent sales opens its trace at ${width} px`, async ({ page }) => {
+    const lots = await build();
+    await page.setViewportSize({ width, height: 900 });
+    for (const number of lots.sales) {
+      await page.goto("/sales");
+      await expect(sales(page).locator("div[aria-hidden='true']").first(), "the table shows").toBeVisible();
+      await sales(page).getByRole("link", { name: number, exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/trace\\?sale=${number}$`));
+    }
+  });
+}
+
+test(`with a vendor name that wraps, each receipt's lot number sits directly under its date at 1280 px`, async ({ page }) => {
+  const lots = await build();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/receiving?product=RAW-TOM");
+  await expect(receipts(page).locator("div[aria-hidden='true']").first(), "the table shows").toBeVisible();
+  for (const lot of [lots.inUse, lots.untouched, lots.voided]) {
+    const item = receipts(page).locator("ul > li").filter({ hasText: lot });
+    await expect(item).toHaveCount(1);
+    const seen = await item.evaluate((li) => {
+      const [lotCell, date, vendor] = [...li.querySelectorAll("dd")].slice(0, 3) as HTMLElement[];
+      // A cell's box stretches to its row, so the text itself is measured.
+      const text = (cell: HTMLElement) => {
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        return range;
+      };
+      const lines = new Set([...text(vendor!).getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
+      return {
+        vendorLines: lines,
+        // Two stacked lines leave only their leading between their text boxes; a blank line would add a whole line box.
+        leading: parseFloat(getComputedStyle(date!).lineHeight) - text(date!).getBoundingClientRect().height,
+        gap: text(lotCell!).getBoundingClientRect().top - text(date!).getBoundingClientRect().bottom,
+        sameColumn: Math.abs(text(lotCell!).getBoundingClientRect().left - text(date!).getBoundingClientRect().left),
+      };
+    });
+    expect(seen.vendorLines, `${lot}: the vendor name wraps`).toBeGreaterThanOrEqual(2);
+    expect(seen.sameColumn, `${lot}: lot number and date share a left edge`).toBeLessThanOrEqual(1);
+    expect(seen.gap, `${lot}: no blank line under the date`).toBeLessThanOrEqual(seen.leading + 1);
+    expect(seen.gap, `${lot}: the lot number is below the date`).toBeGreaterThanOrEqual(-1);
+  }
+});
 
 // Three sales of 502 entered out of sale-date order, two on one date: entry order is A, B, C; the sale dates
 // are A and C on 10 Oct and B on 12 Oct, so the list reads B, then C (entered after A on the same date), then A.
@@ -710,12 +760,65 @@ for (const width of [390, 1280]) {
   });
 }
 
+// The switch's knob and track as measured in px, for the two states below: the knob lies inside the track's
+// inner box in both directions.
+async function expectKnobInside(box: Locator, where: string) {
+  const seen = await switchParts(box);
+  const innerW = seen.trackW - 2 * seen.borderLeft;
+  const innerH = seen.trackH - 2 * seen.edgeWidth;
+  expect(seen.knobLeft, `${where}: knob not past the left edge`).toBeGreaterThanOrEqual(-0.5);
+  expect(seen.knobLeft + seen.knobW, `${where}: knob not past the right edge`).toBeLessThanOrEqual(innerW + 0.5);
+  expect(seen.knobH, `${where}: knob no taller than the track's inside`).toBeLessThanOrEqual(innerH + 0.5);
+}
+
+async function settled(page: Page, box: Locator) {
+  await expect.poll(async () => {
+    const first = (await switchParts(box)).knobLeft;
+    await page.waitForTimeout(150);
+    return first === (await switchParts(box)).knobLeft;
+  }).toBe(true);
+}
+
+test("Menu's switch keeps its knob inside its track, off and on, with the browser's text at 24 px", async ({ page }) => {
+  await build();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/menu");
+  const box = page.getByRole("checkbox", { name: "Sellable only" });
+  await expect(box).toHaveCount(1);
+  await withTextSize(page, 1280, 900, 24);
+  await settled(page, box);
+  await expectKnobInside(box, "off");
+  await box.check();
+  await settled(page, box);
+  await expectKnobInside(box, "on");
+  expect((await switchParts(box)).knobLeft, "on: the knob moved right").toBeGreaterThan(20);
+});
+
+test("under forced colors Menu's switch knob has its own outline, at the track's left when off and its right when on", async ({ page }) => {
+  await build();
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/menu");
+  const box = page.getByRole("checkbox", { name: "Sellable only" });
+  await expect(box).toHaveCount(1);
+  const knobEdge = (input: Locator) => input.evaluate((node) => parseFloat(getComputedStyle(node, "::before").borderTopWidth));
+  const off = await switchParts(box);
+  expect(await knobEdge(box), "off: the knob has an outline").toBeGreaterThanOrEqual(2);
+  const inner = off.trackW - 2 * off.borderLeft;
+  expect(off.knobLeft, "off: knob at the left").toBeLessThan(inner / 2 - off.knobW / 2);
+  await box.check();
+  await settled(page, box);
+  const on = await switchParts(box);
+  expect(await knobEdge(box), "on: the knob has an outline").toBeGreaterThanOrEqual(2);
+  expect(on.knobLeft, "on: knob at the right").toBeGreaterThan(inner / 2 - on.knobW / 2);
+});
+
 // ---- AC-0013: no text above weight 500 on the listed surfaces ----
 
 // Every text node under `root` with its computed weight (read from its parent element), leaving out only the
 // parts AC-0013 names, matched by structure: an element with the heading role, a list's header line (an
 // aria-hidden row of column names), a table row's first column (under the header's first name), the values in
-// a stock tile or a Pricing tile, a button, and a tag (a filled, fully rounded element). Returns the text nodes
+// a stock tile or a Pricing tile (the value element only, not the tile's label), a button, and a tag (a filled, fully rounded element). Returns the text nodes
 // that render above 500, and how many it read.
 function heavyText(root: Locator) {
   return root.evaluate((section) => {
@@ -741,18 +844,20 @@ function heavyText(root: Locator) {
       return path.join(" < ");
     };
     const exempt = (el: Element, range: Range) => {
-      for (let n: Element | null = el; n && n !== section.parentElement; n = n.parentElement) {
+      let below: Element | null = null; // the child of `n` the climb came from
+      for (let n: Element | null = el; n && n !== section.parentElement; below = n, n = n.parentElement) {
         const role = n.getAttribute("role");
         if (/^h[1-6]$/i.test(n.tagName) || role === "heading") return true;
         if (n.tagName === "BUTTON" || role === "button") return true;
         if (n.getAttribute("aria-hidden") === "true") return true; // a header line
-        if (n.tagName === "UL" && n.getAttribute("aria-label") === "Product counts") return true;
+        // A Pricing tile: its value is the tile's last child; its label is not exempt.
+        if (n.tagName === "LI" && n.parentElement?.getAttribute("aria-label") === "Product counts" && below === n.lastElementChild) return true;
         const css = getComputedStyle(n);
         const h = n.getBoundingClientRect().height;
         if (css.backgroundColor !== "rgba(0, 0, 0, 0)" && h > 0 && parseFloat(css.borderTopLeftRadius) >= h / 2) return true; // a tag
         if (n.tagName === "DL" || n.tagName === "DD" || n.tagName === "DT") continue;
         // A stock tile: a filled box in a definition list that holds a label and its value.
-        if (n.tagName === "DIV" && n.parentElement?.tagName === "DL" && css.backgroundColor !== "rgba(0, 0, 0, 0)" && !n.closest("li")) return true;
+        if (n.tagName === "DIV" && n.parentElement?.tagName === "DL" && css.backgroundColor !== "rgba(0, 0, 0, 0)" && !n.closest("li") && below?.tagName === "DD") return true;
       }
       // A table row's first column: the row is a list item under a header line, and the text lies within the
       // header's first name.
@@ -870,11 +975,11 @@ test("Menu's status tags stay on one line where the list is a table, at 1280 px 
   page,
 }) => {
   await build();
-  for (const size of ["", "20px"]) {
+  for (const size of [16, 20]) {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/menu");
-    if (size) await setRootSize(page, size);
-    await expect(page.locator("span", { hasText: /^Finished on hand$/ }), `${size || "default"}: the header line`).toBeVisible();
+    await withTextSize(page, 1280, 900, size);
+    await expect(page.locator("span", { hasText: /^Finished on hand$/ }), `${size} px: the header line`).toBeVisible();
     for (const [code, word] of [
       ["502", "Sellable now"],
       ["FIN-B", "Sellable now"],
@@ -893,8 +998,8 @@ test("Menu's status tags stay on one line where the list is a table, at 1280 px 
             uncut: node.scrollWidth <= node.clientWidth && cell.scrollWidth <= cell.clientWidth,
           };
         });
-      expect(seen.lines, `${code} ${size || "default"}: "${word}" on one line`).toBe(1);
-      expect(seen.uncut, `${code} ${size || "default"}: "${word}" not past its cell`).toBe(true);
+      expect(seen.lines, `${code} ${size} px: "${word}" on one line`).toBe(1);
+      expect(seen.uncut, `${code} ${size} px: "${word}" not past its cell`).toBe(true);
     }
   }
 });

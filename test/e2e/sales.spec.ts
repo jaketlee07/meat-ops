@@ -973,7 +973,7 @@ test.describe("recent sales", () => {
     await expect(f.recent.getByText("Showing the 10 most recent of 12 sales.", { exact: true })).toBeVisible();
     await expect(factValue(items.last(), "Sale date")).toHaveText("Oct 6, 2026");
 
-    // AC-0076: a saved sale joins the top of the list, and the count follows.
+    // AC-0076: a saved sale joins the list in sale-date order, and the count follows.
     await fillSale(f, { lbs: "20", date: "2026-10-08" });
     await f.save.click();
     await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toBeVisible();
@@ -1049,7 +1049,7 @@ test.describe("recent sales", () => {
 
     const openItem = recentItem(page, open);
     await expect(voidButtonOf(page, open)).toBeVisible();
-    await expect(openItem.getByText(/^Void: /)).toHaveCount(0);
+    await expect(openItem.getByText("Voided", { exact: true })).toHaveCount(0);
     const voidItem = recentItem(page, voided);
     await expect(voidItem.getByText("Voided", { exact: true })).toBeVisible();
     await expect(voidItem.getByText("wrong customer", { exact: true })).toBeVisible();
@@ -1188,7 +1188,7 @@ test.describe("voiding", () => {
     expect(await saleState(id)).toEqual({ voided: true, reason: "voided elsewhere" });
     expect(await voidMarks()).toBe(1);
     expect(await finishedSnapshot()).toEqual(lots);
-    await expect(item.getByText("Void: second void")).toHaveCount(0);
+    await expect(item.getByText("Voided", { exact: true })).toHaveCount(0);
     // The list after an AC-0084 refusal: still showing the sale with its Void button.
     expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...listControls([{ number, voidable: true }])]);
   });
