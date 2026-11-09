@@ -256,7 +256,14 @@
    and their order here does not matter; result-tight does not inherit result-snug, so a class meant to hold
    under 13rem as well is set under both. In rem, so a larger text size tightens them sooner: at the default
    text size the 280 px form column leaves a saved-result card about 15.4rem wide (result-snug), and with a
-   20 px text size it is about 11.9rem (result-tight only). */
+   20 px text size it is about 11.9rem (result-tight only).
+   A third step, result-stack, is for the same card under 20rem and overlaps the other two: a table row stacks
+   (its label on one line, then Before and After each on a line of their own, every value on one line) and a
+   list row of facts lets its value drop under its label. Six-digit weights with three decimals and costs past a
+   million (1,234,567.891 lbs, $1,524,148.1300/lb) need about 22rem to share a line with a label, so under 20rem
+   they cannot sit in columns; the 340 px form column at 1024 px with the default text size leaves 19.1rem,
+   the widest card the stack has to hold. It is declared after the other two, so where it sets the same property as a snug
+   or tight class, the stack wins. */
 @custom-variant result-snug {
   @container result (13rem <= width < 18rem) {
     @slot;
@@ -265,6 +272,12 @@
 
 @custom-variant result-tight {
   @container result (width < 13rem) {
+    @slot;
+  }
+}
+
+@custom-variant result-stack {
+  @container result (width < 20rem) {
     @slot;
   }
 }

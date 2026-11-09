@@ -99,7 +99,7 @@ export function RecentReceipts({ receipts, total }: Receipts) {
   return (
     <section
       aria-labelledby={HEADING_ID}
-      className="@container/receipts space-y-2 desk:[grid-area:recent] wide:space-y-0 wide:overflow-hidden wide:rounded-card wide:border wide:border-card-border wide:bg-surface"
+      className="@container/receipts space-y-2 wide:space-y-0 wide:overflow-hidden wide:rounded-card wide:border wide:border-card-border wide:bg-surface"
     >
       <h2 id={HEADING_ID} tabIndex={-1} className="text-lg font-bold wide:-outline-offset-2 wide:px-4 wide:py-3">
         Recent receipts

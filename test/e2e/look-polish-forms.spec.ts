@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { query, resetTestData } from "../db";
+import { query, RAW_TOM_ID, resetTestData } from "../db";
 import { banner, marginCase, openDigest, seedDigest, withWatchRefused } from "./alerts-page";
 import { openAsk } from "./ask-page";
 import {
@@ -14,15 +14,18 @@ import {
   sentImage,
   TURKEY,
 } from "./invoices-page";
-import { box, withTextSize } from "./look-checks";
+import { box, FIGURE as FIGURE_NUMBER, withTextSize } from "./look-checks";
+import { addFinished } from "./menu-page";
 import { opensDetail, opens as opensPricing } from "./pricing-page";
 import {
   batchItem,
   batchNumberOf,
+  fillBatch,
   openForm as openProductionForm,
   openReversal,
   reverseButton,
   reverseDialog,
+  saveThrough,
   seed502Fixture,
   seedBatch,
 } from "./production-page";
@@ -33,6 +36,7 @@ import {
   openCorrection,
   openForm as openReceivingForm,
   RAW_TOM_URL,
+  RECEIVING_FORM,
   receiptItem,
   seedReceipt,
   voidButton,
@@ -42,6 +46,7 @@ import {
   voidDialog as receiptVoidDialog,
 } from "./receiving-page";
 import {
+  fillSale,
   fixtureWithPrice,
   openForm as openSalesForm,
   saleNumbers,
@@ -965,3 +970,221 @@ test("AC-0021: the Vendor picker shows its prompt and a long vendor name whole a
   }
   console.log(`AC-0021 narrowest width beside Product: ${narrowest} px\n${reads.join("\n")}`);
 });
+
+// ---- AC-0015, AC-0016, AC-0017, AC-0018: the saved results under the floor forms ----
+
+const BIG_WEIGHT = "1234567.891";
+const BIG_MONEY = "1524148.13";
+
+// A page with its saved result showing: the form, the card, and what must be in the card's text.
+type Saved = { form: Locator; result: Locator; shows: string[] };
+
+async function savedReceipt(page: Page): Promise<Saved> {
+  const f = await openReceivingForm(page);
+  await fillReceipt(f, { weight: BIG_WEIGHT, cost: BIG_MONEY });
+  await f.save.click();
+  await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
+  // The weight is the receipt's, its stock after; the money figure is the cost per lb, written to 4 decimals.
+  return { form: page.getByRole("form", { name: RECEIVING_FORM }), result: f.result, shows: ["1,234,567.891 lbs", "$1,524,148.13"] };
+}
+
+async function savedBatch(page: Page): Promise<Saved> {
+  // Lot A is drawn whole; lot B's one pound is what stays, so the raw stock's average cost after is $1,524,148.13.
+  await seedReceipt(1234567.891, 1, "2026-10-01");
+  await seedReceipt(1, 1524148.13, "2026-10-02");
+  const f = await openProductionForm(page);
+  await fillBatch(f, { raw: BIG_WEIGHT, date: "2026-10-06" });
+  await saveThrough(page, f);
+  await expect(f.result.getByRole("heading", { name: "Batch saved" })).toBeVisible();
+  return { form: page.getByRole("form", { name: "New batch" }), result: f.result, shows: ["1,234,567.891 lbs", "$1,524,148.13"] };
+}
+
+async function savedSale(page: Page): Promise<Saved> {
+  await seedReceipt(1234567.891, 1.5, "2026-10-01");
+  await seedBatch(1234567.891, "2026-10-06", 1234567.891);
+  const f = await openSalesForm(page);
+  await fillSale(f, { lbs: BIG_WEIGHT, price: BIG_MONEY, customer: "Fulton Market Deli", date: "2026-10-08" });
+  await f.save.click();
+  await expect(f.result.getByRole("heading", { name: "Sale saved" })).toBeVisible();
+  return { form: page.getByRole("form", { name: "New sale" }), result: f.result, shows: ["1,234,567.891 lbs", "$1,524,148.13/lb"] };
+}
+
+const SAVED: Array<{ page: string; save: (page: Page) => Promise<Saved> }> = [
+  { page: "/receiving", save: savedReceipt },
+  { page: "/production", save: savedBatch },
+  { page: "/sales", save: savedSale },
+];
+
+// Every text node under `root` that renders at a weight above 500 and is not in an element with the heading role, a
+// button, or the before-and-after table's header row; and how many text nodes were read.
+async function heavyText(root: Locator) {
+  return root.evaluate((section) => {
+    const heavy: string[] = [];
+    let read = 0;
+    const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode() as Text | null; node; node = walker.nextNode() as Text | null) {
+      if (!node.data.trim()) continue;
+      const el = node.parentElement!;
+      const css = getComputedStyle(el);
+      if (css.display === "none" || css.visibility === "hidden") continue;
+      read += 1;
+      if (parseInt(css.fontWeight, 10) <= 500) continue;
+      let exempt = false;
+      for (let n: Element | null = el; n; n = n.parentElement) {
+        const role = n.getAttribute("role");
+        if (/^h[1-6]$/i.test(n.tagName) || role === "heading" || n.tagName === "BUTTON" || role === "button") exempt = true;
+        if (n.tagName === "THEAD") exempt = true;
+        if (n === section) break;
+      }
+      if (!exempt) heavy.push(`"${node.data.trim().slice(0, 40)}" at ${css.fontWeight} in ${el.tagName.toLowerCase()}`);
+    }
+    return { heavy, read };
+  });
+}
+
+for (const { page: label, save } of SAVED) {
+  test(`AC-0015: ${label}'s form and saved result render no text above weight 500 but headings, buttons, and the table's header row`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const saved = await save(page);
+    await withTextSize(page, 1280, 900, 16);
+    for (const [name, root, least] of [
+      ["form", saved.form, 8],
+      ["saved result", saved.result, 12],
+    ] as const) {
+      const walked = await heavyText(root);
+      expect(walked.read, `${name}: text nodes read`).toBeGreaterThanOrEqual(least);
+      expect(walked.heavy, `${name}: text above weight 500`).toEqual([]);
+    }
+  });
+}
+
+// Every problem in the saved result's words and figures at the current size: a word of a row label or header that
+// covers more than one line box, and a number (the text of a value before its first space, where that is a figure) that
+// covers more than one line box or ends past the card's content box.
+async function wholeWordsAndFigures(result: Locator) {
+  return result.evaluate((card, source) => {
+    const problems: string[] = [];
+    const css = getComputedStyle(card);
+    const edge = card.getBoundingClientRect().right - parseFloat(css.borderRightWidth) - parseFloat(css.paddingRight);
+    const shown = (el: Element) => {
+      const style = getComputedStyle(el);
+      return style.display !== "none" && style.visibility !== "hidden";
+    };
+    const wordRanges = (node: Text) => {
+      const out: Array<{ word: string; range: Range }> = [];
+      for (const found of node.data.matchAll(/\S+/g)) {
+        const range = document.createRange();
+        range.setStart(node, found.index!);
+        range.setEnd(node, found.index! + found[0].length);
+        out.push({ word: found[0], range });
+      }
+      return out;
+    };
+    const textNodes = (root: Element) => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const nodes: Text[] = [];
+      for (let n = walker.nextNode() as Text | null; n; n = walker.nextNode() as Text | null) {
+        if (n.data.trim() && n.parentElement && shown(n.parentElement)) nodes.push(n);
+      }
+      return nodes;
+    };
+    let words = 0;
+    let numbers = 0;
+    for (const cell of card.querySelectorAll("table th")) {
+      for (const node of textNodes(cell)) {
+        for (const { word, range } of wordRanges(node)) {
+          words += 1;
+          if (range.getClientRects().length !== 1) problems.push(`the word "${word}" covers ${range.getClientRects().length} line boxes`);
+        }
+      }
+    }
+    for (const value of card.querySelectorAll("dd, table tbody td")) {
+      const [node] = textNodes(value);
+      if (!node) continue;
+      const [first] = wordRanges(node);
+      if (!first || !new RegExp(source).test(first.word)) continue;
+      numbers += 1;
+      const rects = [...first.range.getClientRects()];
+      if (rects.length !== 1) problems.push(`the number "${first.word}" covers ${rects.length} line boxes`);
+      for (const rect of rects) {
+        if (rect.right > edge + 0.5) problems.push(`the number "${first.word}" ends at ${rect.right.toFixed(1)}, past the card's ${edge.toFixed(1)}`);
+      }
+    }
+    return { problems, words, numbers, width: card.getBoundingClientRect().width };
+  }, FIGURE_NUMBER.source);
+}
+
+const RESULT_VIEWS = [
+  [1024, 16],
+  [1280, 16],
+  [1440, 16],
+  [1024, 20],
+  [1280, 20],
+  [1440, 20],
+] as const;
+
+for (const { page: label, save } of SAVED) {
+  test(`AC-0016, AC-0017: ${label}'s saved result keeps each word and number whole at 1024, 1280, and 1440 px, at 16 and 20 px text`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const saved = await save(page);
+    for (const text of saved.shows) await expect(saved.result).toContainText(text);
+    const reads: string[] = [];
+    const problems: string[] = [];
+    for (const [width, px] of RESULT_VIEWS) {
+      await withTextSize(page, width, 900, px);
+      const found = await wholeWordsAndFigures(saved.result);
+      expect(found.words, `words read at ${width} px, ${px} px text`).toBeGreaterThanOrEqual(5);
+      expect(found.numbers, `numbers read at ${width} px, ${px} px text`).toBeGreaterThanOrEqual(6);
+      reads.push(`${width} px, ${px} px text: card ${found.width.toFixed(1)} px, ${found.words} words, ${found.numbers} numbers`);
+      problems.push(...found.problems.map((problem) => `${width} px, ${px} px text: ${problem}`));
+    }
+    console.log(`${label}\n${reads.join("\n")}`);
+    expect(problems).toEqual([]);
+  });
+}
+
+// How far below the form's bottom the saved result's top sits.
+async function resultGap(form: Locator, result: Locator) {
+  const formBox = await box(form);
+  const resultBox = await box(result);
+  return resultBox.y - (formBox.y + formBox.height);
+}
+
+for (const [width, px] of [
+  [1024, 16],
+  [1280, 16],
+  [1024, 20],
+  [1280, 20],
+] as const) {
+  test(`AC-0018: /receiving at ${width} px with ${px} px text puts the saved result the same distance under the form with 1 and with 18 finished products`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const f = await openReceivingForm(page, RAW_TOM_URL);
+    await withTextSize(page, width, 900, px);
+    const form = page.getByRole("form", { name: RECEIVING_FORM });
+    const priced = page.getByRole("region", { name: "Stock and prices" }).locator("dl").last().locator("dt");
+    const saveOnce = async () => {
+      await fillReceipt(f, { weight: "100", cost: "1.9" });
+      await f.save.click();
+      await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeVisible();
+      await withTextSize(page, width, 900, px);
+    };
+    await expect(priced).toHaveCount(1);
+    await saveOnce();
+    const one = await resultGap(form, f.result);
+    for (let n = 2; n <= 18; n += 1) await addFinished(`FIN-${n}`, `Test finished product ${n}`, RAW_TOM_ID, { listPrice: 3 });
+    await page.goto(RAW_TOM_URL);
+    await expect(f.date).not.toHaveValue("");
+    await withTextSize(page, width, 900, px);
+    await expect(priced).toHaveCount(18);
+    await saveOnce();
+    const many = await resultGap(form, f.result);
+    console.log(`AC-0018 ${width} px, ${px} px text: ${one.toFixed(2)} px with 1 finished product, ${many.toFixed(2)} px with 18`);
+    expect(Math.abs(many - one), "the gap under the form with 18 against 1 finished products").toBeLessThanOrEqual(1);
+  });
+}

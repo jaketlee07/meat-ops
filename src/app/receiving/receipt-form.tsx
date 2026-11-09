@@ -402,7 +402,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
 
       <ResultPanel state={state} headingRef={headingRef} voided={lotVoided} corrected={lotCorrected} />
 
-      <div id="product-region" aria-busy={regionPending} className="mt-4 flex flex-col gap-4 desk:mt-0 desk:contents">
+      <div id="product-region" aria-busy={regionPending} className="mt-4 flex flex-col gap-4 desk:mt-0 desk:[grid-area:region]">
         {chosen && chosen.code === regionCode ? region : null}
       </div>
     </>
