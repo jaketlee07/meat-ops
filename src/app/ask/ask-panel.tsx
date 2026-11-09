@@ -13,9 +13,9 @@ import {
 } from "../../lib/ask";
 import { askQuestion, lookUpAnswer, type AskState } from "./actions";
 import { PARAM_FIELD, QUERY_FIELD, QUESTION_FIELD } from "./form-fields";
+import { CONTROL, LABEL } from "../form-parts";
 
 const IDLE: AskState = { status: "idle" };
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 const BUTTON = "w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60";
 const CHOICE_BUTTON =
   "w-full break-words rounded-control border border-field-border bg-surface px-4 py-2 text-left text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60";
@@ -86,7 +86,7 @@ export function AskPanel() {
     <>
       <form onSubmit={submit} noValidate className={`mb-4 space-y-4 ${CARD}`}>
         <div>
-          <label htmlFor="ask-question" className="block text-base font-medium">
+          <label htmlFor="ask-question" className={LABEL}>
             Your question
           </label>
           <input

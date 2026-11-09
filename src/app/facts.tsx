@@ -1,5 +1,6 @@
 // A list of label and value pairs in tabular figures; the value is right-aligned in "list", "quiet", "cells" (outside a
-// table), and "card-cols", and left-aligned in "tiles", "card", and "plain".
+// table), and "card-cols", and left-aligned in "tiles", "card", and "plain". A "list" value that drops under its label
+// (`result-stack`, below) is left-aligned there, under the label.
 // `look` only chooses classes: the elements, their order, and the text are the same in
 // every look, and each label stays in the page. "list" is the plain rows. "tiles" draws
 // the pairs as tinted tiles, label above value, each value whole on one line, side by side while both fit in the
@@ -12,17 +13,25 @@
 // label directly above value, the pairs in a row where the sale trace has room (`sale-cols`) and two to a row where
 // it does not; "plain" draws no card edge, for the facts inside a batch card or a raw lot block. "quiet" is "list"
 // with its values at weight 400, for the facts in the stock cards, where the tiles carry the figures; "list" keeps its
-// bold values for the saved results and the open panels and dialogs. Value weights: "list", "tiles", and "cells" (outside a table)
-// 600; "card" (the sale card) and "card-cols" (the lot card) 500; "quiet" and "plain" (a batch card or raw lot block) 400.
+// values at weight 500 for the saved results and the open panels and dialogs. Value weights: "list", "card" (the sale card), and "card-cols"
+// (the lot card) 500; "tiles" and "cells" (outside a table) 600; "quiet" and "plain" (a batch card or raw lot block) 400.
 type Look = "list" | "quiet" | "tiles" | "cells" | "card" | "card-cols" | "plain";
 
 // Each distinct class string is written once here, and a look only picks which ones it uses.
 const DIVIDED = "divide-y divide-card-border";
 const RULED_ROW = "flex justify-between gap-4 py-2.5";
+const STACKING_ROW = `${RULED_ROW} result-stack:flex-wrap result-stack:gap-y-0.5`;
 const LABEL = "min-w-0 flex-1 break-words text-ink-secondary";
+const STACKING_LABEL = `${LABEL} result-stack:grow result-stack:basis-auto`;
 const COLUMN_LABEL = "min-w-0 break-words text-ink-secondary";
 const VALUE = "max-w-[60%] shrink-0 break-words text-right font-semibold tabular-nums";
+// Weight 500, up to 60% of the row, right-aligned.
 const VALUE_MEDIUM = "max-w-[60%] shrink-0 break-words text-right font-medium tabular-nums";
+// The "list" look's value is VALUE_MEDIUM. Where its card is the container named `result` and under 20rem wide
+// (`result-stack` in globals.css), the row wraps: the value takes up to the row's width and drops under its label
+// when the two do not share a line, so a long figure (1,234,567.891 lbs, $1,524,148.1300/lb) stays whole. Every
+// dropped value is left-aligned under its label.
+const VALUE_LIST = `${VALUE_MEDIUM} result-stack:max-w-full result-stack:text-left`;
 const VALUE_QUIET = "max-w-[60%] shrink-0 break-words text-right tabular-nums";
 const CARD_BOTTOM = "rounded-b-card border border-t-0 border-card-border bg-surface px-4 pb-4";
 const CARD_ROW = "-mb-px flex justify-between gap-4 border-y border-card-border py-2";
@@ -50,7 +59,7 @@ const LIST_CLASS: Record<Look, string> = {
 };
 
 const ROW_CLASS: Record<Look, string> = {
-  list: RULED_ROW,
+  list: STACKING_ROW,
   quiet: RULED_ROW,
   tiles: "flex min-w-0 grow flex-col rounded-control bg-tint px-2.5 py-2",
   cells: RULED_ROW,
@@ -60,7 +69,7 @@ const ROW_CLASS: Record<Look, string> = {
 };
 
 const LABEL_CLASS: Record<Look, string> = {
-  list: LABEL,
+  list: STACKING_LABEL,
   quiet: LABEL,
   tiles: "min-w-0 break-words text-sm text-ink-secondary",
   cells: LABEL,
@@ -74,7 +83,7 @@ const LABEL_CLASS: Record<Look, string> = {
 // cap; "card" and "plain" give a value its column's width and let it wrap there. Where the
 // section is a table, "cells" lets the value shrink to its column and wrap.
 const VALUE_CLASS: Record<Look, string> = {
-  list: VALUE,
+  list: VALUE_LIST,
   quiet: VALUE_QUIET,
   tiles: "whitespace-nowrap text-lg font-semibold tabular-nums",
   cells: `${VALUE} receipt-table:min-w-0 receipt-table:max-w-none receipt-table:shrink receipt-table:text-sm receipt-table:font-normal`,

@@ -10,6 +10,7 @@ import type { CorrectionState } from "./actions";
 import type { CorrectionDetails } from "./correct-receipt";
 import { TotalsView } from "./result-panel";
 import { priceChanges } from "./totals";
+import { LABEL } from "../form-parts";
 
 interface Props {
   lotNumber: string;
@@ -264,9 +265,11 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
             </h2>
             <button
               type="button"
-              disabled={pending}
-              onClick={() => dialogRef.current?.close()}
-              className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
+              aria-disabled={pending ? true : undefined}
+              onClick={() => {
+                if (!pending) dialogRef.current?.close();
+              }}
+              className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
             >
               Cancel
             </button>
@@ -275,7 +278,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
           <p id={sentenceId} className="break-words text-base">{`Lot ${lotNumber}, from ${vendor}, now ${weight}. The receipt keeps what was first entered, and a change of cost restates every batch made from it.`}</p>
 
           <div>
-            <label className="block text-base font-medium">
+            <label className={LABEL}>
               Cost per lb ($)
               <input
                 ref={costRef}
@@ -297,7 +300,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
           </div>
 
           <div>
-            <label className="block text-base font-medium">
+            <label className={LABEL}>
               Weight (lbs)
               <input
                 ref={weightRef}
@@ -319,7 +322,7 @@ export function CorrectDialog({ lotNumber, vendor, weight, costText, weightText,
           </div>
 
           <div>
-            <label className="block text-base font-medium">
+            <label className={LABEL}>
               Reason for the correction
               <textarea
                 ref={reasonRef}

@@ -5,6 +5,7 @@ import { SALE_VOID_UNKNOWN } from "../../lib/failures";
 import { parseVoidReason } from "../../lib/receipt-input";
 import type { SaleVoidState } from "./save-sale";
 import { useVoidedSales } from "./voided-sales";
+import { LABEL } from "../form-parts";
 
 interface Props {
   saleId: string;
@@ -153,7 +154,7 @@ export function VoidDialog({ saleId, saleNumber, productCode, lbs, customer, voi
           <p id={sentenceId} className="break-words text-base">{`Sale ${saleNumber}, ${productCode}, ${lbs}, ${customer === null ? "No customer" : `to ${customer}`}. Voiding puts its lbs back in stock and takes it out of every trace.`}</p>
 
           <div>
-            <label className="block text-base font-medium">
+            <label className={LABEL}>
               Reason for the void
               <textarea
                 ref={reasonRef}

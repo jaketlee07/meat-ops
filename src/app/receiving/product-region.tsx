@@ -5,7 +5,7 @@ import { RecentReceipts } from "./recent-receipts";
 
 // The chosen product's stock card (stock and the current suggested price of each
 // finished product made from it) and its recent receipts, as the database holds them
-// now. Two sections: the page's layout places each beside the form from desk up. The page renders this again after a save or a void, so it is where a
+// now. Two sections, stacked in #product-region, which the page's layout places beside the form and its result from desk up. The page renders this again after a save or a void, so it is where a
 // change in the ledger shows up.
 export function ProductRegion({
   stock,
@@ -19,7 +19,7 @@ export function ProductRegion({
   const view = stockView(stock);
   return (
     <>
-      <section aria-labelledby="stock-heading" className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:mb-4 desk:p-4 desk:[grid-area:stock] wide:grid wide:grid-cols-2 wide:gap-x-6 wide:gap-y-3 wide:space-y-0">
+      <section aria-labelledby="stock-heading" className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 wide:grid wide:grid-cols-2 wide:gap-x-6 wide:gap-y-3 wide:space-y-0">
         <h2 id="stock-heading" className="text-lg font-bold wide:col-span-2">
           Stock and prices
         </h2>

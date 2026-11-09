@@ -38,7 +38,7 @@ async function childWidthCaps(page: Page, least: number) {
 }
 
 // AC-0001: no child of <main> but a dialog has a computed max-width; the page shows at least `minChildren`
-// of them (3 unless the caller says fewer: Menu and Alerts show two).
+// of them (3 unless the caller says fewer: Menu shows two; Alerts shows three, its title, Today's digest, and the alert lists).
 export async function expectNoCap(page: Page, minChildren = 3) {
   const widths = await childWidthCaps(page, minChildren);
   expect(widths.filter((value) => value !== "none")).toEqual([]);

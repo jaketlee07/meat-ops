@@ -12,6 +12,7 @@ import { REASON_LINE, StatusTag } from "../status-tag";
 import { showAverage, showOnHand, stockView } from "../stock-view";
 import type { ReversalState } from "./actions";
 import type { ReversalDetails, ReversalStock } from "./reverse-batch";
+import { LABEL } from "../form-parts";
 
 // What the confirmation lists, read when the page was rendered.
 export type Preview = Pick<ReversalPreview, "lots" | "sales">;
@@ -257,9 +258,11 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
               </h2>
               <button
                 type="button"
-                disabled={pending}
-                onClick={() => dialogRef.current?.close()}
-                className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink disabled:opacity-60"
+                aria-disabled={pending ? true : undefined}
+                onClick={() => {
+                  if (!pending) dialogRef.current?.close();
+                }}
+                className="rounded-control border border-field-border bg-surface px-4 text-base font-medium text-ink aria-disabled:text-ink/60 aria-disabled:border-field-border/60"
               >
                 Cancel
               </button>
@@ -287,7 +290,7 @@ export function ReverseControl({ batchNumber, madeOn, finishedLbs, productCode, 
             )}
 
             <div>
-              <label className="block text-base font-medium">
+              <label className={LABEL}>
                 Reason for the reversal
                 <textarea
                   ref={reasonRef}

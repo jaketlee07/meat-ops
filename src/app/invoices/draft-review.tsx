@@ -25,6 +25,7 @@ import {
   type LineField,
   type LineInput,
 } from "./save-draft";
+import { DATE_BOX, IconBox, LABEL, SELECT_BOX } from "../form-parts";
 
 interface Props {
   draft: Draft;
@@ -44,7 +45,6 @@ const IDLE: ReviewState = { status: "idle" };
 const NO_ERRORS: FieldErrors = {};
 
 const CONTROL = "mt-1.5 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
-const LABEL = "block text-sm font-semibold text-ink-secondary";
 const CARD = "rounded-card border border-card-border bg-surface p-4";
 // A waiting button keeps its focus and fades its colors, never its opacity: the fill of Save receipts, the text
 // and border of Discard draft. Where the form has room (`lines-row`) the two sit side by side at their own width.
@@ -304,8 +304,8 @@ export function DraftReview({ draft, products, vendors }: Props) {
                 const id = (field: LineField) => fieldId(line.lineNo, field);
                 return (
                   // Each line is the container named line: where it has room (`line-pair`) Product and Vendor
-                  // share a row, Product on the wider track so its chosen name shows whole, and Weight, Cost per
-                  // lb, and Received date share a row.
+                  // share a row, Vendor on a track of 17.5rem so its chosen name shows whole and Product on the rest,
+                  // and Weight, Cost per lb, and Received date share a row.
                   <fieldset key={line.id} className={`@container/line min-w-0 space-y-3 ${CARD}`}>
                     <legend className="float-left mb-3 w-full text-lg font-semibold">Line {line.lineNo}</legend>
                     {/* The invoice's words are the model's reading of a photo: text, never markup. */}
@@ -322,7 +322,7 @@ export function DraftReview({ draft, products, vendors }: Props) {
                       />
                       Save this line
                     </label>
-                    <div className="grid grid-cols-1 gap-3 line-pair:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] line-pair:items-start">
+                    <div className="grid grid-cols-1 gap-3 line-pair:grid-cols-[minmax(0,1fr)_17.5rem] line-pair:items-start">
                       <LineBox
                         id={id("product")}
                         label={LABELS.product}
@@ -330,20 +330,22 @@ export function DraftReview({ draft, products, vendors }: Props) {
                         hint={hint("product")}
                       >
                         {(aria) => (
-                          <select
-                            id={id("product")}
-                            value={current.product}
-                            onChange={(event) => change(index, { product: event.target.value })}
-                            className={CONTROL}
-                            {...aria}
-                          >
-                            <option value="">{prompt(CHOOSE_PRODUCT)}</option>
-                            {products.map((product) => (
-                              <option key={product.id} value={product.id}>
-                                {product.code} {product.description}
-                              </option>
-                            ))}
-                          </select>
+                          <IconBox icon="chevron" spacing="mt-1.5">
+                            <select
+                              id={id("product")}
+                              value={current.product}
+                              onChange={(event) => change(index, { product: event.target.value })}
+                              className={SELECT_BOX}
+                              {...aria}
+                            >
+                              <option value="">{prompt(CHOOSE_PRODUCT)}</option>
+                              {products.map((product) => (
+                                <option key={product.id} value={product.id}>
+                                  {product.code} {product.description}
+                                </option>
+                              ))}
+                            </select>
+                          </IconBox>
                         )}
                       </LineBox>
                       <LineBox
@@ -353,20 +355,22 @@ export function DraftReview({ draft, products, vendors }: Props) {
                         hint={hint("vendor")}
                       >
                         {(aria) => (
-                          <select
-                            id={id("vendor")}
-                            value={current.vendor}
-                            onChange={(event) => change(index, { vendor: event.target.value })}
-                            className={CONTROL}
-                            {...aria}
-                          >
-                            <option value="">{prompt(CHOOSE_VENDOR)}</option>
-                            {vendors.map((vendor) => (
-                              <option key={vendor.id} value={vendor.id}>
-                                {vendor.name}
-                              </option>
-                            ))}
-                          </select>
+                          <IconBox icon="chevron" spacing="mt-1.5">
+                            <select
+                              id={id("vendor")}
+                              value={current.vendor}
+                              onChange={(event) => change(index, { vendor: event.target.value })}
+                              className={SELECT_BOX}
+                              {...aria}
+                            >
+                              <option value="">{prompt(CHOOSE_VENDOR)}</option>
+                              {vendors.map((vendor) => (
+                                <option key={vendor.id} value={vendor.id}>
+                                  {vendor.name}
+                                </option>
+                              ))}
+                            </select>
+                          </IconBox>
                         )}
                       </LineBox>
                     </div>
@@ -406,14 +410,16 @@ export function DraftReview({ draft, products, vendors }: Props) {
                       </LineBox>
                       <LineBox id={id("date")} label={LABELS.date} error={lineErrors.date} hint={hint("date")}>
                         {(aria) => (
-                          <input
-                            id={id("date")}
-                            type="date"
-                            value={current.date}
-                            onChange={(event) => change(index, { date: event.target.value })}
-                            className={CONTROL}
-                            {...aria}
-                          />
+                          <IconBox icon="calendar" spacing="mt-1.5">
+                            <input
+                              id={id("date")}
+                              type="date"
+                              value={current.date}
+                              onChange={(event) => change(index, { date: event.target.value })}
+                              className={DATE_BOX}
+                              {...aria}
+                            />
+                          </IconBox>
                         )}
                       </LineBox>
                     </div>

@@ -17,6 +17,7 @@ import type { Vendor } from "../../lib/receiving";
 import { saveReceipt, type SaveState } from "./actions";
 import { FIELD_ORDER, readFields, readRecheck, RECHECK_FIELD } from "./form-fields";
 import { ResultPanel } from "./result-panel";
+import { CONTROL, DATE_BOX, IconBox, LABEL, PAIR, PAIR_FIELD, SELECT_BOX } from "../form-parts";
 
 export interface ProductChoice {
   code: string;
@@ -52,8 +53,6 @@ const FIELD_IDS: Record<ReceiptField, string> = {
 const IDLE: SaveState = { status: "idle" };
 const NO_ERRORS: Partial<Record<ReceiptField, string>> = {};
 const NO_LOTS: readonly string[] = [];
-
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
 function deviceToday(): string {
@@ -103,19 +102,26 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
   // Only a form that passes them goes to the server. A marked form (its code is
   // missing from the product list) skips them: only the server knows the codes
   // active now, and it runs the same rules over the whole form.
+  // Set at once on press, because `pending` lands a render later; a second press
+  // sends nothing. It clears when the action settles, whatever its outcome.
+  const pressRef = useRef(false);
   const [state, formAction, pending] = useActionState(
     async (_previous: SaveState, formData: FormData): Promise<SaveState> => {
-      if (!readRecheck(formData)) {
-        const parsed = parseReceiptForm(readFields(formData), new Set(known.keys()));
-        if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
-      }
       try {
-        return await saveReceipt(formData);
-      } catch {
-        // A dropped connection or a server error: the save may have happened
-        // (AC-0071). A rejected action reaches the error boundary, which would
-        // unmount this form and lose every value, so it is answered here.
-        return { status: "refused", message: SAVE_UNKNOWN };
+        if (!readRecheck(formData)) {
+          const parsed = parseReceiptForm(readFields(formData), new Set(known.keys()));
+          if (!parsed.ok) return { status: "invalid", fieldErrors: parsed.errors };
+        }
+        try {
+          return await saveReceipt(formData);
+        } catch {
+          // A dropped connection or a server error: the save may have happened
+          // (AC-0071). A rejected action reaches the error boundary, which would
+          // unmount this form and lose every value, so it is answered here.
+          return { status: "refused", message: SAVE_UNKNOWN };
+        }
+      } finally {
+        pressRef.current = false;
       }
     },
     IDLE,
@@ -130,7 +136,8 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
   // date field's `max` all take it.
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pressRef.current || pending) return;
+    pressRef.current = true;
     const date = deviceToday();
     setToday(date);
     const formData = new FormData(event.currentTarget);
@@ -233,7 +240,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         onSubmit={submit}
         aria-labelledby="receipt-form-heading"
         noValidate
-        className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
+        className="@container/fields space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]"
       >
         <h2 id="receipt-form-heading" className="text-lg font-bold">
           New receipt
@@ -247,7 +254,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         )}
 
         <div>
-          <label htmlFor={FIELD_IDS.productCode} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.productCode} className={LABEL}>
             Product code
           </label>
           <input
@@ -270,77 +277,83 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.vendorId} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.vendorId} className={LABEL}>
             Vendor
           </label>
-          <select
-            id={FIELD_IDS.vendorId}
-            name="vendorId"
-            value={vendorId}
-            onChange={(event) => setVendorId(event.target.value)}
-            className={CONTROL}
-            {...describe("vendorId")}
-          >
-            <option value="">Choose a vendor</option>
-            {vendors.map((vendor) => (
-              <option key={vendor.id} value={vendor.id}>
-                {vendor.name}
-              </option>
-            ))}
-          </select>
+          <IconBox icon="chevron">
+            <select
+              id={FIELD_IDS.vendorId}
+              name="vendorId"
+              value={vendorId}
+              onChange={(event) => setVendorId(event.target.value)}
+              className={SELECT_BOX}
+              {...describe("vendorId")}
+            >
+              <option value="">Choose a vendor</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name}
+                </option>
+              ))}
+            </select>
+          </IconBox>
           {fieldError("vendorId")}
         </div>
 
-        <div>
-          <label htmlFor={FIELD_IDS.weight} className="block text-sm font-semibold text-ink-secondary">
-            Weight (lbs)
-          </label>
-          <input
-            id={FIELD_IDS.weight}
-            name="weight"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={weight}
-            onChange={(event) => setWeight(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("weight")}
-          />
-          {fieldError("weight")}
+        <div className={PAIR}>
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.weight} className={LABEL}>
+              Weight (lbs)
+            </label>
+            <input
+              id={FIELD_IDS.weight}
+              name="weight"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={weight}
+              onChange={(event) => setWeight(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("weight")}
+            />
+            {fieldError("weight")}
+          </div>
+
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.cost} className={LABEL}>
+              Cost per lb ($)
+            </label>
+            <input
+              id={FIELD_IDS.cost}
+              name="cost"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={cost}
+              onChange={(event) => setCost(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("cost")}
+            />
+            {fieldError("cost")}
+          </div>
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.cost} className="block text-sm font-semibold text-ink-secondary">
-            Cost per lb ($)
-          </label>
-          <input
-            id={FIELD_IDS.cost}
-            name="cost"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={cost}
-            onChange={(event) => setCost(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("cost")}
-          />
-          {fieldError("cost")}
-        </div>
-
-        <div>
-          <label htmlFor={FIELD_IDS.receivedDate} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.receivedDate} className={LABEL}>
             Received date
           </label>
-          <input
-            id={FIELD_IDS.receivedDate}
-            name="receivedDate"
-            type="date"
-            max={today || undefined}
-            value={receivedDate}
-            onChange={(event) => setReceivedDate(event.target.value)}
-            className={CONTROL}
-            {...describe("receivedDate")}
-          />
+          <IconBox icon="calendar">
+            <input
+              id={FIELD_IDS.receivedDate}
+              name="receivedDate"
+              type="date"
+              max={today || undefined}
+              value={receivedDate}
+              onChange={(event) => setReceivedDate(event.target.value)}
+              className={DATE_BOX}
+              {...describe("receivedDate")}
+            />
+          </IconBox>
           {fieldError("receivedDate")}
         </div>
         {/* The server reads the device date from here, never from its own clock. */}
@@ -348,7 +361,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
         {recheckCode && <input type="hidden" name={RECHECK_FIELD} value="1" />}
 
         <div>
-          <label htmlFor={FIELD_IDS.notes} className="block text-sm font-semibold text-ink-secondary">
+          <label htmlFor={FIELD_IDS.notes} className={LABEL}>
             Notes (optional)
           </label>
           <textarea
@@ -376,13 +389,12 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
 
         <button
           type="submit"
-          disabled={pending}
-          aria-disabled={blocked ? true : undefined}
+          aria-disabled={blocked || pending ? true : undefined}
           aria-describedby={blocked ? "setup-notice" : undefined}
           onClick={(event) => {
             if (blocked) event.preventDefault();
           }}
-          className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary disabled:opacity-60 aria-disabled:bg-primary/60"
+          className="w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60"
         >
           Save
         </button>
@@ -390,7 +402,7 @@ export function ReceiptForm({ products, vendors, urlCode, regionCode, region, vo
 
       <ResultPanel state={state} headingRef={headingRef} voided={lotVoided} corrected={lotCorrected} />
 
-      <div id="product-region" aria-busy={regionPending} className="mt-4 flex flex-col gap-4 desk:mt-0 desk:contents">
+      <div id="product-region" aria-busy={regionPending} className="mt-4 flex flex-col gap-4 desk:mt-0 desk:[grid-area:region]">
         {chosen && chosen.code === regionCode ? region : null}
       </div>
     </>

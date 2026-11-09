@@ -287,14 +287,14 @@ test.describe("the read forms", () => {
     expect(sent).not.toContain("\\r");
   });
 
-  test("the photo field's selector button looks like a button and the field stays 44 px tall", async ({ page }) => {
+  test("the photo field's Choose photo button looks like a button and stays 44 px tall", async ({ page }) => {
     const p = await openInvoices(page);
-    const button = await p.photo.evaluate((input) => {
-      const style = getComputedStyle(input, "::file-selector-button");
+    const button = await p.choosePhoto.evaluate((node) => {
+      const style = getComputedStyle(node);
       return { border: style.borderTopWidth, radius: style.borderTopLeftRadius, padding: style.paddingLeft, weight: style.fontWeight };
     });
-    expect(button).toEqual({ border: "1px", radius: "6px", padding: "12px", weight: "500" });
-    expect((await p.photo.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect(button).toEqual({ border: "1px", radius: "10px", padding: "12px", weight: "500" });
+    expect((await p.choosePhoto.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   });
 
   // Boxes in page coordinates, so a scroll the press causes does not count as a move.
@@ -308,23 +308,44 @@ test.describe("the read forms", () => {
       ),
     );
 
-  // 320 px is the narrowest screen: the message wraps to two lines there.
+  // 320 px is the narrowest screen: the message wraps to two lines there, and the cards stack.
+  // The cards hold no reserved line, so the reading card grows to hold the message. The pressed Read button and
+  // every box above the message keep their place; what sits below moves by the growth of the row (side by side)
+  // or of the reading card (stacked) that holds it.
   for (const [source, viewport] of [
     ["text", null],
     ["photo", null],
     ["text", { width: 320, height: 640 }],
     ["photo", { width: 320, height: 640 }],
   ] as const) {
-    test(`AC-0014: while a ${source} read is in flight${viewport ? " at 320 px" : ""} the message sits by that Read button, nothing moves, and both buttons are disabled`, async ({
+    test(`AC-0014: while a ${source} read is in flight${viewport ? " at 320 px" : ""} the message sits by that Read button, the card grows to hold it, and both buttons are disabled`, async ({
       page,
     }) => {
       if (viewport) await page.setViewportSize(viewport);
       await model.answer({ hold: true, then: TURKEY });
       const p = await openInvoices(page);
       const [here, other] = source === "text" ? [p.textStatus, p.photoStatus] : [p.photoStatus, p.textStatus];
+      const [reading, beside] = source === "text" ? [p.textSection, p.photoSection] : [p.photoSection, p.textSection];
+      const [readButton, besideButton] = source === "text" ? [p.readText, p.readPhoto] : [p.readPhoto, p.readText];
       await expect(here).toHaveText("");
       await expect(other).toHaveText("");
-      const before = await documentBoxes([p.readPhoto, p.readText, p.text, p.draftsSection]);
+      const tracked = {
+        reading,
+        heading: reading.locator("h2"),
+        field: reading.locator("form > div").first(),
+        readButton,
+        beside,
+        besideButton,
+        text: p.text,
+        drafts: p.draftsSection,
+      };
+      const names = Object.keys(tracked) as (keyof typeof tracked)[];
+      const read = async () => {
+        const found = await documentBoxes(names.map((name) => tracked[name]));
+        return Object.fromEntries(names.map((name, i) => [name, found[i]!])) as Record<(typeof names)[number], { x: number; y: number; width: number; height: number }>;
+      };
+      const before = await read();
+      const stacked = before.beside.y >= before.reading.y + before.reading.height - 1 || before.reading.y >= before.beside.y + before.beside.height - 1;
       if (source === "text") {
         await readText(p);
       } else {
@@ -336,8 +357,31 @@ test.describe("the read forms", () => {
       await expect(other).toHaveText("");
       await expect(p.readPhoto).toBeDisabled();
       await expect(p.readText).toBeDisabled();
-      // The line was reserved, so neither form moved when the text appeared.
-      expect(await documentBoxes([p.readPhoto, p.readText, p.text, p.draftsSection])).toEqual(before);
+      const after = await read();
+      const [message] = await documentBoxes([here]);
+      const room = await reading.evaluate((card) => {
+        const css = getComputedStyle(card);
+        return parseFloat(css.paddingBottom) + parseFloat(css.borderBottomWidth);
+      });
+      const growth = after.reading.height - before.reading.height;
+      const rowGrowth = stacked
+        ? growth
+        : Math.max(after.reading.height, after.beside.height) - Math.max(before.reading.height, before.beside.height);
+      // Kept in place: the pressed button and every box above the message.
+      for (const name of ["reading", "heading", "field", "readButton"] as const) {
+        expect({ name, x: after[name].x, y: after[name].y }).toEqual({ name, x: before[name].x, y: before[name].y });
+      }
+      expect(growth, "the reading card grew to hold the message").toBeGreaterThan(0);
+      expect(message!.y, "the message sits under the pressed button").toBeGreaterThanOrEqual(after.readButton.y + after.readButton.height - 1);
+      expect(Math.abs(after.reading.y + after.reading.height - (message!.y + message!.height + room)), "the card's bottom against the message's bottom plus the card's bottom padding and border").toBeLessThanOrEqual(1);
+      // Below the reading card (stacked) a box moves by the card's growth; Drafts moves by its row's growth; the rest keep their place.
+      const belowReading = (name: keyof typeof before) =>
+        stacked && before[name].y >= before.reading.y + before.reading.height - 1;
+      for (const name of ["beside", "besideButton", "text", "drafts"] as const) {
+        const moved = name === "drafts" ? rowGrowth : belowReading(name) ? growth : 0;
+        expect(after[name].x, `${name} keeps its left edge`).toBeCloseTo(before[name].x, 0);
+        expect(Math.abs(after[name].y - before[name].y - moved), `${name} moves down by ${moved.toFixed(1)} px`).toBeLessThanOrEqual(1);
+      }
       expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
 
       await model.release();
@@ -388,7 +432,7 @@ test.describe("the read forms", () => {
     const first = await draftIdFromUrl(page);
 
     await openInvoices(page);
-    await p.photo.focus();
+    await p.choosePhoto.focus();
     await p.photo.setInputFiles(pngFile(300, 200));
     await page.keyboard.press("Tab");
     await expect(p.readPhoto).toBeFocused();
@@ -425,8 +469,8 @@ test.describe("read refusals", () => {
       if (file) await p.photo.setInputFiles(file);
       await sleepless(page, () => p.readPhoto.click());
       await expect(p.photoError).toHaveText(message);
-      await expect(p.photo).toBeFocused();
-      await expect(p.photo).toHaveAttribute("aria-describedby", "invoice-photo-error");
+      await expect(p.choosePhoto).toBeFocused();
+      await expect(p.choosePhoto).toHaveAccessibleDescription(`Invoice photo ${file?.name ?? "No photo chosen"} ${message}`);
       expect(await draftCount()).toBe(0);
       expect(await model.requests()).toEqual([]);
     });

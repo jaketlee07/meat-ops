@@ -179,13 +179,14 @@ function UrgentBanner({ watch }: { watch: Watch }) {
     <div
       role="region"
       aria-label="Urgent alerts"
-      className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-error-edge bg-error-wash pl-3.5"
+      className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-card-border bg-surface pl-3.5"
     >
       {watch.status === "failed" ? (
         <p className="py-2.5 pr-3.5 text-base font-medium text-error">{WATCH_FAILED}</p>
       ) : (
         <>
-          <p className="text-base font-semibold text-error">
+          <p className="flex items-center gap-2.5 text-base font-normal text-ink">
+            <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-error" />
             {watch.urgent === 1 ? "1 urgent alert needs you." : `${watch.urgent} urgent alerts need you.`}
           </p>
           <Link

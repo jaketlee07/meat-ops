@@ -11,6 +11,7 @@ import { saveSale } from "./actions";
 import { FIELD_ORDER } from "./form-fields";
 import { ResultPanel } from "./result-panel";
 import type { SaleSaveState } from "./save-sale";
+import { CONTROL, DATE_BOX, IconBox, LABEL, PAIR, PAIR_FIELD, SELECT_BOX } from "../form-parts";
 
 interface Props {
   // The page's product list: the active finished products as of the latest server render.
@@ -29,8 +30,6 @@ const FIELD_IDS: Record<SaleField, string> = {
 
 const IDLE: SaleSaveState = { status: "idle" };
 const NO_ERRORS: Partial<Record<SaleField, string>> = {};
-
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
 
 // The date on this device, as YYYY-MM-DD.
 function deviceToday(): string {
@@ -204,7 +203,7 @@ export function SaleForm({ products, customers }: Props) {
 
   return (
     <>
-      <form onSubmit={submit} aria-labelledby="sale-form-heading" noValidate className="space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]">
+      <form onSubmit={submit} aria-labelledby="sale-form-heading" noValidate className="@container/fields space-y-3 rounded-card border border-card-border bg-surface p-3.5 desk:p-4 desk:[grid-area:form]">
         <h2 id="sale-form-heading" className="text-lg font-bold">
           New sale
         </h2>
@@ -216,7 +215,7 @@ export function SaleForm({ products, customers }: Props) {
         )}
 
         <div>
-          <label htmlFor={FIELD_IDS.productCode} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.productCode} className={LABEL}>
             Product code
           </label>
           <input
@@ -253,78 +252,84 @@ export function SaleForm({ products, customers }: Props) {
           {fieldError("productCode")}
         </div>
 
-        <div>
-          <label htmlFor={FIELD_IDS.lbs} className="block text-base font-medium">
-            Weight sold (lbs)
-          </label>
-          <input
-            id={FIELD_IDS.lbs}
-            name="lbs"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={lbs}
-            onChange={(event) => setLbs(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("lbs")}
-          />
-          {fieldError("lbs")}
+        <div className={PAIR}>
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.lbs} className={LABEL}>
+              Weight sold (lbs)
+            </label>
+            <input
+              id={FIELD_IDS.lbs}
+              name="lbs"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={lbs}
+              onChange={(event) => setLbs(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("lbs")}
+            />
+            {fieldError("lbs")}
+          </div>
+
+          <div className={PAIR_FIELD}>
+            <label htmlFor={FIELD_IDS.pricePerLb} className={LABEL}>
+              Price per lb ($)
+            </label>
+            <input
+              id={FIELD_IDS.pricePerLb}
+              name="pricePerLb"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={pricePerLb}
+              onChange={(event) => setPricePerLb(event.target.value)}
+              className={`${CONTROL} tabular-nums`}
+              {...describe("pricePerLb")}
+            />
+            {fieldError("pricePerLb")}
+          </div>
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.pricePerLb} className="block text-base font-medium">
-            Price per lb ($)
-          </label>
-          <input
-            id={FIELD_IDS.pricePerLb}
-            name="pricePerLb"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            value={pricePerLb}
-            onChange={(event) => setPricePerLb(event.target.value)}
-            className={`${CONTROL} tabular-nums`}
-            {...describe("pricePerLb")}
-          />
-          {fieldError("pricePerLb")}
-        </div>
-
-        <div>
-          <label htmlFor={FIELD_IDS.customerId} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.customerId} className={LABEL}>
             Customer
           </label>
-          <select
-            id={FIELD_IDS.customerId}
-            name="customerId"
-            value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
-            className={CONTROL}
-            {...describe("customerId")}
-          >
-            <option value="">No customer</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
+          <IconBox icon="chevron">
+            <select
+              id={FIELD_IDS.customerId}
+              name="customerId"
+              value={customerId}
+              onChange={(event) => setCustomerId(event.target.value)}
+              className={SELECT_BOX}
+              {...describe("customerId")}
+            >
+              <option value="">No customer</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+          </IconBox>
           {fieldError("customerId")}
         </div>
 
         <div>
-          <label htmlFor={FIELD_IDS.saleDate} className="block text-base font-medium">
+          <label htmlFor={FIELD_IDS.saleDate} className={LABEL}>
             Sale date
           </label>
-          <input
-            id={FIELD_IDS.saleDate}
-            name="saleDate"
-            type="date"
-            max={today || undefined}
-            value={saleDate}
-            onChange={(event) => setSaleDate(event.target.value)}
-            className={CONTROL}
-            {...describe("saleDate")}
-          />
+          <IconBox icon="calendar">
+            <input
+              id={FIELD_IDS.saleDate}
+              name="saleDate"
+              type="date"
+              max={today || undefined}
+              value={saleDate}
+              onChange={(event) => setSaleDate(event.target.value)}
+              className={DATE_BOX}
+              {...describe("saleDate")}
+            />
+          </IconBox>
           {fieldError("saleDate")}
         </div>
 

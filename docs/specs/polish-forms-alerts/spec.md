@@ -1,6 +1,6 @@
 # Spec: polish-forms-alerts
 
-- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the Constraints in the brief [`docs/product/briefs/ui-polish.md`](../../product/briefs/ui-polish.md), including the intent's Guardrail it points to; the screen rules in the `src/app` row of [`docs/architecture/overview.md`](../../architecture/overview.md), including its waiting-control rule; [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §11; the `AGENTS.md` hard rules
@@ -85,71 +85,71 @@ This spec, its plan, and its verification ledger are kept in the repository unde
 
 ### One label style
 
-- [ ] **AC-0001.** Every `label` element that names a text box, a dropdown, a date box, a text area, or the photo picker renders at 14 px at the default text size, at font weight 500, in `--color-ink-secondary`, on each of these: `/sign-in`; `/receiving` with its form, its Void dialog, and its Correct dialog; `/production` with its form and its Reverse dialog; `/sales` with its form and its Void dialog; `/pricing` with its "Product details" panel's target margin and list price forms and its what-if form; both finders on `/trace`; both read forms and a draft's review on `/invoices`; and `/ask`.
+- [x] **AC-0001.** Every `label` element that names a text box, a dropdown, a date box, a text area, or the photo picker renders at 14 px at the default text size, at font weight 500, in `--color-ink-secondary`, on each of these: `/sign-in`; `/receiving` with its form, its Void dialog, and its Correct dialog; `/production` with its form and its Reverse dialog; `/sales` with its form and its Void dialog; `/pricing` with its "Product details" panel's target margin and list price forms and its what-if form; both finders on `/trace`; both read forms and a draft's review on `/invoices`; and `/ask`.
 
 ### Fields side by side
 
-- [ ] **AC-0002.** At 390 px, 1024 px, and 1280 px at the default text size, each of these pairs shares a line, the second field right of the first and the tops of their boxes within 1 px: Weight (lbs) and Cost per lb ($) on `/receiving`; Raw lbs and Finished lbs (optional) on `/production`; and Weight sold (lbs) and Price per lb ($) on `/sales`.
-- [ ] **AC-0004.** At 390 px, 1024 px, and 1280 px, at the default text size and with the browser's text size at 20 px, each number box that shares a line with another field holds the typed value 12,345.678 whole: the box's scroll width is no more than its client width.
+- [x] **AC-0002.** At 390 px, 1024 px, and 1280 px at the default text size, each of these pairs shares a line, the second field right of the first and the tops of their boxes within 1 px: Weight (lbs) and Cost per lb ($) on `/receiving`; Raw lbs and Finished lbs (optional) on `/production`; and Weight sold (lbs) and Price per lb ($) on `/sales`.
+- [x] **AC-0004.** At 390 px, 1024 px, and 1280 px, at the default text size and with the browser's text size at 20 px, each number box that shares a line with another field holds the typed value 12,345.678 whole: the box's scroll width is no more than its client width.
 
 ### Dropdowns, date boxes, and the photo picker
 
-- [ ] **AC-0006.** Every dropdown on a page or dialog that AC-0001 names draws no arrow of the browser's own (its computed `appearance` is `none`) and shows a chevron drawn by `LineIcon` in `--color-ink-secondary` inside its right edge.
-- [ ] **AC-0007.** Every date box on a page or dialog that AC-0001 names shows a calendar icon drawn by `LineIcon` in `--color-ink-secondary` inside its right edge and right of its content box, and the browser's own calendar icon is not visible anywhere in the box: with the `LineIcon` hidden, a screenshot of the date box is identical to one taken after a rule that hides `::-webkit-calendar-picker-indicator` is added to the page.
-- [ ] **AC-0008.** The verification ledger records the owner's check by hand at 1280 px that a mouse press at the center of the calendar icon of each date box AC-0007 covers opens the browser's own date picker.
-- [ ] **AC-0009.** On `/invoices`, the photo field shows "Invoice photo" above a button named "Choose photo", and beside the button "No photo chosen" before a photo is chosen and that file's name after; the browser's own file input is not visible.
-- [ ] **AC-0034.** The "Choose photo" button's accessible description holds "Invoice photo", then the status text beside it ("No photo chosen" or the chosen file's name), then the photo field's error message whenever one shows.
-- [ ] **AC-0010.** A mouse press on "Choose photo", and Space or Enter while it has keyboard focus, each open the browser's file chooser.
-- [ ] **AC-0011.** A photo chosen through that file chooser is the photo that Read photo sends to the model.
+- [x] **AC-0006.** Every dropdown on a page or dialog that AC-0001 names draws no arrow of the browser's own (its computed `appearance` is `none`) and shows a chevron drawn by `LineIcon` in `--color-ink-secondary` inside its right edge.
+- [x] **AC-0007.** Every date box on a page or dialog that AC-0001 names shows a calendar icon drawn by `LineIcon` in `--color-ink-secondary` inside its right edge and right of its content box, and the browser's own calendar icon is not visible anywhere in the box: with the `LineIcon` hidden, a screenshot of the date box is identical to one taken after a rule that hides `::-webkit-calendar-picker-indicator` is added to the page.
+- [x] **AC-0008.** The verification ledger records the owner's check by hand at 1280 px that a mouse press at the center of the calendar icon of each date box AC-0007 covers opens the browser's own date picker.
+- [x] **AC-0009.** On `/invoices`, the photo field shows "Invoice photo" above a button named "Choose photo", and beside the button "No photo chosen" before a photo is chosen and that file's name after; the browser's own file input is not visible.
+- [x] **AC-0034.** The "Choose photo" button's accessible description holds "Invoice photo", then the status text beside it ("No photo chosen" or the chosen file's name), then the photo field's error message whenever one shows.
+- [x] **AC-0010.** A mouse press on "Choose photo", and Space or Enter while it has keyboard focus, each open the browser's file chooser.
+- [x] **AC-0011.** A photo chosen through that file chooser is the photo that Read photo sends to the model.
 
 ### The urgent banner
 
-- [ ] **AC-0012.** With at least one urgent alert, and with the alert check failed, the region named "Urgent alerts" is filled with `--color-surface` and edged with `--color-card-border`, and neither its fill nor its edge takes `--color-error-wash` or `--color-error-edge`.
-- [ ] **AC-0013.** With at least one urgent alert, the region's sentence ("1 urgent alert needs you." or "<n> urgent alerts need you.") renders at font weight 400 in `--color-ink`, after a dot filled with `--color-error`, and its "See alerts" link stays.
-- [ ] **AC-0014.** With at least one urgent alert, at 390 px and 1280 px at the default text size, the region is one line: its height is no more than 44 px plus its top and bottom border widths.
+- [x] **AC-0012.** With at least one urgent alert, and with the alert check failed, the region named "Urgent alerts" is filled with `--color-surface` and edged with `--color-card-border`, and neither its fill nor its edge takes `--color-error-wash` or `--color-error-edge`.
+- [x] **AC-0013.** With at least one urgent alert, the region's sentence ("1 urgent alert needs you." or "<n> urgent alerts need you.") renders at font weight 400 in `--color-ink`, after a dot filled with `--color-error`, and its "See alerts" link stays.
+- [x] **AC-0014.** With at least one urgent alert, at 390 px and 1280 px at the default text size, the region is one line: its height is no more than 44 px plus its top and bottom border widths.
 
 ### Weight in the form column
 
-- [ ] **AC-0015.** At 1280 px at the default text size, with a saved receipt, batch, and sale showing on their pages, no text renders at a font weight above 500 in the form or in the saved result under it on `/receiving`, `/production`, and `/sales`, except text in an element with the heading role, buttons, and the before-and-after table's header row.
+- [x] **AC-0015.** At 1280 px at the default text size, with a saved receipt, batch, and sale showing on their pages, no text renders at a font weight above 500 in the form or in the saved result under it on `/receiving`, `/production`, and `/sales`, except text in an element with the heading role, buttons, and the before-and-after table's header row.
 
 ### Saved results
 
-- [ ] **AC-0016.** In the saved result on `/receiving`, `/production`, and `/sales`, at 1024 px, 1280 px, and 1440 px, at the default text size and with the browser's text size at 20 px, with a weight of 1,234,567.891 lbs and a money figure of $1,524,148.13 among the result's figures, no word in the before-and-after table's row labels or header line splits across lines.
-- [ ] **AC-0017.** In the same results, widths, text sizes, and figures, no number (a value's text before its first space) splits across lines or runs past the result's card.
-- [ ] **AC-0018.** On `/receiving` at 1024 px and 1280 px, at the default text size and with the browser's text size at 20 px, with 18 finished products made from the chosen raw product, the saved result's top sits the same distance below the form's bottom, within 1 px, as it does with one finished product made from it.
+- [x] **AC-0016.** In the saved result on `/receiving`, `/production`, and `/sales`, at 1024 px, 1280 px, and 1440 px, at the default text size and with the browser's text size at 20 px, with a weight of 1,234,567.891 lbs and a money figure of $1,524,148.13 among the result's figures, no word in the before-and-after table's row labels or header line splits across lines.
+- [x] **AC-0017.** In the same results, widths, text sizes, and figures, no number (a value's text before its first space) splits across lines or runs past the result's card.
+- [x] **AC-0018.** On `/receiving` at 1024 px and 1280 px, at the default text size and with the browser's text size at 20 px, with 18 finished products made from the chosen raw product, the saved result's top sits the same distance below the form's bottom, within 1 px, as it does with one finished product made from it.
 
 ### Waiting buttons
 
-- [ ] **AC-0019.** Each of these buttons, while it waits on its request, has no `disabled` attribute, has `aria-disabled="true"`, keeps keyboard focus when it had it, and renders at opacity 1: Save on `/receiving`; Cancel and Void receipt in the receipt Void dialog; Cancel in the Correct dialog; Cancel in the Reverse dialog; and Sign in.
-- [ ] **AC-0020.** A second press on Save on `/receiving`, on Void receipt in the receipt Void dialog, or on Sign in, while the first press waits, sends no second request.
-- [ ] **AC-0033.** While its request waits, a press on Cancel in the receipt Void dialog, the Correct dialog, or the Reverse dialog leaves that dialog open; with no request waiting, Cancel closes it.
+- [x] **AC-0019.** Each of these buttons, while it waits on its request, has no `disabled` attribute, has `aria-disabled="true"`, keeps keyboard focus when it had it, and renders at opacity 1: Save on `/receiving`; Cancel and Void receipt in the receipt Void dialog; Cancel in the Correct dialog; Cancel in the Reverse dialog; and Sign in.
+- [x] **AC-0020.** A second press on Save on `/receiving`, on Void receipt in the receipt Void dialog, or on Sign in, while the first press waits, sends no second request.
+- [x] **AC-0033.** While its request waits, a press on Cancel in the receipt Void dialog, the Correct dialog, or the Reverse dialog leaves that dialog open; with no request waiting, Cancel closes it.
 
 ### Vendor picker
 
-- [ ] **AC-0021.** On a draft's review on `/invoices` at the default text size, at 1178 px, at 1280 px, and at the narrowest viewport width where Vendor sits beside Product, the closed Vendor picker shows "Choose a vendor" whole, and shows a vendor named "Heartland Wholesale Meats Inc" whole once it is chosen: the text's width fits inside the picker's content box, left of its chevron.
+- [x] **AC-0021.** On a draft's review on `/invoices` at the default text size, at 1178 px, at 1280 px, and at the narrowest viewport width where Vendor sits beside Product, the closed Vendor picker shows "Choose a vendor" whole, and shows a vendor named "Heartland Wholesale Meats Inc" whole once it is chosen: the text's width fits inside the picker's content box, left of its chevron.
 
 ### Alerts
 
-- [ ] **AC-0022.** On `/alerts` with a written digest of three paragraphs, the digest shows as a list of three items holding the three paragraphs in order, and the digest's footer follows the list, outside it.
-- [ ] **AC-0023.** Each digest item shows a dot filled with `--color-status-nocost` before its text.
-- [ ] **AC-0024.** The `/alerts` AC-0001 test in `test/e2e/look-menu-invoices-ask-alerts.spec.ts` requires the three children `/alerts` shows in `<main>` (its title, Today's digest, and the alert lists), so it fails on a build that shows only two of them.
+- [x] **AC-0022.** On `/alerts` with a written digest of three paragraphs, the digest shows as a list of three items holding the three paragraphs in order, and the digest's footer follows the list, outside it.
+- [x] **AC-0023.** Each digest item shows a dot filled with `--color-status-nocost` before its text.
+- [x] **AC-0024.** The `/alerts` AC-0001 test in `test/e2e/look-menu-invoices-ask-alerts.spec.ts` requires the three children `/alerts` shows in `<main>` (its title, Today's digest, and the alert lists), so it fails on a build that shows only two of them.
 
 ### Ask, Trace, and Invoices
 
-- [ ] **AC-0025.** On `/ask` at 1280 px with an answer, the question card, the answer card, and the "Questions Ask can answer" section each span `<main>`'s content box: their left and right edges are within 1 px of its edges.
-- [ ] **AC-0026.** On `/trace` and `/invoices` at 1024 px and 1280 px at the default text size, with no message showing, in each of the Find a sale, Find a raw lot, Read photo, and Read text cards, the button's top is within 1 px of the field above it plus its form's row gap.
-- [ ] **AC-0027.** In the same cards, widths, and state, the card's bottom edge is within 1 px of the button's bottom plus the card's bottom padding and border.
+- [x] **AC-0025.** On `/ask` at 1280 px with an answer, the question card, the answer card, and the "Questions Ask can answer" section each span `<main>`'s content box: their left and right edges are within 1 px of its edges.
+- [x] **AC-0026.** On `/trace` and `/invoices` at 1024 px and 1280 px at the default text size, with no message showing, in each of the Find a sale, Find a raw lot, Read photo, and Read text cards, the button's top is within 1 px of the field above it plus its form's row gap.
+- [x] **AC-0027.** In the same cards, widths, and state, the card's bottom edge is within 1 px of the button's bottom plus the card's bottom padding and border.
 
 ### Floor entry
 
-- [ ] **AC-0028.** On `/receiving`, `/production`, and `/sales` at 390 px and 1280 px, pressing Tab from the Product code field reaches the form's other fields in this order, as it does today: Vendor, Weight (lbs), Cost per lb ($), Received date, and Notes (optional) on `/receiving`; Raw lbs, Finished lbs (optional), Production date, and Notes (optional) on `/production`; Weight sold (lbs), Price per lb ($), Customer, and Sale date on `/sales`.
+- [x] **AC-0028.** On `/receiving`, `/production`, and `/sales` at 390 px and 1280 px, pressing Tab from the Product code field reaches the form's other fields in this order, as it does today: Vendor, Weight (lbs), Cost per lb ($), Received date, and Notes (optional) on `/receiving`; Raw lbs, Finished lbs (optional), Production date, and Notes (optional) on `/production`; Weight sold (lbs), Price per lb ($), Customer, and Sale date on `/sales`.
 
 ### Look and regressions
 
-- [ ] **AC-0029.** The verification ledger records the owner's "match" verdict for each of these screens built from this branch at 1280 px, each compared with the named parts of the comparison page at revision 1794121141-4df1: `/receiving` with a product chosen, with the "Forms" Change block, leaving out its "Vendor beside Received date"; `/receiving` with an urgent alert, with the "First screen and alerts" Change block's first line; `/alerts` with a written digest, with the "Also fix" line on the daily digest, leaving out its one line per alert and its colored dot; `/invoices`, with the "Forms" Change block's line on the invoice photo picker; `/trace` and `/invoices`, with the "Also fix" line on blank gaps; and `/ask` with an answer, with that line's "Ask uses half the width". A "no match" on any fails this criterion. The test data's names, numbers, and dates do not count as differences.
-- [ ] **AC-0030.** `npm test` passes.
-- [ ] **AC-0031.** Read from the branch point with `main`, tracked and untracked, the only changed expectations in existing test files are those that read: `/ask`'s 544 px column, which AC-0025 changes; the read forms' level button tops, which AC-0026 and AC-0027 change; the read forms' check that nothing moves while a read is in flight, which AC-0027 changes; the photo field's file-selector button, its Tab stop, the field focus and description a refused photo sets, and the `file:rounded-md` exception in `test/look-tidy.test.ts`, which AC-0009 and AC-0034 change; the `/alerts` block count, which AC-0024 changes; the digest's paragraphs as paragraphs, which AC-0022 changes; and a waiting button's `disabled` attribute, which AC-0019 changes. The values, names, and orders the changed lines assert are otherwise unchanged. A test added to an existing file is not a changed expectation. A change the owner approves under Ask first, recorded in the verification ledger with its date, joins this list.
-- [ ] **AC-0032.** The browser suite's page-state check (`checkPageState`) reports no violation on each screen state AC-0029 names, on `/sign-in`, and on `/production` and `/sales` each with a saved result showing.
+- [x] **AC-0029.** The verification ledger records the owner's "match" verdict for each of these screens built from this branch at 1280 px, each compared with the named parts of the comparison page at revision 1794121141-4df1: `/receiving` with a product chosen, with the "Forms" Change block, leaving out its "Vendor beside Received date"; `/receiving` with an urgent alert, with the "First screen and alerts" Change block's first line; `/alerts` with a written digest, with the "Also fix" line on the daily digest, leaving out its one line per alert and its colored dot; `/invoices`, with the "Forms" Change block's line on the invoice photo picker; `/trace` and `/invoices`, with the "Also fix" line on blank gaps; and `/ask` with an answer, with that line's "Ask uses half the width". A "no match" on any fails this criterion. The test data's names, numbers, and dates do not count as differences.
+- [x] **AC-0030.** `npm test` passes.
+- [x] **AC-0031.** Read from the branch point with `main`, tracked and untracked, the only changed expectations in existing test files are those that read: `/ask`'s 544 px column, which AC-0025 changes; the read forms' level button tops, which AC-0026 and AC-0027 change; the read forms' check that nothing moves while a read is in flight, which AC-0027 changes; the photo field's file-selector button, its Tab stop, the field focus and description a refused photo sets, and the `file:rounded-md` exception in `test/look-tidy.test.ts`, which AC-0009 and AC-0034 change; the `/alerts` block count, which AC-0024 changes; the digest's paragraphs as paragraphs, which AC-0022 changes; and a waiting button's `disabled` attribute, which AC-0019 changes. The values, names, and orders the changed lines assert are otherwise unchanged. A test added to an existing file is not a changed expectation. A change the owner approves under Ask first, recorded in the verification ledger with its date, joins this list.
+- [x] **AC-0032.** The browser suite's page-state check (`checkPageState`) reports no violation on each screen state AC-0029 names, on `/sign-in`, and on `/production` and `/sales` each with a saved result showing.
 
 ## Follow-ons
 

@@ -145,13 +145,16 @@
 
 /* One line of a draft's review: its fieldset is the container named line, and a container query measures its
    content box (the fieldset's width less its 1rem padding and 1px border on each side, 2.125rem). Where that
-   box is at least 32rem wide (three fields of about 10.2rem with two gaps of 0.75rem, so a date field holds its
-   text and picker) Product and Vendor share a row, Product on the wider track, and Weight, Cost per lb, and
-   Received date share a row. In rem, no screen gate. Without a scrollbar the Lines form is 40.5rem wide at
-   1280 px and 24.5rem at 1024 px, so the box is 38.4rem (rows) and 22.4rem (stacked); the box is 48.4rem at
-   1440 px. */
+   box is at least 38rem wide (608 px) Product and Vendor share a row, Vendor on a track of 17.5rem (280 px) and
+   Product on the rest (316 px at the threshold), and Weight, Cost per lb, and Received date share a row on three
+   tracks of 195 px. A closed picker holds its text between 12 px of left padding and 40 px of right padding for
+   its chevron, so the Vendor track leaves 226 px for "Heartland Wholesale Meats Inc" (224.9 px at 16 px text),
+   Product holds "RAW-TOM Turkey Drums TOM (raw)" whole (314.5 px), and a date track clears the 156 px that shows
+   11/09/2026 beside the calendar icon. Below 38rem each field takes the full line. In rem, no screen gate.
+   Without a scrollbar the Lines form is 40.5rem wide at 1280 px and 24.5rem at 1024 px, so the box is 38.4rem
+   (rows) and 22.4rem (stacked); the box is 48.4rem at 1440 px. */
 @custom-variant line-pair {
-  @container line (min-width: 32rem) {
+  @container line (min-width: 38rem) {
     @slot;
   }
 }
@@ -253,7 +256,14 @@
    and their order here does not matter; result-tight does not inherit result-snug, so a class meant to hold
    under 13rem as well is set under both. In rem, so a larger text size tightens them sooner: at the default
    text size the 280 px form column leaves a saved-result card about 15.4rem wide (result-snug), and with a
-   20 px text size it is about 11.9rem (result-tight only). */
+   20 px text size it is about 11.9rem (result-tight only).
+   A third step, result-stack, is for the same card under 20rem and overlaps the other two: a table row stacks
+   (its label on one line, then Before and After each on a line of their own, every value on one line) and a
+   list row of facts lets its value drop under its label. Six-digit weights with three decimals and costs past a
+   million (1,234,567.891 lbs, $1,524,148.1300/lb) need about 22rem to share a line with a label, so under 20rem
+   they cannot sit in columns; the 340 px form column at 1024 px with the default text size leaves 19.1rem,
+   the widest card the stack has to hold. It is declared after the other two, so where it sets the same property as a snug
+   or tight class, the stack wins. */
 @custom-variant result-snug {
   @container result (13rem <= width < 18rem) {
     @slot;
@@ -266,10 +276,29 @@
   }
 }
 
+@custom-variant result-stack {
+  @container result (width < 20rem) {
+    @slot;
+  }
+}
+
 /* A row's status area (the div after the figures) while one of its child divs holds a non-empty
    refusal (role alert) or panel (role status), on Receiving's receipts, Production's batches, and Sales' sales. Not the
    receipt form's own `receipt-message` id. */
 @custom-variant status-has-message (&:has(> div > [role="alert"]:not(:empty), > div > [role="status"]:not(:empty)));
+
+/* Two neighboring number fields (PAIR in form-parts.ts) share a line only when the form around them, the
+   container named fields, is at least 14.75rem wide inside its padding; narrower, they stack. Each box of a
+   pair must hold 12,345.678 whole: 111 px a box at 16 px text (6.9rem), 136 px at 20 px (6.8rem), so two boxes
+   and the 0.75rem gap need 14.63rem at 16 px and 14.35rem at 20 px. In rem, no screen gate, so a larger text
+   size stacks them until the form has grown to fit.
+   The three floor forms are 20.5rem wide inside at 390 px, 19.1rem at 1024 px, and 15.4rem at 1280 px at the
+   default size; with a 20 px root 15.7rem, 14.9rem, and 11.9rem (stacked at 1280 px). */
+@custom-variant field-pair {
+  @container fields (min-width: 14.75rem) {
+    @slot;
+  }
+}
 
 /* Anything on the navy bar: white text, and a white focus ring. */
 @utility on-bar {
@@ -299,6 +328,20 @@
 
   button {
     min-width: var(--spacing-control);
+  }
+
+  /* A date box draws its own calendar icon (IconBox in form-parts.ts). The browser's icon stays as the press
+     target but is transparent and stretched over the box's 40 px of right padding. */
+  .date-box::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    width: 2.5rem;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0;
   }
 
   :focus-visible {

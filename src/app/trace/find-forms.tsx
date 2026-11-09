@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseLotFinder, parseSaleNumber } from "../../lib/sale-input";
+import { CONTROL, DATE_BOX, IconBox, LABEL } from "../form-parts";
 
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
-const BUTTON = "mt-auto w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary";
+const BUTTON = "w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary";
 const CARD = "flex flex-col rounded-card border border-card-border bg-surface p-3.5 desk:p-4";
-const FORM = "flex flex-1 flex-col gap-3";
+const FORM = "flex flex-col gap-3";
 const SALE_ID = "find-sale-number";
 const RAW_ID = "find-raw-code";
 const RECEIVED_ID = "find-received";
@@ -62,7 +62,7 @@ export function FindForms({
   }, [lookup]);
 
   return (
-    <div className="grid gap-4 desk:grid-cols-2">
+    <div className="grid items-start gap-4 desk:grid-cols-2">
       <FindSale sale={sale} urlError={saleError} />
       <FindLot rawCode={rawCode} received={received} urlErrors={lotErrors} />
     </div>
@@ -105,7 +105,7 @@ function FindSale({ sale, urlError }: { sale: string; urlError?: string }) {
       </h2>
       <form onSubmit={submit} noValidate className={FORM}>
         <div>
-          <label htmlFor={SALE_ID} className="block text-base font-medium">
+          <label htmlFor={SALE_ID} className={LABEL}>
             Sale number
           </label>
           <input
@@ -172,7 +172,7 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
       </h2>
       <form onSubmit={submit} noValidate className={FORM}>
         <div>
-          <label htmlFor={RAW_ID} className="block text-base font-medium">
+          <label htmlFor={RAW_ID} className={LABEL}>
             Raw product code
           </label>
           <input
@@ -188,18 +188,20 @@ function FindLot({ rawCode, received, urlErrors }: { rawCode: string; received: 
           <FieldError id={RAW_ID} message={errors.rawCode} />
         </div>
         <div>
-          <label htmlFor={RECEIVED_ID} className="block text-base font-medium">
+          <label htmlFor={RECEIVED_ID} className={LABEL}>
             Received date
           </label>
-          <input
-            id={RECEIVED_ID}
-            name="received"
-            type="date"
-            value={dateText}
-            onChange={(event) => setDateText(event.target.value)}
-            className={CONTROL}
-            {...describe(RECEIVED_ID, errors.received)}
-          />
+          <IconBox icon="calendar">
+            <input
+              id={RECEIVED_ID}
+              name="received"
+              type="date"
+              value={dateText}
+              onChange={(event) => setDateText(event.target.value)}
+              className={DATE_BOX}
+              {...describe(RECEIVED_ID, errors.received)}
+            />
+          </IconBox>
           <FieldError id={RECEIVED_ID} message={errors.received} />
         </div>
         <button type="submit" className={BUTTON}>

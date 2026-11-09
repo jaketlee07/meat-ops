@@ -18,7 +18,7 @@ export default async function AskPage() {
   if (!(await isOperator(supabase))) return <NotAllowed />;
 
   return (
-    <PageShell title="Ask" current="ask">
+    <PageShell title="Ask" current="ask" fullWidth>
       <AskPanel />
       <section aria-labelledby="examples-heading" className="mt-8 space-y-2 rounded-card border border-card-border bg-surface p-3.5 desk:p-4">
         <h2 id="examples-heading" className="text-xl font-semibold">

@@ -3,13 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { parseWhatIf, type WhatIfField } from "../../lib/price-input";
+import { CONTROL, IconBox, LABEL, SELECT_BOX } from "../form-parts";
 
 type Errors = Partial<Record<WhatIfField, string>>;
 
 const IDS: Record<WhatIfField, string> = { rawCode: "what-if-raw", cost: "what-if-cost" };
 const ORDER: WhatIfField[] = ["rawCode", "cost"];
-const CONTROL = "mt-1 block w-full rounded-control border border-field-border bg-surface px-3 text-base text-ink";
-const LABEL = "block text-sm font-semibold text-ink-secondary";
 
 export interface RawChoice {
   code: string;
@@ -83,21 +82,23 @@ export function WhatIfForm({
         <label htmlFor={IDS.rawCode} className={LABEL}>
           Raw product
         </label>
-        <select
-          id={IDS.rawCode}
-          name="raw"
-          value={raw}
-          onChange={(event) => setRaw(event.target.value)}
-          className={CONTROL}
-          {...describe("rawCode")}
-        >
-          <option value=""></option>
-          {rawProducts.map((product) => (
-            <option key={product.code} value={product.code}>
-              {product.code} {product.description}
-            </option>
-          ))}
-        </select>
+        <IconBox icon="chevron">
+          <select
+            id={IDS.rawCode}
+            name="raw"
+            value={raw}
+            onChange={(event) => setRaw(event.target.value)}
+            className={SELECT_BOX}
+            {...describe("rawCode")}
+          >
+            <option value=""></option>
+            {rawProducts.map((product) => (
+              <option key={product.code} value={product.code}>
+                {product.code} {product.description}
+              </option>
+            ))}
+          </select>
+        </IconBox>
         {fieldError("rawCode")}
       </div>
       <div>
