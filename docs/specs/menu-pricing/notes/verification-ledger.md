@@ -193,3 +193,13 @@ Deferred Nits (quality round 3, `.context/reviews/9c4bdfed-250f-4d1d-a62d-38242a
 
 - `src/app/pricing/figure.tsx:6-7`: no test fails if `min-w-0` is removed from the Figure row; every fixture's figure text is short or has spaces.
 - `test/e2e/pricing.spec.ts:639`: the Back test's title still carries `AC-0124:` although it pins construction behavior (the test at line 477 closes AC-0124).
+
+## Day-30 review (2026-11-09)
+
+- The cooling record `docs/lifecycle/menu-pricing.json` came due on 2026-11-08. The owner chose on 2026-11-09 to keep this folder, with its next review on 2027-02-09.
+- **Delivery on main:** approve. PR #8's merge `8026b5e` is on `main`.
+- **Lasting facts kept elsewhere:** refuse. This spec's Acceptance Criteria definitions (suggested list price, price action, needs a new price, below target, menu view, finished and raw lbs on hand, sellable, code order) are the only home that later specs cite.
+- **Still in use:** refuse. 6 specs cite this one: alerts, ask-your-data, invoice-entry, look-pricing-receiving, menu-pricing-review, and sales. The alerts spec amended AC-0034 in `2991002`, adding the clause for the private list-price history.
+- **Open obligations:** approve. No open intent or spec needs it as a hard dependency. The two intents that name it as their source, `price-change-history.md` and `menu-pricing-review-nits.md`, are Fulfilled.
+- **Content unchanged:** uncertain. The reviewed amendment `2991002` changed `spec.md`, so the record's fingerprint, taken from the merged version, no longer matches.
+- **Write authority:** approve. The developer still maintains the repository.
