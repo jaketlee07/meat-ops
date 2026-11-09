@@ -308,23 +308,44 @@ test.describe("the read forms", () => {
       ),
     );
 
-  // 320 px is the narrowest screen: the message wraps to two lines there.
+  // 320 px is the narrowest screen: the message wraps to two lines there, and the cards stack.
+  // The cards hold no reserved line, so the reading card grows to hold the message. The pressed Read button and
+  // every box above the message keep their place; what sits below moves by the growth of the row (side by side)
+  // or of the reading card (stacked) that holds it.
   for (const [source, viewport] of [
     ["text", null],
     ["photo", null],
     ["text", { width: 320, height: 640 }],
     ["photo", { width: 320, height: 640 }],
   ] as const) {
-    test(`AC-0014: while a ${source} read is in flight${viewport ? " at 320 px" : ""} the message sits by that Read button, nothing moves, and both buttons are disabled`, async ({
+    test(`AC-0014: while a ${source} read is in flight${viewport ? " at 320 px" : ""} the message sits by that Read button, the card grows to hold it, and both buttons are disabled`, async ({
       page,
     }) => {
       if (viewport) await page.setViewportSize(viewport);
       await model.answer({ hold: true, then: TURKEY });
       const p = await openInvoices(page);
       const [here, other] = source === "text" ? [p.textStatus, p.photoStatus] : [p.photoStatus, p.textStatus];
+      const [reading, beside] = source === "text" ? [p.textSection, p.photoSection] : [p.photoSection, p.textSection];
+      const [readButton, besideButton] = source === "text" ? [p.readText, p.readPhoto] : [p.readPhoto, p.readText];
       await expect(here).toHaveText("");
       await expect(other).toHaveText("");
-      const before = await documentBoxes([p.readPhoto, p.readText, p.text, p.draftsSection]);
+      const tracked = {
+        reading,
+        heading: reading.locator("h2"),
+        field: reading.locator("form > div").first(),
+        readButton,
+        beside,
+        besideButton,
+        text: p.text,
+        drafts: p.draftsSection,
+      };
+      const names = Object.keys(tracked) as (keyof typeof tracked)[];
+      const read = async () => {
+        const found = await documentBoxes(names.map((name) => tracked[name]));
+        return Object.fromEntries(names.map((name, i) => [name, found[i]!])) as Record<(typeof names)[number], { x: number; y: number; width: number; height: number }>;
+      };
+      const before = await read();
+      const stacked = before.beside.y >= before.reading.y + before.reading.height - 1 || before.reading.y >= before.beside.y + before.beside.height - 1;
       if (source === "text") {
         await readText(p);
       } else {
@@ -336,8 +357,34 @@ test.describe("the read forms", () => {
       await expect(other).toHaveText("");
       await expect(p.readPhoto).toBeDisabled();
       await expect(p.readText).toBeDisabled();
-      // The line was reserved, so neither form moved when the text appeared.
-      expect(await documentBoxes([p.readPhoto, p.readText, p.text, p.draftsSection])).toEqual(before);
+      const after = await read();
+      const [message] = await documentBoxes([here]);
+      const room = await reading.evaluate((card) => {
+        const css = getComputedStyle(card);
+        return parseFloat(css.paddingBottom) + parseFloat(css.borderBottomWidth);
+      });
+      const growth = after.reading.height - before.reading.height;
+      const rowGrowth = stacked
+        ? growth
+        : Math.max(after.reading.height, after.beside.height) - Math.max(before.reading.height, before.beside.height);
+      console.log(
+        `AC-0014 ${source}${viewport ? " at 320 px" : " at 1280 px"}: ${stacked ? "stacked" : "side by side"}, reading card grew ${growth.toFixed(1)} px, its row grew ${rowGrowth.toFixed(1)} px, message ${message!.height.toFixed(1)} px tall`,
+      );
+      // Kept in place: the pressed button and every box above the message.
+      for (const name of ["reading", "heading", "field", "readButton"] as const) {
+        expect({ name, x: after[name].x, y: after[name].y }).toEqual({ name, x: before[name].x, y: before[name].y });
+      }
+      expect(growth, "the reading card grew to hold the message").toBeGreaterThan(0);
+      expect(message!.y, "the message sits under the pressed button").toBeGreaterThanOrEqual(after.readButton.y + after.readButton.height - 1);
+      expect(Math.abs(after.reading.y + after.reading.height - (message!.y + message!.height + room)), "the card's bottom against the message's bottom plus the card's bottom padding and border").toBeLessThanOrEqual(1);
+      // Below the reading card (stacked) a box moves by the card's growth; Drafts moves by its row's growth; the rest keep their place.
+      const belowReading = (name: keyof typeof before) =>
+        stacked && before[name].y >= before.reading.y + before.reading.height - 1;
+      for (const name of ["beside", "besideButton", "text", "drafts"] as const) {
+        const moved = name === "drafts" ? rowGrowth : belowReading(name) ? growth : 0;
+        expect(after[name].x, `${name} keeps its left edge`).toBeCloseTo(before[name].x, 0);
+        expect(Math.abs(after[name].y - before[name].y - moved), `${name} moves down by ${moved.toFixed(1)} px`).toBeLessThanOrEqual(1);
+      }
       expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
 
       await model.release();

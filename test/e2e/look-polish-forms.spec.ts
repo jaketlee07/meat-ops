@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { query, RAW_TOM_ID, resetTestData } from "../db";
+import { query, RAW_TOM_ID, resetTestData, saleFixture } from "../db";
 import { banner, marginCase, openDigest, seedDigest, withWatchRefused } from "./alerts-page";
-import { openAsk } from "./ask-page";
+import { ask, modelAnswer, openAsk } from "./ask-page";
 import {
   draftIdFromUrl,
   fakeModel,
@@ -1186,5 +1186,114 @@ for (const [width, px] of [
     const many = await resultGap(form, f.result);
     console.log(`AC-0018 ${width} px, ${px} px text: ${one.toFixed(2)} px with 1 finished product, ${many.toFixed(2)} px with 18`);
     expect(Math.abs(many - one), "the gap under the form with 18 against 1 finished products").toBeLessThanOrEqual(1);
+  });
+}
+
+// ---- AC-0025: Ask uses the page's width ----
+
+test("AC-0025: at 1280 px with an answer, /ask's question card, answer card, and examples section each span <main>'s content box", async ({
+  page,
+  baseURL,
+}) => {
+  await saleFixture();
+  const model = fakeModel(baseURL);
+  await model.reset();
+  await model.answer(modelAnswer({ query: "sellable_now" }));
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const p = await openAsk(page);
+  await ask(p, "What can I sell right now?");
+  await expect(p.answer).toBeVisible();
+  const content = await page.locator("main").evaluate((el) => {
+    const style = getComputedStyle(el);
+    const left = el.getBoundingClientRect().left + el.clientLeft + parseFloat(style.paddingLeft);
+    return { left, right: left + el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
+  });
+  const reads: string[] = [];
+  for (const [name, target] of [
+    ["question card", page.locator("main form")],
+    ["answer card", p.answer],
+    ["examples section", p.examples],
+  ] as const) {
+    const own = await box(target);
+    reads.push(`${name} ${own.x.toFixed(1)} to ${(own.x + own.width).toFixed(1)}`);
+    expect(Math.abs(own.x - content.left), `${name} left edge against <main>'s content`).toBeLessThanOrEqual(1);
+    expect(Math.abs(own.x + own.width - content.right), `${name} right edge against <main>'s content`).toBeLessThanOrEqual(1);
+  }
+  console.log(`AC-0025 content ${content.left.toFixed(1)} to ${content.right.toFixed(1)}: ${reads.join("; ")}`);
+});
+
+// ---- AC-0026 and AC-0027: the Trace and Invoices cards hold no gaps ----
+
+// One card's gaps with no message showing: the button's top below the field above it, that form's row gap, and the
+// card's bottom below the button, with the card's bottom padding and border. The field above is the form's nearest
+// child before the button that takes a place; an empty message or status element takes none.
+function cardGaps(card: Locator) {
+  return card.evaluate((section) => {
+    const form = section.querySelector("form")!;
+    const button = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    let above = button.previousElementSibling as HTMLElement | null;
+    while (above && above.getBoundingClientRect().height === 0) above = above.previousElementSibling as HTMLElement | null;
+    const css = getComputedStyle(section);
+    const [b, a, c] = [button, above!, section].map((el) => el.getBoundingClientRect());
+    return {
+      above: button.getBoundingClientRect().top - a!.bottom,
+      rowGap: parseFloat(getComputedStyle(form).rowGap),
+      below: c!.bottom - b!.bottom,
+      room: parseFloat(css.paddingBottom) + parseFloat(css.borderBottomWidth),
+    };
+  });
+}
+
+for (const [label, width, height, names, open] of [
+  ["/trace", 1024, 768, ["Find a sale", "Find a raw lot"], async (page: Page) => void (await openTrace(page))],
+  ["/trace", 1280, 720, ["Find a sale", "Find a raw lot"], async (page: Page) => void (await openTrace(page))],
+  [
+    "/invoices",
+    1024,
+    768,
+    ["Read an invoice", "Type a receipt"],
+    async (page: Page) => {
+      await seedFixture();
+      await openInvoices(page);
+    },
+  ],
+  [
+    "/invoices",
+    1280,
+    720,
+    ["Read an invoice", "Type a receipt"],
+    async (page: Page) => {
+      await seedFixture();
+      await openInvoices(page);
+    },
+  ],
+] as const) {
+  test(`AC-0026, AC-0027: ${label} at ${width} px: each finder or read card's button sits one row gap under its field and one card padding above the card's bottom`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await open(page);
+    const reads: string[] = [];
+    for (const name of names) {
+      const card = page.getByRole("region", { name, exact: true });
+      const g = await cardGaps(card);
+      reads.push(`${name}: button ${g.above.toFixed(1)} under its field (row gap ${g.rowGap}), card bottom ${g.below.toFixed(1)} under the button (padding and border ${g.room})`);
+      expect(Math.abs(g.above - g.rowGap), `${name}: the button's top under the field above it, against the form's row gap`).toBeLessThanOrEqual(1);
+      expect(Math.abs(g.below - g.room), `${name}: the card's bottom under the button, against its bottom padding and border`).toBeLessThanOrEqual(1);
+    }
+    if (label === "/invoices") {
+      // The empty message and status regions take no place but stay in the page and its accessibility tree.
+      for (const name of names) {
+        const card = page.getByRole("region", { name, exact: true });
+        await expect(card.locator("[role=alert]")).toHaveCount(1);
+        await expect(card.locator("[role=status]")).toHaveCount(1);
+        for (const region of [card.locator("[role=alert]"), card.locator("[role=status]")]) {
+          await expect(region).toBeAttached();
+          expect(await region.evaluate((el) => getComputedStyle(el).display)).not.toBe("none");
+        }
+      }
+      await expect(page.getByRole("region", { name: "Read an invoice" }).getByRole("status")).toBeAttached();
+    }
+    console.log(`AC-0026, AC-0027 ${label} ${width} px: ${reads.join("; ")}`);
   });
 }

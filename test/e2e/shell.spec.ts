@@ -555,14 +555,26 @@ test.describe("landmarks", () => {
 test.describe("the desktop content cap", () => {
   test.use({ storageState: OPERATOR_STATE });
 
-  test("at 1280, /ask's examples section is capped at 544px and /production's check step keeps its own 28rem", async ({ page }) => {
+  test("at 1280, /ask's examples section spans the full width and /production's check step keeps its own 28rem", async ({ page }) => {
     await seed502Fixture();
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/ask");
     // The examples section is a direct child of <main>, after the shell's title-and-banner div.
     const examples = page.locator("main > section[aria-labelledby='examples-heading']");
     await expect(examples).toHaveCount(1);
-    expect(await examples.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("544px");
+    expect(await examples.evaluate((el) => getComputedStyle(el).maxWidth)).toBe("none");
+    const [section, main] = await examples.evaluate((el) => {
+      const parent = el.closest("main")!;
+      const style = getComputedStyle(parent);
+      const own = el.getBoundingClientRect();
+      const left = parent.getBoundingClientRect().left + parent.clientLeft + parseFloat(style.paddingLeft);
+      return [
+        [own.left, own.right],
+        [left, left + parent.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)],
+      ];
+    });
+    expect(Math.abs(section![0]! - main![0]!), "examples left edge against <main>'s content").toBeLessThanOrEqual(1);
+    expect(Math.abs(section![1]! - main![1]!), "examples right edge against <main>'s content").toBeLessThanOrEqual(1);
     const f = await openForm(page);
     await fillBatch(f, {});
     await f.save.click();

@@ -22,11 +22,10 @@ const READING = "Reading. This can take up to two minutes.";
 const IDLE: ReadState = { status: "idle" };
 // The photo field's visible "Choose photo" button, which opens the hidden file input.
 const CHOOSE_BUTTON = "rounded-control border border-field-border bg-surface px-3 text-base font-medium text-ink";
-// The button sits at the card's bottom, so the two Read buttons' tops line up from `desk`.
 const BUTTON =
-  "mt-auto w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60";
+  "w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary aria-disabled:bg-primary/60";
 const CARD = "flex flex-col gap-4 rounded-card border border-card-border bg-surface p-3.5 desk:p-4";
-const FORM = "flex flex-1 flex-col gap-4";
+const FORM = "flex flex-col gap-4";
 
 type Press =
   | { source: "photo"; file: File | undefined; today: string }
@@ -125,11 +124,11 @@ export function ReadForms() {
     state.status === "invalid" && state.source === source ? state.message : null;
   const failure = (source: "photo" | "text") =>
     state.status === "refused" && state.source === source ? state.message : null;
-  // Two lines are reserved, the most the message takes in the 288 px column of a
-  // 320 px screen, so neither form moves when the text appears. The regions are in
-  // the page before they have text, so the change is announced.
+  // Each card takes the height it needs: a read in flight grows its card. The
+  // regions are in the page before they have text, so the change is announced. An
+  // empty one cancels the form's row gap above it (`empty:-mt-4`) and takes no place.
   const reading = (source: "photo" | "text") => (
-    <div role="status" className="min-h-12 text-base">
+    <div role="status" className="text-base empty:-mt-4">
       {busy && pressed === source ? READING : null}
     </div>
   );
@@ -137,7 +136,7 @@ export function ReadForms() {
   const textError = fieldError("text");
 
   return (
-    <div className="mb-8 grid gap-4 desk:grid-cols-2">
+    <div className="mb-8 grid items-start gap-4 desk:grid-cols-2">
       <section aria-labelledby="read-photo-heading" className={CARD}>
         <h2 id="read-photo-heading" className="text-xl font-semibold">
           Read an invoice
@@ -182,7 +181,7 @@ export function ReadForms() {
               </p>
             )}
           </div>
-          <div id="photo-message" role="alert" tabIndex={-1} className="break-words text-base font-medium text-error">
+          <div id="photo-message" role="alert" tabIndex={-1} className="break-words text-base font-medium text-error empty:-mt-4">
             {failure("photo")}
           </div>
           <button type="submit" aria-disabled={busy ? true : undefined} className={BUTTON}>
@@ -217,7 +216,7 @@ export function ReadForms() {
               </p>
             )}
           </div>
-          <div id="text-message" role="alert" tabIndex={-1} className="break-words text-base font-medium text-error">
+          <div id="text-message" role="alert" tabIndex={-1} className="break-words text-base font-medium text-error empty:-mt-4">
             {failure("text")}
           </div>
           <button type="submit" aria-disabled={busy ? true : undefined} className={BUTTON}>

@@ -5,9 +5,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseLotFinder, parseSaleNumber } from "../../lib/sale-input";
 import { CONTROL, DATE_BOX, IconBox, LABEL } from "../form-parts";
 
-const BUTTON = "mt-auto w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary";
+const BUTTON = "w-full rounded-control bg-primary px-4 text-base font-bold text-on-primary";
 const CARD = "flex flex-col rounded-card border border-card-border bg-surface p-3.5 desk:p-4";
-const FORM = "flex flex-1 flex-col gap-3";
+const FORM = "flex flex-col gap-3";
 const SALE_ID = "find-sale-number";
 const RAW_ID = "find-raw-code";
 const RECEIVED_ID = "find-received";
@@ -62,7 +62,7 @@ export function FindForms({
   }, [lookup]);
 
   return (
-    <div className="grid gap-4 desk:grid-cols-2">
+    <div className="grid items-start gap-4 desk:grid-cols-2">
       <FindSale sale={sale} urlError={saleError} />
       <FindLot rawCode={rawCode} received={received} urlErrors={lotErrors} />
     </div>

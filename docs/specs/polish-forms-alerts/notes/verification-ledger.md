@@ -85,3 +85,15 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 - The leftovers intent's saved-result and Receiving-result gaps are closed.
 - Slot fix before the full run: 211,178 dead `pg_class` rows and slot age 20,285 before, 0 and 0 after. The folder check listed only another project's folders.
 - `npm test`: Vitest 55 files, 1052 passed; Playwright 1127 passed, none failed or flaky, in 16.4 min.
+
+## T6 (2026-11-09)
+
+- `/ask` passes `fullWidth`; every `PageShell` call in `src/app` now does, so no page keeps the shell's 34rem cap and the option stays in the shell. At 1280 px Ask's question card, answer card, and examples section span `<main>`'s content box (x 268 to 1252); on the old tree the question card ended 440 px short.
+- Trace's finders and Invoices' read cards take their own heights (`items-start`); their buttons lose `mt-auto` and their forms `flex-1`; Invoices' status line loses its reserved height. Each empty `role="alert"` and `role="status"` region stays in the page and the accessibility tree with `empty:-mt-4`, which cancels the form's row gap above it only while it is empty; the new test checks each Invoices card still holds one of each, attached and not `display: none`.
+- Gaps at 1024 px and 1280 px: each button now sits its form's row gap under its field (Trace 12 px, Invoices 16 px) and each card's bottom 17 px (padding and border) under its button. On the old tree "Find a sale"'s button sat 92 px under its field and "Read an invoice"'s 102 px.
+- A read in flight grows its card by the message and the row gap above it: 40 px at 1280 px (a 24 px message) and 64 px at 320 px (a 48 px message). At 1280 px a text read grows the row and moves Drafts down 40 px; a photo read moves nothing, since the Type a receipt card stays the taller. At 320 px every box below the reading card, Drafts included, moves down 64 px.
+- On the old tree the new AC-0025 test and all four AC-0026 and AC-0027 runs failed.
+- Changed lines in existing test files (AC-0031): `look-menu-invoices-ask-alerts.spec.ts`' Ask width test checks that each card spans `<main>`'s content (title reworded); its read-forms test drops the level-button check (title reworded); `shell.spec.ts`' desktop content cap test checks `/ask`'s examples section at `max-width: none` and spanning `<main>`'s content, and keeps the check step's own 28rem; `invoices.spec.ts`' in-flight test expects the per-source, per-viewport moves above in place of "nothing moves" (title reworded), and keeps its message, empty-status, disabled-button, and `checkPageState` checks. `look-floor-pages.spec.ts`' Trace finder checks pass unchanged.
+- The leftovers intent's Vendor picker (T2), saved result and Receiving result (T4), waiting buttons (T5), and Alerts width test (T3) gaps are closed, and spec 1a closed its stock tiles and sale trace; the intent's whole Boundary is delivered.
+- Slot fix before the full run: 205,351 dead `pg_class` rows and slot age 20,275 before, 0 and 3 after. The folder check listed only another project's folders.
+- `npm test`: Vitest 55 files, 1052 passed; Playwright 1132 passed, none failed or flaky, in 16.3 min.

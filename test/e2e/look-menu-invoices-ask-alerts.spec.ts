@@ -443,20 +443,17 @@ test.describe("the Invoices layout", () => {
       await expectNoCap(page);
     });
 
-    test(`AC-0004: at ${width}x${height} the read forms sit side by side with their tops and their buttons' tops level, above Drafts to confirm`, async ({
+    test(`AC-0004: at ${width}x${height} the read forms sit side by side with their tops level, above Drafts to confirm`, async ({
       page,
     }) => {
       const p = await opensInvoices(page, width, height);
-      const { photo, text, photoButton, textButton, drafts } = await namedBoxes({
+      const { photo, text, drafts } = await namedBoxes({
         photo: p.photoSection,
         text: p.textSection,
-        photoButton: p.readPhoto,
-        textButton: p.readText,
         drafts: p.draftsSection,
       });
       expect(photo.x + photo.width, "Read an invoice is left of Type a receipt").toBeLessThanOrEqual(text.x + 1);
       expect(Math.abs(photo.y - text.y), "form tops level").toBeLessThanOrEqual(1);
-      expect(Math.abs(photoButton.y - textButton.y), "button tops level").toBeLessThanOrEqual(1);
       expect(drafts.y, "drafts below both").toBeGreaterThanOrEqual(Math.max(photo.y + photo.height, text.y + text.height) - 1);
     });
   }
@@ -1143,14 +1140,15 @@ async function showsAnswer(page: Page, baseURL: string | undefined, width: numbe
 }
 
 test.describe("the Ask layout", () => {
-  test("AC-0001: at 1280 px with an answer, /ask's form, answer, and examples end within 544 px of <main>'s content", async ({
+  test("AC-0001: at 1280 px with an answer, /ask's form, answer, and examples span <main>'s content", async ({
     page,
     baseURL,
   }) => {
     const p = await showsAnswer(page, baseURL, 1280, 720);
     const content = await page.locator("main").evaluate((el) => {
       const style = getComputedStyle(el);
-      return el.getBoundingClientRect().left + el.clientLeft + parseFloat(style.paddingLeft);
+      const left = el.getBoundingClientRect().left + el.clientLeft + parseFloat(style.paddingLeft);
+      return { left, right: left + el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) };
     });
     for (const [name, target] of [
       ["form", page.locator("main form")],
@@ -1158,7 +1156,7 @@ test.describe("the Ask layout", () => {
       ["examples", p.examples],
     ] as const) {
       const b = await box(target);
-      expect(b.x + b.width - content, `${name} right edge from the content's left edge`).toBeLessThanOrEqual(544.5);
+      expect(Math.abs(b.x + b.width - content.right), `${name} right edge from the content's right edge`).toBeLessThanOrEqual(1);
     }
   });
 });
