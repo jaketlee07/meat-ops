@@ -23,3 +23,8 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 - Adversarial round 3's two repairs (T6's measured growth, T1's ledger Touches) were checked by shaping rounds 4 and 5 only, since the adversarial reviewer's three rounds were used.
 - Deletion pass over what review added: AC-0024's rewrite, AC-0021's narrowest width, AC-0033, and AC-0034 conform to the leftovers intent, the waiting-control rule, and accessibility; T1's red run of AC-0004, T5's reopened-dialog press, and T6's per-layout in-flight expectations are needed to verify their criteria. One is a scope call: AC-0008 asks the owner to press each date box's calendar icon by hand at the AC-0029 sitting. Nothing contradicts a non-goal.
 - Pre-EXECUTE gates: the adversarial gate ran (three rounds); no security gate fires, since the spec changes no security boundary, data flow, or guarding control. `creative-direction` and `design-review` are not installed (named skip); the comparison page and look E are the design reference.
+
+## Approval (2026-11-09)
+
+- The owner approved the spec and the plan on 2026-11-09 and chose to start building once the approval PR merges.
+- For this build the owner approved stopping the app server that runs from this folder and starting it again from a fresh build when the work is done; running the stack A slot fix before each full test run; and committing each task on `feat/polish-forms-alerts`, then opening one PR.
