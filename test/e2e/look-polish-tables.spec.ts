@@ -209,13 +209,17 @@ for (const list of LISTS) {
 // "No list price yet" is gray text in --color-ink-secondary, outside any tag.
 async function expectQuiet(page: Page, word: Locator) {
   await expect(word).toHaveCount(1);
-  // A tag is a filled element whose corners are at least half its height, the walk's own test (AC-0001).
+  // A tag (AC-0001) is a rounded element with its own fill: here, any element from the word up to its row (the
+  // nearest li or dl, which is not counted) that has a fill and any rounded corner, whatever radius token it uses.
+  // The card or panel that holds the list sits above the row, so it is never counted.
   const style = await word.evaluate((node) => {
     let inTag = false;
-    for (let n: Element | null = node; n; n = n.parentElement) {
+    for (let n: Element | null = node; n && !n.matches("li, dl"); n = n.parentElement) {
       const css = getComputedStyle(n);
-      const h = n.getBoundingClientRect().height;
-      if (css.backgroundColor !== "rgba(0, 0, 0, 0)" && h > 0 && parseFloat(css.borderTopLeftRadius) >= h / 2) inTag = true;
+      const rounded = [css.borderTopLeftRadius, css.borderTopRightRadius, css.borderBottomLeftRadius, css.borderBottomRightRadius].some(
+        (r) => parseFloat(r) > 0,
+      );
+      if (css.backgroundColor !== "rgba(0, 0, 0, 0)" && rounded) inTag = true;
     }
     return { color: getComputedStyle(node).color, inTag };
   });
@@ -536,23 +540,25 @@ test(`with a vendor name that wraps, each receipt's lot number sits directly und
   for (const lot of [lots.inUse, lots.untouched, lots.voided]) {
     const item = receipts(page).locator("ul > li").filter({ hasText: lot });
     await expect(item).toHaveCount(1);
-    const seen = await item.evaluate((li) => {
-      const [lotCell, date, vendor] = [...li.querySelectorAll("dd")].slice(0, 3) as HTMLElement[];
-      // A cell's box stretches to its row, so the text itself is measured.
-      const text = (cell: HTMLElement) => {
+    // A cell's box stretches to its row, so the text itself is measured; each cell is found by its label.
+    const text = (cell: Locator) =>
+      cell.evaluate((node) => {
         const range = document.createRange();
-        range.selectNodeContents(cell);
-        return range;
-      };
-      const lines = new Set([...text(vendor!).getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
-      return {
-        vendorLines: lines,
-        // Two stacked lines leave only their leading between their text boxes; a blank line would add a whole line box.
-        leading: parseFloat(getComputedStyle(date!).lineHeight) - text(date!).getBoundingClientRect().height,
-        gap: text(lotCell!).getBoundingClientRect().top - text(date!).getBoundingClientRect().bottom,
-        sameColumn: Math.abs(text(lotCell!).getBoundingClientRect().left - text(date!).getBoundingClientRect().left),
-      };
-    });
+        range.selectNodeContents(node);
+        const box = range.getBoundingClientRect();
+        const tops = [...range.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top));
+        return { top: box.top, bottom: box.bottom, left: box.left, lines: new Set(tops).size, lineHeight: parseFloat(getComputedStyle(node).lineHeight) };
+      });
+    const lotCell = await text(factValue(item, "Lot number"));
+    const date = await text(factValue(item, "Received"));
+    const vendor = await text(factValue(item, "Vendor"));
+    const seen = {
+      vendorLines: vendor.lines,
+      // Two stacked lines leave only their leading between their text boxes; a blank line would add a whole line box.
+      leading: date.lineHeight - (date.bottom - date.top),
+      gap: lotCell.top - date.bottom,
+      sameColumn: Math.abs(lotCell.left - date.left),
+    };
     expect(seen.vendorLines, `${lot}: the vendor name wraps`).toBeGreaterThanOrEqual(2);
     expect(seen.sameColumn, `${lot}: lot number and date share a left edge`).toBeLessThanOrEqual(1);
     expect(seen.gap, `${lot}: no blank line under the date`).toBeLessThanOrEqual(seen.leading + 1);
@@ -695,6 +701,8 @@ function switchParts(box: Locator) {
       knobFill: knob.backgroundColor,
       knobContent: knob.content,
       knobLeft: left + translate + transform,
+      // The knob is centred by top and bottom 0 with auto margins; its used top margin is its offset.
+      knobTop: knob.position === "absolute" ? px(knob.top) + px(knob.marginTop) : px(knob.marginTop),
       borderLeft: parseFloat(css.borderLeftWidth),
     };
   });
@@ -768,7 +776,8 @@ async function expectKnobInside(box: Locator, where: string) {
   const innerH = seen.trackH - 2 * seen.edgeWidth;
   expect(seen.knobLeft, `${where}: knob not past the left edge`).toBeGreaterThanOrEqual(-0.5);
   expect(seen.knobLeft + seen.knobW, `${where}: knob not past the right edge`).toBeLessThanOrEqual(innerW + 0.5);
-  expect(seen.knobH, `${where}: knob no taller than the track's inside`).toBeLessThanOrEqual(innerH + 0.5);
+  expect(seen.knobTop, `${where}: knob not past the top edge`).toBeGreaterThanOrEqual(-0.5);
+  expect(seen.knobTop + seen.knobH, `${where}: knob not past the bottom edge`).toBeLessThanOrEqual(innerH + 0.5);
 }
 
 async function settled(page: Page, box: Locator) {
