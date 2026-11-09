@@ -1,7 +1,7 @@
 # Plan: polish-forms-alerts
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Approved <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the form column (`src/app/form-column-grid.ts`) and the three floor forms (`src/app/receiving/receipt-form.tsx`, `src/app/production/production-form.tsx`, `src/app/sales/sale-form.tsx`) with their suites `test/e2e/look-pages.spec.ts` and `test/e2e/look-floor-pages.spec.ts`; the shared before-and-after table `src/app/before-after.tsx` and its `result-snug` and `result-tight` variants in `src/app/globals.css`; the shell's banner in `src/app/page-header.tsx`; `/alerts`' `src/app/alerts/digest-section.tsx` with `test/e2e/alerts-page.ts`; the read forms and draft review on `/invoices` (`src/app/invoices/read-forms.tsx`, `src/app/invoices/draft-review.tsx`, the `line-pair` variant) and `test/e2e/look-menu-invoices-ask-alerts.spec.ts`; the Trace finders (`src/app/trace/find-forms.tsx`); the page-state check `checkPageState` in `test/e2e/a11y.ts` and `withTextSize` and `expectNoCap` in `test/e2e/look-checks.ts`; a held server action through `page.route` on the `next-action` header, as `test/e2e/alerts.spec.ts` line 659 does. Uncertainty: the exact inner width of each form at each size, which T1 measures before it sets the pair thresholds.
 
 > **Plan contract:** this is the implementation strategy. It may change

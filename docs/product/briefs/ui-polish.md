@@ -88,7 +88,7 @@ None.
 | Spec | Status |
 | --- | --- |
 | `polish-tables-status` | Shipped |
-| `polish-forms-alerts` | Approved |
+| `polish-forms-alerts` | Implementing |
 
 ## Source
 

@@ -77,10 +77,9 @@ name = "UI polish and home screen"
 status = "active"
 
 [ini-002.work]
-queue = [
+active = [
   { path = "docs/specs/polish-forms-alerts/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-polish.md", revision = "4e7e5d3", parent = "docs/product/briefs/ui-polish.md" }, summary = "Spec 1b of UI polish: one label style, number fields side by side, styled pickers and photo picker, a quiet urgent banner, the digest as a list, saved results that fit, Receiving's result under its form, focusable waiting buttons, Ask full width, and no gaps in the Trace and Invoices cards", needs = [] },
 ]
-active = []
 shipped = [
   { path = "docs/specs/polish-tables-status/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-polish.md", revision = "26d1047", parent = "docs/product/briefs/ui-polish.md" }, summary = "Spec 1a of UI polish: status tags, IDs and dates on one line, quiet row buttons, one main button on Pricing, Menu's switch, lighter weight, Recent sales by sale date, stock tiles, and the sale trace", needs = [] },
 ]

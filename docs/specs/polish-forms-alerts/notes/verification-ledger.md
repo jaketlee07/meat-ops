@@ -26,5 +26,7 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 
 ## Approval (2026-11-09)
 
-- The owner approved the spec and the plan on 2026-11-09 and chose to start building once the approval PR merges.
+- The owner approved the spec and the plan on 2026-11-09 (PR #61, merged as `0966245`) and chose to start building.
+- Work-loop run `66ead429-0279-4602-ad5e-19d0896a98a3`. `approve-plan` recorded spec hash `1a26bc4bacca…` and plan hash `c9f613cf758d…`. The schedule's waves are T1, T3, and T5; then T2 and T4; then T6; then T7, run one task at a time.
+- Base: `0966245` on branch `feat/polish-forms-alerts` in the main folder, on stack A.
 - For this build the owner approved stopping the app server that runs from this folder and starting it again from a fresh build when the work is done; running the stack A slot fix before each full test run; and committing each task on `feat/polish-forms-alerts`, then opening one PR.
