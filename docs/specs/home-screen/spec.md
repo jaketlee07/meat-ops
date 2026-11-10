@@ -177,6 +177,5 @@ None. Spec 2b of the brief covers search and filters.
 - Product: "Today" shows four sections in this order: the money figures, the open alerts, today's entries, and stock on hand (source: user confirmation 2026-11-09)
 - Product: the urgent banner does not show on "Today", which lists the open alerts itself; `/alerts` shows none (source: user confirmation 2026-11-09; `src/app/page-header.tsx`)
 - Product: both menus' first item is "Today" (source: user confirmation 2026-11-09)
-- Product: on "Today", while an alert is urgent, the "Open alerts" section carries the urgent count in a line only screen readers hear, with no visible change, since the page has no banner and the menu badge is hidden from assistive technology (source: user confirmation 2026-11-09)
 - Product: a failed load of `/` shows the error view headed "Today" from a root error file, and `/sign-in`, which that file would otherwise cover, gets its own, headed "Sign in" (source: user confirmation 2026-11-09)
 - Product: today's sales total is lbs times price per lb over today's sales, voids left out; stock value counts raw lbs on hand at each lot's current cost plus finished lbs on hand at each batch's cost per lb, over every product, active or not; Stock on hand lists every active product and any inactive one that still holds stock (source: user confirmation 2026-11-09)
