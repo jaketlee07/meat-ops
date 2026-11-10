@@ -3,8 +3,8 @@
 This is the source of truth for the costing math. The tests in
 `test/costing.test.ts`, `test/engine.test.ts`, `test/corrections.test.ts`,
 `test/pricing.test.ts`, `test/receipt-corrections.test.ts`,
-`test/batch-reversal.test.ts`, `test/zero-stock.test.ts`, and
-`test/alerts-corrections.test.ts` encode every costing number below. The rules and reads around them are in
+`test/batch-reversal.test.ts`, `test/zero-stock.test.ts`,
+`test/alerts-corrections.test.ts`, and `test/home-figures.test.ts` encode every costing number below. The rules and reads around them are in
 `test/correction-rules.test.ts`, `test/corrections-data.test.ts`, and
 `test/save-correction.test.ts`, and the two pages' end-to-end checks are in
 `test/e2e/correct.spec.ts` and `test/e2e/reverse.spec.ts`. The display formats
@@ -15,7 +15,7 @@ wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
 `record_sale`, `void_receipt`, `void_sale`, `adjust_lot`, `correct_receipt`, and `reverse_batch`, the views
-`v_product_pricing` and `v_sale_summary`, and the function `price_what_if`.
+`v_product_pricing`, `v_sale_summary`, `v_daily_sales`, and `v_stock_value`, and the function `price_what_if`.
 Nothing in TypeScript computes a cost, an average, or a price.
 
 ## Cost build-up per finished lb
@@ -381,6 +381,30 @@ batch 2, and RAW-TOM has 1,000 lbs on hand at 1.8000.
   2,000 lbs, correcting lot B to 1.90 moves the average to 1.9000, since batch 2's
   1,000 lbs from lot B now cost 1.90.
 - With lot B adjusted to 900 lbs first, the smallest weight is 2,100 lbs.
+
+## Today's sales and stock value
+
+The "Today" page shows two money figures, both worked out by views and left
+unrounded. The screen rounds them for display (see the Rounding note).
+
+- **Today's sales** (`v_daily_sales.sales_total`) is the sum of `lbs_sold ×
+  price_per_lb` over the sale items of one date's sales that are not voided. A
+  date with no sale, or only voided ones, has no row.
+- **Stock value** (`v_stock_value`) is `raw_value`, the sum of `remaining_lbs ×
+  current_unit_cost` over every lot; `finished_value`, the sum of `lbs_remaining ×
+  cost_per_lb` over every finished good; and `total_value`, the two added. It
+  counts every product, active or not. A void zeroes the lot or sale it takes
+  back and a reversal zeroes its batch's finished goods, so neither adds value.
+  The view returns one row for a caller who can read stock and none for one who
+  cannot.
+
+Worked example (`test/home-figures.test.ts`). Sales of 502 on one date: 100 lbs at
+$3.2900/lb and 50 lbs at $3.5000/lb, and a 10 lb sale at $3.0000/lb that is
+voided. The date's total is 329 + 175 = 504. After receipts of RAW-TOM of 1,000
+lbs at $1.6800/lb and then 500 lbs at $1.8000/lb, a batch of 502 from 400 raw
+lbs (308 finished lbs at $2.6318/lb), and those sales, the raw value is
+600 × 1.68 + 500 × 1.80 = 1,908, the finished value is 158 × 2.6318 = 415.8244,
+and the total value is 2,323.8244.
 
 ## Rounding note
 

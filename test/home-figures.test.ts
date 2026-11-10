@@ -1,0 +1,176 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
+import { createTypedClient } from "../src/lib/supabase.js";
+import {
+  assertLedgerInvariants,
+  callAsOperator,
+  closePool,
+  idOf,
+  PROD_502_ID,
+  produceCall,
+  query,
+  RAW_TOM_ID,
+  receiveCall,
+  resetTestData,
+  reverseCall,
+  saleCall,
+  VENDOR_ID,
+  voidReceiptCall,
+  voidSaleCall,
+  type OpCall,
+} from "./db.js";
+import { resolveStackEnv } from "./env.js";
+import { signInNonOperator, signInOperator } from "./users.js";
+
+// Every name, price, and figure in this file is made up. Setup goes through the
+// operations only; the views are read back with SQL numeric comparisons, never
+// through JavaScript arithmetic.
+
+const VIEWS = ["v_daily_sales", "v_stock_value", "v_stock_on_hand"] as const;
+const SALES_DAY = "2026-06-10";
+
+type Loose = SupabaseClient;
+
+async function run(call: OpCall): Promise<string> {
+  const outcome = await callAsOperator(call);
+  if (!outcome.ok) throw new Error(`${call.fn}: ${outcome.error}`);
+  return idOf(outcome);
+}
+
+// 1,000 lbs of RAW-TOM at 1.68, then a batch of 502 from 400 raw lbs (308 finished lbs at 2.6318).
+async function receiveAndProduce(): Promise<void> {
+  await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, 1.68, "2026-06-01"));
+  await run(produceCall(PROD_502_ID, 400, null, "2026-06-02"));
+}
+
+// AC-0011's sales on SALES_DAY: 100 lbs at 3.29, 50 lbs at 3.50, and 10 lbs at 3.00, voided.
+async function recordDaySales(): Promise<void> {
+  await run(saleCall(PROD_502_ID, 100, 3.29, SALES_DAY));
+  await run(saleCall(PROD_502_ID, 50, 3.5, SALES_DAY));
+  const voided = await run(saleCall(PROD_502_ID, 10, 3.0, SALES_DAY));
+  await run(voidSaleCall(voided));
+}
+
+async function stockValue() {
+  const rows = await query<{ raw_ok: boolean; finished_ok: boolean; total_ok: boolean; n: string }>(
+    `select raw_value = 1908 as raw_ok, finished_value = 415.8244 as finished_ok,
+            total_value = 2323.8244 as total_ok, count(*) over () as n
+     from public.v_stock_value`,
+  );
+  return rows;
+}
+
+beforeEach(async () => {
+  await resetTestData();
+});
+afterEach(async () => {
+  await assertLedgerInvariants();
+});
+afterAll(async () => {
+  await closePool();
+});
+
+it("AC-0011: the daily sales view totals the day's sales that are not voided", async () => {
+  await receiveAndProduce();
+  await recordDaySales();
+  // Another date has its own total, and a date whose only sale is voided has no row.
+  await run(saleCall(PROD_502_ID, 20, 3.0, "2026-06-11"));
+  const onlyVoided = await run(saleCall(PROD_502_ID, 5, 3.0, "2026-06-12"));
+  await run(voidSaleCall(onlyVoided));
+
+  const day = await query(
+    `select sales_total = 504 as exact, sales_total::numeric = 504.0000 as same from public.v_daily_sales where sale_date = $1`,
+    [SALES_DAY],
+  );
+  expect(day).toEqual([{ exact: true, same: true }]);
+  const other = await query(`select sales_total = 60 as exact from public.v_daily_sales where sale_date = '2026-06-11'`);
+  expect(other).toEqual([{ exact: true }]);
+  const voidedDay = await query(`select 1 from public.v_daily_sales where sale_date = '2026-06-12'`);
+  expect(voidedDay).toEqual([]);
+  const all = await query(`select count(*)::int as n from public.v_daily_sales`);
+  expect(all).toEqual([{ n: 2 }]);
+});
+
+it("AC-0012: the stock value view adds every lot and finished good, unrounded", async () => {
+  await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, 1.68, "2026-06-01"));
+  await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 500, 1.8, "2026-06-01"));
+  await run(produceCall(PROD_502_ID, 400, null, "2026-06-02"));
+  await recordDaySales();
+  expect(await stockValue()).toEqual([{ raw_ok: true, finished_ok: true, total_ok: true, n: "1" }]);
+});
+
+it("AC-0012: a voided receipt and a reversed batch add nothing to the stock value", async () => {
+  await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, 1.68, "2026-06-01"));
+  await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 500, 1.8, "2026-06-01"));
+  await run(produceCall(PROD_502_ID, 400, null, "2026-06-02"));
+  await recordDaySales();
+  const extraLot = await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 100, 2.0, "2026-06-03"));
+  await run(voidReceiptCall(extraLot));
+  const extraBatch = await run(produceCall(PROD_502_ID, 100, null, "2026-06-04"));
+  await run(reverseCall(extraBatch));
+  expect(await stockValue()).toEqual([{ raw_ok: true, finished_ok: true, total_ok: true, n: "1" }]);
+});
+
+it("AC-0015: each new view refuses anon, shows a non-operator no row, and shows an operator and service_role a row", async () => {
+  await receiveAndProduce();
+  await recordDaySales();
+  const env = resolveStackEnv();
+  const anon = createTypedClient(env.apiUrl, env.anonKey) as unknown as Loose;
+  const service = createTypedClient(env.apiUrl, env.serviceRoleKey) as unknown as Loose;
+  const nonOperator = (await signInNonOperator()) as unknown as Loose;
+  const operator = (await signInOperator()) as unknown as Loose;
+  for (const view of VIEWS) {
+    const refused = await anon.from(view).select("*");
+    expect(refused.error?.code, `anon ${view}`).toBe("42501");
+    const none = await nonOperator.from(view).select("*");
+    expect(none.error, `non-operator ${view}`).toBeNull();
+    expect(none.data, `non-operator ${view}`).toEqual([]);
+    for (const [role, client] of [["operator", operator], ["service_role", service]] as const) {
+      const res = await client.from(view).select("*");
+      expect(res.error, `${role} ${view}`).toBeNull();
+      expect(res.data?.length, `${role} ${view}`).toBeGreaterThanOrEqual(1);
+    }
+  }
+});
+
+it("AC-0024: anon and public hold no privilege on the new views, and authenticated and service_role hold SELECT only", async () => {
+  const rows = await query<{ view: string; grantee: string; privilege: string }>(
+    `select c.relname as view,
+            case when a.grantee = 0 then 'public' else pg_get_userbyid(a.grantee) end as grantee,
+            a.privilege_type as privilege
+     from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+     cross join lateral aclexplode(c.relacl) a
+     where n.nspname = 'public' and c.relname = any($1)
+     order by 1, 2, 3`,
+    [[...VIEWS]],
+  );
+  for (const view of VIEWS) {
+    const held = (who: string) => rows.filter((r) => r.view === view && r.grantee === who).map((r) => r.privilege);
+    expect(held("anon"), `anon on ${view}`).toEqual([]);
+    expect(held("public"), `public on ${view}`).toEqual([]);
+    expect(held("authenticated"), `authenticated on ${view}`).toEqual(["SELECT"]);
+    expect(held("service_role"), `service_role on ${view}`).toEqual(["SELECT"]);
+  }
+  const options = await query<{ relname: string; reloptions: string[] | null }>(
+    `select relname, reloptions from pg_class where relnamespace = 'public'::regnamespace and relname = any($1) order by 1`,
+    [[...VIEWS]],
+  );
+  expect(options.map((o) => o.reloptions)).toEqual(VIEWS.map(() => ["security_invoker=true"]));
+});
+
+it("AC-0010: the stock on hand view gives a raw product its balance and a finished product its remaining lbs", async () => {
+  expect(
+    await query(`select count(*)::int as n from public.v_stock_on_hand where lbs_on_hand = 0`),
+  ).toEqual([{ n: 2 }]);
+  await receiveAndProduce();
+  await recordDaySales();
+  const rows = await query(
+    `select code, kind, active, lbs_on_hand = (case code when 'RAW-TOM' then 600 else 158 end) as ok
+     from public.v_stock_on_hand order by code`,
+  );
+  expect(rows).toEqual([
+    { code: "502", kind: "finished", active: true, ok: true },
+    { code: "RAW-TOM", kind: "raw", active: true, ok: true },
+  ]);
+});

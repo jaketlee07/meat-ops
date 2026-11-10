@@ -150,6 +150,13 @@ export type Database = {
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
           },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
+          },
         ]
       }
       customers: {
@@ -264,6 +271,13 @@ export type Database = {
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
           },
+          {
+            foreignKeyName: "finished_goods_finished_product_id_fkey"
+            columns: ["finished_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
+          },
         ]
       }
       import_draft_lines: {
@@ -351,6 +365,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
+          },
+          {
+            foreignKeyName: "import_draft_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "import_draft_lines_vendor_id_fkey"
@@ -447,6 +468,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
+          },
+          {
+            foreignKeyName: "inventory_balances_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -582,6 +610,13 @@ export type Database = {
             referencedColumns: ["finished_product_id"]
           },
           {
+            foreignKeyName: "lots_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
+          },
+          {
             foreignKeyName: "lots_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
@@ -641,6 +676,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
+          },
+          {
+            foreignKeyName: "product_fees_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -761,6 +803,13 @@ export type Database = {
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
           },
+          {
+            foreignKeyName: "production_batches_finished_product_id_fkey"
+            columns: ["finished_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
+          },
         ]
       }
       products: {
@@ -840,6 +889,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
+          },
+          {
+            foreignKeyName: "products_raw_product_id_fkey"
+            columns: ["raw_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -1080,6 +1136,13 @@ export type Database = {
             referencedRelation: "v_sale_summary"
             referencedColumns: ["finished_product_id"]
           },
+          {
+            foreignKeyName: "alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_on_hand"
+            referencedColumns: ["product_id"]
+          },
         ]
       }
       v_current_menu: {
@@ -1093,6 +1156,13 @@ export type Database = {
           raw_lbs_available: number | null
           sellable: boolean | null
           species: string | null
+        }
+        Relationships: []
+      }
+      v_daily_sales: {
+        Row: {
+          sale_date: string | null
+          sales_total: number | null
         }
         Relationships: []
       }
@@ -1180,6 +1250,41 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_stock_on_hand: {
+        Row: {
+          active: boolean | null
+          code: string | null
+          description: string | null
+          kind: string | null
+          lbs_on_hand: number | null
+          product_id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          code?: string | null
+          description?: string | null
+          kind?: string | null
+          lbs_on_hand?: never
+          product_id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          code?: string | null
+          description?: string | null
+          kind?: string | null
+          lbs_on_hand?: never
+          product_id?: string | null
+        }
+        Relationships: []
+      }
+      v_stock_value: {
+        Row: {
+          finished_value: number | null
+          raw_value: number | null
+          total_value: number | null
+        }
+        Relationships: []
       }
     }
     Functions: {

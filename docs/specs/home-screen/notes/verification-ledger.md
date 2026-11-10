@@ -45,3 +45,7 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 
 - The owner approved the spec and the plan on 2026-11-09 at `43514e7`.
 - For this build the owner approved stopping the app server that runs from this folder (PIDs 74009 and 74031) and starting it again from the final build when the work is done; running the stack A slot fix when catalog bloat slows the tests; and committing each task on `feat/home-screen`, then pushing and opening one PR.
+
+## T1
+
+- Red run, before the migration existed: `npx vitest run test/home-figures.test.ts` on the local stack failed 6 of 6 tests (AC-0011, AC-0012 twice, AC-0015, AC-0024, and the stock-on-hand check), each because `public.v_daily_sales`, `public.v_stock_value`, or `public.v_stock_on_hand` does not exist. The commit it ran on is added at T4.
