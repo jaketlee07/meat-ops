@@ -3,19 +3,19 @@
 This is the source of truth for the costing math. The tests in
 `test/costing.test.ts`, `test/engine.test.ts`, `test/corrections.test.ts`,
 `test/pricing.test.ts`, `test/receipt-corrections.test.ts`,
-`test/batch-reversal.test.ts`, `test/zero-stock.test.ts`, and
-`test/alerts-corrections.test.ts` encode every costing number below. The rules and reads around them are in
+`test/batch-reversal.test.ts`, `test/zero-stock.test.ts`,
+`test/alerts-corrections.test.ts`, and `test/home-figures.test.ts` encode every costing number below. The rules and reads around them are in
 `test/correction-rules.test.ts`, `test/corrections-data.test.ts`, and
 `test/save-correction.test.ts`, and the two pages' end-to-end checks are in
 `test/e2e/correct.spec.ts` and `test/e2e/reverse.spec.ts`. The display formats
 in the Rounding note are asserted by `test/format.test.ts`,
 `test/production-rules.test.ts`, and `test/pricing-rules.test.ts`, and its
-missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, and `test/e2e/trace.spec.ts`. If a change turns any of these red, the change is
+missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, `test/e2e/trace.spec.ts`, and `test/e2e/home.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
 `record_sale`, `void_receipt`, `void_sale`, `adjust_lot`, `correct_receipt`, and `reverse_batch`, the views
-`v_product_pricing` and `v_sale_summary`, and the function `price_what_if`.
+`v_product_pricing`, `v_sale_summary`, `v_daily_sales`, and `v_stock_value`, and the function `price_what_if`.
 Nothing in TypeScript computes a cost, an average, or a price.
 
 ## Cost build-up per finished lb
@@ -382,6 +382,33 @@ batch 2, and RAW-TOM has 1,000 lbs on hand at 1.8000.
   1,000 lbs from lot B now cost 1.90.
 - With lot B adjusted to 900 lbs first, the smallest weight is 2,100 lbs.
 
+## Today's sales and stock value
+
+The "Today" page shows two money figures, both worked out by views and left
+unrounded. The screen rounds them for display (see the Rounding note).
+
+- **Today's sales** (`v_daily_sales.sales_total`) is the sum of `lbs_sold ×
+  price_per_lb` over the sale items of one date's sales that are not voided. A
+  date with no sale, or only voided ones, has no row.
+- **Stock value** (`v_stock_value`) is `raw_value`, the sum of `remaining_lbs ×
+  current_unit_cost` over every lot; `finished_value`, the sum of `lbs_remaining ×
+  cost_per_lb` over every finished good; and `total_value`, the two added. It
+  counts every product, active or not. A voided receipt zeroes its lot's
+  remaining lbs, so it adds no value. A reversal zeroes its batch's finished
+  goods and returns the raw lbs it drew to the lots they came from, so those
+  count again in `raw_value`. A voided sale returns its lbs to the finished
+  goods it drew from, so they count again in `finished_value`. The view has one row when the caller can see at least
+  one lot or finished good, and no row otherwise: for a caller who cannot read
+  stock, and for one who can when no lot and no finished good exist.
+
+Worked example (`test/home-figures.test.ts`). Sales of 502 on one date: 100 lbs at
+$3.2900/lb and 50 lbs at $3.5000/lb, and a 10 lb sale at $3.0000/lb that is
+voided. The date's total is 329 + 175 = 504. After receipts of RAW-TOM of 1,000
+lbs at $1.6800/lb and then 500 lbs at $1.8000/lb, a batch of 502 from 400 raw
+lbs (308 finished lbs at $2.6318/lb), and those sales, the raw value is
+600 × 1.68 + 500 × 1.80 = 1,908, the finished value is 158 × 2.6318 = 415.8244,
+and the total value is 2,323.8244.
+
 ## Rounding note
 
 v_product_pricing returns numbers the database has already rounded: cost per lb
@@ -405,7 +432,7 @@ through the same formats:
 | Date | month abbreviation, day, year, in any time zone | 2026-10-07 → Oct 7, 2026 |
 | Shrink | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.23 → 23%; 0.235 → 23.5%; 0.2345 → 23.45%; 0 → 0% |
 | Margin (at a list price) | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.2 → 20%; 0.018 → 1.8%; 0.2001 → 20.01%; 0.2481 → 24.81%; -0.0527 → -5.27%; 0 → 0% |
-| Raw cost total | "$", thousands separators, 2 decimals | 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01 |
+| Money total (a raw cost total, a day's sales total, and a stock value) | "$", thousands separators, 2 decimals | 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01; 504 → $504.00; 415.8244 → $415.82; 2323.8244 → $2,323.82 |
 | Days (days left) | 0 to 1 decimals with a trailing zero dropped, then " day" when the rounded value is exactly 1 and " days" otherwise | 5.3333 → 5.3 days; 7 → 7 days; 1 → 1 day; 0 → 0 days; 0.96 → 1 day |
 | Change (a cost change or drift) | the absolute value of the fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%"; the words "up", "down", "above", and "below" carry the sign | 0.0962 → 9.62%; -0.1024 → 10.24%; 0.1 → 10%; 0.6667 → 66.67% |
 
@@ -424,6 +451,10 @@ Where the database has nothing to show, the screen uses text:
   makes the product inactive before the reversal and asserts "Not available" in
   both the before and the after column of the "Batch reversed" panel; no test
   asserts it for "Sale saved".
+- A money figure with no row shows "$0.00": "Today's sales" on the home screen with no sale
+  that is not voided on the app's today, and each stock value tile with no lot and no
+  finished good. This holds only after the read succeeded; a failed read shows the
+  error view, never "$0.00".
 - The target margin of a finished product with none shows "No target".
 - The raw average cost, cost after shrink, and cost per lb of a finished
   product whose raw product has no non-void receipt show "None yet", whatever

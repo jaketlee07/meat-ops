@@ -79,11 +79,11 @@ test.describe("signed out", () => {
     expect(await authCookies(page)).toEqual([]);
   });
 
-  test("AC-0002 and AC-0006: sign-in ends on the receiving form, with HttpOnly SameSite=Lax cookies", async ({ page }) => {
+  test("AC-0002 and AC-0006: sign-in ends on Today at /, with HttpOnly SameSite=Lax cookies", async ({ page }) => {
     await signInThroughForm(page, OPERATOR_EMAIL);
-    // AC-0002: signing in ends on /receiving with the receiving form shown.
-    await expect(page).toHaveURL(/\/receiving$/);
-    await expect(page.getByRole("form", { name: RECEIVING_FORM })).toBeVisible();
+    // AC-0002: signing in ends on / with the Today page shown.
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
     const atSignIn = await authCookies(page);
     expect(atSignIn.length, "the session cookie exists after sign-in").toBeGreaterThan(0);
     for (const cookie of atSignIn) {
@@ -151,7 +151,7 @@ test.describe("sign out", () => {
     expect(refused.body.error_code).toBe("refresh_token_not_found");
   });
 
-  test("AC-0005: Sign out on the operator's receiving page ends on /sign-in, and /receiving then ends there too", async ({
+  test("AC-0005: Sign out from Today at / ends on /sign-in, and /receiving then ends there too", async ({
     browser,
     baseURL,
   }) => {
@@ -162,7 +162,7 @@ test.describe("sign out", () => {
     try {
       const page = await context.newPage();
       await signInThroughForm(page, OPERATOR_EMAIL);
-      await expect(page.getByRole("form", { name: RECEIVING_FORM })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
       expect((await authCookies(page)).length, "the session cookie exists before sign-out").toBeGreaterThan(0);
 
       await page.getByRole("button", { name: "Sign out" }).click();

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Meat Ops",
     short_name: "Meat Ops",
-    start_url: "/receiving",
+    start_url: "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#1d4ed8",

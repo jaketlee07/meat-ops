@@ -42,7 +42,7 @@ export async function signIn(_previous: SignInState, formData: FormData): Promis
   }
 
   // redirect() throws to leave the action, so it stays outside the try.
-  redirect("/receiving");
+  redirect("/");
 }
 
 // Removes every Supabase auth cookie the request holds: the session cookie, its

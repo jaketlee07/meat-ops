@@ -16,9 +16,10 @@ export async function submitSignIn(page: Page, email: string, password = TEST_PA
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
-// Signs in through the form and waits until the receiving page has loaded.
+// Signs in through the form and waits until the page sign-in lands on has loaded: "Today" for an
+// operator, the not-allowed page for a non-operator.
 export async function signInThroughForm(page: Page, email: string): Promise<void> {
   await submitSignIn(page, email);
-  await page.waitForURL("**/receiving");
+  await page.waitForURL((url) => url.pathname === "/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 }

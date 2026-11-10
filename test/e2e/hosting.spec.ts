@@ -205,7 +205,7 @@ function parseSetCookie(line: string): { name: string; attributes: Map<string, s
 test.describe("every auth cookie is Secure", () => {
   test("AC-0001: sign-in and a token refresh both set Secure on every auth cookie", async ({ page }) => {
     await signInThroughForm(page, OPERATOR_EMAIL);
-    await expect(page).toHaveURL(/\/receiving$/);
+    await expect(page).toHaveURL(/\/$/);
     const atSignIn = await authCookies(page);
     expect(atSignIn.length, "the session cookie exists after sign-in").toBeGreaterThan(0);
     for (const cookie of atSignIn) expect(cookie.secure, `secure on ${cookie.name} after sign-in`).toBe(true);
@@ -243,7 +243,7 @@ test.describe("every auth cookie is Secure", () => {
 const MANIFEST = {
   name: "Meat Ops",
   short_name: "Meat Ops",
-  start_url: "/receiving",
+  start_url: "/",
   display: "standalone",
   background_color: "#ffffff",
   theme_color: "#1d4ed8",

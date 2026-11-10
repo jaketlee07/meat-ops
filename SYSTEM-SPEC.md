@@ -111,6 +111,9 @@ the app is allowed to bypass.
 - v_current_menu: per finished product, its suggested price, its list price, and whether it is sellable now (has finished stock, or has raw available to make it). The menu reads this.
 - v_sale_traceability: per sale line, the full chain: sale, customer name (empty when the sale has no customer), sale line id, finished product, lbs sold and price per lb on the line, batch, production date, raw lot, raw product, vendor, received date, lbs drawn from that lot, and that lot's current cost. Void sales do not appear. It also carries the sale, the customer, the raw product's code, and the keys that put batches and lots in the order they were drawn. Both forward trace (sale to origin) and reverse trace (lot to every sale) read this.
 - v_sale_summary: one row per sale, void or not, with its finished product, customer name (empty when the sale has no customer), total lbs sold, price per lb, and the void time and reason. The sales page reads it.
+- v_daily_sales: one row per sale date that has a sale not voided, with `sale_date` and `sales_total`, the sum of lbs sold times price per lb over that date's sales that are not voided. A date whose sales are all voided has no row. The "Today" page reads it.
+- v_stock_value: one row of `raw_value` (every lot's remaining lbs at its current cost), `finished_value` (every finished good's remaining lbs at its cost per lb), and `total_value` (the two added), all unrounded. A caller who can read no lot or finished good gets no row. The "Today" page reads it.
+- v_stock_on_hand: one row per product, active or not, with `product_id`, `code`, `description`, `kind`, `active`, and `lbs_on_hand`: a raw product's balance (0 with no balance row) or a finished product's remaining lbs summed over its finished goods (0 with none). The "Today" page reads it.
 
 ## 5. The deterministic engine (behavioral contracts, no code)
 
