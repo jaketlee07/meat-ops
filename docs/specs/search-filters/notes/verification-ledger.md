@@ -57,3 +57,7 @@ Every round 6 finding is prior-round-repair origin, in round 5's rewrite of the 
 - **Owner's call, 2026-11-10.** Rounds 4 to 6 found 2, 4, and 3 findings, all in this one plan bullet; the spec's criteria are unchanged since round 4. The owner chose to apply round 6's three fixes and go to approval without a seventh round. The fixes are unreviewed; the post-gates reviews read the real test code.
 - **Deletion pass.** Every criterion added during review is an owner call (the 50-row cap, the vendor limit, the sales order, inactive products), a trust-boundary check on address input, or a split of an earlier criterion. None was cut.
 
+## Approval (2026-11-10)
+
+- The owner approved the spec and the plan on 2026-11-10 at `7be828e`.
+
