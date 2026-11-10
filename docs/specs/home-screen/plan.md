@@ -76,7 +76,7 @@ Most construction tests live under **Tasks** below.
 **Touches:** `supabase/migrations/<timestamp>_home_figures.sql`, `src/lib/database.types.ts`, `test/home-figures.test.ts`, `SYSTEM-SPEC.md`, `docs/costing.md`, `docs/architecture/overview.md`
 
 **Tests:**
-- New `test/home-figures.test.ts`, run with the reset and seed helpers the existing Vitest suites share: AC-0011 with its three sales seeded through `record_sale` and `void_sale`, plus a sale on another date and a date whose only sale is voided, which have no row on AC-0011's date; AC-0012 with its lots and finished goods set as `postgres`, the test-setup role the Access model names, plus a voided lot and a reversed batch that add nothing. Each compares the view's value as text.
+- New `test/home-figures.test.ts`, run with the reset helper and the operation calls the existing Vitest suites share, and writing no lot, balance, batch, finished good, or sale directly (`test/db.ts`'s rule): AC-0011 with its sales through `record_sale` and `void_sale`, plus a sale on another date and a date whose only sale is voided, which have no row on AC-0011's date; AC-0012 through `receive_lot`, `produce_batch`, and AC-0011's sales, plus a receipt voided through `void_receipt` and a batch reversed through `reverse_batch`, which add nothing. Each compares the view's value as text.
 - The same file: AC-0015 reads each of the three views as `anon`, a non-operator, an operator, and `service_role`, as `test/sales.test.ts` reads its views; AC-0024 reads each view's privileges for `anon`, `public`, `authenticated`, and `service_role` from the catalog.
 - `test/access.test.ts` stays unchanged: its fixture's receipt, batch, and sale give the operator a row from each new view.
 - Each new test is seen red once before the migration exists, recorded in the ledger.
@@ -91,16 +91,16 @@ Most construction tests live under **Tasks** below.
 
 **Depends on:** T1
 **Mode:** manual QA through the browser suite
-**Touches:** `src/lib/home.ts`, `src/app/page.tsx`, `src/app/home/`, `src/app/page-header.tsx`, `src/app/globals.css`, `test/e2e/home.spec.ts`, `test/e2e/home-page.ts`, `docs/costing.md`, `docs/architecture/overview.md`
+**Touches:** `src/lib/home.ts`, `src/app/page.tsx`, `src/app/error.tsx`, `src/app/sign-in/error.tsx`, `src/app/home/`, `src/app/page-header.tsx`, `src/app/globals.css`, `test/e2e/home.spec.ts`, `test/e2e/home-page.ts`, `docs/costing.md`, `docs/architecture/overview.md`
 
 **Tests:**
 - no stub (manual QA): the checks are the rendered page's roles, text, and boxes.
-- New `home.spec.ts`, opening `/` directly with the saved sessions: AC-0003 with the non-operator's; AC-0030 reading the four sections' source order and boxes at 390 px and 1280 px; AC-0014 with AC-0011's sales dated today and AC-0012's stock set as `postgres`; AC-0013 and AC-0027 on an emptied stack, AC-0013 also with only a voided sale today; AC-0004 against the order `/alerts` shows for the same alerts; AC-0026 with and without open alerts; AC-0005; AC-0021 and AC-0022 inside `withWatchRefused` from `test/e2e/alerts-page.ts`; AC-0007 and AC-0008 with entries on the app's today and the day before, one of each voided or reversed; AC-0009 and AC-0031 with two receipts, no batch, and one sale; AC-0010 against `inventory_balances` and `finished_goods` read with `query`, with one inactive product holding stock and one holding none; AC-0032 on an emptied stack; AC-0016 and AC-0028 at each width and text size they name, with the long values set as `postgres`.
+- New `home.spec.ts`, opening `/` directly with the saved sessions and seeding every receipt, batch, and sale through `seedReceipt`, `seedBatch`, `seedSale`, and the void and reverse operations, never by a direct write: AC-0003 with the non-operator's; AC-0030 reading the four sections' source order and boxes at each width and text size it names; AC-0014 with AC-0012's receipts, batch, and sales dated today; AC-0013 and AC-0027 on an emptied stack, AC-0013 also with only a voided sale today; AC-0004 against the order `/alerts` shows for the same alerts; AC-0026 with and without open alerts; AC-0005; AC-0021 and AC-0022 inside `withWatchRefused` from `test/e2e/alerts-page.ts`; AC-0007 and AC-0008 with entries on the app's today and the day before, one of each voided or reversed; AC-0009 and AC-0031 with two receipts, no batch, and one sale; AC-0010 against `inventory_balances` and `finished_goods` read with `query`, with one inactive product holding stock and one holding none (a product's `active` flag is master data); AC-0032 on an emptied stack; AC-0016 and AC-0028 at each width and text size they name, with the long values set through the operations (for example, receipts of 1,800,000 lbs and then 1,234,567.891 lbs of RAW-TOM at $1.68, a batch of 502 from 1,800,000 raw lbs, and a sale of 1,000,000 lbs at $3.50, which leave each money tile from $1,000,000.00 to $9,999,999.99).
 
 **Approach:**
-- Build the reads, then the page and its section parts, reusing each Recent list's formats and tags.
+- Build the reads, then the page and its section parts, reusing each Recent list's formats and tags, then the two error files, each rendering `PageError` as the other pages' `error.tsx` files do.
 - Add `today` to `PageName` and drop the banner region for it in `PageShell`.
-- Write "Today" at `/` and its sections into the overview's `src/app` row, list the new suite in its `test/e2e/` row, and add the home screen's figures to the Rounding note's money row.
+- Write "Today" at `/` and its sections into the overview's `src/app` row, list the new suite in its `test/e2e/` row, and turn the Rounding note's "Raw cost total" row into one for every money total, with "$0.00" for a missing row in its "Where the database has nothing to show" list.
 
 **Done when:** the T2 tests pass and `npm test` passes.
 
@@ -131,7 +131,7 @@ Most construction tests live under **Tasks** below.
 **Tests:**
 - no stub (visual and manual QA): the owner's verdict and a diff read.
 - `home.spec.ts`: AC-0020 runs `checkPageState` on `/` in each state it names.
-- The ledger records the owner's AC-0017 verdict, the AC-0019 read of `git diff` from the branch point over `test/` with untracked files listed, and the red runs T1 saw.
+- The ledger records the owner's AC-0017 verdict, the AC-0019 read of `git diff` from the branch point over `test/` with untracked files listed, the red runs T1 saw, and recorded runs of AC-0033 and AC-0034: `/` loaded while a scratch revoke of select on `v_stock_value` from `authenticated` refuses one of its reads, and `/sign-in` loaded with a scratch throw in its page; the grant is restored and the throw removed right after each run.
 - Each T4 record names the commit it read: the branch's last commit that changes a file other than those under `docs/specs/home-screen/`, `docs/product/briefs/ui-polish.md`, and `workspace.toml`. A later commit that changes any other file re-opens every T4 record; one that changes only those files re-opens none.
 
 **Approach:**
@@ -146,9 +146,9 @@ One PR. Rollback is a revert of the app and a new migration that drops the three
 ## Risks
 
 - An existing browser test that walks a menu's Tab order or counts its links fails once "Today" joins it. T3 changes only what AC-0019 lists, and the T4 diff read checks each change.
-- `/` is now the page that every sign-in and every installed-app start reads from the database. A failed read goes to the error view, as on every other page.
 
 ## Changelog
 
 - 2026-11-09: initial plan, after the owner's answers on the sign-in landing, the four sections, the banner, the menu item, and the money figures, a rolled-back view probe on stack A, and a Node probe of Intl's rounding.
 - 2026-11-09: after spec-stage review round 1 (adversarial, shaping, and security): a third view for per-product lbs; the owner's calls on the install file's start, inactive products' stock, and the section order; layouts that follow their own container's width; a sign-in wait that holds for both roles; the probe results moved to the spec's Assumptions; and catalog and `service_role` checks for the views.
+- 2026-11-09: after spec-stage review round 2 (adversarial and shaping; security clean): every test fixture through the operations, with one worked example the operations produce; every existing sign-in landing check in AC-0019's list; named data and boxes for the layout checks; and, on the owner's call, error files for `/` and `/sign-in`, checked by recorded runs.
