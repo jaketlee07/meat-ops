@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatPricePerLb, formatWeight } from "../../lib/format";
 import { Facts } from "../facts";
+import { CONTROL, LABEL } from "../form-parts";
 import { StatusTag } from "../status-tag";
 
 export interface MenuCard {
@@ -17,6 +18,7 @@ export interface MenuCard {
 
 const NONE = "No active finished products yet. Add one in Supabase Studio, then reload this page.";
 const NOTHING_SELLABLE = "No product can be sold right now.";
+const NO_MATCH = "No products match.";
 
 // Where the list is a table (the `menu-table` variant: the list's section is the container named `menu`
 // and at least 42rem wide at the current text size) the switch, its status line, the header line, and
@@ -54,12 +56,34 @@ const SWITCH = [
 // every load. The database decides which products are sellable; this only filters.
 export function MenuList({ items }: { items: MenuCard[] }) {
   const [sellableOnly, setSellableOnly] = useState(false);
-  const shown = sellableOnly ? items.filter((item) => item.sellable) : items;
+  const [search, setSearch] = useState("");
+  // The text is trimmed as JavaScript's `trim` does, and both sides are lower-cased with `toLowerCase`
+  // (not the browser's language rules) and compared with `includes`, so every character matches only itself.
+  const text = search.trim().toLowerCase();
+  const bySwitch = sellableOnly ? items.filter((item) => item.sellable) : items;
+  const shown =
+    text === ""
+      ? bySwitch
+      : bySwitch.filter((item) => item.code.toLowerCase().includes(text) || item.description.toLowerCase().includes(text));
 
   if (items.length === 0) return <p className="text-base">{NONE}</p>;
 
   return (
     <section className="@container/menu">
+      <div className="mb-3">
+        <label htmlFor="menu-search" className={LABEL}>
+          Search products
+        </label>
+        <input
+          id="menu-search"
+          type="text"
+          autoComplete="off"
+          maxLength={100}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className={`${CONTROL} min-h-control`}
+        />
+      </div>
       {/* The container cannot style itself, so this div carries the table's card edge. It clips, so the switch's
           label keeps 6px above and below its checkbox, inside the card, for the 4px focus ring. */}
       <div className="menu-table:overflow-hidden menu-table:rounded-card menu-table:border menu-table:border-card-border menu-table:bg-surface">
@@ -73,8 +97,10 @@ export function MenuList({ items }: { items: MenuCard[] }) {
           Sellable only
         </label>
         <div role="status">
-          {sellableOnly && shown.length === 0 && (
-            <p className="mb-3 text-base menu-table:mb-0 menu-table:px-4 menu-table:pb-3">{NOTHING_SELLABLE}</p>
+          {shown.length === 0 && (text !== "" || sellableOnly) && (
+            <p className="mb-3 text-base menu-table:mb-0 menu-table:px-4 menu-table:pb-3">
+              {text !== "" ? NO_MATCH : NOTHING_SELLABLE}
+            </p>
           )}
         </div>
         {shown.length > 0 && (

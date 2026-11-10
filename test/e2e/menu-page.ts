@@ -14,6 +14,9 @@ export const MENU_CONTROLS = [
   ...HEADER_STOPS,
 ];
 
+// "Search products" has the id its label points at and no name, so the Tab walk reports it by its id.
+export const MENU_SEARCH_STOP = "input #menu-search";
+
 export function sellableSwitch(page: Page): Locator {
   return page.getByLabel("Sellable only");
 }

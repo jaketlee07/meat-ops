@@ -33,6 +33,7 @@ import {
   addRaw,
   cards,
   MENU_CONTROLS,
+  MENU_SEARCH_STOP,
   produce,
   receive,
   retire502,
@@ -55,7 +56,7 @@ const MENU_COLUMNS = ["Product", "List price", "Finished on hand", "Raw on hand"
 const FIGURE_LABELS = ["Finished on hand", "Raw on hand"];
 
 // What Tab reaches on /menu: the shell, then the switch.
-const WITH_SWITCH = [...MENU_CONTROLS, "input"];
+const WITH_SWITCH = [...MENU_CONTROLS, MENU_SEARCH_STOP, "input"];
 
 // Six products, four sellable now and two not: a $10 price, one with no list price and stock, one with no
 // list price and none, one with raw stock only, and one with no finished stock. The seeded 502 is retired.

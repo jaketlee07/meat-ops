@@ -92,3 +92,20 @@ Red run 2: `src/lib/list-search.ts` written (the five pure tests then passed), t
 - AC-0029, 100 vendors, then 101, then an empty text: `AssertionError: expected undefined to be false // Object.is equality` (the read had no `tooManyVendors` field yet; the test was then changed to expect it absent when false, because `receiving-data-extra.test.ts` compares a no-receipt result with `toEqual`, and its `tooMany.tooManyVendors` check still fails on the old read)
 
 The unsearched-text half of each AC-0012 test (notes, void reason, correction reason, reversal reason) runs after the first assertion in the test, so it was not reached in red run 2; it ran green with the reads.
+
+## T4
+
+Red run, 2026-11-10, against `src/app/menu/menu-list.tsx` unchanged from commit `e55439a` (the new `test/e2e/list-search.spec.ts` and `test/e2e/list-search-page.ts` in place; the two `/menu` Tab-order lists already holding the box's stop). `npm run test:e2e -- list-search`: 24 failed, 2 passed (the two sign-in setup tests), 10.2 minutes. The 24 failures, each before the box existed:
+
+- AC-0007: `Expected: 1  Received: 0` counting the "Search products" text box in the switch's section.
+- AC-0045, AC-0010 (names, codes, every punctuation character), AC-0011, AC-0028 (no match), and AC-0038 and AC-0039 at 390, 1024, and 1280 px at both text sizes (12 runs): `locator.click: Test timeout of 30000ms exceeded. waiting for getByRole('textbox', { name: 'Search products', exact: true })`.
+- AC-0014: `Expected: "100"  Error: element(s) not found` reading the box's `maxlength`.
+- AC-0037: the walk read `["button #menu-button", "a #alerts-link", "input"]` and lacked `"input #menu-search"`.
+- AC-0040 and AC-0041: the same missing box (`getByRole('textbox', ...)` or the box's id not found).
+- AC-0028 (lines with the text empty): failed on a test fault, not the missing box: `getByRole('status')` matched the shell's status region as well as Menu's. The test now reads Menu's own region through `menuStatus`.
+
+## Wave 1 gate (T1 and T4)
+
+- Before the gate, `test/invoice-data.test.ts` timed out in T4's run, a file this work does not touch. The stack A slot fix ran at 2026-11-10T22:01Z under the owner's build approval: dead `pg_class` rows went from 522,934 to 0 and the Realtime slot's age from 70,206 to 2.
+- `npm test` passed on T1's commit `e55439a` plus T4's uncommitted work: Vitest 58 files and 1,101 tests in 68 s, then Playwright 1,197 tests in 15.0 min.
+
