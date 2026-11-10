@@ -14,6 +14,7 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 | 2 (delta `316e196..f259c79`) | 6 findings: 3 sustained and accepted, 2 refuted, 1 indeterminate settled by the owner | 10 findings, all accepted | Clean |
 | 3 (delta `f259c79..0557b56`) | 6 findings: 5 sustained and accepted, 1 refuted | 5 findings, all accepted | Not run (the delta changes no access) |
 | 4 (delta `0557b56..b7f80af`) | Not run (three-round cap) | 3 findings, all accepted | Not run (the delta changes no access) |
+| 5 (delta `b7f80af..849a685`) | Not run (three-round cap) | 2 findings, all accepted | Not run (the delta changes no access) |
 
 - Every round 1 finding is draft-origin: each condition was in the draft before review.
 - Round 1 refuted (no change from the finding): adversarial 9 (no rule makes the stock value and the list cover the same products), 10 (no rule moved the install file's start), and 15 (the access fixture already gives the operator a row from each view). The owner then chose on 2026-11-09 to count and list an inactive product's stock and to open the installed app on "Today", and the plan's fixture fallback is gone.
@@ -25,3 +26,4 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 - Round 3 origins: every finding is prior-round-repair. AC-0016's lbs values drew a finding in rounds 1, 2, and 3 under three wordings, which the rubric reads as a defect in what the clause asked for; it now names one exact value per figure, all produced through the operations by a rolled-back probe. AC-0033 now names its reads and runs in the browser suite, since committed tests already refuse a read by revoking a grant.
 - Round 3 refuted (no change from the finding): adversarial 1 (the AC-0034 run can be served by `npm run dev`; the Testing Strategy now names that server anyway, as the true reason for the recorded run).
 - Round 4 origins: all three shaping findings are prior-round-repair. The receipts run's revoke of `lots` also refused the stock value view; a column grant now keeps the view readable, which a rolled-back probe confirmed.
+- Round 5 origins: both shaping findings are prior-round-repair, from round 4's evidence gap and Fix wording. `v_alerts` reads the same `lots` and `production_batches` columns as the receipts and batches reads, so no grant can fail one of them alone on a loaded page; the repair closes the class by checking each read alone in Vitest (AC-0033) and the error view once in the browser (AC-0035).
