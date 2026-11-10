@@ -270,7 +270,7 @@ test.describe("the phone menu", () => {
     await expect(field).toBeFocused();
   });
 
-  test("AC-0015: the page-state check passes with the phone menu open, reaching Close menu, the nine links, Sign out", async ({
+  test("AC-0015: the page-state check passes with the phone menu open, reaching Close menu, the ten links, Sign out", async ({
     page,
   }) => {
     await openPhoneMenu(page);
@@ -368,7 +368,7 @@ test.describe("focus outlines", () => {
 test.describe("the desktop walk", () => {
   test.use({ storageState: OPERATOR_STATE });
 
-  test("AC-0018: with one urgent alert, the page-state check passes and the 1280 walk reaches the nine links, then Sign out, first", async ({
+  test("AC-0018: with one urgent alert, the page-state check passes and the 1280 walk reaches the ten links, then Sign out, first", async ({
     page,
   }) => {
     await marginCase();

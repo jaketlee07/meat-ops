@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, expect, it } from "vitest";
 import { createTypedClient } from "../src/lib/supabase.js";
 import {
   assertLedgerInvariants,
   callAsOperator,
   closePool,
+  correctCall,
   idOf,
   PROD_502_ID,
   produceCall,
@@ -23,8 +24,9 @@ import { resolveStackEnv } from "./env.js";
 import { signInNonOperator, signInOperator } from "./users.js";
 
 // Every name, price, and figure in this file is made up. Setup goes through the
-// operations only; the views are read back with SQL numeric comparisons, never
-// through JavaScript arithmetic.
+// operations only; each view value is read back as text and compared with its exact unrounded text
+// at the views' scale of 7 (lbs at scale 3 times a cost or price at scale 4), so a view that rounds
+// fails. No figure goes through JavaScript arithmetic.
 
 const VIEWS = ["v_daily_sales", "v_stock_value", "v_stock_on_hand"] as const;
 const SALES_DAY = "2026-06-10";
@@ -51,14 +53,14 @@ async function recordDaySales(): Promise<void> {
   await run(voidSaleCall(voided));
 }
 
+// The three stock values as the views' own text.
 async function stockValue() {
-  const rows = await query<{ raw_ok: boolean; finished_ok: boolean; total_ok: boolean; n: string }>(
-    `select raw_value = 1908 as raw_ok, finished_value = 415.8244 as finished_ok,
-            total_value = 2323.8244 as total_ok, count(*) over () as n
-     from public.v_stock_value`,
+  return query<{ raw_value: string; finished_value: string; total_value: string }>(
+    `select raw_value::text, finished_value::text, total_value::text from public.v_stock_value`,
   );
-  return rows;
 }
+
+const WORKED_STOCK = [{ raw_value: "1908.0000000", finished_value: "415.8244000", total_value: "2323.8244000" }];
 
 beforeEach(async () => {
   await resetTestData();
@@ -79,12 +81,12 @@ it("AC-0011: the daily sales view totals the day's sales that are not voided", a
   await run(voidSaleCall(onlyVoided));
 
   const day = await query(
-    `select sales_total = 504 as exact, sales_total::numeric = 504.0000 as same from public.v_daily_sales where sale_date = $1`,
+    `select sales_total::text as total from public.v_daily_sales where sale_date = $1`,
     [SALES_DAY],
   );
-  expect(day).toEqual([{ exact: true, same: true }]);
-  const other = await query(`select sales_total = 60 as exact from public.v_daily_sales where sale_date = '2026-06-11'`);
-  expect(other).toEqual([{ exact: true }]);
+  expect(day).toEqual([{ total: "504.0000000" }]);
+  const other = await query(`select sales_total::text as total from public.v_daily_sales where sale_date = '2026-06-11'`);
+  expect(other).toEqual([{ total: "60.0000000" }]);
   const voidedDay = await query(`select 1 from public.v_daily_sales where sale_date = '2026-06-12'`);
   expect(voidedDay).toEqual([]);
   const all = await query(`select count(*)::int as n from public.v_daily_sales`);
@@ -96,7 +98,20 @@ it("AC-0012: the stock value view adds every lot and finished good, unrounded", 
   await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 500, 1.8, "2026-06-01"));
   await run(produceCall(PROD_502_ID, 400, null, "2026-06-02"));
   await recordDaySales();
-  expect(await stockValue()).toEqual([{ raw_ok: true, finished_ok: true, total_ok: true, n: "1" }]);
+  expect(await stockValue()).toEqual(WORKED_STOCK);
+});
+
+it("AC-0012: a receipt whose cost is corrected values its lot, and the batch drawn from it, at the new cost", async () => {
+  const drawn = await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 1000, 1.68, "2026-06-01"));
+  await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 500, 1.8, "2026-06-01"));
+  await run(produceCall(PROD_502_ID, 400, null, "2026-06-02"));
+  await recordDaySales();
+  await run(correctCall(drawn, 1.86, 1000));
+  // Raw: 600 lbs left of the corrected lot at 1.86 (1116) plus 500 at 1.80 (900). The batch restates:
+  // 400 x 1.86 = 744 over 308 finished lbs is 2.4156, plus the 0.45 of fees is 2.8656; 158 x 2.8656 = 452.7648.
+  expect(await stockValue()).toEqual([
+    { raw_value: "2016.0000000", finished_value: "452.7648000", total_value: "2468.7648000" },
+  ]);
 });
 
 it("AC-0012: a voided receipt and a reversed batch add nothing to the stock value", async () => {
@@ -108,7 +123,7 @@ it("AC-0012: a voided receipt and a reversed batch add nothing to the stock valu
   await run(voidReceiptCall(extraLot));
   const extraBatch = await run(produceCall(PROD_502_ID, 100, null, "2026-06-04"));
   await run(reverseCall(extraBatch));
-  expect(await stockValue()).toEqual([{ raw_ok: true, finished_ok: true, total_ok: true, n: "1" }]);
+  expect(await stockValue()).toEqual(WORKED_STOCK);
 });
 
 it("AC-0015: each new view refuses anon, shows a non-operator no row, and shows an operator and service_role a row", async () => {

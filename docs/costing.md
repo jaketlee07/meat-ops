@@ -393,10 +393,12 @@ unrounded. The screen rounds them for display (see the Rounding note).
 - **Stock value** (`v_stock_value`) is `raw_value`, the sum of `remaining_lbs ×
   current_unit_cost` over every lot; `finished_value`, the sum of `lbs_remaining ×
   cost_per_lb` over every finished good; and `total_value`, the two added. It
-  counts every product, active or not. A void zeroes the lot or sale it takes
-  back and a reversal zeroes its batch's finished goods, so neither adds value.
-  The view returns one row for a caller who can read stock and none for one who
-  cannot.
+  counts every product, active or not. A voided receipt zeroes its lot's
+  remaining lbs and a reversal zeroes its batch's finished goods, so neither
+  adds value; a voided sale returns its lbs to the finished goods it drew from,
+  so they count again. The view has one row when the caller can see at least
+  one lot or finished good, and no row otherwise: for a caller who cannot read
+  stock, and for one who can when no lot and no finished good exist.
 
 Worked example (`test/home-figures.test.ts`). Sales of 502 on one date: 100 lbs at
 $3.2900/lb and 50 lbs at $3.5000/lb, and a 10 lb sale at $3.0000/lb that is

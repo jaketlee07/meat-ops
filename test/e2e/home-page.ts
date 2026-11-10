@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import {
   callAsOperator,
+  correctCall,
   CUSTOMER_ID,
   idOf,
   PROD_502_ID,
@@ -117,6 +118,8 @@ export const sell = (lbs: number | string, price: number | string, daysAgo = 0, 
       p_sale_date: appDate(-daysAgo),
     },
   });
+export const correctReceipt = (lotId: string, cost: number | string, weight: number | string) =>
+  run(correctCall(lotId, cost, weight));
 export const voidSale = (saleId: string) => run(voidSaleCall(saleId));
 export const voidReceipt = (lotId: string) => run(voidReceiptCall(lotId));
 export const reverseBatch = (batchId: string) => run(reverseCall(batchId));
@@ -191,6 +194,31 @@ export async function expectedSale(id: string): Promise<Shown> {
     product: `${row!.code} ${row!.description}`,
     rest: [row!.customer ?? "No customer", ...(row!.voided ? ["Voided"] : [])],
   };
+}
+
+// Empties the products, as the empty-state tests do. The page's menu-link prefetches open database
+// transactions in the first seconds after a load, so the truncate can deadlock with one; Postgres then
+// ends one side, and if it ended the truncate, it runs once more (as resetTestData does).
+export async function truncateProducts(): Promise<void> {
+  const sql = "truncate product_fees, products restart identity cascade";
+  try {
+    await query(sql);
+  } catch (error) {
+    if ((error as { code?: string }).code !== "40P01") throw error;
+    await query(sql);
+  }
+}
+
+// The computed color a design token gives, read through a probe element.
+export async function tokenColor(page: Page, token: string): Promise<string> {
+  return page.evaluate((name) => {
+    const probe = document.createElement("span");
+    probe.style.color = `var(${name})`;
+    document.body.append(probe);
+    const value = getComputedStyle(probe).color;
+    probe.remove();
+    return value;
+  }, token);
 }
 
 // ---- Refusing a read ----

@@ -35,8 +35,12 @@ const RELATIONS_AND_READS: ReadonlyArray<[relation: string, read: (client: Typed
 ];
 
 async function restoreAll(): Promise<void> {
+  // Grants only where the read is missing: a GRANT makes PostgREST reload its schema cache.
   for (const [relation] of RELATIONS_AND_READS) {
-    await query(`grant select on public.${relation} to authenticated`);
+    const [row] = await query<{ granted: boolean }>(
+      `select has_table_privilege('authenticated', 'public.${relation}', 'select') as granted`,
+    );
+    if (!row?.granted) await query(`grant select on public.${relation} to authenticated`);
   }
 }
 
@@ -96,16 +100,55 @@ function nodesOf(file: ts.SourceFile): ts.Node[] {
 const calleeName = (call: ts.CallExpression): string | null =>
   ts.isIdentifier(call.expression) ? call.expression.text : null;
 
+const READ_MODULES = ["../lib/home", "../lib/alerts"];
+
+// The names the file binds, unaliased and not type-only, from src/lib/home or src/lib/alerts.
+function boundFromLib(file: ts.SourceFile): Set<string> {
+  const bound = new Set<string>();
+  for (const node of file.statements) {
+    if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) continue;
+    if (!READ_MODULES.includes(node.moduleSpecifier.text)) continue;
+    const clause = node.importClause;
+    if (!clause || clause.isTypeOnly || !clause.namedBindings || !ts.isNamedImports(clause.namedBindings)) continue;
+    for (const element of clause.namedBindings.elements) {
+      if (!element.isTypeOnly && !element.propertyName) bound.add(element.name.text);
+    }
+  }
+  return bound;
+}
+
+// The function that holds a node directly, or null at the top level.
+function enclosingFunction(node: ts.Node): ts.Node | null {
+  for (let up = node.parent; up; up = up.parent) {
+    if (ts.isFunctionLike(up)) return up;
+  }
+  return null;
+}
+
+function isDefaultExportedFunction(node: ts.Node | null): boolean {
+  if (!node || !ts.isFunctionDeclaration(node)) return false;
+  const words = ts.getModifiers(node)?.map((modifier) => modifier.kind) ?? [];
+  return words.includes(ts.SyntaxKind.ExportKeyword) && words.includes(ts.SyntaxKind.DefaultKeyword);
+}
+
 // What the page's source breaks of AC-0036's first clause; an empty list passes.
 function pageProblems(text: string): string[] {
   const problems: string[] = [];
   for (const banned of BANNED) if (banned.test(text)) problems.push(`holds the text ${banned}`);
 
-  const nodes = nodesOf(parse(text));
+  const file = parse(text);
+  const nodes = nodesOf(file);
   const calls = nodes.filter(ts.isCallExpression);
   const alls = calls.filter((call) => call.expression.getText() === "Promise.all");
   if (alls.length !== 1) return [...problems, `holds ${alls.length} Promise.all calls, not 1`];
   const all = alls[0]!;
+  if (!isDefaultExportedFunction(enclosingFunction(all))) {
+    problems.push("the Promise.all is not inside the default-exported page function");
+  }
+  const bound = boundFromLib(file);
+  for (const read of READS) {
+    if (!bound.has(read)) problems.push(`${read} is not bound by an unaliased import from ../lib/home or ../lib/alerts`);
+  }
   const awaited = all.parent;
   if (!ts.isAwaitExpression(awaited)) problems.push("the Promise.all is not awaited where it is written");
   const list = all.arguments[0];
@@ -165,7 +208,8 @@ function partProblems(text: string): string[] {
   return problems;
 }
 
-const IMPORTED = `import { getTodaySales, getStockValue, listOpenAlerts, listTodayReceipts, listTodayBatches, listTodaySales, listStockOnHand } from "x";`;
+const IMPORTED = `import { getTodaySales, getStockValue, listTodayReceipts, listTodayBatches, listTodaySales, listStockOnHand } from "../lib/home";
+import { listOpenAlerts } from "../lib/alerts";`;
 const GOOD = `${IMPORTED}
 export default async function P() {
   const [a, b, c, d, e, f, g] = await Promise.all([
@@ -174,18 +218,77 @@ export default async function P() {
   ]);
 }`;
 
-it("AC-0036: the checker passes a page of seven bare calls and fails each way of leaving that shape", () => {
+// Each page below leaves the shape one way; a branch of pageProblems must name exactly that way.
+const BAD_PAGES: ReadonlyArray<[what: string, page: string, problems: string[]]> = [
+  ["holds a banned text", `${GOOD}\n// catch`, ["holds the text /catch/i"]],
+  ["holds a second Promise.all", GOOD.replace("const [a", "await Promise.all([]); const [a"), ["holds 2 Promise.all calls, not 1"]],
+  ["leaves the Promise.all unawaited", GOOD.replace("await Promise.all", "Promise.all"), ["the Promise.all is not awaited where it is written"]],
+  [
+    "gives the Promise.all a variable instead of an array literal",
+    GOOD.replace(/Promise\.all\(\[[^]*?\]\)/, "Promise.all(list)"),
+    ["the Promise.all does not take one array literal"],
+  ],
+  ["lists an element that is not a call", GOOD.replace("listStockOnHand(s),", "listStockOnHand(s), other,"), ["an element is not a bare call of a read: other"]],
+  ["lists one read twice and leaves another out", GOOD.replace("listStockOnHand(s)", "getStockValue(s)"), ["the elements are not the seven reads, once each"]],
+  [
+    "calls a read outside the elements",
+    GOOD.replace("const [a", "getTodaySales(s, t); const [a"),
+    ["getTodaySales is called outside the Promise.all elements"],
+  ],
+  [
+    "awaits inside an element's arguments",
+    GOOD.replace("getStockValue(s)", "getStockValue(await s)"),
+    ["an await sits inside the Promise.all array"],
+  ],
+  [
+    "wraps a read in another call",
+    GOOD.replace("getStockValue(s)", "keep(getStockValue(s))"),
+    [
+      "an element is not a bare call of a read: keep(getStockValue(s))",
+      "the elements are not the seven reads, once each",
+      "getStockValue is called outside the Promise.all elements",
+    ],
+  ],
+  [
+    "chains onto a read",
+    GOOD.replace("listStockOnHand(s)", "listStockOnHand(s).x"),
+    [
+      "an element is not a bare call of a read: listStockOnHand(s).x",
+      "the elements are not the seven reads, once each",
+      "listStockOnHand is called outside the Promise.all elements",
+    ],
+  ],
+  [
+    "imports a read from another module",
+    GOOD.replace(", listStockOnHand }", " }") + '\nimport { listStockOnHand } from "./wrapped";',
+    ["listStockOnHand is not bound by an unaliased import from ../lib/home or ../lib/alerts"],
+  ],
+  [
+    "imports a read under another name",
+    GOOD.replace("listStockOnHand }", "keep as listStockOnHand }"),
+    ["listStockOnHand is not bound by an unaliased import from ../lib/home or ../lib/alerts"],
+  ],
+  [
+    "runs the Promise.all in a function that is not the default export",
+    GOOD.replace("export default async function P", "export async function P"),
+    ["the Promise.all is not inside the default-exported page function"],
+  ],
+  [
+    "runs the Promise.all in a function nested in the default export",
+    GOOD.replace("const [a, b, c, d, e, f, g] = await Promise.all([", "const run = async () => await Promise.all(["),
+    ["the Promise.all is not inside the default-exported page function"],
+  ],
+];
+
+it("AC-0036: the checker passes a page of seven bare calls imported from src/lib in the default-exported function", () => {
   expect(pageProblems(GOOD)).toEqual([]);
-  const outside = GOOD.replace("await Promise.all([", "await getTodaySales(s, t); await Promise.all([").replace(
-    "getTodaySales(s, t), getStockValue",
-    "getStockValue",
-  );
-  expect(pageProblems(outside).length, "a read awaited outside the Promise.all").toBeGreaterThan(0);
-  const wrapped = GOOD.replace("getStockValue(s)", "keep(getStockValue(s))");
-  expect(pageProblems(wrapped).length, "a read wrapped inside the Promise.all").toBeGreaterThan(0);
-  const chained = GOOD.replace("listStockOnHand(s)", "listStockOnHand(s).x");
-  expect(pageProblems(chained).length, "a read with something chained onto it").toBeGreaterThan(0);
 });
+
+for (const [what, page, problems] of BAD_PAGES) {
+  it(`AC-0036: the checker rejects a page that ${what}, and only for that`, () => {
+    expect(pageProblems(page)).toEqual(problems);
+  });
+}
 
 it("AC-0036: src/app/page.tsx awaits the seven reads in one Promise.all of bare calls and holds no handler text", () => {
   const page = readFileSync(join(ROOT, "src", "app", "page.tsx"), "utf8");
@@ -194,7 +297,7 @@ it("AC-0036: src/app/page.tsx awaits the seven reads in one Promise.all of bare 
 
 it("AC-0036: the files under src/app/home/ import from src/lib only format.ts and type-only imports, and nothing from _server", () => {
   const dir = join(ROOT, "src", "app", "home");
-  const files = readdirSync(dir).filter((name) => /\.tsx?$/.test(name));
+  const files = (readdirSync(dir, { recursive: true }) as string[]).filter((name) => /\.tsx?$/.test(name));
   expect(files.length, "the home parts exist").toBeGreaterThan(0);
   for (const name of files) expect(partProblems(readFileSync(join(dir, name), "utf8")), name).toEqual([]);
   expect(partProblems(`import { alertText } from "../../lib/alert-text";`).length).toBe(1);

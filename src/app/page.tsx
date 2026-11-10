@@ -38,13 +38,19 @@ export default async function TodayPage() {
   ]);
 
   // In place of the list: the failed watch's line, or the empty line.
-  const notice = watch.status === "failed" ? WATCH_FAILED : alerts.length === 0 ? NO_OPEN_ALERTS : null;
+  const failed = watch.status === "failed";
+  const notice = failed ? WATCH_FAILED : alerts.length === 0 ? NO_OPEN_ALERTS : null;
 
   return (
     <PageShell title="Today" current="today" fullWidth>
       <div className="space-y-6">
         <SalesAndStockValue sales={sales} stock={stock} />
-        <OpenAlerts titles={alerts.map((alert) => alertText(alert.view).title)} notice={notice} />
+        <OpenAlerts
+          titles={alerts.map((alert) => alertText(alert.view).title)}
+          notice={notice}
+          failed={failed}
+          urgent={watch.status === "ok" ? watch.urgent : 0}
+        />
         <div className="@container/today">
           <div className="grid items-start gap-6 today-pair:grid-cols-[minmax(0,1fr)_22rem]">
             <TodaysEntries receipts={receipts} batches={batches} sales={todaySales} />

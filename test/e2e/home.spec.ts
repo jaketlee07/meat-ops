@@ -1,12 +1,13 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { buildFiveAlertFixture } from "../alert-fixtures";
-import { callAsOperator, PROD_502_ID, query, RAW_TOM_ID, receiveCall, resetTestData, seedInvoiceFixture, VENDOR_ID } from "../db";
+import { callAsOperator, PROD_502_ID, query, RAW_CHK_ID, RAW_TOM_ID, receiveCall, resetTestData, seedInvoiceFixture, VENDOR_ID } from "../db";
 import { formatWeight } from "../../src/lib/format";
 import { checkPageState } from "./a11y";
 import { banner, groupTitles, marginCase, opens, withWatchRefused, WATCH_FAILED } from "./alerts-page";
 import { appDate } from "./app-time";
 import {
   alertTitlesShown,
+  correctReceipt,
   CUSTOMER_ID,
   entriesShown,
   expectedBatch,
@@ -31,6 +32,8 @@ import {
   stockShown,
   TEXT_SIZES,
   tileValues,
+  tokenColor,
+  truncateProducts,
   voidReceipt,
   voidSale,
   WIDTHS,
@@ -141,19 +144,59 @@ test.describe("open alerts", () => {
   });
 });
 
+test.describe("the Open alerts section for assistive technology and for a failed check", () => {
+  test("a line only screen readers hear gives the urgent count while an urgent alert is open, and is absent with none", async ({
+    page,
+  }) => {
+    await marginCase();
+    await openToday(page);
+    const alerts = section(page, "Open alerts");
+    const line = alerts.getByText("1 urgent alert.", { exact: true });
+    await expect(line).toHaveCount(1);
+    // Screen-reader-only: it takes no visible room.
+    const box = await line.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
+    });
+    expect(box.width).toBeLessThanOrEqual(1);
+    expect(box.height).toBeLessThanOrEqual(1);
+  });
+
+  test("no urgent-alert line is in the Open alerts section when no alert is urgent", async ({ page }) => {
+    await openToday(page);
+    await expect(section(page, "Open alerts").getByText(/urgent alert/)).toHaveCount(0);
+  });
+
+  test("the failed alert check line takes the error color and medium weight", async ({ page }) => {
+    await withWatchRefused(async () => {
+      await openToday(page);
+      const line = section(page, "Open alerts").getByText(WATCH_FAILED, { exact: true });
+      await expect(line).toBeVisible();
+      const error = await tokenColor(page, "--color-error");
+      const css = await line.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return { color: style.color, weight: style.fontWeight };
+      });
+      expect(css).toEqual({ color: error, weight: "500" });
+    });
+  });
+});
+
 test.describe("today's entries", () => {
   test("AC-0007, AC-0008: each list holds the day's entries only, newest first, with their values and tags", async ({
     page,
   }) => {
     await seedInvoiceFixture();
-    const chickenId = "55555555-5555-5555-5555-555555555555";
     await receive(RAW_TOM_ID, 3000, 1.68, 1);
     const day = [
       await receive(RAW_TOM_ID, 1000, 1.68),
-      await receive(chickenId, 500, 2.1),
+      await receive(RAW_CHK_ID, 500, 2.1),
       await receive(RAW_TOM_ID, 12.5, 1.7),
+      await receive(RAW_TOM_ID, 800, 1.7),
     ];
     await voidReceipt(day[1]!);
+    // Received as 800 lbs and corrected to 760.5: the list shows the current weight, not the recorded one.
+    await correctReceipt(day[3]!, 1.7, 760.5);
     const yesterdayBatch = await produce(100, null, 1);
     const batches = [await produce(400), await produce(150, 100), await produce(120)];
     await reverseBatch(batches[2]!);
@@ -162,7 +205,7 @@ test.describe("today's entries", () => {
     await voidSale(sales[2]!);
 
     await openToday(page);
-    await expect(listHeading(page, "Receipts", 3)).toBeVisible();
+    await expect(listHeading(page, "Receipts", 4)).toBeVisible();
     await expect(listHeading(page, "Batches", 3)).toBeVisible();
     await expect(listHeading(page, "Sales", 3)).toBeVisible();
 
@@ -172,7 +215,7 @@ test.describe("today's entries", () => {
     expect(await entriesShown(page, "Sales")).toEqual(await Promise.all(newestFirst(sales).map(expectedSale)));
 
     // The tags: Voided on the voided receipt and sale, Reversed on the reversed batch, none elsewhere.
-    expect((await entriesShown(page, "Receipts")).map((row) => row.rest)).toEqual([[], ["Voided"], []]);
+    expect((await entriesShown(page, "Receipts")).map((row) => row.rest)).toEqual([[], [], ["Voided"], []]);
     expect((await entriesShown(page, "Batches")).map((row) => row.rest)).toEqual([["Reversed"], [], []]);
     expect((await entriesShown(page, "Sales")).map((row) => row.rest)).toEqual([
       ["Fulton Market Deli", "Voided"],
@@ -268,7 +311,7 @@ test.describe("stock on hand", () => {
   });
 
   test("AC-0032: with no product to list the section reads No stock on hand.", async ({ page }) => {
-    await query("truncate product_fees, products restart identity cascade");
+    await truncateProducts();
     await openToday(page);
     await expect(section(page, "Stock on hand").getByText("No stock on hand.", { exact: true })).toBeVisible();
     await expect(section(page, "Stock on hand").getByRole("listitem")).toHaveCount(0);
@@ -457,7 +500,7 @@ test.describe("page state", () => {
     await expect(section(page, "Today's entries").getByText("None today.", { exact: true })).toHaveCount(3);
     await expectClean(page);
     // And no product to list (AC-0032).
-    await query("truncate product_fees, products restart identity cascade");
+    await truncateProducts();
     await page.reload();
     await expect(section(page, "Stock on hand").getByText("No stock on hand.", { exact: true })).toBeVisible();
     await expectClean(page);
