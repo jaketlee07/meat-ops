@@ -581,8 +581,8 @@ test("AC-0009: Recent sales lists by sale date, newest first, and by entry time 
   expect(shown).toEqual([b, c, a]);
 });
 
-// 11 sales of 502, the first entered carrying the newest sale date: the 10 last-entered show, so it does not.
-test("AC-0020: with 11 sales Recent sales shows the 10 most recently entered", async ({ page }) => {
+// 11 sales of 502, the first entered carrying the newest sale date: the 10 newest by sale date show, so the one dated Oct 1 does not.
+test("AC-0020: with 11 sales Recent sales shows the 10 newest by sale date", async ({ page }) => {
   await seedReceipt(5000, 1.68, "2026-09-30");
   await seedBatch(2000, "2026-10-01");
   await seedSale(10, "2026-10-30");
@@ -593,8 +593,8 @@ test("AC-0020: with 11 sales Recent sales shows the 10 most recently entered", a
   await page.goto("/sales");
   const shown = await sales(page).locator("ul > li").getByRole("link").allTextContents();
   expect(shown).toHaveLength(10);
-  expect(shown).not.toContain(numbers[0]);
-  expect([...shown].sort()).toEqual(numbers.slice(1).sort());
+  expect(shown).not.toContain(numbers[1]);
+  expect([...shown].sort()).toEqual([numbers[0], ...numbers.slice(2)].sort());
   await expect(sales(page).getByText("Showing the 10 most recent of 11 sales.", { exact: true })).toBeVisible();
 });
 

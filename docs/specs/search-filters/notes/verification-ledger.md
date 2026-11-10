@@ -62,3 +62,33 @@ Every round 6 finding is prior-round-repair origin, in round 5's rewrite of the 
 - The owner approved the spec and the plan on 2026-11-10 at `7be828e`.
 - For this build the owner approved stopping the app server that runs from this folder (PIDs 91551 and 91574, stopped 2026-11-10) and starting it again from the final build when the work is done; running the stack A slot fix when catalog bloat slows the tests; and committing each task on `feat/search-filters`, then pushing and opening one PR.
 
+
+## T1
+
+Red runs of the new tests in `test/list-search.test.ts`, before the reads changed. Both ran on `79f13d2` with the new test file and nothing else changed (uncommitted). Command: `npx vitest run test/list-search.test.ts`.
+
+Red run 1: `src/lib/list-search.ts` did not exist. The whole file failed at import with `Error: Cannot find module '../src/lib/list-search.js' imported from test/list-search.test.ts`. This is the red run of the five pure tests, which have no read to change:
+
+- AC-0011: white space at the start and end of the text is ignored, as trim removes it
+- AC-0015: NULs go, the text is trimmed, cut to 100 code units without splitting a pair, and trimmed again
+- AC-0016: a date counts only as a real yyyy-mm-dd day with a year from 0100 to 9999
+- AC-0017: a row count in digits alone counts from 10 to 50; anything else counts as 10
+- AC-0009: the match values escape the regular-expression specials, and quote for or()
+
+Red run 2: `src/lib/list-search.ts` written (the five pure tests then passed), the three reads still ignoring a search argument and `listRecentSales` still ordering by `created_at`. 13 of 18 tests failed, each on the line shown:
+
+- AC-0009, Recent receipts: `AssertionError: q!z: expected [ '500 Off Meats', 'AXB Foods', ...(8) ] to deeply equal [ 'Q!Z Foods', 'V-0' ]`
+- AC-0009, Recent batches: `AssertionError: q!z: expected [ '500 Off Meats', 'AXB Foods', ...(8) ] to deeply equal [ 'Q!Z Foods' ]`
+- AC-0009, Recent sales: `AssertionError: q!z: expected [ '500 Off Meats', 'AXB Foods', ...(8) ] to deeply equal [ 'Q!Z Foods', 'S-0' ]`
+- AC-0012, Recent receipts: `AssertionError: x",lot_number.not.is.null,lot_number.eq.": expected [ Array(6) ] to deeply equal [ 'VEND-0', ...(1) ]`
+- AC-0012, Recent batches: `AssertionError: x",batch_number.not.is.null,batch_number.eq.": expected [ ...(4) ] to deeply equal [ Array(1) ]`
+- AC-0012, Recent sales: `AssertionError: x",sale_number.not.is.null,sale_number.eq.": expected [ 'CUST-0', 'CUST-1', 'PLAIN-0', ...(3) ] to deeply equal [ 'CUST-0', ...(1) ]`
+- AC-0018, Recent receipts: `AssertionError: expected [ 'L-20260906-e10845', ...(9) ] to deeply equal [ 'L-20260906-e10845', ...(24) ]`
+- AC-0018, Recent batches: `AssertionError: expected [ 'B-20260906-aa514b', ...(9) ] to deeply equal [ 'B-20260906-aa514b', ...(24) ]`
+- AC-0023, Recent receipts: `AssertionError: expected [ { ...(14) }, { ...(14) }, ...(8) ] to have a length of 20 but got 10`
+- AC-0023, Recent batches: `AssertionError: expected [ { ...(8) }, { ...(8) }, { ...(8) }, ...(7) ] to have a length of 20 but got 10`
+- AC-0023, Recent sales: `AssertionError: expected [ { ...(12) }, { ...(12) }, ...(8) ] to have a length of 20 but got 10`
+- AC-0046, Recent sales: `AssertionError: expected [ 'P2-B', 'P2-A', 'P1-B', 'P1-A' ] to deeply equal [ 'P2-B', 'P2-A', 'P1-A', 'P1-B' ]` (first attempt held pair 2's `sale_id` property, so no retry was needed)
+- AC-0029, 100 vendors, then 101, then an empty text: `AssertionError: expected undefined to be false // Object.is equality` (the read had no `tooManyVendors` field yet; the test was then changed to expect it absent when false, because `receiving-data-extra.test.ts` compares a no-receipt result with `toEqual`, and its `tooMany.tooManyVendors` check still fails on the old read)
+
+The unsearched-text half of each AC-0012 test (notes, void reason, correction reason, reversal reason) runs after the first assertion in the test, so it was not reached in red run 2; it ran green with the reads.

@@ -938,7 +938,7 @@ test.describe("keyboard, focus, and names", () => {
 });
 
 test.describe("recent sales", () => {
-  test("AC-0070, AC-0074, and AC-0076: the 10 last entered of 12, though the last has the earliest date, and the count", async ({
+  test("AC-0070, AC-0074, and AC-0076: the 10 newest by sale date of 12, though the last entered has the earliest date, and the count", async ({
     page,
   }) => {
     await fixtureWithPrice();
@@ -960,7 +960,7 @@ test.describe("recent sales", () => {
     for (const date of dates) ids.push(await seedSale(10, date));
     const numbers = await saleNumbers();
     // One void sale outside the 10 and one inside: both count in N.
-    for (const index of [0, 4]) {
+    for (const index of [2, 4]) {
       const outcome = await callAsOperator(voidSaleCall(ids[index] ?? ""));
       expect(outcome.ok, outcome.error).toBe(true);
     }
@@ -968,10 +968,10 @@ test.describe("recent sales", () => {
     const f = await openForm(page);
     const items = f.recent.getByRole("listitem");
     await expect(items).toHaveCount(10);
-    // The 10 last entered, by sale date newest first, then last entered first within a date.
-    await expect(items.getByRole("heading")).toHaveText([7, 3, 10, 5, 9, 6, 4, 8, 2, 11].map((i) => numbers[i] ?? ""));
+    // The 10 newest by sale date, then last entered first within a date.
+    await expect(items.getByRole("heading")).toHaveText([7, 3, 10, 5, 9, 1, 6, 0, 4, 8].map((i) => numbers[i] ?? ""));
     await expect(f.recent.getByText("Showing the 10 most recent of 12 sales.", { exact: true })).toBeVisible();
-    await expect(factValue(items.last(), "Sale date")).toHaveText("Oct 6, 2026");
+    await expect(factValue(items.last(), "Sale date")).toHaveText("Oct 7, 2026");
 
     // AC-0076: a saved sale joins the list in sale-date order, and the count follows.
     await fillSale(f, { lbs: "20", date: "2026-10-08" });
@@ -979,8 +979,8 @@ test.describe("recent sales", () => {
     await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toBeVisible();
     const saved = await factValue(f.result, "Sale number").textContent();
     await expect(f.recent.getByText("Showing the 10 most recent of 13 sales.", { exact: true })).toBeVisible();
-    // Dated Oct 8 and the last entered, it sits first among the Oct 8 sales, after the six later-dated ones.
-    await expect(items.nth(6).getByRole("heading")).toHaveText(saved ?? "");
+    // Dated Oct 8 and the last entered, it sits first among the Oct 8 sales, after the eight later-dated ones.
+    await expect(items.nth(8).getByRole("heading")).toHaveText(saved ?? "");
   });
 
   test("AC-0074: with 10 sales there is no count line", async ({ page }) => {
