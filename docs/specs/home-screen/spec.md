@@ -75,7 +75,8 @@ The owners the `Constrained by` line names state the rules this work follows. Th
 
 ## Testing Strategy
 
-- **TDD against the local stack in Vitest (AC-0011, AC-0012, AC-0015, AC-0024, AC-0033, AC-0036)**: each is a value, a read, a refusal, or a privilege the database returns, checked against worked examples, each role, and the catalog, or a text the page's source holds or lacks.
+- **TDD against the local stack in Vitest (AC-0011, AC-0012, AC-0015, AC-0024, AC-0033)**: each is a value, a read, a refusal, or a privilege the database returns, checked against worked examples, each role, and the catalog.
+- **Goal-based check, run in Vitest as a read of the page's source (AC-0036)**: where the reads live is a fact of the source text, so a source read decides it.
 - **Manual QA exercised by the end-to-end (E2E) browser suite (AC-0001, AC-0002, AC-0003, AC-0004, AC-0005, AC-0006, AC-0007, AC-0008, AC-0009, AC-0010, AC-0013, AC-0014, AC-0016, AC-0020, AC-0021, AC-0022, AC-0023, AC-0025, AC-0026, AC-0027, AC-0028, AC-0029, AC-0030, AC-0031, AC-0032, AC-0035)**: each is a page, list, figure, layout, or served file the owner meets, read from the page's roles, text, element boxes, and the rows the test seeded.
 - **Goal-based check over the whole suite (AC-0018)**: `npm test` passes.
 - **Visual and manual QA, recorded in the verification ledger (AC-0017, AC-0019, AC-0034)**: the owner's comparison with the comparison page, a read of the branch's test diff, and a recorded run of the sign-in error view. `/sign-in` is built ahead of time and reads no data, so only a scratch throw in its code, served by `npm run dev`, makes it fail.
@@ -143,7 +144,7 @@ The owners the `Constrained by` line names state the rules this work follows. Th
   - `test/e2e/shell.spec.ts`'s page titles, links, and Tab lists, `test/e2e/shell-page.ts`'s stop lists, `test/e2e/production.spec.ts`'s menu-order rows, and any other existing check of the menus' items, links, or Tab stops that the added "Today" link moves (AC-0002).
 - [ ] **AC-0020.** The browser suite's page-state check (`checkPageState`) reports no violation on `/` with every section filled, with every section in its empty state (AC-0005, AC-0013, AC-0027, AC-0031, AC-0032), and with an urgent alert open.
 - [ ] **AC-0033.** Each of `/`'s reads (the daily sales, stock value, and stock on hand views, today's receipts, batches, and sales, and the open alerts) throws when the database refuses it, and returns no empty list, zero, or missing row in its place.
-- [ ] **AC-0036.** The code behind `/` (`src/app/page.tsx`, the files under `src/app/home/`, and `src/lib/home.ts`) contains none of the texts `catch`, `allSettled`, and `.then(`, so no failed read is handled before the error view.
+- [ ] **AC-0036.** Every read AC-0033 lists runs in `src/app/page.tsx` before the page renders: `page.tsx` calls each of them inside one `await Promise.all([...])`, and holds none of the texts `catch` (in any letter case), `allSettled`, `.then(`, and `use(`. The files under `src/app/home/` import from `src/lib/` only `format.ts` and type-only imports, and nothing from `src/app/_server/`.
 - [ ] **AC-0035.** When a read on `/` fails, `/` shows the error view headed "Today" with its "Try again" button, and no money tile. A failed watch is AC-0021's and AC-0022's case.
 - [ ] **AC-0034.** When `/sign-in` fails to load, it shows the error view headed "Sign in" with its "Try again" button.
 
@@ -158,6 +159,8 @@ None. Spec 2b of the brief covers search and filters.
 - Technical: AC-0016's long values come through the operations: a rolled-back probe on stack A (2026-11-09) gave 502 a cost of $2.6318/lb and 386,000 lbs left, RAW-TOM 1,234,567.891 lbs on hand, and the totals 3500000.4305, 2074074.05688, and 1015874.8, and left no row
 - Technical: `v_alerts` and `v_stock_value` read `lots`, and `v_alerts` reads `production_batches`, so refusing a table on a loaded `/` fails more than one read; a read called alone fails alone, and Vitest runs one file at a time (source: `supabase/migrations/20261016204845_alerts.sql`; `vitest.config.ts`)
 - Technical: a committed Vitest suite already checks app source for a text it must or must not hold (source: `test/look-tidy.test.ts`)
+- Technical: a server page's awaited reads finish before it renders, so no error boundary inside the page can catch them; a read moved into a section part, or a promise handed to one, could be caught there (source: shaping review round 8, 2026-11-09)
+- Product: every read on "Today" runs in its page before it renders, and its section parts get their data by props, so a source check can prove no failed read is caught on the way to the error view (source: user confirmation 2026-11-09)
 - Technical: committed tests may refuse a read by revoking a grant and restoring it, as `revokeSaleItemsRead` (`test/e2e/sales-page.ts`) and `withWatchRefused` (`test/e2e/alerts-page.ts`) do; `/sign-in` is prerendered (source: those files; `.next/prerender-manifest.json`)
 - Technical: through the operations, RAW-TOM and 502 give AC-0012's figures: a rolled-back probe on stack A (2026-11-09) gave 308 finished lbs at $2.6318/lb from 400 raw lbs, a daily total of 504, raw value 1908.0000000, and finished value 415.8244000, and left no row
 - Technical: low stock is one of the five alert types (`low_stock`, medium), raised for an active raw product with under 7 days left at its 28-day use, so the open alerts carry it (source: `SYSTEM-SPEC.md`; `supabase/migrations/20261016204845_alerts.sql`)
