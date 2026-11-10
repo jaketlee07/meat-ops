@@ -4,7 +4,7 @@ This ledger holds what only a person, a probe, or a diff read can check for [`sp
 
 ## Owner decisions (2026-11-09)
 
-The owner's 2026-11-09 product decisions made before approval are the Product lines in the spec's [Assumptions](../spec.md#assumptions). The two made during post-gates review (the deadlock probe and the screen-reader urgent count) are recorded under Post-gates review below, and the overview's `src/app` row states the resulting behavior; the approved spec stays unchanged in substance.
+The owner's 2026-11-09 product decisions made before approval are the Product lines in the spec's [Assumptions](../spec.md#assumptions). The two made during post-gates review are recorded under Post-gates review below: the screen-reader urgent count, whose behavior the overview's `src/app` row states, and the deadlock probe, whose retry lives in `truncateProducts` in `test/e2e/home-page.ts`. The approved spec stays unchanged in substance.
 
 ## Spec-stage review
 
@@ -91,4 +91,15 @@ Post-gates artifacts sit under the same ignored folder. `experience-reviewer` is
 - Every warranted reviewer finished with no Blocker or Concern open: security clean in round 1, frontend clean in round 3, quality with one deferred Nit in round 3, and adversarial with one deferred Nit in round 4. `experience-reviewer` is a named skip.
 - The review verdict is READY_WITH_RESIDUAL_RISK: 31 sustained findings across the rounds, 29 resolved and 2 deferred Nits, plus two accepted blind spots (Chromium-only rendering, and no run in a real screen reader). The `review-verdict.v1` record is in the pull request.
 - The spec is Shipped with all 36 criteria checked, the plan is Done, the brief's Spec map lists `home-screen` as Shipped, and `workspace.toml` moves it to `[ini-002.work].shipped`.
+
+## Close-out (2026-11-10)
+
+- PR #64 merged on 2026-11-10 at 08:37 CST as `bb1d8b2`; the work-loop run is DONE.
+- The owner confirmed on 2026-11-10 that the lasting docs read right: the overview's `src/app`, `supabase/migrations/`, `test/`, and `test/e2e/` rows and its Access model, SYSTEM-SPEC's views list, and the costing reference's section on today's sales and stock value with its Rounding note. The hosted step for the migration is owned by the overview's hosted Migrations rule. The folder cools for 30 days (`docs/lifecycle/home-screen.json`, review on 2026-12-10).
+- Round 4's deferred Nit is answered here: the owner-decisions pointer above now names where each post-gates decision's result lives.
+- Set aside at close-out, each accurate and unfixed because no spec line covered it:
+  - Fix now (owner, 2026-11-10): "Today"'s error view shows only "Try again", with no menu and no link to Receiving, though sign-in and the installed app land there (post-gates frontend round 1, finding 2). It runs as its own change before spec 2b.
+  - Queued in the UI polish leftovers intent (owner, 2026-11-10): Today's lists can stop at the database's 1,000-row cap under a higher heading count (T2's implementer and quality round 1's Not checked); no test presses "Try again" on Today's error view (quality round 1, finding 9); and `test/e2e/home.spec.ts:191` checks the same list twice (quality round 3's deferred Nit).
+  - Queued as its own Draft intent (owner, 2026-11-10): PostgREST's planned and estimated counts may hint to a signed-in non-operator how many rows a table holds, on every table (the security reviewer's round 1 Not checked list; older than this spec).
+  - Dropped: the round 1 frontend points refuted by the overview's conventions (a wrapped figure left-aligns; the entries grid stacks to one column under a classic scrollbar).
 
