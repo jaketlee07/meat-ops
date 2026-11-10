@@ -60,4 +60,5 @@ Every round 6 finding is prior-round-repair origin, in round 5's rewrite of the 
 ## Approval (2026-11-10)
 
 - The owner approved the spec and the plan on 2026-11-10 at `7be828e`.
+- For this build the owner approved stopping the app server that runs from this folder (PIDs 91551 and 91574, stopped 2026-11-10) and starting it again from the final build when the work is done; running the stack A slot fix when catalog bloat slows the tests; and committing each task on `feat/search-filters`, then pushing and opening one PR.
 

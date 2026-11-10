@@ -77,8 +77,7 @@ name = "UI polish and home screen"
 status = "active"
 
 [ini-002.work]
-active = []
-queue = [
+active = [
   { path = "docs/specs/search-filters/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-polish.md", revision = "7be828e", parent = "docs/product/briefs/ui-polish.md" }, summary = "Spec 2b of UI polish: search on Recent receipts, Recent batches, Recent sales, and Menu, Show 10 more up to 50 rows, Recent sales by sale date then entry, and Correct, Void, and Reverse on found rows", needs = [] },
 ]
 shipped = [
