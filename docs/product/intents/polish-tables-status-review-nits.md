@@ -1,4 +1,4 @@
-# UI polish leftovers: Recent receipts' vendor column, Menu's card price, the switch test, the phone saved result, Choose photo while reading, and Ask's status space
+# UI polish leftovers: Recent receipts' vendor column, Menu's card price, the switch test, the phone saved result, Choose photo while reading, Ask's status space, and Today's long lists, Try again, and a repeated check
 
 - **Status:** Draft
 
@@ -17,7 +17,10 @@ Recent receipts keeps every vendor word whole and each lot number right under it
 - Choose photo while reading (spec 1b): on `/invoices`, "Choose photo" still opens the file chooser while a photo read is in flight, and `#photo-status` then names the newly chosen file while the reading message refers to the earlier one. Spec 1b's AC-0010 requires the button to open the chooser, so a fix decides what it does mid-read.
 - Ask's status space (spec 1b): Ask's question card keeps a two-line status space under its Ask button (`src/app/ask/ask-panel.tsx`) for "Looking it up", which shows as empty space at rest.
 - Test sightings (spec 1b's build, 2026-11-09, stack A): `test/e2e/look-floor-pages.spec.ts` "AC-0007: at 1280x720 a reverse refusal spans its batch's row below the figures" timed out once at 30 s on the Reverse dialog's "Reverse batch" button ("element is not stable", then detached) in a full run, and "AC-0006: at 1024x768 with 16 px text each batch stays a card, ..." failed once ("label 0 on its value's first line": 10 against 4) in another; each passed alone (`docs/specs/polish-forms-alerts/notes/verification-ledger.md`).
-- The owner queued spec 1a's four at its close-out on 2026-11-09, and spec 1b's three and the test sightings at its close-out the same day. Spec 1a is shipped, so under the UI polish brief's Boundary-change rule these gaps stay out of that intent's Boundary, and the same holds for spec 1b's.
+- Today's long lists (spec 2a): `src/lib/home.ts` reads today's receipts, batches, and sales with an exact count but no paging, so on a day with more than 1,000 of one kind the list stops at the database's 1,000-row cap (`max_rows`) while its heading still shows the full count.
+- Try again on Today (spec 2a): `test/e2e/home.spec.ts` checks that a refused read shows "Today"'s error view (AC-0035) but never presses "Try again" to see the page come back once the read works.
+- Repeated check (spec 2a): `test/e2e/home.spec.ts:191`, in the test of an open alert that is not urgent, counts the Open alerts list a second time instead of naming the alert it shows.
+- The owner queued spec 1a's four at its close-out on 2026-11-09, spec 1b's three and the test sightings at its close-out the same day, and spec 2a's three at its close-out on 2026-11-10. Spec 1a is shipped, so under the UI polish brief's Boundary-change rule these gaps stay out of that intent's Boundary, and the same holds for spec 1b's.
 - What each screen does, and every figure, word, and control name, stays the same. Each layout keeps picking its look from its own section's width and the text size.
 
 ## Owner
