@@ -2,6 +2,7 @@ import { expect, test, type Locator } from "@playwright/test";
 import { buildFiveAlertFixture } from "../alert-fixtures";
 import { callAsOperator, PROD_502_ID, query, RAW_TOM_ID, receiveCall, resetTestData, seedInvoiceFixture, VENDOR_ID } from "../db";
 import { formatWeight } from "../../src/lib/format";
+import { checkPageState } from "./a11y";
 import { banner, groupTitles, marginCase, opens, withWatchRefused, WATCH_FAILED } from "./alerts-page";
 import { appDate } from "./app-time";
 import {
@@ -430,5 +431,42 @@ test.describe("the urgent count on Today", () => {
     await openToday(page);
     const side = page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Alerts", exact: true });
     await expect(badge(side)).toHaveText("1");
+  });
+});
+
+test.describe("page state", () => {
+  // checkPageState throws on any axe, phone-width, or keyboard-focus violation; it returns the Tab stops.
+  async function expectClean(page: Parameters<typeof checkPageState>[0]): Promise<void> {
+    expect((await checkPageState(page)).length, "Tab stops reached").toBeGreaterThan(0);
+  }
+
+  test("AC-0020: / has no page-state violation with every section filled", async ({ page }) => {
+    await buildFiveAlertFixture({ today: appDate(), watch: false });
+    await worked();
+    await receive(RAW_TOM_ID, 12.5, 1.7);
+    await openToday(page);
+    await expect(section(page, "Open alerts").getByRole("listitem")).toHaveCount(5);
+    await expect(listHeading(page, "Sales", 3)).toBeVisible();
+    await expectClean(page);
+  });
+
+  test("AC-0020: / has no page-state violation with every section empty", async ({ page }) => {
+    // No lot, batch, sale, or alert (AC-0005, AC-0013, AC-0027, AC-0031).
+    await openToday(page);
+    await expect(section(page, "Open alerts").getByText("No open alerts.", { exact: true })).toBeVisible();
+    await expect(section(page, "Today's entries").getByText("None today.", { exact: true })).toHaveCount(3);
+    await expectClean(page);
+    // And no product to list (AC-0032).
+    await query("truncate product_fees, products restart identity cascade");
+    await page.reload();
+    await expect(section(page, "Stock on hand").getByText("No stock on hand.", { exact: true })).toBeVisible();
+    await expectClean(page);
+  });
+
+  test("AC-0020: / has no page-state violation with an urgent alert open", async ({ page }) => {
+    await marginCase();
+    await openToday(page);
+    await expect(section(page, "Open alerts").getByRole("listitem")).toHaveCount(1);
+    await expectClean(page);
   });
 });
