@@ -10,7 +10,7 @@ This is the source of truth for the costing math. The tests in
 `test/e2e/correct.spec.ts` and `test/e2e/reverse.spec.ts`. The display formats
 in the Rounding note are asserted by `test/format.test.ts`,
 `test/production-rules.test.ts`, and `test/pricing-rules.test.ts`, and its
-missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, and `test/e2e/trace.spec.ts`. If a change turns any of these red, the change is
+missing-value texts by `test/e2e/receiving.spec.ts`, `test/e2e/production.spec.ts`, `test/e2e/pricing.spec.ts`, `test/e2e/sales.spec.ts`, `test/e2e/trace.spec.ts`, and `test/e2e/home.spec.ts`. If a change turns any of these red, the change is
 wrong, not the test.
 
 The math lives only in Postgres: the functions `receive_lot`, `produce_batch`,
@@ -429,7 +429,7 @@ through the same formats:
 | Date | month abbreviation, day, year, in any time zone | 2026-10-07 → Oct 7, 2026 |
 | Shrink | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.23 → 23%; 0.235 → 23.5%; 0.2345 → 23.45%; 0 → 0% |
 | Margin (at a list price) | the stored fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%" | 0.2 → 20%; 0.018 → 1.8%; 0.2001 → 20.01%; 0.2481 → 24.81%; -0.0527 → -5.27%; 0 → 0% |
-| Raw cost total | "$", thousands separators, 2 decimals | 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01 |
+| Money total (a raw cost total, a day's sales total, and a stock value) | "$", thousands separators, 2 decimals | 3360 → $3,360.00; 10200 → $10,200.00; 1234.5678 → $1,234.57; 0.005 → $0.01; 504 → $504.00; 415.8244 → $415.82; 2323.8244 → $2,323.82 |
 | Days (days left) | 0 to 1 decimals with a trailing zero dropped, then " day" when the rounded value is exactly 1 and " days" otherwise | 5.3333 → 5.3 days; 7 → 7 days; 1 → 1 day; 0 → 0 days; 0.96 → 1 day |
 | Change (a cost change or drift) | the absolute value of the fraction written as a percent, 0 to 2 decimals with trailing zeros dropped, then "%"; the words "up", "down", "above", and "below" carry the sign | 0.0962 → 9.62%; -0.1024 → 10.24%; 0.1 → 10%; 0.6667 → 66.67% |
 
@@ -448,6 +448,10 @@ Where the database has nothing to show, the screen uses text:
   makes the product inactive before the reversal and asserts "Not available" in
   both the before and the after column of the "Batch reversed" panel; no test
   asserts it for "Sale saved".
+- A money figure with no row shows "$0.00": "Today's sales" on the home screen with no sale
+  that is not voided on the app's today, and each stock value tile with no lot and no
+  finished good. This holds only after the read succeeded; a failed read shows the
+  error view, never "$0.00".
 - The target margin of a finished product with none shows "No target".
 - The raw average cost, cost after shrink, and cost per lb of a finished
   product whose raw product has no non-void receipt show "None yet", whatever

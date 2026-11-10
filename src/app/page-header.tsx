@@ -7,7 +7,7 @@ import { signOut } from "./sign-in/actions";
 
 export const WATCH_FAILED = "Alerts couldn't be checked.";
 
-type PageName = "receiving" | "production" | "menu" | "pricing" | "sales" | "trace" | "invoices" | "ask" | "alerts";
+type PageName = "today" | "receiving" | "production" | "menu" | "pricing" | "sales" | "trace" | "invoices" | "ask" | "alerts";
 
 const BELL = "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0";
 
@@ -37,7 +37,8 @@ const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string; icon: 
 // menu below that, the page title, and the urgent banner. The link to the page
 // being shown carries aria-current="page" and the others carry none. Every page
 // but /alerts runs the watch here and shows the urgent banner below the title
-// (alerts AC-0010 to AC-0017); /alerts shows its own failure line. The count N
+// (alerts AC-0010 to AC-0017); /alerts shows its own failure line, and "Today" lists the open alerts
+// itself, so it shows no banner in any watch state. The count N
 // on the three Alerts links is the watch's urgent count when it ran and
 // succeeded, and 0 otherwise.
 export async function PageShell({
@@ -82,7 +83,7 @@ export async function PageShell({
           <div>
             <h1 className="hidden text-2xl font-bold desk:mb-4 desk:block">{title}</h1>
             {/* A status container that is in the page before a save fills it, so a banner a save raises is announced. */}
-            {watch && (
+            {watch && current !== "today" && (
               <div role="status">
                 <UrgentBanner watch={watch} />
               </div>

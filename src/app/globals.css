@@ -200,6 +200,19 @@
   }
 }
 
+/* "Today": Today's entries and Stock on hand share a row only when their shared wrapper, the container named
+   today, is at least 48rem wide: an entries column that holds one list (17rem of list, 1.75rem of padding and
+   border), a 22rem stock column that holds a code, a description of about 8rem, and a lbs figure whole (a
+   figure such as 1,234,567.891 lbs is about 9rem), and a 1.5rem gap, with room to spare. Narrower, Stock on hand
+   sits under Today's entries. In rem, no screen gate, so a larger text size stacks them until the wrapper has
+   grown to fit. <main>'s content box is 44.4rem at 1024 px (stacked), 60.4rem at 1280 px (side by side), and
+   at 1280 px with a 20 px root 44.5rem (stacked). */
+@custom-variant today-pair {
+  @container today (min-width: 48rem) {
+    @slot;
+  }
+}
+
 /* Trace's lot result: the section is the container named tracelot. Where it is at least 53rem wide
    (the Customers column of 16.25rem, a gap, and Sales' table at 35rem) Customers sits beside "Sales from
    this lot" and the lot's facts run in three columns. The page has no column grid, so the section is the
