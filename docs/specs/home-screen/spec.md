@@ -1,6 +1,6 @@
 # Spec: home-screen
 
-- **Status:** Draft <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Approved <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the Constraints and Non-goals in the brief [`docs/product/briefs/ui-polish.md`](../../product/briefs/ui-polish.md), including the intent's Guardrail and Limits they point to; the screen rules in the `src/app` row, the `supabase/migrations/` row, and the Access model in [`docs/architecture/overview.md`](../../architecture/overview.md); [`docs/costing.md`](../../costing.md); [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §11; the `AGENTS.md` hard rules

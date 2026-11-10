@@ -40,3 +40,8 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 - Round 9 origins: all four shaping findings are prior-round-repair. A helper wrapped around a read inside the `Promise.all` could still swallow its error, so AC-0036 now allows only bare calls of the reads as the array's elements, an allowlist rather than a list of handler spellings. The Next.js boundary fact now cites the bundled 16.4.2 docs.
 - Deletion pass over what review added (AC-0021 to AC-0036): AC-0022, AC-0023, AC-0025, AC-0026, AC-0027, AC-0028, and AC-0031 split a draft criterion one check each; AC-0024 holds the views' grants to hard rule 2; AC-0021, AC-0032, AC-0033, and AC-0035 add failure and empty states the draft lacked; AC-0029, AC-0030, AC-0034, and AC-0036 carry the owner's 2026-11-09 calls. None contradicts a brief Non-goal, every one traces to a task, and none is cut.
 - Pre-EXECUTE gates: the adversarial gate ran its three rounds; the security gate ran two rounds and ended clean; the shaping review ran twelve rounds and ended clean. `creative-direction` and `design-review` are not installed (named skip); the comparison page and look E stand in, through AC-0017.
+
+## Approval (2026-11-09)
+
+- The owner approved the spec and the plan on 2026-11-09 at `43514e7`.
+- For this build the owner approved stopping the app server that runs from this folder (PIDs 74009 and 74031) and starting it again from the final build when the work is done; running the stack A slot fix when catalog bloat slows the tests; and committing each task on `feat/home-screen`, then pushing and opening one PR.
