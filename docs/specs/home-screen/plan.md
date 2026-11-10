@@ -1,7 +1,7 @@
 # Plan: home-screen
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the views and grants of `v_sale_summary` in `supabase/migrations/20261013155724_sales_trace.sql`, with `test/access.test.ts`, which reads every relation in `public`, and `test/sales.test.ts`, which reads its views as `service_role`; the page pattern of `src/app/alerts/page.tsx` (claims, `isOperator`, `runWatch`, `PageShell`); the shell, menus, and banner in `src/app/page-header.tsx`, with `test/e2e/shell.spec.ts` and `test/e2e/shell-page.ts`; the sign-in action `src/app/sign-in/actions.ts`, with `test/e2e/auth.spec.ts`, `test/e2e/auth.setup.ts`, and `signInThroughForm` in `test/e2e/states.ts`; the install file `src/app/manifest.ts`, with `test/e2e/hosting.spec.ts`; the Recent lists `src/app/receiving/recent-receipts.tsx`, `src/app/production/recent-batches.tsx`, and `src/app/sales/recent-sales.tsx`, with the shared `StatusTag`, `Facts`, and `formatMoney`; the container variants in `src/app/globals.css` (`alert-pair`, `sale-table`) and the stock tiles that wrap with no breakpoint.
 
 > **Plan contract:** this is the implementation strategy. It may change

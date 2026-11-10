@@ -1,6 +1,6 @@
 # Spec: home-screen
 
-- **Status:** Implementing <!-- Draft | Approved | Implementing | Shipped | Archived -->
+- **Status:** Shipped <!-- Draft | Approved | Implementing | Shipped | Archived -->
 - **Owner:** jaketlee07
 - **Plan:** [`plan.md`](plan.md)
 - **Constrained by:** the Constraints and Non-goals in the brief [`docs/product/briefs/ui-polish.md`](../../product/briefs/ui-polish.md), including the intent's Guardrail and Limits they point to; the screen rules in the `src/app` row, the `supabase/migrations/` row, and the Access model in [`docs/architecture/overview.md`](../../architecture/overview.md); [`docs/costing.md`](../../costing.md); [`SYSTEM-SPEC.md`](../../../SYSTEM-SPEC.md) §11; the `AGENTS.md` hard rules
@@ -85,68 +85,68 @@ The owners the `Constrained by` line names state the rules this work follows. Th
 
 ### Getting to "Today"
 
-- [ ] **AC-0001.** Signing in as an operator ends on `/`, which shows a page whose level-1 heading is "Today".
-- [ ] **AC-0029.** The install file at `/manifest.webmanifest` sets `start_url` to `/`.
-- [ ] **AC-0002.** In the side menu and in the phone menu, the first item is a link named "Today" to `/`, before "Receiving".
-- [ ] **AC-0025.** On `/`, the "Today" link in each menu carries `aria-current="page"`.
-- [ ] **AC-0003.** A signed-in non-operator who opens `/` sees the not-allowed page and none of the sections named below.
+- [x] **AC-0001.** Signing in as an operator ends on `/`, which shows a page whose level-1 heading is "Today".
+- [x] **AC-0029.** The install file at `/manifest.webmanifest` sets `start_url` to `/`.
+- [x] **AC-0002.** In the side menu and in the phone menu, the first item is a link named "Today" to `/`, before "Receiving".
+- [x] **AC-0025.** On `/`, the "Today" link in each menu carries `aria-current="page"`.
+- [x] **AC-0003.** A signed-in non-operator who opens `/` sees the not-allowed page and none of the sections named below.
 
 ### The sections
 
-- [ ] **AC-0030.** With every section filled, at 390 px, 1024 px, and 1280 px, at the default text size and with the browser's text size at 20 px, the page's sections run in this order, both in the page's source and on screen: "Sales and stock value", "Open alerts", "Today's entries", "Stock on hand". On screen, each section starts below the one before it, or on the same row to its right.
+- [x] **AC-0030.** With every section filled, at 390 px, 1024 px, and 1280 px, at the default text size and with the browser's text size at 20 px, the page's sections run in this order, both in the page's source and on screen: "Sales and stock value", "Open alerts", "Today's entries", "Stock on hand". On screen, each section starts below the one before it, or on the same row to its right.
 
 ### Sales and stock value
 
-- [ ] **AC-0011.** For a date, the daily sales view's total equals the sum of `lbs_sold × price_per_lb` over the sale items of that date's sales that are not voided, unrounded: with sales on that date of 100 lbs at $3.2900/lb and 50 lbs at $3.5000/lb, and a sale of 10 lbs at $3.0000/lb that is then voided, the total is 504.
-- [ ] **AC-0012.** The stock value view's raw value equals the sum of `remaining_lbs × current_unit_cost` over every lot, its finished value equals the sum of `lbs_remaining × cost_per_lb` over every finished good, and its total equals the two added, unrounded: after receipts of 1,000 lbs at $1.6800/lb and then 500 lbs at $1.8000/lb of the made-up raw product RAW-TOM, a batch of its finished product 502 from 400 raw lbs (308 finished lbs at $2.6318/lb), and AC-0011's sales of 502, they are 1,908, 415.8244, and 2,323.8244.
-- [ ] **AC-0014.** With AC-0012's receipts, batch, and sales, all dated the app's today, the "Sales and stock value" section shows four tiles: "Today's sales" with "$504.00", "Raw stock at cost" with "$1,908.00", "Finished stock at cost" with "$415.82", and "All stock at cost" with "$2,323.82", each figure inside the tile its label names.
-- [ ] **AC-0013.** With no sale dated the app's today, or only voided ones, the "Today's sales" tile reads "$0.00".
-- [ ] **AC-0027.** With no lot and no finished good, each of the three stock tiles reads "$0.00".
-- [ ] **AC-0015.** For each of the three new views (daily sales, stock value, and stock on hand), `anon`'s read is refused, a signed-in non-operator reads no row, and an operator and `service_role` each read at least one row once the stack holds a product, a lot, and a sale that is not voided.
-- [ ] **AC-0024.** In the catalog, neither `anon` nor `public` holds any privilege on the three new views, and `authenticated` and `service_role` each hold SELECT and no other privilege on them.
+- [x] **AC-0011.** For a date, the daily sales view's total equals the sum of `lbs_sold × price_per_lb` over the sale items of that date's sales that are not voided, unrounded: with sales on that date of 100 lbs at $3.2900/lb and 50 lbs at $3.5000/lb, and a sale of 10 lbs at $3.0000/lb that is then voided, the total is 504.
+- [x] **AC-0012.** The stock value view's raw value equals the sum of `remaining_lbs × current_unit_cost` over every lot, its finished value equals the sum of `lbs_remaining × cost_per_lb` over every finished good, and its total equals the two added, unrounded: after receipts of 1,000 lbs at $1.6800/lb and then 500 lbs at $1.8000/lb of the made-up raw product RAW-TOM, a batch of its finished product 502 from 400 raw lbs (308 finished lbs at $2.6318/lb), and AC-0011's sales of 502, they are 1,908, 415.8244, and 2,323.8244.
+- [x] **AC-0014.** With AC-0012's receipts, batch, and sales, all dated the app's today, the "Sales and stock value" section shows four tiles: "Today's sales" with "$504.00", "Raw stock at cost" with "$1,908.00", "Finished stock at cost" with "$415.82", and "All stock at cost" with "$2,323.82", each figure inside the tile its label names.
+- [x] **AC-0013.** With no sale dated the app's today, or only voided ones, the "Today's sales" tile reads "$0.00".
+- [x] **AC-0027.** With no lot and no finished good, each of the three stock tiles reads "$0.00".
+- [x] **AC-0015.** For each of the three new views (daily sales, stock value, and stock on hand), `anon`'s read is refused, a signed-in non-operator reads no row, and an operator and `service_role` each read at least one row once the stack holds a product, a lot, and a sale that is not voided.
+- [x] **AC-0024.** In the catalog, neither `anon` nor `public` holds any privilege on the three new views, and `authenticated` and `service_role` each hold SELECT and no other privilege on them.
 
 ### Open alerts
 
-- [ ] **AC-0004.** With open alerts, the "Open alerts" section lists each open alert's title in the order `/alerts` lists them.
-- [ ] **AC-0026.** The "Open alerts" section holds a link named "See alerts" to `/alerts`, with open alerts and with none.
-- [ ] **AC-0005.** With no open alerts, the "Open alerts" section reads "No open alerts."
-- [ ] **AC-0021.** When the watch (the alert check each page load runs) fails, the "Open alerts" section reads "Alerts couldn't be checked." in place of its list.
-- [ ] **AC-0006.** While an alert is urgent, the region named "Urgent alerts" is absent from `/` and `/alerts` and present on every other page the menus list.
-- [ ] **AC-0022.** When the watch fails, the region named "Urgent alerts" is absent from `/`.
-- [ ] **AC-0023.** While an alert is urgent, on `/` each of the three Alerts links (the side menu's, the phone menu's, and the top bar's) shows the urgent count.
+- [x] **AC-0004.** With open alerts, the "Open alerts" section lists each open alert's title in the order `/alerts` lists them.
+- [x] **AC-0026.** The "Open alerts" section holds a link named "See alerts" to `/alerts`, with open alerts and with none.
+- [x] **AC-0005.** With no open alerts, the "Open alerts" section reads "No open alerts."
+- [x] **AC-0021.** When the watch (the alert check each page load runs) fails, the "Open alerts" section reads "Alerts couldn't be checked." in place of its list.
+- [x] **AC-0006.** While an alert is urgent, the region named "Urgent alerts" is absent from `/` and `/alerts` and present on every other page the menus list.
+- [x] **AC-0022.** When the watch fails, the region named "Urgent alerts" is absent from `/`.
+- [x] **AC-0023.** While an alert is urgent, on `/` each of the three Alerts links (the side menu's, the phone menu's, and the top bar's) shows the urgent count.
 
 ### Today's entries
 
-- [ ] **AC-0007.** For the app's today, the "Today's entries" section holds three lists, "Receipts", "Batches", and "Sales", across all products. Each receipt received that day shows its lot number, its product's code and description, and the weight Recent receipts shows for it. Each batch produced that day shows its batch number, its product's code and description, and the finished lbs Recent batches shows for it. Each sale dated that day shows its sale number, its product's code and description, and the customer and lbs Recent sales shows for it. No list holds an entry dated another day.
-- [ ] **AC-0008.** In those lists, a voided receipt and a voided sale show the "Voided" tag, and a reversed batch shows the "Reversed" tag, as Recent receipts, Recent sales, and Recent batches show them.
-- [ ] **AC-0009.** Each list's heading reads its name and its entry count, as "Receipts (2)", "Batches (0)", and "Sales (1)".
-- [ ] **AC-0031.** A list with no entry reads "None today."
+- [x] **AC-0007.** For the app's today, the "Today's entries" section holds three lists, "Receipts", "Batches", and "Sales", across all products. Each receipt received that day shows its lot number, its product's code and description, and the weight Recent receipts shows for it. Each batch produced that day shows its batch number, its product's code and description, and the finished lbs Recent batches shows for it. Each sale dated that day shows its sale number, its product's code and description, and the customer and lbs Recent sales shows for it. No list holds an entry dated another day.
+- [x] **AC-0008.** In those lists, a voided receipt and a voided sale show the "Voided" tag, and a reversed batch shows the "Reversed" tag, as Recent receipts, Recent sales, and Recent batches show them.
+- [x] **AC-0009.** Each list's heading reads its name and its entry count, as "Receipts (2)", "Batches (0)", and "Sales (1)".
+- [x] **AC-0031.** A list with no entry reads "None today."
 
 ### Stock on hand
 
-- [ ] **AC-0010.** The "Stock on hand" section lists every active product, and every inactive product whose lbs on hand are above 0, each with its code, description, and lbs on hand. A raw product's lbs on hand equal its `inventory_balances.qty_on_hand`, or 0 with no balance row. A finished product's equal the sum of `lbs_remaining` over its finished goods.
-- [ ] **AC-0032.** With no product to list, the "Stock on hand" section reads "No stock on hand."
+- [x] **AC-0010.** The "Stock on hand" section lists every active product, and every inactive product whose lbs on hand are above 0, each with its code, description, and lbs on hand. A raw product's lbs on hand equal its `inventory_balances.qty_on_hand`, or 0 with no balance row. A finished product's equal the sum of `lbs_remaining` over its finished goods.
+- [x] **AC-0032.** With no product to list, the "Stock on hand" section reads "No stock on hand."
 
 ### Layout
 
-- [ ] **AC-0016.** With the long values set, at 390 px, 1024 px, and 1280 px, at the default text size and with the browser's text size at 20 px, each money figure, each lbs figure, and each lot, batch, and sale number on `/` stays on one line inside the element that holds that one value: its tile, its table cell, or its line in a card, in whichever look its list takes at that width. The long values, all dated the app's today: receipts of 1,800,000 lbs and then 1,234,567.891 lbs of RAW-TOM at $1.6800/lb; a batch of 502 from the 1,800,000 raw lbs with a measured 1,386,000.123 finished lbs; and a sale of 1,000,000.123 lbs of 502 at $3.5000/lb. They leave RAW-TOM 1,234,567.891 lbs on hand and put the four money tiles at "$3,500,000.43", "$2,074,074.06", "$1,015,874.80", and "$3,089,948.86".
-- [ ] **AC-0028.** With AC-0016's long values set, at the widths and text sizes AC-0016 names, `/` does not scroll sideways.
+- [x] **AC-0016.** With the long values set, at 390 px, 1024 px, and 1280 px, at the default text size and with the browser's text size at 20 px, each money figure, each lbs figure, and each lot, batch, and sale number on `/` stays on one line inside the element that holds that one value: its tile, its table cell, or its line in a card, in whichever look its list takes at that width. The long values, all dated the app's today: receipts of 1,800,000 lbs and then 1,234,567.891 lbs of RAW-TOM at $1.6800/lb; a batch of 502 from the 1,800,000 raw lbs with a measured 1,386,000.123 finished lbs; and a sale of 1,000,000.123 lbs of 502 at $3.5000/lb. They leave RAW-TOM 1,234,567.891 lbs on hand and put the four money tiles at "$3,500,000.43", "$2,074,074.06", "$1,015,874.80", and "$3,089,948.86".
+- [x] **AC-0028.** With AC-0016's long values set, at the widths and text sizes AC-0016 names, `/` does not scroll sideways.
 
 ### Look and regressions
 
-- [ ] **AC-0017.** The verification ledger records the owner's "match" verdict for `/` built from this branch at 1280 px, with made-up data in every section, compared with the comparison page at revision 1794121141-4df1, its "First screen and alerts" block (the MarketMan dashboard and the line on a "Today" home page). A "no match" fails this criterion. The test data's names, numbers, and dates do not count as differences, nor does anything the brief's Non-goals or the intent's Limits leave out.
-- [ ] **AC-0018.** `npm test` passes.
-- [ ] **AC-0019.** Read from the branch point with `main`, tracked and untracked, the only changed expectations in existing test files are these, each moved by the criterion named. The values, names, and orders the changed lines assert are otherwise unchanged. A test added to an existing file is not a changed expectation. A change the owner approves under Ask first, recorded in the verification ledger with its date, joins this list.
+- [x] **AC-0017.** The verification ledger records the owner's "match" verdict for `/` built from this branch at 1280 px, with made-up data in every section, compared with the comparison page at revision 1794121141-4df1, its "First screen and alerts" block (the MarketMan dashboard and the line on a "Today" home page). A "no match" fails this criterion. The test data's names, numbers, and dates do not count as differences, nor does anything the brief's Non-goals or the intent's Limits leave out.
+- [x] **AC-0018.** `npm test` passes.
+- [x] **AC-0019.** Read from the branch point with `main`, tracked and untracked, the only changed expectations in existing test files are these, each moved by the criterion named. The values, names, and orders the changed lines assert are otherwise unchanged. A test added to an existing file is not a changed expectation. A change the owner approves under Ask first, recorded in the verification ledger with its date, joins this list.
   - `test/e2e/auth.spec.ts`'s check that signing in ends on `/receiving` with the receiving form shown, and its operator sign-out test's check of the receiving form right after sign-in (AC-0001).
   - `test/e2e/hosting.spec.ts`'s Secure-cookie test's check that sign-in ends on `/receiving` (AC-0001).
   - `signInThroughForm` in `test/e2e/states.ts`, which waits for `/receiving` (AC-0001).
   - `test/e2e/hosting.spec.ts`'s install file with `start_url` `/receiving` (AC-0029).
   - `test/e2e/shell.spec.ts`'s page titles, links, and Tab lists, `test/e2e/shell-page.ts`'s stop lists, `test/e2e/production.spec.ts`'s menu-order rows, and any other existing check of the menus' items, links, or Tab stops that the added "Today" link moves (AC-0002).
-- [ ] **AC-0020.** The browser suite's page-state check (`checkPageState`) reports no violation on `/` with every section filled, with every section in its empty state (AC-0005, AC-0013, AC-0027, AC-0031, AC-0032), and with an urgent alert open.
-- [ ] **AC-0033.** Each of `/`'s reads (the daily sales, stock value, and stock on hand views, today's receipts, batches, and sales, and the open alerts) throws when the database refuses it, and returns no empty list, zero, or missing row in its place.
-- [ ] **AC-0036.** Every read AC-0033 lists runs in `src/app/page.tsx` before the page renders: `page.tsx` awaits them in one `await Promise.all([...])` whose elements are exactly those reads' calls, each a bare call with nothing wrapped around it or chained onto it, and holds none of the texts `catch` (in any letter case), `allSettled`, `.then(`, and `use(`. The files under `src/app/home/` import from `src/lib/` only `format.ts` and type-only imports, and nothing from `src/app/_server/`.
-- [ ] **AC-0035.** When a read on `/` fails, `/` shows the error view headed "Today" with its "Try again" button, and no money tile. A failed watch is AC-0021's and AC-0022's case.
-- [ ] **AC-0034.** When `/sign-in` fails to load, it shows the error view headed "Sign in" with its "Try again" button.
+- [x] **AC-0020.** The browser suite's page-state check (`checkPageState`) reports no violation on `/` with every section filled, with every section in its empty state (AC-0005, AC-0013, AC-0027, AC-0031, AC-0032), and with an urgent alert open.
+- [x] **AC-0033.** Each of `/`'s reads (the daily sales, stock value, and stock on hand views, today's receipts, batches, and sales, and the open alerts) throws when the database refuses it, and returns no empty list, zero, or missing row in its place.
+- [x] **AC-0036.** Every read AC-0033 lists runs in `src/app/page.tsx` before the page renders: `page.tsx` awaits them in one `await Promise.all([...])` whose elements are exactly those reads' calls, each a bare call with nothing wrapped around it or chained onto it, and holds none of the texts `catch` (in any letter case), `allSettled`, `.then(`, and `use(`. The files under `src/app/home/` import from `src/lib/` only `format.ts` and type-only imports, and nothing from `src/app/_server/`.
+- [x] **AC-0035.** When a read on `/` fails, `/` shows the error view headed "Today" with its "Try again" button, and no money tile. A failed watch is AC-0021's and AC-0022's case.
+- [x] **AC-0034.** When `/sign-in` fails to load, it shows the error view headed "Sign in" with its "Try again" button.
 
 ## Follow-ons
 
