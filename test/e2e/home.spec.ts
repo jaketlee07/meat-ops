@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { buildFiveAlertFixture } from "../alert-fixtures";
 import { callAsOperator, PROD_502_ID, query, RAW_TOM_ID, receiveCall, resetTestData, seedInvoiceFixture, VENDOR_ID } from "../db";
 import { formatWeight } from "../../src/lib/format";
-import { banner, groupTitles, opens, withWatchRefused, WATCH_FAILED } from "./alerts-page";
+import { banner, groupTitles, marginCase, opens, withWatchRefused, WATCH_FAILED } from "./alerts-page";
 import { appDate } from "./app-time";
 import {
   alertTitlesShown,
@@ -35,7 +35,8 @@ import {
   WIDTHS,
   worked,
 } from "./home-page";
-import { NON_OPERATOR_STATE, OPERATOR_STATE } from "./states";
+import { OPERATOR_EMAIL } from "../users";
+import { NON_OPERATOR_STATE, OPERATOR_STATE, signInThroughForm } from "./states";
 
 // "Today" at `/`, end to end: a real browser over the production build and the local database. Every
 // receipt, batch, and sale goes through the operations, dated from the app's today (test/e2e/app-time.ts);
@@ -351,5 +352,83 @@ test.describe("a read that fails", () => {
     } finally {
       await restoreDailySalesRead();
     }
+  });
+});
+
+test.describe("getting to Today", () => {
+  test.describe("signed out", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test("AC-0001: signing in as an operator through the form ends on / headed Today", async ({ page }) => {
+      await signInThroughForm(page, OPERATOR_EMAIL);
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    });
+  });
+
+  // The side menu's and the phone menu's Primary navigation, each checked for its first link.
+  async function expectTodayFirst(nav: Locator): Promise<void> {
+    const links = nav.getByRole("link");
+    await expect(links.first()).toHaveText("Today");
+    await expect(links.first()).toHaveAttribute("href", "/");
+    await expect(links.nth(1)).toHaveText("Receiving");
+    await expect(links.first()).toHaveAttribute("aria-current", "page");
+    await expect(nav.locator("[aria-current]")).toHaveCount(1);
+  }
+
+  test("AC-0002, AC-0025: at 390 px the phone menu lists Today first and marks it current on /", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await openToday(page);
+    await page.getByRole("button", { name: "Open menu" }).click();
+    const menu = page.getByRole("dialog", { name: "Menu" });
+    await expect(menu).toBeVisible();
+    await expectTodayFirst(menu.getByRole("navigation", { name: "Primary" }));
+  });
+
+  test("AC-0002, AC-0025: at 1280 px the side menu lists Today first and marks it current on /", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openToday(page);
+    await expectTodayFirst(page.getByRole("complementary", { name: "Side menu" }).getByRole("navigation", { name: "Primary" }));
+  });
+});
+
+test.describe("the urgent banner", () => {
+  test("AC-0006: with one urgent alert open, the Urgent alerts region is absent on / and /alerts and present on the eight other pages the menus list", async ({
+    page,
+  }) => {
+    await marginCase();
+    await openToday(page);
+    await expect(banner(page), "/").toHaveCount(0);
+    await opens(page);
+    await expect(banner(page), "/alerts").toHaveCount(0);
+    for (const path of ["/receiving", "/production", "/menu", "/pricing", "/sales", "/trace", "/invoices", "/ask"]) {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 }), path).toBeVisible();
+      await expect(banner(page), path).toHaveCount(1);
+    }
+  });
+});
+
+test.describe("the urgent count on Today", () => {
+  // The badge is aria-hidden, so it is found by that attribute inside the link.
+  const badge = (link: Locator) => link.locator('span[aria-hidden="true"]');
+
+  test("AC-0023: at 390 px the top bar's and the phone menu's Alerts links show the urgent count", async ({ page }) => {
+    await marginCase();
+    await page.setViewportSize({ width: 390, height: 800 });
+    await openToday(page);
+    const top = page.getByRole("link", { name: "Alerts, 1 urgent", exact: true });
+    await expect(badge(top)).toHaveText("1");
+    await page.getByRole("button", { name: "Open menu" }).click();
+    const inMenu = page.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: "Alerts", exact: true });
+    await expect(badge(inMenu)).toHaveText("1");
+  });
+
+  test("AC-0023: at 1280 px the side menu's Alerts link shows the urgent count", async ({ page }) => {
+    await marginCase();
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openToday(page);
+    const side = page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Alerts", exact: true });
+    await expect(badge(side)).toHaveText("1");
   });
 });

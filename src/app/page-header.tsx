@@ -12,6 +12,7 @@ type PageName = "today" | "receiving" | "production" | "menu" | "pricing" | "sal
 const BELL = "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0";
 
 const PAGES: ReadonlyArray<{ name: PageName; label: string; href: string; icon: string }> = [
+  { name: "today", label: "Today", href: "/", icon: "M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6" },
   {
     name: "receiving",
     label: "Receiving",

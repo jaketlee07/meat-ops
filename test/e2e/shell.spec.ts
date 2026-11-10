@@ -16,6 +16,8 @@ const WHITE = "rgb(255, 255, 255)";
 const BLUE = "rgb(29, 78, 216)";
 const PHONE = { width: 320, height: 640 };
 const TITLES = ["Receiving", "Production", "Menu", "Pricing", "Sales", "Trace", "Invoices", "Ask", "Alerts"];
+// The menus list "Today" first, ahead of the nine pages.
+const MENU_TITLES = ["Today", ...TITLES];
 const NINE_PAGES = ["/receiving", "/production", "/menu", "/pricing", "/sales", "/trace", "/invoices", "/ask", "/alerts"];
 
 test.beforeEach(async () => {
@@ -148,7 +150,7 @@ test.describe("the shell", () => {
       const side = sideMenu(page);
       await expect(side).toBeVisible();
       expect(await backgroundOf(side)).toBe(NAVY);
-      await expect(primaryNav(page).getByRole("link")).toHaveText(TITLES);
+      await expect(primaryNav(page).getByRole("link")).toHaveText(MENU_TITLES);
       const brand = side.getByText("Meat Ops", { exact: true });
       const signOut = side.getByRole("button", { name: "Sign out" });
       const [brandBox, navBox, outBox] = await Promise.all([
@@ -184,7 +186,7 @@ test.describe("the phone menu", () => {
     expect(await dialog.evaluate((el) => el.matches(":modal"))).toBe(true);
     expect(await backgroundOf(dialog)).toBe(NAVY);
     await expect(page.getByRole("button", { name: "Close menu" })).toBeFocused();
-    await expect(dialog.getByRole("navigation", { name: "Primary" }).getByRole("link")).toHaveText(TITLES);
+    await expect(dialog.getByRole("navigation", { name: "Primary" }).getByRole("link")).toHaveText(MENU_TITLES);
     const parts = await Promise.all([
       dialog.getByRole("button", { name: "Close menu" }).boundingBox(),
       dialog.getByRole("navigation", { name: "Primary" }).boundingBox(),
@@ -274,7 +276,7 @@ test.describe("the phone menu", () => {
     await openPhoneMenu(page);
     expect(await checkPageState(page)).toEqual([
       "button Close menu",
-      ...TITLES.map((title) => `a ${title}`),
+      ...MENU_TITLES.map((title) => `a ${title}`),
       "button Sign out",
     ]);
   });
@@ -373,8 +375,8 @@ test.describe("the desktop walk", () => {
     await open(page, "/receiving", { width: 1280, height: 720 });
     await checkPageState(page);
     const labels = await checkDesktopWalk(page);
-    expect(labels.slice(0, 10)).toEqual([
-      ...TITLES.map((title) => (title === "Alerts" ? "a Alerts1" : `a ${title}`)),
+    expect(labels.slice(0, 11)).toEqual([
+      ...MENU_TITLES.map((title) => (title === "Alerts" ? "a Alerts1" : `a ${title}`)),
       "button Sign out",
     ]);
   });
