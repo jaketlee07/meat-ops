@@ -89,7 +89,7 @@ None.
 | --- | --- |
 | `polish-tables-status` | Shipped |
 | `polish-forms-alerts` | Shipped |
-| `home-screen` | Approved |
+| `home-screen` | Implementing |
 
 ## Source
 

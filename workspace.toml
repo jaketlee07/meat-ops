@@ -76,8 +76,7 @@ name = "UI polish and home screen"
 status = "active"
 
 [ini-002.work]
-active = []
-queue = [
+active = [
   { path = "docs/specs/home-screen/spec.md", kind = "spec", source = { mode = "repo-origin", ref = "docs/product/briefs/ui-polish.md", revision = "316e196", parent = "docs/product/briefs/ui-polish.md" }, summary = "Spec 2a of UI polish: the Today home screen at /, where sign-in and the installed app land, with today's sales and stock value from new views, open alerts, today's receipts, batches, and sales, and stock on hand", needs = [] },
 ]
 shipped = [
