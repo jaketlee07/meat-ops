@@ -433,6 +433,22 @@ test.describe("a read that fails", () => {
       await restoreDailySalesRead();
     }
   });
+
+  test("Today's error view links to Receiving, passes the page-state check, and the link opens Receiving", async ({ page }) => {
+    await revokeDailySalesRead();
+    try {
+      await page.goto("/");
+      await expect(page.getByRole("button", { name: "Try again", exact: true })).toBeVisible();
+      const link = page.getByRole("link", { name: "Go to Receiving", exact: true });
+      await expect(link).toHaveAttribute("href", "/receiving");
+      expect((await checkPageState(page)).length, "Tab stops reached").toBeGreaterThan(0);
+      await link.click();
+      await expect(page).toHaveURL(/\/receiving$/);
+      await expect(page.getByRole("heading", { level: 1, name: "Receiving" })).toBeVisible();
+    } finally {
+      await restoreDailySalesRead();
+    }
+  });
 });
 
 test.describe("getting to Today", () => {
