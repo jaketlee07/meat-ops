@@ -2,7 +2,7 @@
 
 - **Spec:** [`spec.md`](spec.md)
 - **Status:** Drafting <!-- Drafting | Approved | Executing | Done -->
-- **Repository anchors:** the views and grants of `v_sale_summary` in `supabase/migrations/20261013155724_sales_trace.sql`, with `test/access.test.ts`, which reads every relation in `public`; the page pattern of `src/app/alerts/page.tsx` (claims, `isOperator`, `runWatch`, `PageShell`); the shell, menus, and banner in `src/app/page-header.tsx`, with `test/e2e/shell.spec.ts` and `test/e2e/shell-page.ts`; the sign-in action `src/app/sign-in/actions.ts`, with `test/e2e/auth.spec.ts` and the helper `signInThroughForm` in `test/e2e/states.ts`; the Recent lists `src/app/receiving/recent-receipts.tsx`, `src/app/production/recent-batches.tsx`, and `src/app/sales/recent-sales.tsx`, with the shared `StatusTag`, `Facts`, and `formatMoney`.
+- **Repository anchors:** the views and grants of `v_sale_summary` in `supabase/migrations/20261013155724_sales_trace.sql`, with `test/access.test.ts`, which reads every relation in `public`, and `test/sales.test.ts`, which reads its views as `service_role`; the page pattern of `src/app/alerts/page.tsx` (claims, `isOperator`, `runWatch`, `PageShell`); the shell, menus, and banner in `src/app/page-header.tsx`, with `test/e2e/shell.spec.ts` and `test/e2e/shell-page.ts`; the sign-in action `src/app/sign-in/actions.ts`, with `test/e2e/auth.spec.ts`, `test/e2e/auth.setup.ts`, and `signInThroughForm` in `test/e2e/states.ts`; the install file `src/app/manifest.ts`, with `test/e2e/hosting.spec.ts`; the Recent lists `src/app/receiving/recent-receipts.tsx`, `src/app/production/recent-batches.tsx`, and `src/app/sales/recent-sales.tsx`, with the shared `StatusTag`, `Facts`, and `formatMoney`; the container variants in `src/app/globals.css` (`alert-pair`, `sale-table`) and the stock tiles that wrap with no breakpoint.
 
 > **Plan contract:** this is the implementation strategy. It may change
 > substantively only while its Status is `Drafting`, before approval records its
@@ -18,16 +18,13 @@
 
 ## Approach
 
-The two views come first, because the page's money figures read them and their math is golden-tested on its own. The page and its reads follow. Then sign-in, the menus, and the banner move to it, which is the step that changes existing tests. A last task records what only a person or a diff read can check.
+The three views come first, because the page's money figures and stock list read them and their math and access are tested on their own. The page and its reads follow. Then sign-in, the install file, the menus, and the banner move to it, which is the step that changes existing tests. A last task records what only a person or a diff read can check.
 
-The riskiest part is the stock value view's access. An aggregate with no `GROUP BY` returns one row even when row-level security hides every row under it, and the access suite requires that a signed-in non-operator reads 0 rows from every view. A rolled-back probe on stack A on 2026-11-09 settled the shape (see the view Design decision). Because T1 changes what each role can read, `security-reviewer` joins the post-gates review.
+The riskiest part is the stock value view's access. An aggregate with no `GROUP BY` returns one row even when row-level security hides every row under it, and a signed-in non-operator must read no row from it. The probe the spec's Assumptions record settled the shape. Because T1 changes what each role can read, `security-reviewer` joins the post-gates review.
 
 ## Constraints
 
-- The brief's Constraints and the intent's Guardrail: no costing outside the engine, 44 px controls, the focus outline, the contrast and axe checks, and the floor forms' fields, Tab order, and presses.
-- Specs 1a and 1b's criteria stay met: the status tags, the table parts, the label style, and the quiet banner on every page that shows it.
-- The look E shell and its tests: `<main>`'s first child stays the title-and-banner `div`; a page's own status stays out of `main > div > [role=status]`.
-- `AGENTS.md`: hard rules 2, 3, 6, and 7; no em dashes; `type(scope): description` commits; `npm ci --ignore-scripts`; the folder check before any test run, reset, or stack stop.
+The spec's `Constrained by` line names the rules. One more holds for the build: `<main>`'s first child stays the shell's title-and-banner `div`, and a page's own status stays out of `main > div > [role=status]`, as the look E shell tests read.
 
 ## Construction tests
 
@@ -40,10 +37,10 @@ Most construction tests live under **Tasks** below.
 
 | Durable output | Tasks | Implementation evidence | Closeout evidence |
 | --- | --- | --- | --- |
-| `SYSTEM-SPEC.md` views list | T1 | It names `v_daily_sales` and `v_stock_value` with their columns. | `close-work` reads the list against the migration. |
-| `docs/costing.md` section on today's sales and stock value | T1 | It defines both figures, the voids and reversals they leave out, and AC-0011's and AC-0012's examples. | `close-work` reads it against the views. |
-| Overview `supabase/migrations/` row and Access model | T1 | Both name the two views, `security_invoker`, and their grants. | `close-work` reads both against the migration. |
-| Overview `src/app` row | T2, T3 | It names "Today" at `/`, its four sections, the menus' first item, sign-in landing there, and the banner's absence there. | `close-work` reads the row whole against the code. |
+| `SYSTEM-SPEC.md` views list | T1 | It names `v_daily_sales`, `v_stock_value`, and `v_stock_on_hand` with their columns. | `close-work` reads the list against the migration. |
+| `docs/costing.md` | T1, T2 | Its opening lists name the two money views and `test/home-figures.test.ts`; a section defines both figures with AC-0011's and AC-0012's examples; the Rounding note's money row names the home screen's figures. | `close-work` reads it against the views. |
+| Overview `supabase/migrations/` row and Access model | T1 | Both name the three views, `security_invoker`, and their grants. | `close-work` reads both against the migration. |
+| Overview `src/app` row | T2, T3 | It names "Today" at `/`, its sections in order, the menus' first item, sign-in and the install file opening there, and the banner's absence there. | `close-work` reads the row whole against the code. |
 | Overview `test/` and `test/e2e/` rows | T1, T2 | They list `test/home-figures.test.ts` and `test/e2e/home.spec.ts`. | `close-work` reads both rows whole. |
 | Design reference: the comparison page | T4 | The AC-0017 ledger entry names revision 1794121141-4df1. | The brief still links the page. |
 
@@ -51,19 +48,18 @@ Most construction tests live under **Tasks** below.
 
 ### Design decisions
 
-- **Two views.** `v_daily_sales` holds one row per `sale_date` with `sales_total`, the sum of `lbs_sold * price_per_lb` over the items of that date's sales whose `voided_at` is null. `v_stock_value` holds `raw_value`, `finished_value`, and `total_value`, each a `coalesce(sum(...), 0)` over a `union all` of every lot's `remaining_lbs * current_unit_cost` and every finished good's `lbs_remaining * cost_per_lb`, ending in `having count(*) > 0`. A void sets a lot's `remaining_lbs` to 0 and a reversal sets its finished goods' `lbs_remaining` to 0, so neither needs its own filter. Both views are `security_invoker = true`. The migration revokes all on each from `public`, `anon`, `authenticated`, and `service_role`, then grants select to `authenticated` and `service_role`, as `v_sale_summary` does.
-- **The probe behind the view shape.** On 2026-11-09, inside one rolled-back transaction on stack A, one made-up receipt (5,000 lbs at $1.68) and one batch (2,000 lbs) then the two views gave: `postgres` one stock row (raw 5040.0000000, finished 4052.9720000, type `numeric`); a signed-in non-operator 0 rows from each view; an operator one stock row; `service_role` one stock row. Without the revoke, `anon` passed the view and was refused only at `lots`, which is why the migration revokes first. The transaction left no view and no row.
-- **No row means zero.** The page reads today's `v_daily_sales` row with `.eq("sale_date", today).maybeSingle()` and the one `v_stock_value` row with `.maybeSingle()`. A missing row shows `formatMoney(0)`, "$0.00". No total is added in `src/`.
-- **Money on screen.** Each total goes through `formatMoney`, as Production's raw cost total does. Intl rounds a number from its shortest decimal form, so a total of 15 significant digits or fewer shows as its exact decimal rounded half away from zero (a 2026-11-09 Node 22 probe: `1.005` and `"1.005"` both show "$1.01").
-- **Today's reads.** `src/lib/home.ts` reads today's lots by `received_date`, batches by `production_date`, and `v_sale_summary` by `sale_date`, each with `count: "exact"`, newest first, using the app's today from `appToday`. Each row keeps the fields its Recent list shows and goes through the same formats and tags. Stock on hand reads active raw products with their `inventory_balances` row, and active finished products' `finished_lbs_available` from `v_current_menu`, which sums `lbs_remaining` in the database.
-- **The watch.** `runWatch` is wrapped in React's `cache`, so the page and the shell share one run per request. The page runs it before reading the open alerts, as `/alerts` does. The shell keeps the badge on `/` and drops the banner for `current === "today"`. A failed watch shows `WATCH_FAILED` in the Open alerts section.
-- **The page.** `src/app/page.tsx` replaces its redirect with the `/alerts` pattern: claims, then `isOperator`, then the reads, then `PageShell` with `title="Today"`, `current="today"`, and `fullWidth`. The sections run in this order: the money figures as a row of figure tiles, then Open alerts, Today's entries, and Stock on hand. From 1024 px the figure tiles share one row and Open alerts sits beside Stock on hand, with Today's entries below at full width. Below 1024 px every section takes its own line. Each list uses 1a's table parts and `StatusTag`.
-- **The menus.** `PageName` gains `today`, and `PAGES` gains a first entry, `{ name: "today", label: "Today", href: "/" }`, with a line icon in the same stroke style as the others.
-- **Sign-in.** `signIn` ends with `redirect("/")`, and `signInThroughForm` waits for `/` and the "Today" heading.
+- **Three views.** `v_daily_sales` gives one row per `sale_date` with `sales_total` over the date's sales that are not voided; a date whose sales are all voided has no row. `v_stock_value` gives one row of `raw_value`, `finished_value`, and `total_value` over every lot and every finished good, ending in `having count(*) > 0` so that a caller whose rows RLS hides gets no row. `v_stock_on_hand` gives one row per product with its code, description, kind, `active`, and `lbs_on_hand`: a raw product's from its balance row, a finished product's summed over its finished goods in the database. A void or a reversal already zeroes what it takes off the shelf, so no view filters for them. Each view is `security_invoker`, and the migration revokes all on it from `public`, `anon`, `authenticated`, and `service_role` before granting select to `authenticated` and `service_role`, as `v_sale_summary` does.
+- **No row means zero.** A missing `v_daily_sales` row for today, or a missing `v_stock_value` row, shows `formatMoney(0)`. No total is added in `src/`.
+- **Money on screen.** Each total goes through `formatMoney`, as Production's raw cost total does, and rounds as the costing reference's Rounding note states.
+- **Today's reads.** `src/lib/home.ts` reads today's lots by `received_date`, batches by `production_date`, and `v_sale_summary` by `sale_date`, using the app's today from `appToday`. Each read joins its product's code and description, counts exactly, and lists newest first. Each row keeps the fields its Recent list shows and goes through the same formats and tags. Stock on hand reads `v_stock_on_hand` filtered to active products and products with stock.
+- **The watch.** `runWatch` is wrapped in React's `cache`, so the page and the shell share one run per request. The page runs it before reading the open alerts, as `/alerts` does. For `current === "today"` the shell renders no "Urgent alerts" region in any watch state and keeps the three badges.
+- **The page.** `src/app/page.tsx` follows the `/alerts` pattern: claims, then `isOperator`, then the reads, then `PageShell` titled "Today" with `fullWidth`. The sections run in the spec's order, and the page's source follows the reading order. Each layout picks its look from its own container's width and the text size, through container variants in `globals.css`, as `alert-pair` and `sale-table` do: the four tiles wrap as the stock tiles do, and Today's entries and Stock on hand share a row only when their shared container fits both.
+- **The menus.** `PageName` gains `today`, and the page list gains a first entry for "Today" at `/`, with a line icon in the same stroke style as the others.
+- **Sign-in and the install file.** Sign-in ends on `/`. `signInThroughForm` waits for `/` and any level-1 heading, so the non-operator's not-allowed page passes it as well as "Today". The install file's start address is `/`.
 
 ### Component / module decomposition
 
-- New: the migration (from `supabase migration new home_figures`), `src/lib/home.ts`, `test/home-figures.test.ts`, `test/e2e/home.spec.ts` with a page object `test/e2e/home-page.ts`, and the verification ledger.
+- New: the migration (from `supabase migration new home_figures`), `src/lib/home.ts`, the section parts under `src/app/home/`, `test/home-figures.test.ts`, `test/e2e/home.spec.ts` with a page object `test/e2e/home-page.ts`, and the verification ledger.
 - Changed: listed in each task's Touches.
 
 ### Quality attributes (NFRs)
@@ -73,20 +69,21 @@ Most construction tests live under **Tasks** below.
 
 ## Tasks
 
-### T1: The daily sales and stock value views
+### T1: The daily sales, stock value, and stock on hand views
 
 **Depends on:** none
 **Mode:** TDD against the local stack
 **Touches:** `supabase/migrations/<timestamp>_home_figures.sql`, `src/lib/database.types.ts`, `test/home-figures.test.ts`, `SYSTEM-SPEC.md`, `docs/costing.md`, `docs/architecture/overview.md`
 
 **Tests:**
-- New `test/home-figures.test.ts`, run with the reset and seed helpers the existing Vitest suites share: AC-0011 with its three sales seeded through `record_sale` and `void_sale` on one date, plus a sale on another date that its row leaves out; AC-0012 with its lots and finished goods set as `postgres`, plus a voided lot and a reversed batch that add nothing. Each compares the view's value as text.
-- `test/access.test.ts` unchanged: its fixture gives the operator at least one row from each new view (AC-0015). If it does not, the fixture gains the rows it needs, and that change is recorded for AC-0019.
-- Each new test is seen red once against the migration before the views exist, recorded in the ledger.
+- New `test/home-figures.test.ts`, run with the reset and seed helpers the existing Vitest suites share: AC-0011 with its three sales seeded through `record_sale` and `void_sale`, plus a sale on another date and a date whose only sale is voided, which have no row on AC-0011's date; AC-0012 with its lots and finished goods set as `postgres`, the test-setup role the Access model names, plus a voided lot and a reversed batch that add nothing. Each compares the view's value as text.
+- The same file: AC-0015 reads each of the three views as `anon`, a non-operator, an operator, and `service_role`, as `test/sales.test.ts` reads its views; AC-0024 reads each view's privileges for `anon`, `public`, `authenticated`, and `service_role` from the catalog.
+- `test/access.test.ts` stays unchanged: its fixture's receipt, batch, and sale give the operator a row from each new view.
+- Each new test is seen red once before the migration exists, recorded in the ledger.
 
 **Approach:**
 - Write the migration, apply it with `supabase migration up`, and run `npm run gen:types`.
-- Write the views into the SYSTEM-SPEC views list, the costing reference, and the overview's `supabase/migrations/` row, Access model, and `test/` row.
+- Write the views into the SYSTEM-SPEC views list, the costing reference's opening lists and new section, and the overview's `supabase/migrations/` row, Access model, and `test/` row.
 
 **Done when:** the T1 tests pass, `npm run test:costing` passes, and `npm test` passes.
 
@@ -94,33 +91,34 @@ Most construction tests live under **Tasks** below.
 
 **Depends on:** T1
 **Mode:** manual QA through the browser suite
-**Touches:** `src/lib/home.ts`, `src/app/page.tsx`, `src/app/home/` (the section parts), `src/app/page-header.tsx`, `test/e2e/home.spec.ts`, `test/e2e/home-page.ts`, `docs/architecture/overview.md`
+**Touches:** `src/lib/home.ts`, `src/app/page.tsx`, `src/app/home/`, `src/app/page-header.tsx`, `src/app/globals.css`, `test/e2e/home.spec.ts`, `test/e2e/home-page.ts`, `docs/costing.md`, `docs/architecture/overview.md`
 
 **Tests:**
 - no stub (manual QA): the checks are the rendered page's roles, text, and boxes.
-- New `home.spec.ts`, opening `/` directly with the saved operator session: AC-0003 with the non-operator session; AC-0004 against the order `/alerts` shows for the same alerts; AC-0005, AC-0009, and AC-0013 on an emptied stack; AC-0021 inside `withWatchRefused` from `test/e2e/alerts-page.ts`; AC-0007 and AC-0008 with entries on the app's today and the day before, one of each voided or reversed; AC-0010 against `inventory_balances` and `finished_goods` read with `query`; AC-0014 with AC-0011's sales dated today and AC-0012's stock set as `postgres`; AC-0016 at each width and text size it names.
+- New `home.spec.ts`, opening `/` directly with the saved sessions: AC-0003 with the non-operator's; AC-0030 reading the four sections' source order and boxes at 390 px and 1280 px; AC-0014 with AC-0011's sales dated today and AC-0012's stock set as `postgres`; AC-0013 and AC-0027 on an emptied stack, AC-0013 also with only a voided sale today; AC-0004 against the order `/alerts` shows for the same alerts; AC-0026 with and without open alerts; AC-0005; AC-0021 and AC-0022 inside `withWatchRefused` from `test/e2e/alerts-page.ts`; AC-0007 and AC-0008 with entries on the app's today and the day before, one of each voided or reversed; AC-0009 and AC-0031 with two receipts, no batch, and one sale; AC-0010 against `inventory_balances` and `finished_goods` read with `query`, with one inactive product holding stock and one holding none; AC-0032 on an emptied stack; AC-0016 and AC-0028 at each width and text size they name, with the long values set as `postgres`.
 
 **Approach:**
-- Build the reads, then the page, then the section parts, reusing each Recent list's formats and tags.
-- Add `today` to `PageName` and drop the banner for it in `PageShell`.
-- Write "Today" at `/` and its sections into the overview's `src/app` row, and list the new suite in its `test/e2e/` row.
+- Build the reads, then the page and its section parts, reusing each Recent list's formats and tags.
+- Add `today` to `PageName` and drop the banner region for it in `PageShell`.
+- Write "Today" at `/` and its sections into the overview's `src/app` row, list the new suite in its `test/e2e/` row, and add the home screen's figures to the Rounding note's money row.
 
 **Done when:** the T2 tests pass and `npm test` passes.
 
-### T3: Sign-in lands on "Today", the menus list it first, and the banner leaves it
+### T3: Sign-in and the install file open "Today", the menus list it first, and the banner leaves it
 
 **Depends on:** T2
 **Mode:** manual QA through the browser suite
-**Touches:** `src/app/sign-in/actions.ts`, `src/app/page-header.tsx`, `test/e2e/states.ts`, `test/e2e/auth.spec.ts`, `test/e2e/shell.spec.ts`, `test/e2e/shell-page.ts`, `test/e2e/production.spec.ts`, `test/e2e/home.spec.ts`, any other existing e2e file whose assertion reads the sign-in landing, the menus' items, or their Tab stops, and `docs/architecture/overview.md`
+**Touches:** `src/app/sign-in/actions.ts`, `src/app/manifest.ts`, `src/app/page-header.tsx`, `test/e2e/states.ts`, `test/e2e/auth.spec.ts`, `test/e2e/hosting.spec.ts`, `test/e2e/shell.spec.ts`, `test/e2e/shell-page.ts`, `test/e2e/production.spec.ts`, `test/e2e/home.spec.ts`, the other existing e2e files AC-0019's last item covers, and `docs/architecture/overview.md`
 
 **Tests:**
-- no stub (manual QA): the checks are URLs, links, and regions in a browser.
-- `home.spec.ts`: AC-0001 through the sign-in form; AC-0002 at 390 px with the phone menu open and at 1280 px; AC-0006 with one urgent alert open, on `/`, `/alerts`, and each of the other eight pages.
-- `auth.spec.ts`' landing check, `signInThroughForm`, `shell.spec.ts`' `TITLES` and Tab lists, and `production.spec.ts`' menu-order rows change only as AC-0019 allows; the T4 diff read checks each.
+- no stub (manual QA): the checks are URLs, links, regions, and a served file in a browser.
+- `home.spec.ts`: AC-0001 through the sign-in form; AC-0002 and AC-0025 at 390 px with the phone menu open and at 1280 px; AC-0006 with one urgent alert open, on `/`, `/alerts`, and each other page the menus list; AC-0023 at 390 px and 1280 px.
+- `hosting.spec.ts`' install file check reads AC-0029.
+- Each existing check AC-0019 lists changes only as it allows; the T4 diff read checks each.
 
 **Approach:**
-- Point sign-in at `/`, add the "Today" entry and icon to `PAGES`, then run the browser suite and change each failing existing check that AC-0019 names.
-- Write the sign-in landing and the menus' first item into the overview's `src/app` row.
+- Point sign-in and the install file at `/`, add the "Today" entry and icon to the page list, then run the browser suite and change each failing existing check that AC-0019 lists.
+- Write the sign-in landing, the install file's start, and the menus' first item into the overview's `src/app` row.
 
 **Done when:** the T3 tests pass and `npm test` passes.
 
@@ -143,14 +141,14 @@ Most construction tests live under **Tasks** below.
 
 ## Rollout
 
-One PR. Rollback is a revert of the app and a new migration that drops the two views. The views change no table and no stored value. The hosted project gets the migration before any hosted app build that reads it; each step needs the developer's approval, and neither is part of this spec.
+One PR. Rollback is a revert of the app and a new migration that drops the three views. The views change no table and no stored value. The hosted project gets the migration before any hosted app build that reads it; each step needs the developer's approval, and neither is part of this spec.
 
 ## Risks
 
-- An existing browser test that walks the side menu's Tab order or counts its links fails once "Today" joins it. T3 changes only those AC-0019 names, and the T4 diff read checks each change.
-- `/` is now a page that reads the database on every sign-in. A failed read throws to the error boundary, as every other page's does.
-- The access suite's fixture may give the operator no row from `v_daily_sales`. T1's second test bullet covers that.
+- An existing browser test that walks a menu's Tab order or counts its links fails once "Today" joins it. T3 changes only what AC-0019 lists, and the T4 diff read checks each change.
+- `/` is now the page that every sign-in and every installed-app start reads from the database. A failed read goes to the error view, as on every other page.
 
 ## Changelog
 
 - 2026-11-09: initial plan, after the owner's answers on the sign-in landing, the four sections, the banner, the menu item, and the money figures, a rolled-back view probe on stack A, and a Node probe of Intl's rounding.
+- 2026-11-09: after spec-stage review round 1 (adversarial, shaping, and security): a third view for per-product lbs; the owner's calls on the install file's start, inactive products' stock, and the section order; layouts that follow their own container's width; a sign-in wait that holds for both roles; the probe results moved to the spec's Assumptions; and catalog and `service_role` checks for the views.
