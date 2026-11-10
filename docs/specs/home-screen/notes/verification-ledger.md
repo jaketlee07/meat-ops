@@ -19,6 +19,7 @@ The owner's 2026-11-09 product decisions are the Product lines in the spec's [As
 | 7 (delta `a4329e0..63984f2`) | Not run (three-round cap) | 3 findings, answered by a change of mechanism | Not run (the delta changes no access) |
 | 8 (delta `63984f2..0c088a2`) | Not run (three-round cap) | 2 findings, answered by the owner's call | Not run (the delta changes no access) |
 | 9 (delta `0c088a2..1772a08`) | Not run (three-round cap) | 4 findings, all accepted | Not run (the delta changes no access) |
+| 10 (delta `1772a08..fd984b1`) | Not run (three-round cap) | 2 Low findings, all accepted | Not run (the delta changes no access) |
 
 - Every round 1 finding is draft-origin: each condition was in the draft before review.
 - Round 1 refuted (no change from the finding): adversarial 9 (no rule makes the stock value and the list cover the same products), 10 (no rule moved the install file's start), and 15 (the access fixture already gives the operator a row from each view). The owner then chose on 2026-11-09 to count and list an inactive product's stock and to open the installed app on "Today", and the plan's fixture fallback is gone.
