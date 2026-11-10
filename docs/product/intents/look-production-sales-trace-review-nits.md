@@ -1,6 +1,6 @@
 # Look E leftovers: figures, labels, and pickers that fit their space, waiting buttons, and Receiving's result under a tall stock card
 
-- **Status:** Draft
+- **Status:** Fulfilled
 
 
 ## Outcome
@@ -15,7 +15,7 @@ On Production, Receiving, Sales, and Trace every figure stays whole and every la
 - Vendor picker: on a draft's review, Product sits beside Vendor from 1178 px wide at the default text size and takes two thirds of the line. The closed Vendor picker is 167 px wide at 1178 px and 201 px at 1280 px. At 1178 px it cuts its own "Choose a vendor" by about 2 px and any vendor name over about 15 characters (a made-up "Heartland Wholesale Meats Inc" shows as "Heartland Whole"); at 1280 px it cuts names over about 18 characters. Under 1178 px the fields stack and the picker runs the line's full width. No test checks the Vendor picker's width.
 - Alerts width test: `/alerts` shows three blocks in `<main>` (the title, Today's digest, and the alert lists), but its AC-0001 test in `test/e2e/look-menu-invoices-ask-alerts.spec.ts` calls `expectNoCap(page, 2)`, and the comment on `expectNoCap` in `test/e2e/look-checks.ts` says Menu and Alerts show two. Menu shows two.
 - A probe on main at `a31fafc` measured the saved result, the stock tiles, and the sale trace on 2026-11-05; spec 3a's frontend reviews had listed them as not checked. A probe on main at `0da70e6` measured the Vendor picker and the Alerts blocks on 2026-11-06; spec 3b's reviews had listed them as not checked. The owner queued the first four items (stock tiles, sale trace, saved result, Receiving's result) at spec 3a's close-out on 2026-11-05 (PR #49), the waiting buttons while shaping spec 3b on 2026-11-06, and the Vendor picker and the Alerts width test at spec 3b's close-out on 2026-11-06 (PR #51).
-- Spec 1a of the UI polish brief (`docs/specs/polish-tables-status/`, PR #58) closed the stock tiles and sale trace gaps on 2026-11-09. The rest wait for spec 1b.
+- Spec 1a of the UI polish brief (`docs/specs/polish-tables-status/`, PR #58) closed the stock tiles and sale trace gaps on 2026-11-09, and spec 1b (`docs/specs/polish-forms-alerts/`, PR #62) closed the rest the same day: the saved result, Receiving's result, the waiting buttons, the Vendor picker, and the Alerts width test.
 - What each screen does, and every figure, word, and control name, stays the same. Each layout keeps picking its look from its own section's width and the text size.
 
 ## Owner
