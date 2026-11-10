@@ -3,7 +3,19 @@ import { buildFiveAlertFixture } from "../alert-fixtures";
 import { callAsOperator, PROD_502_ID, query, RAW_CHK_ID, RAW_TOM_ID, receiveCall, resetTestData, seedInvoiceFixture, VENDOR_ID } from "../db";
 import { formatWeight } from "../../src/lib/format";
 import { checkPageState } from "./a11y";
-import { banner, groupTitles, marginCase, opens, withWatchRefused, WATCH_FAILED } from "./alerts-page";
+import {
+  alertIdOf,
+  banner,
+  costEarlier,
+  groupTitles,
+  marginCase,
+  opens,
+  receiveTom,
+  watch,
+  withWatchRefused,
+  WATCH_FAILED,
+  yieldBatch,
+} from "./alerts-page";
 import { appDate } from "./app-time";
 import {
   alertTitlesShown,
@@ -145,7 +157,7 @@ test.describe("open alerts", () => {
 });
 
 test.describe("the Open alerts section for assistive technology and for a failed check", () => {
-  test("a line only screen readers hear gives the urgent count while an urgent alert is open, and is absent with none", async ({
+  test("a line only screen readers hear gives the urgent count while an urgent alert is open", async ({
     page,
   }) => {
     await marginCase();
@@ -165,6 +177,30 @@ test.describe("the Open alerts section for assistive technology and for a failed
   test("no urgent-alert line is in the Open alerts section when no alert is urgent", async ({ page }) => {
     await openToday(page);
     await expect(section(page, "Open alerts").getByText(/urgent alert/)).toHaveCount(0);
+  });
+
+  test("an open alert that is not urgent is listed with no urgent-alert line", async ({ page }) => {
+    await marginCase();
+    await yieldBatch();
+    await watch();
+    const margin = await alertIdOf("margin_below_target");
+    expect((await callAsOperator({ fn: "dismiss_alert", args: { p_alert_id: margin } })).ok).toBe(true);
+    await openToday(page);
+    const alerts = section(page, "Open alerts");
+    await expect(alerts.getByRole("listitem")).toHaveCount(1);
+    expect((await alertTitlesShown(page)).length).toBe(1);
+    await expect(alerts.getByText(/urgent alert/)).toHaveCount(0);
+  });
+
+  test("two urgent alerts give the line 2 urgent alerts.", async ({ page }) => {
+    await marginCase();
+    await costEarlier();
+    await receiveTom(1000, "1.90", 0);
+    await openToday(page);
+    const alerts = section(page, "Open alerts");
+    await expect(alerts.getByRole("listitem")).toHaveCount(2);
+    await expect(alerts.getByText(/urgent alert/)).toHaveCount(1);
+    await expect(alerts.getByText("2 urgent alerts.", { exact: true })).toHaveCount(1);
   });
 
   test("the failed alert check line takes the error color and medium weight", async ({ page }) => {

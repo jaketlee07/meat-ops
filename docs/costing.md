@@ -394,9 +394,10 @@ unrounded. The screen rounds them for display (see the Rounding note).
   current_unit_cost` over every lot; `finished_value`, the sum of `lbs_remaining ×
   cost_per_lb` over every finished good; and `total_value`, the two added. It
   counts every product, active or not. A voided receipt zeroes its lot's
-  remaining lbs and a reversal zeroes its batch's finished goods, so neither
-  adds value; a voided sale returns its lbs to the finished goods it drew from,
-  so they count again. The view has one row when the caller can see at least
+  remaining lbs, so it adds no value. A reversal zeroes its batch's finished
+  goods and returns the raw lbs it drew to the lots they came from, so those
+  count again in `raw_value`. A voided sale returns its lbs to the finished
+  goods it drew from, so they count again in `finished_value`. The view has one row when the caller can see at least
   one lot or finished good, and no row otherwise: for a caller who cannot read
   stock, and for one who can when no lot and no finished good exist.
 

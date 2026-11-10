@@ -24,9 +24,10 @@ import { resolveStackEnv } from "./env.js";
 import { signInNonOperator, signInOperator } from "./users.js";
 
 // Every name, price, and figure in this file is made up. Setup goes through the
-// operations only; each view value is read back as text and compared with its exact unrounded text
-// at the views' scale of 7 (lbs at scale 3 times a cost or price at scale 4), so a view that rounds
-// fails. No figure goes through JavaScript arithmetic.
+// operations only; the daily sales and stock value values are read back as text and compared with their
+// exact unrounded text at the views' scale of 7 (lbs at scale 3 times a cost or price at scale 4), so a
+// view that rounds fails. The stock on hand check compares lbs as numbers. No figure goes through
+// JavaScript arithmetic.
 
 const VIEWS = ["v_daily_sales", "v_stock_value", "v_stock_on_hand"] as const;
 const SALES_DAY = "2026-06-10";
