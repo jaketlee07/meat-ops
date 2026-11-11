@@ -7,8 +7,8 @@ import { isSearchSet, type ListSearch, MAX_ROWS } from "../lib/list-search";
 import { CONTROL, DATE_BOX, IconBox, LABEL } from "./form-parts";
 
 // The search form and the lines under a Recent list, shared by Recent receipts, Recent batches, and Recent
-// sales. The page parses its address with `parseListSearch` (src/lib/list-search.ts) and passes the result
-// in as `text`, `date`, and `rows`; nothing here reads the database.
+// sales. The page parses its address with `parseListSearch` (src/lib/list-search.ts); `SearchForm` receives the
+// result's `text` and `date`, and `ListEnd` the whole search. Nothing here reads the database.
 
 const STEP = 10;
 
@@ -156,7 +156,8 @@ export function ListEnd({
     <Link
       href={addressOf(path, product, "", null, null)}
       scroll={false}
-      onClick={() => {
+      // Next calls onNavigate only for a press that navigates in this tab, not a Cmd, Ctrl, Shift, or Alt one.
+      onNavigate={() => {
         clearing.current = true;
       }}
       className={LINK}
@@ -193,9 +194,11 @@ export function ListEnd({
       </Link>
     );
   }
+  // Each address gives its line a new element, so a search whose line reads as the last one's is announced too.
+  const lineKey = JSON.stringify([product, search.text, search.date, search.rows]);
   return (
     <div className={line === null ? collapsed : inset}>
-      <div role="status">{line !== null && <p>{line}</p>}</div>
+      <div role="status">{line !== null && <p key={lineKey}>{line}</p>}</div>
       {link}
     </div>
   );

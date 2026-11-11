@@ -332,6 +332,49 @@ export const noMatchLine = (page: Page, list: RecentList): Locator =>
   listSection(page, list).getByText(`No ${list.noun} match.`, { exact: true });
 export const TOO_MANY = "Too many vendors match. Type more of the name.";
 
+// The status region under a Recent list's rows, which holds its "Showing", cap, no-match, or too-many line. The rows'
+// own status regions, in their dialogs and result panels, are left out. Read by role, so it is in the accessibility tree.
+export const listStatusOf = (page: Page, list: RecentList): Locator =>
+  listSection(page, list).getByRole("status").and(page.locator(`[role=status]:not(#${list.listId} *)`));
+
+// Keeps the list's status region on `window`, as the page has it now, so a later check can tell that a line lands in
+// that same element: a region the page adds along with its line is not announced.
+export async function keepListStatus(page: Page, list: RecentList): Promise<void> {
+  const region = listStatusOf(page, list);
+  await expect(region, "the list's status region").toHaveCount(1);
+  await region.evaluate((node) => {
+    (window as unknown as { __listStatus?: Element }).__listStatus = node;
+  });
+}
+
+// The list's status region holds `line` ("" for none), and it is the element keepListStatus kept.
+export async function expectKeptListStatus(page: Page, list: RecentList, line: string): Promise<void> {
+  const region = listStatusOf(page, list);
+  await expect(region, "the list's status region").toHaveText(line);
+  expect(
+    await region.evaluate((node) => node === (window as unknown as { __listStatus?: Element }).__listStatus),
+    "the status region is the one the page had before",
+  ).toBe(true);
+}
+
+// How much taller the list's section is with the end under its rows than without it: the room the end takes, its gap
+// above included. The end is taken out of the page and put back in one step. Also says whether the list reads as a
+// table, its column header line shown.
+export async function endRoom(page: Page, list: RecentList): Promise<{ room: number; table: boolean }> {
+  return listStatusOf(page, list).evaluate((region, listId) => {
+    const end = region.parentElement!;
+    const holder = end.parentElement!;
+    const section = holder.closest("section")!;
+    const next = end.nextSibling;
+    const withEnd = section.getBoundingClientRect().height;
+    end.remove();
+    const withoutEnd = section.getBoundingClientRect().height;
+    holder.insertBefore(end, next);
+    const header = document.getElementById(listId)?.previousElementSibling;
+    return { room: withEnd - withoutEnd, table: header instanceof HTMLElement && getComputedStyle(header).display !== "none" };
+  }, list.listId);
+}
+
 // The numbers of the rows shown, in order.
 export async function shown(page: Page, list: RecentList): Promise<string[]> {
   const texts = await rowsOf(page, list).evaluateAll((items) => items.map((item) => item.textContent ?? ""));

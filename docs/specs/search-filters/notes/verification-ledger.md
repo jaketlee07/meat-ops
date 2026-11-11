@@ -186,7 +186,7 @@ Quality engineer:
 - 4, the chosen product: see adversarial 3.
 - 5 (finding 6), the `total` comments: in `src/lib/receiving.ts`, `src/lib/production.ts`, and `src/lib/sales.ts` each says `total` counts the rows that match the search, the M in "Showing N of M", and 0 for receipts in the too-many case.
 - 6 (finding 7), one decision for "a search is set": `isSearchSet` in `src/lib/list-search.ts`, used by the three lists and by `ListEnd`, which now takes the whole `search`.
-- 7 (finding 8), the no-break spaces: the four lines write each as ` `.
+- 7 (finding 8), the no-break spaces: the four lines write each as `\u00a0`.
 - 8 (finding 9), the copied helpers: `box` from `look-checks.ts` replaces `boxOf`, and the search stops come from `RECEIPT_SEARCH_STOPS`, `BATCH_SEARCH_STOPS`, and `SALE_SEARCH_STOPS`.
 - 9 (finding 10), the imports: `BETA`, `GAMMA`, `groupOf`, and `mixedDay` are gone from the spec, and `../db` is imported once.
 - 10 (finding 11), the self-skipping test: it is now two tests, "AC-0002: a receipt's vendor name and lot number are searched" and "AC-0006: a sale's product code, product name, customer, and sale number are searched". The suite has no skip.
@@ -217,3 +217,45 @@ Gates, 2026-11-11, on `90dcb5a` plus these fixes, uncommitted:
 - `npm test`: Vitest 58 files and 1,101 tests in 48 s, then Playwright 1,265 passed, none skipped, in 12.9 min.
 - After that gate, two edits changed only text no test reads: the AC-0002 seed comment, and the 55-row paging test's title, which dropped AC-0024 since that test opens with no search (the 25-row test checks AC-0024 with a search and a date). The typecheck passed after both.
 
+
+### Round 2 fixes
+
+One line per sustained finding of `.context/reviews/a5f08fda-ae0d-4d6e-a49d-fb51e365b01a/2-post-gates-*-adjudication.md`, 2026-11-11. Where findings overlap, each names the one repair.
+
+Adversarial reviewer:
+
+- 1 (finding 2), no check of the status region: `listStatusOf` in `test/e2e/list-search-page.ts` finds a Recent list's region by its role, leaving out the rows' own regions. `keepListStatus` keeps that element on `window`, and `expectKeptListStatus` checks that the region holds one exact line, or none, and is still the kept element. No Tab stop is added. Four tests use them, on each list they cover:
+  - The 12-row paging test: "Showing 10 of 12" sits in the region, which stays, empty, once the press shows every row.
+  - The AC-0027 test opens a search whose 6 matches all show, so the region is empty. "No ... match." then lands in that same region, and "Showing 10 of 12" does after Clear search.
+  - The 55-row test: each "Showing" line and the cap line sit in the one region.
+  - The AC-0047 test: the too-many line lands in the region the page had while it was empty.
+- 2 (finding 3), the `list-search.tsx` header: it says `SearchForm` receives the parsed search's `text` and `date`, and `ListEnd` the whole search.
+- 3 (finding 4), the AC-0016 box check: the test also opens `0099-12-31`, which a date box can hold and the parser refuses, and checks the box shows empty. It then fills the box with that date and checks the box holds it, so the empty value is the page's doing.
+- 4 (finding 5), the other-product comment: see quality 4.
+
+Quality engineer:
+
+- 1, the empty status region: see adversarial 1.
+- 2, the empty end's room: the `collapsed` classes stay. `endRoom` measures how much taller the list's section is with its end than with the end taken out. Once the press shows every row, the 12-row paging test checks that room is 0 at 1280 px, where the list reads as a table, and at 390 px, where it reads as cards; it checks which of the two it is at each width. The status region stays in the page and in the accessibility tree in every state.
+- 3, the modified click on "Clear search": the Link sets the focus flag from `onNavigate`, which Next calls only for a press that navigates in this tab. The AC-0027 focus check passes.
+- 4 (finding 5), the other-product comment and the dead check: the comment names only the searches each list's other row matches: for receipts "bETa", "LT-00", 2026-09-15, and "beta" with 2026-09-15; for batches "BT-00", 2026-09-15, and "BT-00" with 2026-09-15. The `not.toContain` after the exact poll is gone, and the poll's message names the other product's row.
+- 5 (finding 6), the no-break space: line 189 writes the escape as `\u00a0`.
+
+Frontend reviewer:
+
+- 1, the modified click: see quality 3.
+- 2, the repeated line: the `p` in the region is keyed on the parsed address (product, text, date, and rows), so each new address gives the line a new element. The region stays mounted, and the line texts are unchanged. The AC-0027 test searches "zzy" after "zzz" and checks the second "No ... match." is a new element in the same region.
+
+Mutation runs, 2026-11-11. Each made one scratch edit, then ran `npm run test:e2e -- list-search -g "AC-0027: a search|with 12 rows|AC-0047: more than|with 55 rows|AC-0016: an address"` (15 tests, the 2 sign-in setup tests among them), then copied the files back; `cmp` found no difference.
+
+- The region rendered only beside a line: 7 failed in 57.7 s, each `Error: the list's status region`: AC-0027 at `list-search.spec.ts:580` and AC-0047 at `:770` with `Received: 0`, and the 12-row test at `:678` with `element(s) not found`.
+- The region always there, with the line after it: 10 failed in 1.4 min (AC-0027, the 12-row test, and the 55-row test on each list, and AC-0047), each `Error: the list's status region` with `Received: ""`.
+- The line with no key, and the end with no `collapsed` classes: 6 failed in 36.9 s: `the second miss's line is a new element`, `Received: false`, at `:604` (AC-0027), and `at 390 px, the room the empty end takes`, `Received: 8`, at `:686` (the 12-row test).
+- Each section's table gap at `space-y-1` in place of `space-y-0`, and `dateOf` in `src/lib/list-search.ts` passing `0099-12-31` through: 6 failed in 42.4 s: `date 0099-12-31`, `Received: "0099-12-31"`, at `:567` (AC-0016), and `at 1280 px, the room the empty end takes`, `Received: 4`, at `:686`.
+
+Gates, 2026-11-11, on `0384302` plus these fixes, uncommitted:
+
+- `npm run typecheck`: pass.
+- `npm test`, 15:08 to 15:23: Vitest 58 files and 1,101 tests in 64 s, then Playwright 1,264 passed and 1 failed in 13.6 min. The failure was `look-menu-invoices-ask-alerts.spec.ts:834`, "AC-0021: at 1280x720 with 16 px text", on `/invoices`, which this round does not touch: the draft's "Saved 3 receipts." never showed. In that test the app logged `isOperator failed: An invalid response was received from the upstream server`, and Kong logged `recv() failed (104: Connection reset by peer)` and a 502 for `POST /rest/v1/rpc/check_operator` at 15:19:21.
+- That test alone, `npm run test:e2e -- look-menu-invoices-ask-alerts -g "AC-0021: at 1280x720 with 16 px text"`: passed, with the 2 setup tests, in 8.1 s.
+- `npm test` again, 15:27 to 15:42: Vitest 58 files and 1,101 tests in 47 s, then Playwright 1,265 passed, none failed or skipped, in 13.9 min.

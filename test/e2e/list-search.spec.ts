@@ -12,9 +12,13 @@ import {
   dateBoxOf,
   DAY_A,
   DAY_B,
+  endRoom,
   expectInside,
+  expectKeptListStatus,
   expectNoSidewaysScroll,
+  keepListStatus,
   listSection,
+  listStatusOf,
   lowestScrollY,
   menuSearch,
   menuStatus,
@@ -453,8 +457,9 @@ for (const list of RECENT_LISTS) {
 
     test(`AC-0002, AC-0004, AC-0006, AC-0008, AC-0013: a search lists the rows its text and date match, keeps the search in the address, and an empty one lists as no search does`, async ({ page }) => {
       await seedRows(list, 12, { shape: "mixed" });
-      // AC-0002 and AC-0004: another product's row numbered 000 on DAY_A (a receipt's from Beta Meats) matches the
-      // name, number, and date searches below. Each list below is exact, so it leaves that row out.
+      // AC-0002 and AC-0004: another product's row, numbered 000 on DAY_A, matches these searches below: for receipts
+      // (a receipt from Beta Meats) "bETa", "LT-00", DAY_A, and "beta" with DAY_A; for batches "BT-00", DAY_A, and
+      // "BT-00" with DAY_A. Each of their lists is exact, so it shows that row left out.
       const other = list.product === null ? null : await seedOtherProductRow(list);
       await opensList(page, list);
       // No search: the 10 newest.
@@ -470,8 +475,9 @@ for (const list of RECENT_LISTS) {
       expect(paramsOf(page).has("rows")).toBe(false);
       // A number's own text.
       await searchFor(page, list, `${list.prefix}-00`);
-      await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [9, 8, 7, 6, 5, 4, 3, 2, 1]));
-      expect(await shown(page, list), "the other product's row").not.toContain(numberOf(list, 0));
+      await expect
+        .poll(() => shown(page, list), { message: "the chosen product's rows, without the other product's row" })
+        .toEqual(numbersOf(list, [9, 8, 7, 6, 5, 4, 3, 2, 1]));
       // A date alone, and a date with text.
       await searchFor(page, list, "", DAY_A);
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [6, 5, 4, 3, 2, 1]));
@@ -554,32 +560,56 @@ for (const list of RECENT_LISTS) {
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [5]));
     });
 
-    test(`AC-0016: an address date of 2026-02-30, 0000-01-01, or 11/10/2026 is ignored, its box shows empty, and the page opens`, async ({ page }) => {
+    test(`AC-0016: an address date of 2026-02-30, 0000-01-01, 11/10/2026, or 0099-12-31 is ignored, its box shows empty, and the page opens`, async ({ page }) => {
       await seedRows(list, 12, { shape: "mixed" });
-      for (const date of ["2026-02-30", "0000-01-01", "11/10/2026"]) {
+      for (const date of ["2026-02-30", "0000-01-01", "11/10/2026", "0099-12-31"]) {
         await opensList(page, list, { date });
         await expect(dateBoxOf(page, list), `date ${date}`).toHaveValue("");
         expect(await shown(page, list), `date ${date}`).toEqual(numbersOf(list, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3]));
       }
+      // The box holds 0099-12-31, so its empty value above is the page's doing. A box empties the first three itself.
+      await dateBoxOf(page, list).fill("0099-12-31");
+      await expect(dateBoxOf(page, list)).toHaveValue("0099-12-31");
     });
 
     test(`AC-0027: a search that matches nothing says so, keeps its text in the boxes, and Clear search goes back to the page with no search`, async ({ page }) => {
       await seedRows(list, 12, { shape: "mixed" });
-      await opensList(page, list);
+      // A search whose 6 matches all show: the list ends with no line, and its status region is there, empty.
+      await opensList(page, list, { q: `${list.prefix}-00`, date: DAY_A });
+      await expect(rowsOf(page, list)).toHaveCount(6);
+      await keepListStatus(page, list);
+      await expectKeptListStatus(page, list, "");
       await searchFor(page, list, "zzz", DAY_A);
       await expect(noMatchLine(page, list)).toBeVisible();
-      await expect(listSection(page, list).getByRole("status").getByText(`No ${list.noun} match.`, { exact: true })).toBeVisible();
+      // The line lands in the region the page already had, so a screen reader hears it.
+      await expectKeptListStatus(page, list, `No ${list.noun} match.`);
       await expect(rowsOf(page, list)).toHaveCount(0);
       await expect(textBoxOf(page, list)).toHaveValue("zzz");
       await expect(dateBoxOf(page, list)).toHaveValue(DAY_A);
       await expect(listSection(page, list).getByText(/^Showing /)).toHaveCount(0);
       await expect(showMoreOf(page, list)).toHaveCount(0);
+      // A second miss reads the same line, in a new element, so it is heard too.
+      await listStatusOf(page, list).evaluate((region) => {
+        (window as unknown as { __listLine?: Element | null }).__listLine = region.firstElementChild;
+      });
+      await searchFor(page, list, "zzy", DAY_A);
+      await expect
+        .poll(
+          () =>
+            listStatusOf(page, list).evaluate(
+              (region) => region.firstElementChild !== null && region.firstElementChild !== (window as unknown as { __listLine?: Element | null }).__listLine,
+            ),
+          { message: "the second miss's line is a new element" },
+        )
+        .toBe(true);
+      await expectKeptListStatus(page, list, `No ${list.noun} match.`);
       const clear = clearOf(page, list);
       await expect(clear).toHaveCount(1);
       await clear.click();
       await expect(page).toHaveURL(addressOf(list), { timeout: 15_000 });
       await expect.poll(() => shown(page, list)).toHaveLength(10);
       await expect(textBoxOf(page, list)).toBeFocused();
+      await expectKeptListStatus(page, list, `Showing 10 of 12 ${list.noun}.`);
       await expect(noMatchLine(page, list)).toHaveCount(0);
       await expect(textBoxOf(page, list)).toHaveValue("");
       await expect(dateBoxOf(page, list)).toHaveValue("");
@@ -633,30 +663,46 @@ for (const list of RECENT_LISTS) {
       await expect(textBoxOf(page, list)).toHaveValue(list.prefix);
     });
 
-    test(`AC-0019, AC-0020, AC-0022: with 12 rows, one press shows every row and ends the line and the link, and a search whose 9 matches all show has neither`, async ({ page }) => {
+    test(`AC-0019, AC-0020, AC-0022: with 12 rows, one press shows every row and ends the line and the link, leaving an empty status region that takes no room, and a search whose 9 matches all show has neither`, async ({ page }) => {
       await seedRows(list, 12);
       await opensList(page, list);
       await expect(showingLine(page, list, 10, 12)).toBeVisible();
+      await keepListStatus(page, list);
+      await expectKeptListStatus(page, list, `Showing 10 of 12 ${list.noun}.`);
       await showMoreOf(page, list).click();
       await expect(rowsOf(page, list)).toHaveCount(12);
       await expect(rowsOf(page, list).nth(10)).toBeFocused();
       await expect(listSection(page, list).getByText(/^Showing /)).toHaveCount(0);
       await expect(showMoreOf(page, list)).toHaveCount(0);
+      // The status region stays in the page, empty, and the end under the rows takes no room, as a table and as cards.
+      await expectKeptListStatus(page, list, "");
+      for (const [width, height, table] of [
+        [1280, 720, true],
+        [390, 844, false],
+      ] as const) {
+        await page.setViewportSize({ width, height });
+        const end = await endRoom(page, list);
+        expect(end.table, `at ${width} px the list reads as ${table ? "a table" : "cards"}`).toBe(table);
+        expect(end.room, `at ${width} px, the room the empty end takes`).toBeCloseTo(0, 0);
+      }
       // A search that 9 rows match, read at 10 rows: all 9 show, with no line and no link.
       await opensList(page, list, { q: list.prefix, date: DAY_A, rows: "10" });
       await searchFor(page, list, `${list.prefix}-00`, DAY_A);
       await expect.poll(() => shown(page, list)).toHaveLength(9);
       await expect(listSection(page, list).getByText(/^Showing /)).toHaveCount(0);
       await expect(showMoreOf(page, list)).toHaveCount(0);
+      await expect(listStatusOf(page, list)).toHaveText("");
     });
 
     test(`AC-0013, AC-0017, AC-0019, AC-0020, AC-0021, AC-0022, AC-0025, AC-0026: with 55 rows, Show 10 more goes until 50, where the cap line takes its place`, async ({ page }) => {
       test.setTimeout(240_000);
       await seedRows(list, 55);
       await opensList(page, list);
+      await keepListStatus(page, list);
       for (const rows of [10, 20, 30, 40]) {
         await expect(rowsOf(page, list)).toHaveCount(rows);
         await expect(showingLine(page, list, rows, 55)).toBeVisible();
+        await expectKeptListStatus(page, list, `Showing ${rows} of 55 ${list.noun}.`);
         await expect(capLine(page, list, 55)).toHaveCount(0);
         if (rows > 10) {
           await expect(rowsOf(page, list).nth(rows - 10)).toBeFocused();
@@ -670,6 +716,7 @@ for (const list of RECENT_LISTS) {
       await expect(rowsOf(page, list).nth(40)).toBeFocused();
       expect(await lowestScrollY(page), "the lowest scroll offset from press 4 to the focus").toBeGreaterThan(0);
       await expect(capLine(page, list, 55)).toBeVisible();
+      await expectKeptListStatus(page, list, `Showing 50 of 55 ${list.noun}. Search or pick a date to find the rest.`);
       await expect(showMoreOf(page, list)).toHaveCount(0);
       await expect(listSection(page, list).getByText(`Showing 50 of 55 ${list.noun}.`, { exact: true })).toHaveCount(0);
       expect(paramsOf(page).get("rows")).toBe("50");
@@ -720,9 +767,12 @@ test.describe("Recent receipts: too many vendors", () => {
     await receiveNumbered("LT-004-FARM");
     await opensList(page, RECEIPTS);
     expect(await shown(page, RECEIPTS)).toEqual(numbersOf(RECEIPTS, [4, 3, 2, 1]));
+    await keepListStatus(page, RECEIPTS);
+    await expectKeptListStatus(page, RECEIPTS, "");
     await searchFor(page, RECEIPTS, "farm");
     const section = listSection(page, RECEIPTS);
     await expect(section.getByText(TOO_MANY, { exact: true })).toBeVisible();
+    await expectKeptListStatus(page, RECEIPTS, TOO_MANY);
     await expect(rowsOf(page, RECEIPTS)).toHaveCount(0);
     await expect(section.getByText(/^Showing /)).toHaveCount(0);
     await expect(showMoreOf(page, RECEIPTS)).toHaveCount(0);
