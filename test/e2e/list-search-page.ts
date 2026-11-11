@@ -8,9 +8,13 @@ import {
   query,
   RAW_TOM_ID,
   receiveCall,
+  reverseCall,
   VENDOR_ID,
+  voidReceiptCall,
+  voidSaleCall,
 } from "../db";
 import { signInOperator } from "../users";
+import { openReversal } from "./production-page";
 
 // What the list-search specs share, named for all four lists: each list's search box, the section it sits in,
 // and the checks of where a control sits. Menu's box is read through these; the three Recent lists add theirs beside it.
@@ -186,6 +190,9 @@ export interface Seed {
   // "mixed": three groups and two days, as groupOf and mixedDay say. "uniform": one name, one day.
   shape: "mixed" | "uniform";
   vendor?: (i: number) => string;
+  // The number of the first row, 1 when unset, so a later seed adds rows after an earlier one's. Only a seed from 1
+  // stocks the raw and finished lots that batches and sales draw from.
+  from?: number;
 }
 
 const dayOf = (shape: Seed["shape"], i: number): string => (shape === "mixed" ? mixedDay(i) : DAY_A);
@@ -196,12 +203,14 @@ async function stockRaw(): Promise<void> {
   await runOperation(receiveCall(RAW_TOM_ID, VENDOR_ID, 100000, 1.5, "2026-01-01"));
 }
 
-// Seeds n rows of a list through the operations, numbered 1 to n in entry order, so the newest entered is n.
-// Returns the ids of the receipts, batches, or sales, in the same order.
+// Seeds n rows of a list through the operations, numbered from `seed.from` (1 when unset) in entry order, so the
+// newest entered has the highest number. Returns the ids of the receipts, batches, or sales, in the same order.
 export async function seedRows(list: RecentList, n: number, seed: Seed = { shape: "uniform" }): Promise<string[]> {
   const ids: string[] = [];
+  const from = seed.from ?? 1;
+  const last = from + n - 1;
   if (list.key === "receipts") {
-    for (let i = 1; i <= n; i++) {
+    for (let i = from; i <= last; i++) {
       const vendor = await namedId("vendors", nameOf(seed, i));
       ids.push(
         await runOperation({
@@ -220,9 +229,9 @@ export async function seedRows(list: RecentList, n: number, seed: Seed = { shape
     }
     return ids;
   }
-  await stockRaw();
+  if (from === 1) await stockRaw();
   if (list.key === "batches") {
-    for (let i = 1; i <= n; i++) {
+    for (let i = from; i <= last; i++) {
       ids.push(
         await runOperation({
           fn: "produce_batch",
@@ -239,8 +248,8 @@ export async function seedRows(list: RecentList, n: number, seed: Seed = { shape
     }
     return ids;
   }
-  await runOperation(produceCall(PROD_502_ID, 50000, null, "2026-02-01"));
-  for (let i = 1; i <= n; i++) {
+  if (from === 1) await runOperation(produceCall(PROD_502_ID, 50000, null, "2026-02-01"));
+  for (let i = from; i <= last; i++) {
     const customer = await namedId("customers", nameOf(seed, i));
     ids.push(
       await runOperation({
@@ -257,6 +266,13 @@ export async function seedRows(list: RecentList, n: number, seed: Seed = { shape
     );
   }
   return ids;
+}
+
+// Voids a receipt or a sale, or reverses a batch, through its operation, so its row carries its tag and reason.
+export async function closeRow(list: RecentList, id: string, reason: string): Promise<void> {
+  const call =
+    list.key === "receipts" ? voidReceiptCall(id, reason) : list.key === "batches" ? reverseCall(id, reason) : voidSaleCall(id, reason);
+  await runOperation(call);
 }
 
 // ---- Addresses, controls, and what a list shows ----
@@ -301,6 +317,45 @@ export const TOO_MANY = "Too many vendors match. Type more of the name.";
 export async function shown(page: Page, list: RecentList): Promise<string[]> {
   const texts = await rowsOf(page, list).evaluateAll((items) => items.map((item) => item.textContent ?? ""));
   return texts.map((text) => text.match(list.numberPattern)?.[0] ?? `(no number in "${text.slice(0, 40)}")`);
+}
+
+// What one row of a Recent list shows outside its dialogs: its look, each label with its value, every other line
+// (the tags and reason lines among them), and each link and button by its name, text, address, and look. A row
+// found by a search or "Show 10 more" is compared with this record of it among the 10 latest (AC-0030 to AC-0035).
+export interface RowRecord {
+  look: string;
+  facts: string[];
+  lines: string[];
+  controls: string[];
+}
+
+export function recordRow(row: Locator): Promise<RowRecord> {
+  return row.evaluate((item) => {
+    const text = (node: Element | null) => (node?.textContent ?? "").replace(/\s+/g, " ").trim();
+    const outsideDialogs = (selector: string) => [...item.querySelectorAll(selector)].filter((node) => node.closest("dialog") === null);
+    return {
+      look: item.className,
+      facts: outsideDialogs("dl > div").map((pair) => `${text(pair.querySelector("dt"))}: ${text(pair.querySelector("dd"))}`),
+      lines: outsideDialogs("p, h3")
+        .map(text)
+        .filter((line) => line !== ""),
+      controls: outsideDialogs("a[href], button").map((control) =>
+        [control.tagName.toLowerCase(), `"${control.getAttribute("aria-label") ?? text(control)}":`, text(control), control.getAttribute("href") ?? "", control.className]
+          .filter((part) => part !== "")
+          .join(" "),
+      ),
+    };
+  });
+}
+
+// What a batch's Reverse confirmation shows once open, as the browser lays out its text. Cancel closes it again.
+export async function recordReversal(page: Page, item: Locator, batchNumber: string): Promise<string> {
+  const dialog = await openReversal(page, item, batchNumber);
+  await expect(dialog).toBeVisible();
+  const text = await dialog.evaluate((node) => (node as HTMLElement).innerText);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  return text;
 }
 
 // Fills the boxes and presses the button, then waits for the address to carry the search.

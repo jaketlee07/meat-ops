@@ -125,3 +125,24 @@ Red run of the Recent lists' new tests in `test/e2e/list-search.spec.ts`, 2026-1
 - The T2 implementer stopped twice before finishing: once on a network error (ENOTFOUND) during its full browser run, then on its model's usage limit. The controller finished T2 on 2026-11-11 from the implementer's working tree: it pointed the five `/production` page-state checks still listing the form's controls alone (`production.spec.ts` AC-0008, AC-0030, AC-0074, AC-0029, and `reverse.spec.ts` AC-0130) at `FORM_AND_SEARCH`, the AC-0044 move the other Production checks had already taken; gave the "Search" button the secondary look so Save stays each floor page's one blue button; and imported `MAX_ROWS` in place of a repeated 50.
 - A browser run on the implementer's tree took 2.8 h with 26 failures, most in files T2 does not touch; the cause of the slowdown was not established. A rerun on 2026-11-11 had 6 failures: the five checks above and one `alerts.spec.ts` seed that hit `alerts_one_live`, a file T2 does not touch, which passed in the next run.
 - T2 gate, `npm test` on `3f3b1e4` plus T2's working tree: Vitest 58 files and 1,101 tests in 42 s, then Playwright 1,259 passed and 1 skipped in 12.9 min. The skip is `list-search.spec.ts`' receipt and sale column check, which skips itself for batches.
+
+## T3
+
+First run of the found-row tests in `test/e2e/list-search.spec.ts`, 2026-11-11, on `9b0e1c1` with the new tests and their helpers in `test/e2e/list-search-page.ts` in place (uncommitted) and no app code changed. Command: `npm run test:e2e -- list-search -g "Row actions on found rows"`. All six passed on that first run (8 passed with the two sign-in setup tests, 12.0 s):
+
+- AC-0030, AC-0031, AC-0036: a receipt found by a search shows what it showed among the 10 latest, and its Correct and Void save as they do there, on the same address
+- AC-0032, AC-0033, AC-0036: a batch found by a search shows what it showed among the 10 latest, with the same Reverse confirmation, and its Reverse saves as it does there, on the same address
+- AC-0034, AC-0035, AC-0036: a sale found by a search shows what it showed among the 10 latest, and its Void saves as it does there, on the same address
+- The same three titles with "found by Show 10 more" in place of "found by a search"
+
+So no app code changed for T3: a found row renders through the same row part as the 10 latest.
+
+Since each passed on its first run, a scratch copy of the spec, `test/e2e/scratch-t3.spec.ts`, ran the same six once against one wrong expectation each, then was deleted and never committed. The three found by a search compared the found row 1 with the record of row 2, the void or reversed one. The three found by "Show 10 more" expected the address without its `rows` after the first save. Command: `npm run test:e2e -- scratch-t3 -g "Row actions on found rows"`. All six failed (2 passed, the setup tests; 15.7 s), each on the line shown:
+
+- Receipt, by a search: `expect(received).toEqual(expected)`, with `- "Lot number: LT-002"` and `+ "Lot number: LT-001"` among the 7 lines that differ
+- Batch, by a search: `expect(received).toEqual(expected)`, with `- "Batch number: BT-002"` and `+ "Batch number: BT-001"` among the lines that differ
+- Sale, by a search: `expect(received).toEqual(expected)`, with the record's lines `- "SL-002"`, `- "Voided"`, and `- "entered twice"` against the found row's `+ "SL-001"`, and the found row's `+ "button \"Void sale SL-001\": Void ..."` that the record lacks
+- Receipt, by Show 10 more, after Correct: `Error: the address`, `Expected: "http://127.0.0.1:3100/receiving?product=RAW-TOM"`, `Received: "http://127.0.0.1:3100/receiving?product=RAW-TOM&rows=20"`
+- Batch, by Show 10 more, after Reverse: `Error: the address`, `Expected: "http://127.0.0.1:3100/production?product=502"`, `Received: "http://127.0.0.1:3100/production?product=502&rows=20"`
+- Sale, by Show 10 more, after Void: `Error: the address`, `Expected: "http://127.0.0.1:3100/sales"`, `Received: "http://127.0.0.1:3100/sales?rows=20"`
+- T3 gate, `npm test` on `9b0e1c1` plus T3's working tree, 2026-11-11: Vitest 58 files and 1,101 tests in 40 s, then Playwright 1,265 passed and 1 skipped in 12.7 min. The skip is the same self-skip T2's gate names.

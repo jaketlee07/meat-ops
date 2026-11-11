@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetTestData } from "../db";
 import { checkPageState } from "./a11y";
 import { withTextSize } from "./look-checks";
@@ -10,6 +10,7 @@ import {
   boxOf,
   capLine,
   clearOf,
+  closeRow,
   dateBoxOf,
   DAY_A,
   DAY_B,
@@ -30,7 +31,10 @@ import {
   RECEIPTS,
   RECENT_LISTS,
   type RecentList,
+  recordReversal,
+  recordRow,
   rowsOf,
+  type RowRecord,
   SALES,
   scrollY,
   searchButtonOf,
@@ -45,9 +49,42 @@ import {
   TOO_MANY,
   typeMenuSearch,
 } from "./list-search-page";
-import { FORM_CONTROLS as BATCH_FORM_CONTROLS } from "./production-page";
-import { FORM_CONTROLS as RECEIPT_FORM_CONTROLS } from "./receiving-page";
-import { FORM_CONTROLS as SALE_FORM_CONTROLS } from "./sales-page";
+import {
+  FORM_CONTROLS as BATCH_FORM_CONTROLS,
+  batchItem,
+  reversalState,
+  reversedCount,
+  reverseButton,
+  reverseDialog,
+  reversePanel,
+  reverseThrough,
+} from "./production-page";
+import {
+  beforeAfter,
+  correctButton,
+  correctDialog,
+  correctedState,
+  correctionCount,
+  correctPanel,
+  correctThrough,
+  factValue,
+  fields as receiptFields,
+  lotState,
+  FORM_CONTROLS as RECEIPT_FORM_CONTROLS,
+  receiptItem,
+  voidButton,
+  voidMarks as receiptVoidMarks,
+  voidThrough as voidReceiptThrough,
+} from "./receiving-page";
+import {
+  fields as saleFields,
+  recentItem,
+  FORM_CONTROLS as SALE_FORM_CONTROLS,
+  saleState,
+  voidButtonOf,
+  voidMarks as saleVoidMarks,
+  voidThrough as voidSaleThrough,
+} from "./sales-page";
 import { callAsOperator, query, voidReceiptCall } from "../db";
 import {
   addFinished,
@@ -861,4 +898,224 @@ test.describe("The Recent lists: the Tab order, the layout, the look, and the pa
     expect(await listStops(page, RECEIPTS)).toEqual([]);
     expect(await checkPageState(page)).toEqual([...RECEIPT_FORM_CONTROLS, ...searchStops(RECEIPTS), "a Show 10 more"]);
   });
+});
+
+// ---- Row actions on found rows ----
+
+// How a test lists the two oldest of 12 rows once they have left the 10 latest.
+const ROUTES = ["a search", "Show 10 more"] as const;
+type Route = (typeof ROUTES)[number];
+
+// Row 1 stays open for its action; row 2 is voided or reversed first, so it carries its tag and reason.
+const OLDEST = 1;
+const CLOSED = 2;
+
+// Seeds 10 rows, closes row 2 through its operation, and records rows 1 and 2 while they are among the 10 latest.
+// The page is left on that list.
+async function recordOldest(
+  page: Page,
+  list: RecentList,
+  item: (number: string) => Locator,
+): Promise<{ ids: string[]; open: RowRecord; closed: RowRecord }> {
+  const ids = await seedRows(list, 10);
+  await closeRow(list, ids[CLOSED - 1] ?? "", "entered twice");
+  await opensList(page, list);
+  expect(await shown(page, list), "the 10 latest").toEqual(numbersOf(list, [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]));
+  return { ids, open: await recordRow(item(numberOf(list, OLDEST))), closed: await recordRow(item(numberOf(list, CLOSED))) };
+}
+
+// Adds rows 11 and 12, so rows 1 and 2 are the oldest of 12 and leave the 10 latest, then lists them by the route:
+// a search that matches rows 1 to 9, or one press of "Show 10 more". Returns the address and the rows it lists.
+async function findOldest(page: Page, list: RecentList, route: Route): Promise<{ address: string; listed: string[] }> {
+  await seedRows(list, 2, { shape: "uniform", from: 11 });
+  await opensList(page, list);
+  expect(await shown(page, list), "the 10 latest").toEqual(numbersOf(list, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3]));
+  let listed: string[];
+  if (route === "a search") {
+    await searchFor(page, list, `${list.prefix}-00`);
+    listed = numbersOf(list, [9, 8, 7, 6, 5, 4, 3, 2, 1]);
+  } else {
+    await showMoreOf(page, list).click();
+    await expect(rowsOf(page, list)).toHaveCount(12);
+    expect(paramsOf(page).get("rows")).toBe("20");
+    listed = numbersOf(list, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+  }
+  await expect.poll(() => shown(page, list)).toEqual(listed);
+  // The page stays loaded from here on: a reload would also show what a save changed.
+  await page.evaluate(() => ((window as unknown as { __kept: boolean }).__kept = true));
+  return { address: page.url(), listed };
+}
+
+// AC-0036: after a save the page keeps its address, with its search and row count, and lists the same rows, with
+// no reload.
+async function expectKept(page: Page, list: RecentList, route: Route, found: { address: string; listed: string[] }): Promise<void> {
+  expect(page.url(), "the address").toBe(found.address);
+  expect(await shown(page, list), "the rows listed").toEqual(found.listed);
+  await expect(textBoxOf(page, list)).toHaveValue(route === "a search" ? `${list.prefix}-00` : "");
+  expect(await page.evaluate(() => (window as unknown as { __kept?: boolean }).__kept), "no reload").toBe(true);
+}
+
+test.describe("Row actions on found rows", () => {
+  for (const route of ROUTES) {
+    test(`AC-0030, AC-0031, AC-0036: a receipt found by ${route} shows what it showed among the 10 latest, and its Correct and Void save as they do there, on the same address`, async ({ page }) => {
+      const oldest = numberOf(RECEIPTS, OLDEST);
+      const closed = numberOf(RECEIPTS, CLOSED);
+      const item = receiptItem(page, oldest);
+      const recorded = await recordOldest(page, RECEIPTS, (number) => receiptItem(page, number));
+      // The records hold what the comparison reads: the figures, Void and Correct, and a void receipt's tag and reason.
+      expect(recorded.open.facts).toEqual([
+        `Lot number: ${oldest}`,
+        "Received: Sep 15, 2026",
+        `Vendor: ${ALPHA}`,
+        "Weight: 100 lbs",
+        "Cost per lb: $1.5000/lb",
+        "Remaining: 100 lbs",
+      ]);
+      expect(recorded.open.controls).toEqual([
+        expect.stringMatching(new RegExp(`^button "Void lot ${oldest}": Void `)),
+        expect.stringMatching(new RegExp(`^button "Correct lot ${oldest}": Correct `)),
+      ]);
+      expect(recorded.closed.lines).toEqual(["Voided", "entered twice"]);
+      expect(recorded.closed.controls).toEqual([]);
+
+      const found = await findOldest(page, RECEIPTS, route);
+      // AC-0030: the same figures, tags, and buttons.
+      expect(await recordRow(item)).toEqual(recorded.open);
+      expect(await recordRow(receiptItem(page, closed))).toEqual(recorded.closed);
+      const region = receiptFields(page).region;
+      await expect(factValue(region, "On hand")).toHaveText("1,100 lbs");
+
+      // AC-0031: Correct saves as it does among the 10 latest (correct.spec.ts, AC-0096, AC-0099, and AC-0100).
+      await correctThrough(page, item, oldest, { cost: "1.75", reason: "invoice price" });
+      const panel = correctPanel(item);
+      const heading = panel.getByRole("heading", { name: "Receipt corrected" });
+      await expect(heading).toBeVisible();
+      await expect(heading).toBeFocused();
+      await expect(panel.getByText(`Lot ${oldest}`, { exact: true })).toBeVisible();
+      await expect(correctDialog(page, oldest)).toBeHidden();
+      await expect(beforeAfter(panel, /^Cost per lb/)).toHaveText(["$1.5000/lb", "$1.7500/lb"]);
+      await expect(beforeAfter(panel, /^Weight/)).toHaveText(["100 lbs", "100 lbs"]);
+      await expect(beforeAfter(panel, /^On hand/)).toHaveText(["1,100 lbs", "1,100 lbs"]);
+      // (1,000 lbs at $1.50 and 100 lbs at $1.75) / 1,100 lbs = $1.5227/lb; 502's price is that / 0.77 + $0.50 of fees.
+      await expect(beforeAfter(panel, /^Average cost/)).toHaveText(["$1.5000/lb", "$1.5227/lb"]);
+      await expect(beforeAfter(panel, /^502 Smoked Turkey Drums Tom/)).toHaveText(["$2.45/lb", "$2.48/lb"]);
+      await expect(panel.getByText("No batch cost changed.", { exact: true })).toBeVisible();
+      // AC-0036: the row shows its new values, on the same address.
+      await expect(factValue(item, "Cost per lb")).toHaveText("$1.7500/lb");
+      await expect(item.getByText("Received as 100 lbs at $1.5000/lb.", { exact: true })).toBeVisible();
+      await expect(item.getByText("Corrected: invoice price", { exact: true })).toBeVisible();
+      await expect(factValue(region, "Average cost")).toHaveText("$1.5227/lb");
+      await expectKept(page, RECEIPTS, route, found);
+      expect(await correctionCount()).toBe(1);
+      expect(await correctedState(recorded.ids[OLDEST - 1] ?? "")).toMatchObject({ cost: "1.7500" });
+
+      // AC-0031: Void saves as it does among the 10 latest (receiving.spec.ts, AC-0023).
+      await voidReceiptThrough(page, item, "keyed twice");
+      await expect(item.getByText("Voided", { exact: true })).toBeVisible();
+      await expect(item.getByText("keyed twice", { exact: true })).toBeVisible();
+      await expect(voidButton(item)).toHaveCount(0);
+      await expect(correctButton(item)).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "Recent receipts" })).toBeFocused();
+      await expect(factValue(region, "On hand")).toHaveText("1,000 lbs");
+      await expect(factValue(region, "Average cost")).toHaveText("$1.5000/lb");
+      // AC-0036: the row shows it is void, on the same address.
+      await expectKept(page, RECEIPTS, route, found);
+      expect(await lotState(recorded.ids[OLDEST - 1] ?? "")).toEqual({ remaining: 0, voided: true, reason: "keyed twice" });
+      expect(await receiptVoidMarks()).toBe(2);
+    });
+
+    test(`AC-0032, AC-0033, AC-0036: a batch found by ${route} shows what it showed among the 10 latest, with the same Reverse confirmation, and its Reverse saves as it does there, on the same address`, async ({ page }) => {
+      const oldest = numberOf(BATCHES, OLDEST);
+      const closed = numberOf(BATCHES, CLOSED);
+      const item = batchItem(page, oldest);
+      const recorded = await recordOldest(page, BATCHES, (number) => batchItem(page, number));
+      const confirmation = await recordReversal(page, item, oldest);
+      // The records hold what the comparison reads: the figures, Reverse, a reversed batch's tag and reason, and
+      // what the confirmation says.
+      expect(recorded.open.facts).toEqual([
+        `Batch number: ${oldest}`,
+        "Production date: Sep 15, 2026",
+        "Raw lbs in: 10 lbs",
+        "Finished lbs out: 7.7 lbs",
+        expect.stringMatching(/^Cost per finished lb: \$\d+\.\d{4}\/lb$/),
+      ]);
+      expect(recorded.open.controls).toEqual([expect.stringMatching(new RegExp(`^button "Reverse batch ${oldest}": Reverse `))]);
+      expect(recorded.closed.lines).toEqual(["Reversed", "entered twice"]);
+      expect(recorded.closed.controls).toEqual([]);
+      expect(confirmation).toContain(`Batch ${oldest}, made Sep 15, 2026, 7.7 lbs finished.`);
+      expect(confirmation).toContain("No sale drew from this batch.");
+
+      const found = await findOldest(page, BATCHES, route);
+      // AC-0032: the same figures, tags, and buttons. AC-0033: the same confirmation.
+      expect(await recordRow(item)).toEqual(recorded.open);
+      expect(await recordRow(batchItem(page, closed))).toEqual(recorded.closed);
+      expect(await recordReversal(page, item, oldest)).toBe(confirmation);
+
+      // AC-0033: Reverse saves as it does among the 10 latest (reverse.spec.ts, AC-0135, AC-0137, and AC-0138).
+      await reverseThrough(page, item, oldest, "keyed twice");
+      const panel = reversePanel(item);
+      const heading = panel.getByRole("heading", { name: "Batch reversed" });
+      await expect(heading).toBeVisible();
+      await expect(heading).toBeFocused();
+      await expect(panel.getByText(`Batch ${oldest}`, { exact: true })).toBeVisible();
+      await expect(reverseDialog(page, oldest)).toBeHidden();
+      // 100,000 raw lbs less 11 open batches of 10; 11 open batches of 7.7 finished lbs, then 10.
+      await expect(beforeAfter(panel, /^On hand/)).toHaveText(["99,890 lbs", "99,900 lbs"]);
+      await expect(beforeAfter(panel, /^Average cost/)).toHaveText(["$1.5000/lb", "$1.5000/lb"]);
+      await expect(beforeAfter(panel, /^502 finished lbs on hand/)).toHaveText(["84.7 lbs", "77 lbs"]);
+      await expect(panel.getByText("No sale was voided.", { exact: true })).toBeVisible();
+      // AC-0036: the row shows it is reversed, on the same address.
+      await expect(item.getByText("Reversed", { exact: true })).toBeVisible();
+      await expect(item.locator("p", { hasText: /^keyed twice$/ })).toBeVisible();
+      await expect(reverseButton(item)).toHaveCount(0);
+      await expectKept(page, BATCHES, route, found);
+      expect(await reversedCount()).toBe(2);
+      expect(await reversalState(recorded.ids[OLDEST - 1] ?? "")).toMatchObject({ reversed: true, reason: "keyed twice", voided: 0 });
+    });
+
+    test(`AC-0034, AC-0035, AC-0036: a sale found by ${route} shows what it showed among the 10 latest, and its Void saves as it does there, on the same address`, async ({ page }) => {
+      const oldest = numberOf(SALES, OLDEST);
+      const closed = numberOf(SALES, CLOSED);
+      const item = recentItem(page, oldest);
+      const recorded = await recordOldest(page, SALES, (number) => recentItem(page, number));
+      // The records hold what the comparison reads: the figures, the trace link and Void, and a void sale's tag and reason.
+      expect(recorded.open.facts).toEqual([
+        "Sale date: Sep 15, 2026",
+        `Customer: ${ALPHA}`,
+        "Product: 502",
+        "Lbs: 1 lbs",
+        "Price per lb: $3.29/lb",
+      ]);
+      expect(recorded.open.controls).toEqual([
+        expect.stringMatching(new RegExp(`^a "${oldest}": ${oldest} /trace\\?sale=${oldest} `)),
+        expect.stringMatching(new RegExp(`^button "Void sale ${oldest}": Void `)),
+      ]);
+      expect(recorded.closed.lines).toEqual([closed, "Voided", "entered twice"]);
+      expect(recorded.closed.controls).toEqual([expect.stringMatching(new RegExp(`^a "${closed}": `))]);
+
+      const found = await findOldest(page, SALES, route);
+      // AC-0034: the same figures, tags, and buttons.
+      expect(await recordRow(item)).toEqual(recorded.open);
+      expect(await recordRow(recentItem(page, closed))).toEqual(recorded.closed);
+      // 50,000 raw lbs make 38,500 finished lbs, less 11 open sales of 1 lb.
+      const f = saleFields(page);
+      await f.code.fill("502");
+      await expect(factValue(f.facts, "Finished on hand")).toHaveText("38,489 lbs");
+      await f.code.fill("");
+
+      // AC-0035: Void saves as it does among the 10 latest (sales.spec.ts, AC-0082 and AC-0158).
+      await voidSaleThrough(page, oldest, "wrong customer");
+      await expect(item.getByText("Voided", { exact: true })).toBeVisible();
+      await expect(item.getByText("wrong customer", { exact: true })).toBeVisible();
+      await expect(voidButtonOf(page, oldest)).toHaveCount(0);
+      await expect(item.getByRole("button")).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: "Recent sales" })).toBeFocused();
+      // AC-0036: the row shows it is void, on the same address.
+      await expectKept(page, SALES, route, found);
+      expect(await saleState(recorded.ids[OLDEST - 1] ?? "")).toEqual({ voided: true, reason: "wrong customer" });
+      expect(await saleVoidMarks()).toBe(2);
+      await f.code.fill("502");
+      await expect(factValue(f.facts, "Finished on hand")).toHaveText("38,490 lbs");
+    });
+  }
 });
