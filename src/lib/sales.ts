@@ -1,4 +1,5 @@
 import type { Database } from "./database.types.js";
+import { type ListSearch, NO_SEARCH, quoteForOr } from "./list-search";
 import type { TypedClient } from "./supabase.js";
 
 // Typed reads for the sale screen. Like receiving.ts, every read throws on error
@@ -38,11 +39,10 @@ export interface SaleSummary {
 
 export interface RecentSales {
   sales: SaleSummary[];
-  // Every sale, void or not, for "Showing the 10 most recent of N".
+  // How many sales match the search, void or not: the M in "Showing N of M sales.".
   total: number;
 }
 
-const RECENT_SALE_LIMIT = 10;
 export const SUMMARY_COLUMNS =
   "sale_id, sale_number, sale_date, created_at, customer_id, customer, finished_code, finished_product, lbs_sold, price_per_lb, voided_at, void_reason";
 
@@ -106,12 +106,24 @@ export async function getFinishedOnHand(client: TypedClient, productId: string):
   return data?.finished_lbs_available ?? null;
 }
 
-export async function listRecentSales(client: TypedClient): Promise<RecentSales> {
-  const { data, error, count } = await client
-    .from("v_sale_summary")
-    .select(SUMMARY_COLUMNS, { count: "exact" })
+// The sales, newest sale date first and latest entered first within a date; sales entered in one transaction
+// share a created_at, so sale_id breaks the last tie and the order never changes between reads. The first
+// search.rows of those whose number, customer, product code, or product name contains the search text and,
+// with a date, that were sold that day.
+export async function listRecentSales(client: TypedClient, search: ListSearch = NO_SEARCH): Promise<RecentSales> {
+  let sales = client.from("v_sale_summary").select(SUMMARY_COLUMNS, { count: "exact" });
+  if (search.text !== "") {
+    const value = quoteForOr(search.text);
+    sales = sales.or(
+      ["sale_number", "customer", "finished_code", "finished_product"].map((column) => `${column}.imatch.${value}`).join(","),
+    );
+  }
+  if (search.date !== null) sales = sales.eq("sale_date", search.date);
+  const { data, error, count } = await sales
+    .order("sale_date", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(RECENT_SALE_LIMIT);
+    .order("sale_id", { ascending: false })
+    .range(0, search.rows - 1);
   if (error) throw new Error(`listRecentSales failed: ${error.message}`);
   if (count === null) throw new Error("listRecentSales failed: the database sent no count");
   return { sales: data.map((row) => saleSummary(row, "listRecentSales")), total: count };

@@ -1,11 +1,18 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
+import { isSearchSet, type ListSearch } from "../../lib/list-search";
 import type { RecentBatches as Batches } from "../../lib/production";
 import { Facts } from "../facts";
+import { ListEnd, SearchForm } from "../list-search";
 import { REASON_LINE, StatusTag } from "../status-tag";
 import { reverseBatch } from "./actions";
 import { ReverseControl, type Preview } from "./reverse-control";
 
 const HEADING_ID = "recent-batches-heading";
+const LIST_ID = "recent-batches-list";
+// The search form and the lines under the list line up with the list's own text where the section is a table.
+const INSET = "batch-table:px-4 batch-table:pb-3";
+// While the lines under the list show nothing, this cancels the section's gap above them.
+const COLLAPSED = "-mt-2 batch-table:mt-0";
 
 // Where the section is a table (the `batch-table` variant: the section is the container named
 // `batches` and at least 38rem wide at the current text size) it reads as one template for the header
@@ -32,10 +39,11 @@ const ACTIONS = "batch-table:col-start-6 batch-table:row-start-1 batch-table:jus
 const MESSAGE_ROW =
   "batch-table:status-has-message:col-span-full batch-table:status-has-message:col-start-1 batch-table:status-has-message:row-start-auto batch-table:status-has-message:justify-start batch-table:status-has-message:pb-2";
 
-// The product's most recently entered batches, last entered first. The page
-// renders this again after a save or a reversal, so the saved batch is the
-// first one listed and a reversed one shows its reason. Each batch is a card of
-// labeled facts, so the list fits 320 px; where the section is a table it is a row of it.
+// The product's batches that match the search, last entered first: the first `search.rows`, 10 with no
+// search. A save or a reversal renders the page again at its current address, search included, so a saved
+// batch is listed first when no search is set or when it matches the search, and a reversed one shows its
+// reason. Each batch is a card of labeled facts, so the list fits 320 px; where the section is a table it is
+// a row of it.
 // Every batch keeps its Reverse control in place, so a re-render of the list keeps the
 // state of each; the control shows the button only while the batch is not reversed.
 // `previews` holds what each batch that is not reversed would do, as the page read it.
@@ -45,7 +53,9 @@ export function RecentBatches({
   productId,
   productCode,
   previews,
-}: Batches & { productId: string; productCode: string; previews: Record<string, Preview> }) {
+  search,
+}: Batches & { productId: string; productCode: string; previews: Record<string, Preview>; search: ListSearch }) {
+  const searching = isSearchSet(search);
   return (
     <section aria-labelledby={HEADING_ID} className="@container/batches desk:[grid-area:recent]">
       {/* The container cannot style itself, so this div carries the table's card edge. */}
@@ -53,13 +63,19 @@ export function RecentBatches({
         <h2 id={HEADING_ID} className="text-lg font-bold batch-table:px-4 batch-table:py-3">
           Recent batches
         </h2>
-        {total === 0 ? (
-          <p className="batch-table:px-4 batch-table:pb-3">No batches for this product yet.</p>
-        ) : (
+        <SearchForm
+          name="Search batches"
+          slug="batches"
+          dateLabel="Produced on"
+          path="/production"
+          product={productCode}
+          text={search.text}
+          date={search.date}
+          inset={INSET}
+        />
+        {total === 0 && !searching && <p className="batch-table:px-4 batch-table:pb-3">No batches for this product yet.</p>}
+        {total > 0 && (
           <>
-            {total > batches.length && (
-              <p className="batch-table:px-4 batch-table:pb-3">{`Showing the ${batches.length} most recent of ${total} batches.`}</p>
-            )}
             {/* Where the section is a table the header line names the columns; each batch's own labels are hidden visually and stay in the page. */}
             <div
               aria-hidden="true"
@@ -72,11 +88,12 @@ export function RecentBatches({
               ))}
               <span />
             </div>
-            <ul className="space-y-3 batch-table:space-y-0">
+            <ul id={LIST_ID} className="space-y-3 batch-table:space-y-0">
               {batches.map((batch) => (
                 <li
                   key={batch.id}
-                  className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 batch-table:grid batch-table:items-center batch-table:gap-y-0 batch-table:rounded-none batch-table:border-0 batch-table:border-t batch-table:py-1.5 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
+                  tabIndex={-1}
+                  className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 batch-table:grid batch-table:items-center batch-table:gap-y-0 batch-table:rounded-none batch-table:border-0 batch-table:border-t batch-table:py-1.5 batch-table:-outline-offset-2 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
                 >
                   <Facts
                     rows={[
@@ -111,6 +128,18 @@ export function RecentBatches({
             </ul>
           </>
         )}
+        <ListEnd
+          noun="batches"
+          slug="batches"
+          listId={LIST_ID}
+          path="/production"
+          product={productCode}
+          search={search}
+          shown={batches.length}
+          total={total}
+          inset={INSET}
+          collapsed={COLLAPSED}
+        />
       </div>
     </section>
   );

@@ -7,6 +7,7 @@ import {
   batchNumberOf,
   fillBatch,
   FORM_CONTROLS,
+  BATCH_SEARCH_STOPS,
   openForm,
   reversePanel,
   reverseButton,
@@ -32,6 +33,7 @@ import {
   fillSale,
   fixtureWithPrice,
   FORM_CONTROLS as SALE_FORM_CONTROLS,
+  SALE_SEARCH_STOPS,
   listControls,
   openForm as openSalesForm,
   recentItem,
@@ -121,7 +123,7 @@ function batchList(page: Page): RowList {
 
 // What Tab reaches with the three batches listed: the form, then a Reverse button for each batch
 // that is not reversed.
-const CONTROLS = [...FORM_CONTROLS, "button Reverse", "button Reverse"];
+const CONTROLS = [...FORM_CONTROLS, ...BATCH_SEARCH_STOPS, "button Reverse", "button Reverse"];
 
 test.describe("the Production layout", () => {
   for (const [width, height] of [
@@ -334,6 +336,7 @@ function saleControls(numbers: { first: string; second: string; third: string })
   return [
     ...SALE_FORM_CONTROLS,
     "a Trace this sale",
+    ...SALE_SEARCH_STOPS,
     ...listControls([
       { number: numbers.third, voidable: true },
       { number: numbers.second, voidable: false },

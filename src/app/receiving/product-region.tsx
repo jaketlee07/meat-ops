@@ -1,3 +1,4 @@
+import type { ListSearch } from "../../lib/list-search";
 import type { FinishedPrice, ProductStock, RecentReceipts as Receipts } from "../../lib/receiving";
 import { Facts } from "../facts";
 import { NO_FINISHED, priceView, showAverage, showOnHand, showPrice, stockView } from "../stock-view";
@@ -11,10 +12,14 @@ export function ProductRegion({
   stock,
   prices,
   recent,
+  search,
+  productCode,
 }: {
   stock: ProductStock;
   prices: FinishedPrice[];
   recent: Receipts;
+  search: ListSearch;
+  productCode: string;
 }) {
   const view = stockView(stock);
   return (
@@ -41,7 +46,7 @@ export function ProductRegion({
           </div>
         )}
       </section>
-      <RecentReceipts {...recent} />
+      <RecentReceipts {...recent} search={search} productCode={productCode} />
     </>
   );
 }

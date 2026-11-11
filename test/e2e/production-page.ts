@@ -27,6 +27,10 @@ export const FORM_CONTROLS = [
   "button Save",
 ];
 
+// The form's stops and, with a product chosen, Recent batches' search controls, which come next (AC-0037).
+export const BATCH_SEARCH_STOPS = ["input #batches-search-text", "input #batches-search-date", "button Search"];
+export const FORM_AND_SEARCH = [...FORM_CONTROLS, ...BATCH_SEARCH_STOPS];
+
 // What Tab reaches inside the open check step.
 export const CHECK_CONTROLS = ["button Go back", "button Save batch"];
 

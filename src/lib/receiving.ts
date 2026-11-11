@@ -1,4 +1,5 @@
 import type { Database } from "./database.types.js";
+import { escapeForImatch, type ListSearch, NO_SEARCH, quoteForOr } from "./list-search";
 import { required } from "./sales";
 import type { TypedClient } from "./supabase.js";
 
@@ -59,8 +60,12 @@ export interface BatchMadeFrom {
 
 export interface RecentReceipts {
   receipts: RecentReceipt[];
-  // Every receipt of the product, void or not, for "Showing the 10 most recent of N".
+  // How many receipts of the product match the search, void or not: the M in "Showing N of M receipts.", and 0 in
+  // the too-many case.
   total: number;
+  // True only when a non-empty search text matches more than MAX_MATCHING_VENDORS vendor names; no lots were read.
+  // Absent otherwise, so a read without that case keeps its old shape.
+  tooManyVendors?: true;
 }
 
 export interface Stock {
@@ -83,21 +88,44 @@ export interface FinishedPrice {
   finalPricePerLb: number | null;
 }
 
-const RECENT_RECEIPT_LIMIT = 10;
+// A receipt search supports this many matching vendor names; one more gives the too-many result.
+export const MAX_MATCHING_VENDORS = 100;
 
+// The product's receipts, latest entered first (receipt_seq never ties), the first search.rows of those
+// whose lot number or vendor name contains the search text and, with a date, that were received that day.
+// The vendors are read first, since or() cannot name an embedded table's column. With more than
+// MAX_MATCHING_VENDORS matching vendors it returns tooManyVendors and reads no lots.
 export async function listRecentReceipts(
   client: TypedClient,
   productId: string,
+  search: ListSearch = NO_SEARCH,
 ): Promise<RecentReceipts> {
-  const { data, error, count } = await client
+  let vendorIds: string[] = [];
+  if (search.text !== "") {
+    const vendors = await client
+      .from("vendors")
+      .select("id")
+      .filter("name", "imatch", escapeForImatch(search.text))
+      .limit(MAX_MATCHING_VENDORS + 1);
+    if (vendors.error) throw new Error(`listRecentReceipts failed: ${vendors.error.message}`);
+    if (vendors.data.length > MAX_MATCHING_VENDORS) return { receipts: [], total: 0, tooManyVendors: true };
+    vendorIds = vendors.data.map((vendor) => vendor.id);
+  }
+  let lots = client
     .from("lots")
     .select(
       "id, lot_number, received_date, weight_lbs, unit_cost, current_weight_lbs, current_unit_cost, weightText:current_weight_lbs::text, costText:current_unit_cost::text, remaining_lbs, void_reason, voided_at, vendors(name), lot_adjustments(count), receipt_corrections(reason, correction_seq)",
       { count: "exact" },
     )
-    .eq("product_id", productId)
+    .eq("product_id", productId);
+  if (search.text !== "") {
+    const byLot = `lot_number.imatch.${quoteForOr(search.text)}`;
+    lots = lots.or(vendorIds.length > 0 ? `${byLot},vendor_id.in.(${vendorIds.join(",")})` : byLot);
+  }
+  if (search.date !== null) lots = lots.eq("received_date", search.date);
+  const { data, error, count } = await lots
     .order("receipt_seq", { ascending: false })
-    .limit(RECENT_RECEIPT_LIMIT);
+    .range(0, search.rows - 1);
   if (error) throw new Error(`listRecentReceipts failed: ${error.message}`);
   if (count === null) throw new Error("listRecentReceipts failed: the database sent no count");
 

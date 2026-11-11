@@ -134,12 +134,12 @@ it("listSaleProducts gives active finished products in code order; listCustomers
   ]);
 });
 
-it("AC-0070, AC-0071, AC-0074: the recent sales are the last 10 entered, void ones included", async () => {
+it("AC-0070, AC-0071, AC-0074: the recent sales are the 10 newest by sale date, then entry, void ones included", async () => {
   await run(receiveCall(RAW_TOM_ID, VENDOR_ID, 5000, 1.68, "2026-10-01"));
   await run(produceCall(PROD_502_ID, 2000, null, "2026-10-01"));
   const ids: string[] = [];
   for (let i = 1; i <= 12; i++) {
-    const date = i === 12 ? "2026-10-02" : "2026-10-05";
+    const date = i === 12 ? "2026-10-06" : "2026-10-05";
     ids.push(await run(sellCall(1, date, i % 2 ? CUSTOMER_ID : null, `T-${String(i).padStart(2, "0")}`)));
   }
   await run(voidSaleCall(ids[4]!));
@@ -148,7 +148,7 @@ it("AC-0070, AC-0071, AC-0074: the recent sales are the last 10 entered, void on
   expect(sales.map((s) => s.saleNumber)).toEqual(
     Array.from({ length: 10 }, (_, k) => `T-${String(12 - k).padStart(2, "0")}`),
   );
-  expect(sales[0]?.saleDate).toBe("2026-10-02");
+  expect(sales[0]?.saleDate).toBe("2026-10-06");
   expect(sales[0]?.customer).toBeNull();
   expect(sales.find((s) => s.saleNumber === "T-05")?.voidedAt).not.toBeNull();
   expect(sales.find((s) => s.saleNumber === "T-05")?.voidReason).toBe("wrong customer");

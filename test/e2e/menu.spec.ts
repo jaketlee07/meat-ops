@@ -8,6 +8,7 @@ import {
   cardHeadings,
   cards,
   MENU_CONTROLS,
+  MENU_SEARCH_STOP,
   NO_PRODUCTS,
   NOTHING_SELLABLE,
   produce,
@@ -31,7 +32,7 @@ test.beforeEach(async () => {
 });
 
 // Tab order with the switch: the navigation, Sign out, then the checkbox (no id or name).
-const WITH_SWITCH = [...MENU_CONTROLS, "input"];
+const WITH_SWITCH = [...MENU_CONTROLS, MENU_SEARCH_STOP, "input"];
 
 const FRAMING = {
   "content-security-policy": "frame-ancestors 'none'",

@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { formatDate, formatPricePerLb, formatWeight } from "../../lib/format";
+import { isSearchSet, type ListSearch } from "../../lib/list-search";
 import type { RecentSales as Sales, SaleSummary } from "../../lib/sales";
 import { Facts } from "../facts";
+import { ListEnd, SearchForm } from "../list-search";
 import { REASON_LINE, StatusTag } from "../status-tag";
 import { voidSale } from "./actions";
 import { VoidDialog } from "./void-dialog";
 
 const HEADING_ID = "recent-sales-heading";
+const LIST_ID = "recent-sales-list";
+// The search form and the lines under the list line up with the list's own text where the section is a table.
+const INSET = "sale-table:px-4 sale-table:pb-3";
+// While the lines under the list show nothing, this cancels the section's gap above them.
+const COLLAPSED = "-mt-2 sale-table:mt-0";
 
 // Where the section is a table (the `sale-table` variant: the section is the container named
 // `sales` and at least 40rem wide at the current text size) it reads as one template for the header
@@ -71,11 +78,13 @@ function Status({ sale }: { sale: SaleSummary }) {
   );
 }
 
-// The 10 last-entered sales, shown by sale date, newest first, void ones included. Each is a
+// The sales that match the search, newest sale date first and latest entered first within a date: the first
+// `search.rows`, 10 with no search, void ones included. Each is a
 // card of labeled facts, so the list fits a 320 px screen with no sideways
 // scroll; where the section is a table it is a row of it. The page renders this
 // again after a save or a void.
-export function RecentSales({ sales, total }: Sales) {
+export function RecentSales({ sales, total, search }: Sales & { search: ListSearch }) {
+  const searching = isSearchSet(search);
   return (
     <section aria-labelledby={HEADING_ID} className="@container/sales mt-8 desk:mt-0 desk:[grid-area:recent]">
       {/* The container cannot style itself, so this div carries the table's card edge. */}
@@ -83,13 +92,19 @@ export function RecentSales({ sales, total }: Sales) {
         <h2 id={HEADING_ID} tabIndex={-1} className="text-lg font-bold sale-table:-outline-offset-2 sale-table:px-4 sale-table:py-3">
           Recent sales
         </h2>
-        {total === 0 ? (
-          <p className="sale-table:px-4 sale-table:pb-3">No sales yet.</p>
-        ) : (
+        <SearchForm
+          name="Search sales"
+          slug="sales"
+          dateLabel="Sold on"
+          path="/sales"
+          product={null}
+          text={search.text}
+          date={search.date}
+          inset={INSET}
+        />
+        {total === 0 && !searching && <p className="sale-table:px-4 sale-table:pb-3">No sales yet.</p>}
+        {total > 0 && (
           <>
-            {total > sales.length && (
-              <p className="sale-table:px-4 sale-table:pb-3">{`Showing the ${sales.length} most recent of ${total} sales.`}</p>
-            )}
             {/* Where the section is a table the header line names the columns; each sale's own labels are hidden visually and stay in the page. */}
             <div
               aria-hidden="true"
@@ -102,11 +117,12 @@ export function RecentSales({ sales, total }: Sales) {
               ))}
               <span />
             </div>
-            <ul className="space-y-3 sale-table:space-y-0">
+            <ul id={LIST_ID} className="space-y-3 sale-table:space-y-0">
               {sales.map((sale) => (
                 <li
                   key={sale.id}
-                  className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 sale-table:grid sale-table:items-center sale-table:gap-y-0 sale-table:rounded-none sale-table:border-0 sale-table:border-t sale-table:py-1.5 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
+                  tabIndex={-1}
+                  className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 sale-table:grid sale-table:items-center sale-table:gap-y-0 sale-table:rounded-none sale-table:border-0 sale-table:border-t sale-table:py-1.5 sale-table:-outline-offset-2 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
                 >
                   <h3 className="text-base font-bold sale-table:relative sale-table:col-start-1 sale-table:row-start-2 sale-table:whitespace-nowrap sale-table:text-sm sale-table:font-medium">
                     <Link
@@ -131,6 +147,18 @@ export function RecentSales({ sales, total }: Sales) {
             </ul>
           </>
         )}
+        <ListEnd
+          noun="sales"
+          slug="sales"
+          listId={LIST_ID}
+          path="/sales"
+          product={null}
+          search={search}
+          shown={sales.length}
+          total={total}
+          inset={INSET}
+          collapsed={COLLAPSED}
+        />
       </div>
     </section>
   );

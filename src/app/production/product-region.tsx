@@ -1,3 +1,4 @@
+import type { ListSearch } from "../../lib/list-search";
 import type { FinishedProduct, RecentBatches as Batches } from "../../lib/production";
 import type { ProductStock } from "../../lib/receiving";
 import { formatShrink } from "../../lib/format";
@@ -18,11 +19,13 @@ export function ProductRegion({
   stock,
   recent,
   previews,
+  search,
 }: {
   product: FinishedProduct;
   stock: ProductStock | null;
   recent: Batches;
   previews: Record<string, Preview>;
+  search: ListSearch;
 }) {
   const raw = product.raw;
   const view = stock ? stockView(stock) : null;
@@ -57,7 +60,7 @@ export function ProductRegion({
           </div>
         )}
       </section>
-      <RecentBatches {...recent} productId={product.id} productCode={product.code} previews={previews} />
+      <RecentBatches {...recent} productId={product.id} productCode={product.code} previews={previews} search={search} />
     </>
   );
 }

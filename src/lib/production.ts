@@ -1,3 +1,4 @@
+import { escapeForImatch, type ListSearch, NO_SEARCH } from "./list-search";
 import { saleSummary, SUMMARY_COLUMNS, type SaleSummary } from "./sales";
 import type { TypedClient } from "./supabase.js";
 import { readAllPages } from "./trace";
@@ -59,11 +60,10 @@ export interface ReversalPreview {
 
 export interface RecentBatches {
   batches: RecentBatch[];
-  // Every batch of the product, for "Showing the 10 most recent of N batches".
+  // How many batches of the product match the search: the M in "Showing N of M batches.".
   total: number;
 }
 
-const RECENT_BATCH_LIMIT = 10;
 const FINISHED_COLUMNS =
   "id, code, description, shrink_pct, raw:raw_product_id(id, code, description, active)";
 
@@ -139,22 +139,28 @@ export async function getFinishedLot(client: TypedClient, batchId: string): Prom
   return { lbsProduced: data.lbs_produced, costPerLb: data.cost_per_lb };
 }
 
+// The product's batches, latest entered first (produced_seq never ties), the first search.rows of those whose
+// batch number contains the search text and, with a date, that were produced that day.
 export async function listRecentBatches(
   client: TypedClient,
   finishedProductId: string,
+  search: ListSearch = NO_SEARCH,
 ): Promise<RecentBatches> {
-  const { data, error, count } = await client
+  let batches = client
     .from("finished_goods")
     .select(
-      "batch_id, production_batches(batch_number, production_date, raw_lbs_in, finished_lbs_out, cost_per_finished_lb, reversed_at, reversal_reason)",
+      "batch_id, production_batches!inner(batch_number, production_date, raw_lbs_in, finished_lbs_out, cost_per_finished_lb, reversed_at, reversal_reason)",
       { count: "exact" },
     )
-    .eq("finished_product_id", finishedProductId)
+    .eq("finished_product_id", finishedProductId);
+  if (search.text !== "") batches = batches.filter("production_batches.batch_number", "imatch", escapeForImatch(search.text));
+  if (search.date !== null) batches = batches.eq("production_batches.production_date", search.date);
+  const { data, error, count } = await batches
     .order("produced_seq", { ascending: false })
-    .limit(RECENT_BATCH_LIMIT);
+    .range(0, search.rows - 1);
   if (error) throw new Error(`listRecentBatches failed: ${error.message}`);
   if (count === null) throw new Error("listRecentBatches failed: the database sent no count");
-  const batches = data.map((row) => ({
+  const recent = data.map((row) => ({
     id: row.batch_id,
     batchNumber: row.production_batches.batch_number,
     productionDate: row.production_batches.production_date,
@@ -164,7 +170,7 @@ export async function listRecentBatches(
     reversedAt: row.production_batches.reversed_at,
     reversalReason: row.production_batches.reversal_reason,
   }));
-  return { batches, total: count };
+  return { batches: recent, total: count };
 }
 
 // How many sale ids one summary read takes, so its URL and its rows stay small.

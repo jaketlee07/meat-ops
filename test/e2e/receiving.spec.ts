@@ -20,6 +20,7 @@ import {
   factValue,
   fillReceipt,
   FORM_CONTROLS,
+  FORM_AND_SEARCH,
   type Fields,
   lotCount,
   lotNumberOf,
@@ -318,7 +319,7 @@ test.describe("refused forms", () => {
     await f.save.click();
     await expect(page.locator("#weight-error")).toHaveText(WEIGHT_FORMAT);
     await expect(f.weight).toBeFocused();
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 });
 
@@ -388,7 +389,7 @@ test.describe("saving", () => {
     await expect(f.notes).toHaveValue("");
 
     // Both receipts are untouched, so the list adds a Void and a Correct button for each.
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct", "button Void", "button Correct"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Void", "button Correct", "button Void", "button Correct"]);
   });
 
   test("AC-0014 and AC-0067: a first receipt shows 0 lbs, None yet, and No price yet before", async ({ page }) => {
@@ -465,7 +466,7 @@ test.describe("saving", () => {
 
     await expect(f.result.getByRole("heading", { name: "Receipt saved" })).toBeFocused();
     await expect(beforeAfter(f.result, /^On hand/)).toHaveText(["100,000.125 lbs", "300,000.375 lbs"]);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct", "button Void", "button Correct"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Void", "button Correct", "button Void", "button Correct"]);
   });
 
   test("AC-0018: pressing Save again while a save is pending writes no second lot", async ({ page }) => {
@@ -545,7 +546,7 @@ test.describe("refusals after the rules pass", () => {
     await expect(f.message).toBeFocused();
     expect(await readValues(f)).toEqual(typed);
     expect(await lotCount()).toBe(0);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("AC-0019 and AC-0046: any other refusal from the database shows its own reason", async ({ page }) => {
@@ -572,7 +573,7 @@ test.describe("refusals after the rules pass", () => {
     await expect(f.message).toBeFocused();
     expect(await readValues(f)).toEqual(typed);
     expect(await lotCount()).toBe(0);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("AC-0042 and AC-0046: an expired access token refreshes and saves, and a revoked session keeps the form", async ({
@@ -633,7 +634,7 @@ test.describe("refusals after the rules pass", () => {
     expect(await readValues(f)).toEqual(typed);
     expect(await lotCount()).toBe(0);
     await expect(f.save).toBeEnabled();
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 });
 
@@ -655,18 +656,18 @@ test.describe("recent receipts", () => {
     await expect(factValue(f.region, "Received")).toHaveText(
       [20, 19, 18, 17, 16, 15, 14, 13, 12, 11].map((day) => `May ${day}, 2026`),
     );
-    await expect(f.region.getByText("Showing the 10 most recent of 12 receipts.", { exact: true })).toBeVisible();
+    await expect(f.region.getByText("Showing 10 of 12 receipts.", { exact: true })).toBeVisible();
   });
 
   test("AC-0048: with 10 receipts or fewer there is no count line", async ({ page }) => {
     for (const day of ENTRY_DAYS.slice(0, 10)) await seedReceipt(100, 1.68, `2026-05-${day}`);
     const f = await openForm(page, RAW_TOM_URL);
     await expect(f.region.getByRole("listitem")).toHaveCount(10);
-    await expect(f.region.getByText(/^Showing the/)).toHaveCount(0);
+    await expect(f.region.getByText(/^Showing /)).toHaveCount(0);
 
     await seedReceipt(100, 1.68, "2026-05-22");
     await page.reload();
-    await expect(f.region.getByText("Showing the 10 most recent of 11 receipts.", { exact: true })).toBeVisible();
+    await expect(f.region.getByText("Showing 10 of 11 receipts.", { exact: true })).toBeVisible();
   });
 
   test("AC-0047: each receipt shows its lot number, date, vendor, weight, cost, and remaining lbs", async ({
@@ -727,7 +728,7 @@ test.describe("recent receipts", () => {
 
     // Four receipts at phone width: no sideways scroll, one Void button, and a Correct button on each receipt that is not void.
     expect(await checkPageState(page)).toEqual([
-      ...FORM_CONTROLS,
+      ...FORM_AND_SEARCH,
       "button Void",
       "button Correct",
       "button Correct",
@@ -880,7 +881,7 @@ test.describe("voiding", () => {
     await expect(f.result.getByRole("table")).toHaveCount(0);
     await expect(f.result.getByText("Before")).toHaveCount(0);
     await expect(factValue(f.result, "Lot number")).toHaveText(lotNumber);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
 
     // Choosing another product swaps the list, and the panel still says so.
     await f.code.fill("RAW-PORK");
@@ -948,7 +949,7 @@ test.describe("voiding", () => {
     await expect(item.getByText("Voided", { exact: true })).toHaveCount(0);
 
     // The list after the refusal: the message is in the page, the dialog is closed.
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Void", "button Correct"]);
   });
 });
 
@@ -974,7 +975,7 @@ test.describe("voiding when the connection drops", () => {
     await expect(factValue(f.region, "On hand")).toHaveText("1,000 lbs");
     expect(await lotState(id)).toEqual(before);
     expect(await voidMarks()).toBe(0);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Void", "button Correct"]);
   });
 });
 
