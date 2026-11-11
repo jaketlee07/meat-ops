@@ -320,6 +320,10 @@ export const dateBoxOf = (page: Page, list: RecentList): Locator =>
 export const searchButtonOf = (page: Page, list: RecentList): Locator =>
   searchForm(page, list).getByRole("button", { name: "Search", exact: true });
 export const rowsOf = (page: Page, list: RecentList): Locator => page.locator(`#${list.listId} > li`);
+// The list's own column header line, the aria-hidden div just before its `ul`: shown where the list reads as a table,
+// hidden where it reads as cards.
+export const headerLineOf = (page: Page, list: RecentList): Locator =>
+  page.locator(`#${list.listId}`).locator("xpath=preceding-sibling::*[1][self::div][@aria-hidden='true']");
 export const showMoreOf = (page: Page, list: RecentList): Locator =>
   listSection(page, list).getByRole("link", { name: "Show 10 more", exact: true });
 export const clearOf = (page: Page, list: RecentList): Locator =>
@@ -347,10 +351,15 @@ export async function keepListStatus(page: Page, list: RecentList): Promise<void
   });
 }
 
-// The list's status region holds `line` ("" for none), and it is the element keepListStatus kept.
+// The list's status region holds `line` ("" for none), and it is the element keepListStatus kept. Once the line is
+// there, a reload since keepListStatus fails under its own message before the check of a region the page replaced.
 export async function expectKeptListStatus(page: Page, list: RecentList, line: string): Promise<void> {
   const region = listStatusOf(page, list);
   await expect(region, "the list's status region").toHaveText(line);
+  expect(
+    await page.evaluate(() => (window as unknown as { __listStatus?: Element }).__listStatus !== undefined),
+    "the kept status region is still on window: the page did not reload since keepListStatus",
+  ).toBe(true);
   expect(
     await region.evaluate((node) => node === (window as unknown as { __listStatus?: Element }).__listStatus),
     "the status region is the one the page had before",
@@ -358,20 +367,22 @@ export async function expectKeptListStatus(page: Page, list: RecentList, line: s
 }
 
 // How much taller the list's section is with the end under its rows than without it: the room the end takes, its gap
-// above included. The end is taken out of the page and put back in one step. Also says whether the list reads as a
-// table, its column header line shown.
-export async function endRoom(page: Page, list: RecentList): Promise<{ room: number; table: boolean }> {
+// above included. The end is the status region's parent, and it must share a parent with the list's `ul`; it is taken
+// out of the page and put back in one step.
+export async function endRoom(page: Page, list: RecentList): Promise<number> {
   return listStatusOf(page, list).evaluate((region, listId) => {
     const end = region.parentElement!;
-    const holder = end.parentElement!;
+    const holder = end.parentElement;
+    if (holder === null || document.getElementById(listId)?.parentElement !== holder) {
+      throw new Error(`endRoom: the status region's parent does not share a parent with #${listId}, so it is not the whole end under the list`);
+    }
     const section = holder.closest("section")!;
     const next = end.nextSibling;
     const withEnd = section.getBoundingClientRect().height;
     end.remove();
     const withoutEnd = section.getBoundingClientRect().height;
     holder.insertBefore(end, next);
-    const header = document.getElementById(listId)?.previousElementSibling;
-    return { room: withEnd - withoutEnd, table: header instanceof HTMLElement && getComputedStyle(header).display !== "none" };
+    return withEnd - withoutEnd;
   }, list.listId);
 }
 

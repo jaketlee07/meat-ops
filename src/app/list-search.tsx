@@ -3,7 +3,7 @@
 import Form from "next/form";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { isSearchSet, type ListSearch, MAX_ROWS } from "../lib/list-search";
+import { DEFAULT_ROWS, isSearchSet, type ListSearch, MAX_ROWS } from "../lib/list-search";
 import { CONTROL, DATE_BOX, IconBox, LABEL } from "./form-parts";
 
 // The search form and the lines under a Recent list, shared by Recent receipts, Recent batches, and Recent
@@ -28,6 +28,10 @@ function addressOf(path: string, product: string | null, text: string, date: str
   const query = params.toString();
   return query === "" ? path : `${path}?${query}`;
 }
+
+// One string for a parsed address: the chosen product, the search text and date, and the row count.
+const addressKey = (product: string | null, text: string, date: string | null, rows: number): string =>
+  JSON.stringify([product, text, date, rows]);
 
 // The id of a list's Search text box, such as "receipts-search-text".
 const textIdOf = (slug: string): string => `${slug}-search-text`;
@@ -102,10 +106,11 @@ export function SearchForm({
 }
 
 // What a Recent list says under its rows, and its link. It stays in the page in every state. Its status region
-// holds the line, so a screen reader hears each new one; the link sits after the region, outside it. Once a press of
-// "Show 10 more" has added rows it focuses the first of them, even when that press shows the last match and the link
-// goes, and once a press of "Clear search" has cleared the search it focuses the list's Search box. `listId` is the
-// id of the list's `ul`, whose rows carry `tabIndex={-1}`.
+// holds the line, so a screen reader hears each new one; the link sits after the region, outside it. A press of
+// "Show 10 more" or "Clear search" that navigates this tab arms one focus move for the address it opens: to the first
+// row it adds, or to the list's Search box. The first page to land after the press runs that move only if it is that
+// address, and disarms it either way, so a press that another navigation overtakes moves nothing. `listId` is the id
+// of the list's `ul`, whose rows carry `tabIndex={-1}`.
 export function ListEnd({
   noun,
   slug,
@@ -138,27 +143,29 @@ export function ListEnd({
   collapsed: string;
 }) {
   const searching = isSearchSet(search);
-  const asked = useRef<number | null>(null);
-  const clearing = useRef(false);
+  // The armed focus move: the key of the address it waits for, and where to move focus there.
+  const armed = useRef<{ key: string; target: () => Element | null | undefined } | null>(null);
+  // `search` reaches here only through server components, so each page that lands brings its own object, and this
+  // runs once for each page.
   useEffect(() => {
-    if (asked.current === null || shown <= asked.current) return;
-    const row = document.getElementById(listId)?.children[asked.current];
-    asked.current = null;
-    if (row instanceof HTMLElement) row.focus();
-  }, [shown, listId]);
-  useEffect(() => {
-    if (!clearing.current || searching) return;
-    clearing.current = false;
-    document.getElementById(textIdOf(slug))?.focus();
-  }, [searching, slug]);
+    const move = armed.current;
+    armed.current = null;
+    if (move === null || move.key !== addressKey(product, search.text, search.date, search.rows)) return;
+    const target = move.target();
+    if (target instanceof HTMLElement) target.focus();
+  }, [product, search]);
 
   const clear = (
     <Link
       href={addressOf(path, product, "", null, null)}
       scroll={false}
-      // Next calls onNavigate only for a press that navigates in this tab, not a Cmd, Ctrl, Shift, or Alt one.
+      // Next calls onNavigate only for a press that navigates in this tab, not a Cmd, Ctrl, Shift, or Alt one, so only
+      // that press arms a move: to the Search box, on the page with no search.
       onNavigate={() => {
-        clearing.current = true;
+        armed.current = {
+          key: addressKey(product, "", null, DEFAULT_ROWS),
+          target: () => document.getElementById(textIdOf(slug)),
+        };
       }}
       className={LINK}
     >
@@ -180,13 +187,19 @@ export function ListEnd({
     line = `Showing ${shown} of ${total} ${noun}. Search or pick a date to find the rest.`;
   } else if (shown < total) {
     line = `Showing ${shown} of ${total} ${noun}.`;
+    const rows = Math.min(MAX_ROWS, search.rows + STEP);
     link = (
       <Link
-        href={addressOf(path, product, search.text, search.date, Math.min(MAX_ROWS, search.rows + STEP))}
+        href={addressOf(path, product, search.text, search.date, rows)}
         replace
         scroll={false}
-        onClick={() => {
-          asked.current = shown;
+        // As for Clear search, only a press that navigates this tab arms the move: to the row at the count shown now,
+        // the first the press adds, if the page it opens has that row.
+        onNavigate={() => {
+          armed.current = {
+            key: addressKey(product, search.text, search.date, rows),
+            target: () => document.getElementById(listId)?.children[shown],
+          };
         }}
         className={LINK}
       >
@@ -195,7 +208,7 @@ export function ListEnd({
     );
   }
   // Each address gives its line a new element, so a search whose line reads as the last one's is announced too.
-  const lineKey = JSON.stringify([product, search.text, search.date, search.rows]);
+  const lineKey = addressKey(product, search.text, search.date, search.rows);
   return (
     <div className={line === null ? collapsed : inset}>
       <div role="status">{line !== null && <p key={lineKey}>{line}</p>}</div>

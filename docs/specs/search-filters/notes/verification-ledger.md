@@ -246,7 +246,7 @@ Frontend reviewer:
 - 1, the modified click: see quality 3.
 - 2, the repeated line: the `p` in the region is keyed on the parsed address (product, text, date, and rows), so each new address gives the line a new element. The region stays mounted, and the line texts are unchanged. The AC-0027 test searches "zzy" after "zzz" and checks the second "No ... match." is a new element in the same region.
 
-Mutation runs, 2026-11-11. Each made one scratch edit, then ran `npm run test:e2e -- list-search -g "AC-0027: a search|with 12 rows|AC-0047: more than|with 55 rows|AC-0016: an address"` (15 tests, the 2 sign-in setup tests among them), then copied the files back; `cmp` found no difference.
+Mutation runs, 2026-11-11. The first two runs each made one scratch edit, and the last two made two, as each line below names. Each run then ran `npm run test:e2e -- list-search -g "AC-0027: a search|with 12 rows|AC-0047: more than|with 55 rows|AC-0016: an address"` (15 tests, the 2 sign-in setup tests among them), then copied the files back; `cmp` found no difference.
 
 - The region rendered only beside a line: 7 failed in 57.7 s, each `Error: the list's status region`: AC-0027 at `list-search.spec.ts:580` and AC-0047 at `:770` with `Received: 0`, and the 12-row test at `:678` with `element(s) not found`.
 - The region always there, with the line after it: 10 failed in 1.4 min (AC-0027, the 12-row test, and the 55-row test on each list, and AC-0047), each `Error: the list's status region` with `Received: ""`.
@@ -259,3 +259,41 @@ Gates, 2026-11-11, on `0384302` plus these fixes, uncommitted:
 - `npm test`, 15:08 to 15:23: Vitest 58 files and 1,101 tests in 64 s, then Playwright 1,264 passed and 1 failed in 13.6 min. The failure was `look-menu-invoices-ask-alerts.spec.ts:834`, "AC-0021: at 1280x720 with 16 px text", on `/invoices`, which this round does not touch: the draft's "Saved 3 receipts." never showed. In that test the app logged `isOperator failed: An invalid response was received from the upstream server`, and Kong logged `recv() failed (104: Connection reset by peer)` and a 502 for `POST /rest/v1/rpc/check_operator` at 15:19:21.
 - That test alone, `npm run test:e2e -- look-menu-invoices-ask-alerts -g "AC-0021: at 1280x720 with 16 px text"`: passed, with the 2 setup tests, in 8.1 s.
 - `npm test` again, 15:27 to 15:42: Vitest 58 files and 1,101 tests in 47 s, then Playwright 1,265 passed, none failed or skipped, in 13.9 min.
+
+### Round 3 fixes
+
+One line per sustained finding of `.context/reviews/a5f08fda-ae0d-4d6e-a49d-fb51e365b01a/3-post-gates-*-adjudication.md`, 2026-11-11. Where findings overlap, each names the one repair.
+
+Frontend reviewer:
+
+- 1, an overtaken "Clear search" press stays armed: `ListEnd` in `src/app/list-search.tsx` keeps one armed focus move in a ref, the address key it waits for and what to focus, and only each link's `onNavigate` arms it. `addressKey` builds every key as `JSON.stringify([product, text, date, rows])`: the line key, Clear search's target (the same product with `""`, `null`, and `DEFAULT_ROWS`), and Show 10 more's (the same search at `Math.min(MAX_ROWS, search.rows + STEP)` rows). One effect, on `product` and `search`, takes the move, clears the ref, and runs it only when its key is the key of the page that landed, so the first page to land after a press decides. The row move focuses the row at the count shown at the press, if that row exists; the Clear move focuses the Search box. A new test on each list, "AC-0027: a Clear search press moves focus to the Search box once its page lands, and not when another page lands first", holds the page with no search, presses Search with the boxes unchanged, lets the held request go, then searches with both boxes empty and checks focus stays on the Search button. It then holds a second Clear press for 500 ms, lets it go, and checks focus lands on the Search box. The overview's `src/app` row now says each move runs if the next page to render after the press is the one it opens.
+
+Adversarial reviewer:
+
+- 1, Show 10 more arms from `onClick`: see frontend 1. A new test on each list, "AC-0026: a Cmd or Ctrl press of Show 10 more arms no focus move, so Back to the address it opens leaves focus on the link", searches 25 rows, presses Show 10 more (rows 20), presses Search again with the same boxes (rows 10, a pushed entry), presses Show 10 more with `ControlOrMeta` and closes the tab it opens, then goes back to the rows-20 entry. Row 11 is not focused, and the link is.
+- 2, the number-search poll message: see quality 4.
+- 3, the round 2 mutation record: its opening line now says the first two runs made one scratch edit each and the last two made two.
+
+Quality engineer:
+
+- 1, `endRoom` and a wrapped status region: before it removes anything, `endRoom` throws "endRoom: the status region's parent does not share a parent with #<list id>, so it is not the whole end under the list" unless the end shares a parent with the list's `ul`.
+- 2, `expectKeptListStatus` and a reload: once the line is there, it checks `window.__listStatus` is still set, under "the kept status region is still on window: the page did not reload since keepListStatus", and then keeps its identity check and message.
+- 3, `endRoom`'s table flag: `endRoom` returns only the room. The 12-row test reads `headerLineOf`, the list's own `div[aria-hidden='true']` header line just before its `ul`, checks there is one, and checks it is visible at 1280 px and hidden at 390 px.
+- 4, the poll message for sales: Recent sales' message is "sales SL-009 to SL-001"; receipts and batches keep "the chosen product's rows, without the other product's row". The asserted rows are unchanged.
+
+Probe, 2026-11-11, a scratch spec deleted after: on each list, the page prefetches the address with no search as `GET <address>?_rsc=<value>` with the headers `RSC: 1` and `Next-Router-Prefetch: 1`. A plain Clear search press then fetches the same address with `RSC: 1`, a different `_rsc` value, and no `Next-Router-Prefetch`. So the prefetch does not serve the page, and the new AC-0027 test holds only that second kind of request. It also checks the prefetch came, that "No ... match." still shows 500 ms after the press, and that the dropped page has not landed 500 ms after its held request goes. The Cmd or Ctrl press opened a new tab each time; the test closes it.
+
+What the tests confirm about `search`: the overtaken press is disarmed only if the effect runs on the page the unchanged Search press lands, whose key equals the page before it. So that page brings a new `search` object. The held press still moves focus after 500 ms of waiting, so nothing gives `ListEnd` a new `search` before its page lands. Mutation 3 below shows the first check fails when the effect runs only on a key change.
+
+Mutation runs, 2026-11-11. Each made one scratch edit to `src/app/list-search.tsx`, ran the tests named, then copied the file back; `cmp` found no difference.
+
+- Show 10 more's `onNavigate` turned back into `onClick`, with the move and its key check unchanged, then `npm run test:e2e -- list-search -g "AC-0026"` (11 tests, the 2 sign-in setup tests among them): 3 failed and 8 passed in 38.6 s. Each failure was the new AC-0026 test: `Error: row 11 is not focused`, `Expected: not focused`, `Received: focused`, at `list-search.spec.ts:750`.
+- Clear search's move replaced by the old `clearing` ref, set from `onNavigate`, and the old effect on `[searching, slug]` that clears it only on a render with no search, then `-g "AC-0027"` (8 tests): 3 failed and 5 passed in 33.7 s. Each failure was the new AC-0027 test: `Error: focus stays on the Search button`, `Expected: focused`, `Received: inactive`, at `:667`.
+- The effect's dependencies set to `addressKey(product, search.text, search.date, search.rows)` in place of `[product, search]`, then `-g "AC-0027: a Clear search press"` (5 tests): 3 failed and 2 passed in 36.7 s, the same failure at `:667`.
+
+Before the mutation runs, `npm run test:e2e -- list-search -g "AC-0027|AC-0026: a Cmd|with 12 rows|AC-0002, AC-0004"` on the real code: 17 passed in 32.4 s.
+
+Gates, 2026-11-11, on `6857d2d` plus these fixes, uncommitted:
+
+- `npm run typecheck`: pass.
+- `npm test`, 16:15 to 16:31: Vitest 58 files and 1,101 tests in 67 s, then Playwright 1,271 passed, none failed or skipped, in 14.4 min. The 6 tests past round 2's 1,265 are the two new tests on each list.

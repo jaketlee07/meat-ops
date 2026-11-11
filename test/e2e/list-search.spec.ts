@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Route as PlaywrightRoute } from "@playwright/test";
 import { callAsOperator, query, resetTestData, voidReceiptCall } from "../db";
 import { checkPageState } from "./a11y";
 import { box, withTextSize } from "./look-checks";
@@ -16,6 +16,7 @@ import {
   expectInside,
   expectKeptListStatus,
   expectNoSidewaysScroll,
+  headerLineOf,
   keepListStatus,
   listSection,
   listStatusOf,
@@ -476,7 +477,10 @@ for (const list of RECENT_LISTS) {
       // A number's own text.
       await searchFor(page, list, `${list.prefix}-00`);
       await expect
-        .poll(() => shown(page, list), { message: "the chosen product's rows, without the other product's row" })
+        .poll(() => shown(page, list), {
+          message:
+            other === null ? `${list.noun} ${numberOf(list, 9)} to ${numberOf(list, 1)}` : "the chosen product's rows, without the other product's row",
+        })
         .toEqual(numbersOf(list, [9, 8, 7, 6, 5, 4, 3, 2, 1]));
       // A date alone, and a date with text.
       await searchFor(page, list, "", DAY_A);
@@ -617,6 +621,62 @@ for (const list of RECENT_LISTS) {
       await searchFor(page, list, "", "2026-01-01");
       await expect(noMatchLine(page, list)).toBeVisible();
     });
+
+    test(`AC-0027: a Clear search press moves focus to the Search box once its page lands, and not when another page lands first`, async ({ page }) => {
+      await seedRows(list, 12, { shape: "mixed" });
+      // The page with no search is fetched with an RSC header and an _rsc value of its own. Its prefetch, which carries
+      // Next-Router-Prefetch, goes through; each other fetch of it waits in `held` until the test lets it go.
+      const cleared = addressOf(list);
+      const held: PlaywrightRoute[] = [];
+      let prefetched = 0;
+      await page.route(
+        (url) => {
+          const bare = new URL(url);
+          bare.searchParams.delete("_rsc");
+          return `${bare.pathname}${bare.search}` === cleared;
+        },
+        async (route) => {
+          const headers = route.request().headers();
+          if (headers["rsc"] !== "1") return route.continue();
+          if (headers["next-router-prefetch"] !== undefined) {
+            prefetched += 1;
+            return route.continue();
+          }
+          held.push(route);
+        },
+      );
+      // Opened by address, so a Search press with the boxes unchanged opens another address with the same search.
+      await opensList(page, list, { q: "zzz" });
+      await expect(noMatchLine(page, list)).toBeVisible();
+      await expect.poll(() => prefetched, { message: "the page with no search was prefetched" }).toBeGreaterThan(0);
+      await clearOf(page, list).click();
+      await expect.poll(() => held.length, { message: "the press asked for the page with no search" }).toBe(1);
+      await page.waitForTimeout(500);
+      await expect(noMatchLine(page, list), "the prefetch did not show the page with no search").toBeVisible();
+      // Search, with the boxes unchanged, lands first. The held answer then goes, and the router has dropped it.
+      await searchButtonOf(page, list).click();
+      await expect(page).toHaveURL((url) => url.searchParams.get("q") === "zzz" && url.searchParams.get("date") === "");
+      await expect(noMatchLine(page, list)).toBeVisible();
+      await held[0]!.continue().catch(() => undefined);
+      await page.waitForTimeout(500);
+      expect(paramsOf(page).get("q"), "the dropped page did not land").toBe("zzz");
+      // A search with both boxes emptied lands on the page with no search, and focus stays on the button pressed.
+      await searchFor(page, list, "");
+      await expect.poll(() => shown(page, list)).toHaveLength(10);
+      await page.waitForTimeout(500);
+      await expect(searchButtonOf(page, list), "focus stays on the Search button").toBeFocused();
+      // A press whose request waits still moves focus, once its page lands.
+      await searchFor(page, list, "zzz");
+      await expect(noMatchLine(page, list)).toBeVisible();
+      await clearOf(page, list).click();
+      await expect.poll(() => held.length, { message: "the second press asked for the page with no search" }).toBe(2);
+      await page.waitForTimeout(500);
+      await expect(noMatchLine(page, list)).toBeVisible();
+      await held[1]!.continue();
+      await expect(page).toHaveURL(cleared);
+      await expect.poll(() => shown(page, list)).toHaveLength(10);
+      await expect(textBoxOf(page, list)).toBeFocused();
+    });
   });
 
   test.describe(`${list.title}: paging`, () => {
@@ -663,6 +723,34 @@ for (const list of RECENT_LISTS) {
       await expect(textBoxOf(page, list)).toHaveValue(list.prefix);
     });
 
+    test(`AC-0026: a Cmd or Ctrl press of Show 10 more arms no focus move, so Back to the address it opens leaves focus on the link`, async ({ page }) => {
+      test.setTimeout(240_000);
+      await seedRows(list, 25);
+      await opensList(page, list, { q: list.prefix, date: DAY_A });
+      // A plain press: 20 rows, on the same history entry.
+      await showMoreOf(page, list).click();
+      await expect(rowsOf(page, list)).toHaveCount(20);
+      await expect(rowsOf(page, list).nth(10)).toBeFocused();
+      // The same search again: a new entry at 10 rows.
+      await searchButtonOf(page, list).click();
+      await expect(page).toHaveURL((url) => !url.searchParams.has("rows") && url.searchParams.get("date") === DAY_A);
+      await expect(rowsOf(page, list)).toHaveCount(10);
+      // A Cmd or Ctrl press opens the 20-row address in another tab, and this tab stays at 10 rows.
+      const opening = page.context().waitForEvent("page", { timeout: 5_000 }).catch(() => null);
+      await showMoreOf(page, list).click({ modifiers: ["ControlOrMeta"] });
+      await (await opening)?.close();
+      await page.waitForTimeout(500);
+      expect(paramsOf(page).has("rows"), "this tab kept its address").toBe(false);
+      await expect(rowsOf(page, list)).toHaveCount(10);
+      // Back lands on the 20-row entry, the address that press opened, and focus stays on the link.
+      await page.goBack();
+      await expect(rowsOf(page, list)).toHaveCount(20);
+      expect(paramsOf(page).get("rows")).toBe("20");
+      await page.waitForTimeout(500);
+      await expect(rowsOf(page, list).nth(10), "row 11 is not focused").not.toBeFocused();
+      await expect(showMoreOf(page, list)).toBeFocused();
+    });
+
     test(`AC-0019, AC-0020, AC-0022: with 12 rows, one press shows every row and ends the line and the link, leaving an empty status region that takes no room, and a search whose 9 matches all show has neither`, async ({ page }) => {
       await seedRows(list, 12);
       await opensList(page, list);
@@ -676,14 +764,16 @@ for (const list of RECENT_LISTS) {
       await expect(showMoreOf(page, list)).toHaveCount(0);
       // The status region stays in the page, empty, and the end under the rows takes no room, as a table and as cards.
       await expectKeptListStatus(page, list, "");
+      const header = headerLineOf(page, list);
+      await expect(header, "the list's header line").toHaveCount(1);
       for (const [width, height, table] of [
         [1280, 720, true],
         [390, 844, false],
       ] as const) {
         await page.setViewportSize({ width, height });
-        const end = await endRoom(page, list);
-        expect(end.table, `at ${width} px the list reads as ${table ? "a table" : "cards"}`).toBe(table);
-        expect(end.room, `at ${width} px, the room the empty end takes`).toBeCloseTo(0, 0);
+        if (table) await expect(header, `at ${width} px the list reads as a table`).toBeVisible();
+        else await expect(header, `at ${width} px the list reads as cards`).toBeHidden();
+        expect(await endRoom(page, list), `at ${width} px, the room the empty end takes`).toBeCloseTo(0, 0);
       }
       // A search that 9 rows match, read at 10 rows: all 9 show, with no line and no link.
       await opensList(page, list, { q: list.prefix, date: DAY_A, rows: "10" });
