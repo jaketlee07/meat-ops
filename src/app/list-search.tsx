@@ -109,8 +109,9 @@ export function SearchForm({
 // holds the line, so a screen reader hears each new one; the link sits after the region, outside it. A press of
 // "Show 10 more" or "Clear search" that navigates this tab arms one focus move for the address it opens: to the first
 // row it adds, or to the list's Search box. The first page to land after the press runs that move only if it is that
-// address, and disarms it either way, so a press that another navigation overtakes moves nothing. `listId` is the id
-// of the list's `ul`, whose rows carry `tabIndex={-1}`.
+// address, and disarms it either way. So a press that another navigation overtakes moves nothing, unless that
+// navigation lands on the same address, such as a Back to an entry of it. `listId` is the id of the list's `ul`, whose
+// rows carry `tabIndex={-1}`.
 export function ListEnd({
   noun,
   slug,

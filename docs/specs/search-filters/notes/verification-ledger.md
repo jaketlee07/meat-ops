@@ -165,6 +165,10 @@ Both records below read `03caf67`, the branch's last commit that changes a file 
 
 A Save from Receiving's, Production's, or Sales' form under a search keeps the search: the action's `revalidatePath` re-renders the current address with its `q`, `date`, and `rows`, so a saved row that does not match is not listed until "Clear search", while the saved result under the form shows it either way. A Save for a product other than the chosen one moves the address to that product with no search (`router.replace` in `receipt-form.tsx`, `production-form.tsx`, and `sale-form.tsx`). The owner chose to keep this behavior, with no code change, over clearing the search after a Save.
 
+### Owner's call, 2026-11-11: round 4's Nits
+
+Round 4 sustained four Nits. The owner chose to fix the three text and test ones and defer the fourth: a Back, or a Search with both boxes emptied, that overtakes a "Show 10 more" or "Clear search" press and lands on the address that press opens still runs the press's focus move (`.context/reviews/a5f08fda-ae0d-4d6e-a49d-fb51e365b01a/4-post-gates-frontend-reviewer-adjudication.md`, finding 1, at `src/app/list-search.tsx:153`). It needs a second navigation started before the press's page lands, and it moves focus only to the row or box the press asked for. It is a close-out leftover candidate. Any Nit that round 5 sustains is deferred, not fixed.
+
 
 ### Round 1 fixes
 
@@ -297,3 +301,27 @@ Gates, 2026-11-11, on `6857d2d` plus these fixes, uncommitted:
 
 - `npm run typecheck`: pass.
 - `npm test`, 16:15 to 16:31: Vitest 58 files and 1,101 tests in 67 s, then Playwright 1,271 passed, none failed or skipped, in 14.4 min. The 6 tests past round 2's 1,265 are the two new tests on each list.
+
+### Round 4 fixes
+
+One line per sustained finding of `.context/reviews/a5f08fda-ae0d-4d6e-a49d-fb51e365b01a/4-post-gates-*-adjudication.md`, 2026-11-11.
+
+Adversarial reviewer:
+
+- 1, the overview's focus sentences: in the `src/app` row of `docs/architecture/overview.md`, the "Show 10 more" sentence names a press that navigates this tab, not a Cmd, Ctrl, Shift, or Alt one, and the "Clear search" sentence a press that navigates this tab.
+- 2, the plan's Show 10 more bullet: the plan is hash-locked whole, its Design section included (`loop-cohort plan check-current` fails on an edit there), so this ledger line corrects it. The Design bullet "Show 10 more" in `docs/specs/search-filters/plan.md` says the part remembers the row count it asked for and focuses the first added row once the list renders past it. The built mechanism replaces that: a press that navigates this tab arms one focus move from the Link's `onNavigate`, keyed on the address the press opens, and the first page to land runs it only if it is that address and drops it either way. Clear search arms its move to the Search box the same way. The `src/app` row of `docs/architecture/overview.md` and the comment above `ListEnd` state the current rule.
+
+Quality engineer:
+
+- 1, focus while a Clear press waits: in "AC-0027: a Clear search press moves focus to the Search box once its page lands, and not when another page lands first", each held window now checks that the Search box is not focused and the pressed "Clear search" link is, before the next press or the release.
+
+Frontend reviewer:
+
+- 1, a navigation that overtakes a press and lands on its address: deferred by the owner's call above. The comment above `ListEnd` in `src/app/list-search.tsx` now says an overtaken press moves nothing unless that navigation lands on the same address, such as a Back to an entry of it.
+
+Mutation run, 2026-11-11: Clear search's `onNavigate` also focused the Search box itself. `npm run test:e2e -- list-search -g "AC-0027: a Clear search press"` (5 tests, the 2 sign-in setup tests among them): 3 failed in 31.0 s, each `Error: the Search box, before a page lands` at `list-search.spec.ts:657`. The file was copied back; `cmp` found no difference. On the real code the same run passed 5 in 19.6 s.
+
+Gates, 2026-11-11, on `200c2b1` plus these fixes, uncommitted:
+
+- `npm run typecheck`: pass.
+- `npm test`, 16:53 to 17:08: Vitest 58 files and 1,101 tests in 52 s, then Playwright 1,271 passed, none failed or skipped, in 13.7 min.

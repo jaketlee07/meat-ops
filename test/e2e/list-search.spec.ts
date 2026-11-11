@@ -653,6 +653,9 @@ for (const list of RECENT_LISTS) {
       await expect.poll(() => held.length, { message: "the press asked for the page with no search" }).toBe(1);
       await page.waitForTimeout(500);
       await expect(noMatchLine(page, list), "the prefetch did not show the page with no search").toBeVisible();
+      // No page has landed, so focus has not moved: it is still on the link pressed.
+      await expect(textBoxOf(page, list), "the Search box, before a page lands").not.toBeFocused();
+      await expect(clearOf(page, list), "the pressed link, while its page waits").toBeFocused();
       // Search, with the boxes unchanged, lands first. The held answer then goes, and the router has dropped it.
       await searchButtonOf(page, list).click();
       await expect(page).toHaveURL((url) => url.searchParams.get("q") === "zzz" && url.searchParams.get("date") === "");
@@ -672,6 +675,8 @@ for (const list of RECENT_LISTS) {
       await expect.poll(() => held.length, { message: "the second press asked for the page with no search" }).toBe(2);
       await page.waitForTimeout(500);
       await expect(noMatchLine(page, list)).toBeVisible();
+      await expect(textBoxOf(page, list), "the Search box, before the second press's page lands").not.toBeFocused();
+      await expect(clearOf(page, list), "the pressed link, while the second press's page waits").toBeFocused();
       await held[1]!.continue();
       await expect(page).toHaveURL(cleared);
       await expect.poll(() => shown(page, list)).toHaveLength(10);
