@@ -1,7 +1,7 @@
 # Plan: search-filters
 
 - **Spec:** [`spec.md`](spec.md)
-- **Status:** Executing <!-- Drafting | Approved | Executing | Done -->
+- **Status:** Done <!-- Drafting | Approved | Executing | Done -->
 - **Repository anchors:** the `?product=` address pattern of `src/app/receiving/page.tsx` and `src/app/production/page.tsx`; Trace's finder forms in `src/app/trace/find-forms.tsx`, which change the address with `scroll: false`, with `test/e2e/trace.spec.ts`; `isCalendarDate` in `src/lib/batch-input.ts`, which Trace's finder also uses for an address date; the shared control and label classes and `IconBox` in `src/app/form-parts.ts`. Deviation: the search forms use next's `Form` (`next/form`), a GET form, instead of Trace's client `onSubmit` with `router.push`, because a search has no client-side check to run before it changes the address.
 
 > **Plan contract:** this is the implementation strategy. It may change
