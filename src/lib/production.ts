@@ -60,7 +60,7 @@ export interface ReversalPreview {
 
 export interface RecentBatches {
   batches: RecentBatch[];
-  // Every batch of the product, for "Showing the 10 most recent of N batches".
+  // How many batches of the product match the search: the M in "Showing N of M batches.".
   total: number;
 }
 

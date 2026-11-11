@@ -2,8 +2,8 @@
 
 import Form from "next/form";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { MAX_ROWS } from "../lib/list-search";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { isSearchSet, type ListSearch, MAX_ROWS } from "../lib/list-search";
 import { CONTROL, DATE_BOX, IconBox, LABEL } from "./form-parts";
 
 // The search form and the lines under a Recent list, shared by Recent receipts, Recent batches, and Recent
@@ -28,6 +28,9 @@ function addressOf(path: string, product: string | null, text: string, date: str
   const query = params.toString();
   return query === "" ? path : `${path}?${query}`;
 }
+
+// The id of a list's Search text box, such as "receipts-search-text".
+const textIdOf = (slug: string): string => `${slug}-search-text`;
 
 // The named GET form above a list: a text box, a date box, and a button. It sends the page's own address its
 // `q` and `date` (and the hidden `product`), with no `rows`, so a new search opens at 10 rows. The boxes show
@@ -63,7 +66,7 @@ export function SearchForm({
     setTyped(text);
     setDay(date ?? "");
   }
-  const textId = `${slug}-search-text`;
+  const textId = textIdOf(slug);
   const dateId = `${slug}-search-date`;
   return (
     <Form action={path} scroll={false} aria-label={name} className={`flex flex-wrap items-end gap-3 ${inset}`}>
@@ -98,79 +101,87 @@ export function SearchForm({
   );
 }
 
-// What a Recent list says under its rows, and "Show 10 more". It stays in the page in every state, so that
-// once a press of "Show 10 more" has added rows it can focus the first of them, even when that press shows
-// the last match and the link goes. `listId` is the id of the list's `ul`, whose rows carry `tabIndex={-1}`.
+// What a Recent list says under its rows, and its link. It stays in the page in every state. Its status region
+// holds the line, so a screen reader hears each new one; the link sits after the region, outside it. Once a press of
+// "Show 10 more" has added rows it focuses the first of them, even when that press shows the last match and the link
+// goes, and once a press of "Clear search" has cleared the search it focuses the list's Search box. `listId` is the
+// id of the list's `ul`, whose rows carry `tabIndex={-1}`.
 export function ListEnd({
   noun,
+  slug,
   listId,
   path,
   product,
-  text,
-  date,
-  rows,
+  search,
   shown,
   total,
   tooMany = false,
   inset,
+  collapsed,
 }: {
   // "receipts", "batches", or "sales".
   noun: string;
+  // The search form's `slug`, which names its Search box.
+  slug: string;
   listId: string;
   path: string;
   product: string | null;
-  text: string;
-  date: string | null;
-  // The row count the address asked for, from 10 to 50.
-  rows: number;
+  // The address's search; its row count is from 10 to 50.
+  search: ListSearch;
   // How many rows the list shows, and how many match.
   shown: number;
   total: number;
   // Recent receipts only: more vendor names match the text than a search supports.
   tooMany?: boolean;
   inset: string;
+  // The classes that cancel the section's gap above this end while it shows nothing, so it takes no room there.
+  collapsed: string;
 }) {
+  const searching = isSearchSet(search);
   const asked = useRef<number | null>(null);
+  const clearing = useRef(false);
   useEffect(() => {
     if (asked.current === null || shown <= asked.current) return;
     const row = document.getElementById(listId)?.children[asked.current];
     asked.current = null;
     if (row instanceof HTMLElement) row.focus();
   }, [shown, listId]);
+  useEffect(() => {
+    if (!clearing.current || searching) return;
+    clearing.current = false;
+    document.getElementById(textIdOf(slug))?.focus();
+  }, [searching, slug]);
 
   const clear = (
-    <Link href={addressOf(path, product, "", null, null)} scroll={false} className={LINK}>
+    <Link
+      href={addressOf(path, product, "", null, null)}
+      scroll={false}
+      onClick={() => {
+        clearing.current = true;
+      }}
+      className={LINK}
+    >
       Clear search
     </Link>
   );
+  let line: string | null = null;
+  let link: ReactNode = null;
   if (tooMany) {
-    return (
-      <div className={inset}>
-        <p>{TOO_MANY_VENDORS}</p>
-        {clear}
-      </div>
-    );
-  }
-  if (total === 0) {
+    line = TOO_MANY_VENDORS;
+    link = clear;
+  } else if (total === 0) {
     // With no search the list says its own "none yet" line.
-    return text === "" && date === null ? null : (
-      <div className={inset}>
-        <p>{`No ${noun} match.`}</p>
-        {clear}
-      </div>
-    );
-  }
-  if (shown >= total) return null;
-  if (shown >= MAX_ROWS) {
-    return (
-      <p className={inset}>{`Showing ${shown} of ${total} ${noun}. Search or pick a date to find the rest.`}</p>
-    );
-  }
-  return (
-    <div className={inset}>
-      <p>{`Showing ${shown} of ${total} ${noun}.`}</p>
+    if (searching) {
+      line = `No ${noun} match.`;
+      link = clear;
+    }
+  } else if (shown < total && shown >= MAX_ROWS) {
+    line = `Showing ${shown} of ${total} ${noun}. Search or pick a date to find the rest.`;
+  } else if (shown < total) {
+    line = `Showing ${shown} of ${total} ${noun}.`;
+    link = (
       <Link
-        href={addressOf(path, product, text, date, Math.min(MAX_ROWS, rows + STEP))}
+        href={addressOf(path, product, search.text, search.date, Math.min(MAX_ROWS, search.rows + STEP))}
         replace
         scroll={false}
         onClick={() => {
@@ -180,6 +191,12 @@ export function ListEnd({
       >
         Show 10 more
       </Link>
+    );
+  }
+  return (
+    <div className={line === null ? collapsed : inset}>
+      <div role="status">{line !== null && <p>{line}</p>}</div>
+      {link}
     </div>
   );
 }

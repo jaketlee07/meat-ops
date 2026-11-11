@@ -1,5 +1,5 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
-import type { ListSearch } from "../../lib/list-search";
+import { isSearchSet, type ListSearch } from "../../lib/list-search";
 import type { RecentReceipt, RecentReceipts as Receipts } from "../../lib/receiving";
 import { Facts } from "../facts";
 import { ListEnd, SearchForm } from "../list-search";
@@ -12,6 +12,8 @@ const HEADING_ID = "recent-receipts-heading";
 const LIST_ID = "recent-receipts-list";
 // The search form and the lines under the list line up with the list's own text where the section is a card.
 const INSET = "wide:px-4 wide:pb-3";
+// While the lines under the list show nothing, this cancels the section's gap above them.
+const COLLAPSED = "-mt-2 wide:mt-0";
 
 // Where the section is a table (the `receipt-table` variant: 1280 px wide and the section wide
 // enough for these tracks at the current text size) it reads as one template for the header line
@@ -107,7 +109,7 @@ export function RecentReceipts({
   search,
   productCode,
 }: Receipts & { search: ListSearch; productCode: string }) {
-  const searching = search.text !== "" || search.date !== null;
+  const searching = isSearchSet(search);
   return (
     <section
       aria-labelledby={HEADING_ID}
@@ -146,7 +148,7 @@ export function RecentReceipts({
               <li
                 key={receipt.id}
                 tabIndex={-1}
-                className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 receipt-table:grid receipt-table:items-center receipt-table:gap-y-0 receipt-table:rounded-none receipt-table:border-0 receipt-table:border-t receipt-table:py-1.5 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
+                className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 receipt-table:grid receipt-table:items-center receipt-table:gap-y-0 receipt-table:rounded-none receipt-table:border-0 receipt-table:border-t receipt-table:py-1.5 receipt-table:-outline-offset-2 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
               >
                 <Facts
                   look="cells"
@@ -173,16 +175,16 @@ export function RecentReceipts({
       )}
       <ListEnd
         noun="receipts"
+        slug="receipts"
         listId={LIST_ID}
         path="/receiving"
         product={productCode}
-        text={search.text}
-        date={search.date}
-        rows={search.rows}
+        search={search}
         shown={receipts.length}
         total={total}
         tooMany={tooManyVendors === true}
         inset={INSET}
+        collapsed={COLLAPSED}
       />
     </section>
   );

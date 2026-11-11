@@ -20,6 +20,11 @@ const MAX_TEXT_UNITS = 100;
 // The search a list reads when its address carries none.
 export const NO_SEARCH: ListSearch = { text: "", date: null, rows: DEFAULT_ROWS };
 
+// Whether a search narrows the list: a text or a date. A row count alone does not.
+export function isSearchSet(search: ListSearch): boolean {
+  return search.text !== "" || search.date !== null;
+}
+
 function textOf(value: unknown): string {
   if (typeof value !== "string") return "";
   let text = value.replaceAll("\u0000", "").trim();

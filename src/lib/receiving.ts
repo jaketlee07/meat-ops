@@ -60,7 +60,8 @@ export interface BatchMadeFrom {
 
 export interface RecentReceipts {
   receipts: RecentReceipt[];
-  // Every receipt of the product that matches the search, void or not, for "Showing the 10 most recent of N".
+  // How many receipts of the product match the search, void or not: the M in "Showing N of M receipts.", and 0 in
+  // the too-many case.
   total: number;
   // True only when a non-empty search text matches more than MAX_MATCHING_VENDORS vendor names; no lots were read.
   // Absent otherwise, so a read without that case keeps its old shape.

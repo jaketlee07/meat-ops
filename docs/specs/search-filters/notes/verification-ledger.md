@@ -159,3 +159,61 @@ Both records below read `03caf67`, the branch's last commit that changes a file 
 - **Red runs:** recorded under T1, T2, T3, and T4 above.
 - **AC-0043:** the T3 gate ran `npm test` on the tree `03caf67` holds: Vitest 58 files and 1,101 tests in 40 s, Playwright 1,265 passed and 1 self-skip in 12.7 min.
 
+## Post-gates review
+
+### Owner's call, 2026-11-11: a Save keeps the search
+
+A Save from Receiving's, Production's, or Sales' form under a search keeps the search: the action's `revalidatePath` re-renders the current address with its `q`, `date`, and `rows`, so a saved row that does not match is not listed until "Clear search", while the saved result under the form shows it either way. A Save for a product other than the chosen one moves the address to that product with no search (`router.replace` in `receipt-form.tsx`, `production-form.tsx`, and `sale-form.tsx`). The owner chose to keep this behavior, with no code change, over clearing the search after a Save.
+
+
+### Round 1 fixes
+
+One line per sustained finding of `.context/reviews/a5f08fda-ae0d-4d6e-a49d-fb51e365b01a/1-post-gates-*-adjudication.md`, 2026-11-11. Where findings overlap, each names the one repair.
+
+Adversarial reviewer:
+
+- 1, AC-0025's scroll check cannot fail: `watchLowestScroll` and `lowestScrollY` in `test/e2e/list-search-page.ts` record the smallest `window.scrollY` from a scroll listener and a capture-phase `focusin` listener, installed before each press. The 25-row test checks both of its presses, and the 55-row test, which names AC-0025, checks each of its four.
+- 2, AC-0047's lot number: the AC-0047 test seeds `LT-004-FARM`, a RAW-TOM receipt from Reyes Meats, through `receive_lot` (`receiveNumbered`). "004-farm" lists it, and the too-many "farm" lists no row.
+- 3, the chosen product under a search: `seedOtherProductRow` seeds, through the operations, receipt LT-000 of a second raw product (RAW-OTHER) from Beta Meats and batch BT-000 of a second finished product (F-OTHER), each on 2026-09-15. The AC-0002 and AC-0004 test's exact lists leave each out, one check says so by name, and the other product's own list shows it for the same search.
+- 4, the Recent batches comment: it says a save or a reversal renders the current address again, search included, so a saved batch is listed first when no search is set or when it matches.
+- 5, the `total` comments: see quality 5.
+
+Quality engineer:
+
+- 1, AC-0025: see adversarial 1. The `scrollY` helper's comment now says it reads `window.scrollY`.
+- 2, the layout check at 1280 px: the "search that finds rows" step opens its address at the loop's width and height.
+- 3, the too-many lot number: see adversarial 2.
+- 4, the chosen product: see adversarial 3.
+- 5 (finding 6), the `total` comments: in `src/lib/receiving.ts`, `src/lib/production.ts`, and `src/lib/sales.ts` each says `total` counts the rows that match the search, the M in "Showing N of M", and 0 for receipts in the too-many case.
+- 6 (finding 7), one decision for "a search is set": `isSearchSet` in `src/lib/list-search.ts`, used by the three lists and by `ListEnd`, which now takes the whole `search`.
+- 7 (finding 8), the no-break spaces: the four lines write each as ` `.
+- 8 (finding 9), the copied helpers: `box` from `look-checks.ts` replaces `boxOf`, and the search stops come from `RECEIPT_SEARCH_STOPS`, `BATCH_SEARCH_STOPS`, and `SALE_SEARCH_STOPS`.
+- 9 (finding 10), the imports: `BETA`, `GAMMA`, `groupOf`, and `mixedDay` are gone from the spec, and `../db` is imported once.
+- 10 (finding 11), the self-skipping test: it is now two tests, "AC-0002: a receipt's vendor name and lot number are searched" and "AC-0006: a sale's product code, product name, customer, and sale number are searched". The suite has no skip.
+- 11 (finding 12), the titles: the 12-row test no longer names AC-0021, and its comment says a search that 9 rows match shows all 9 with no line and no link. The Vitest AC-0029 title says an empty or white-space text lists the latest receipts, with and without a date.
+- 12 (finding 13), the parser cases in the browser: AC-0016 opens only `2026-02-30`, `0000-01-01`, and `11/10/2026`, and AC-0017 only `1000000`, `99999999999999999999`, `5`, `-5`, `+20`, `20.0`, and `1e21`, checking the cap line on the two that count as 50. The address with `rows=20`, a text, and a date moved to the 55-row test, which names AC-0013.
+- 13 (finding 14), the timeout: the file-wide 120 s is gone; the six tests that seed 25 or 55 rows or 101 vendors keep their own 240 s. In the targeted run below the slowest test took 3.7 s.
+
+Frontend reviewer:
+
+- 1, search results not announced: `ListEnd` renders one wrapper in every state, with a `role="status"` region holding the "Showing" lines, the no-match line, and the too-many line. "Show 10 more" and "Clear search" follow the region, outside it, so the Tab order is unchanged. While the region is empty the wrapper carries each list's `collapsed` classes (`-mt-2` with the table variant's `mt-0`), which cancel the section's gap above it. The AC-0027 test checks that the no-match line sits inside the region.
+- 2, "Clear search" drops focus: once a press of "Clear search" has cleared the search, `ListEnd` focuses the list's Search text box. The AC-0027 test checks it.
+- 3, the clipped focus ring: the three rows' `li` carry `receipt-table:-outline-offset-2`, `batch-table:-outline-offset-2`, and `sale-table:-outline-offset-2`.
+- 4 (finding 5), the Recent batches comment: see adversarial 4.
+
+The overview's `src/app` row states that the lines under a Recent list sit in a status region, that "Clear search" moves focus to the Search box, and that a Save keeps the search in the address.
+
+AC-0025 mutation run, 2026-11-11: a scratch edit removed `scroll={false}` from the "Show 10 more" link in `src/app/list-search.tsx`, then `npm run test:e2e -- list-search -g "AC-0025"` ran. 6 failed and 2 passed (the sign-in setup tests) in 19.3 s. Each failure was the new check:
+
+- `Error: the lowest scroll offset from the press to the focus`, `Expected: > 0`, `Received:   0`, at `list-search.spec.ts:622` (Production's and Sales' 25-row test, the first press) and `:629` (Receiving's 25-row test, the second press).
+- `Error: the lowest scroll offset from press 1 to the focus` (Production and Sales) and `from press 3` (Receiving), `Expected: > 0`, `Received:   0`, at `list-search.spec.ts:663` (the 55-row test).
+
+The file was then copied back from the copy taken before the edit; `cmp` found no difference, so `git diff` shows none of the scratch change.
+
+Gates, 2026-11-11, on `90dcb5a` plus these fixes, uncommitted:
+
+- `npm run test:e2e -- list-search` first, alone: 94 passed in 1.3 min.
+- `npm run typecheck`: pass.
+- `npm test`: Vitest 58 files and 1,101 tests in 48 s, then Playwright 1,265 passed, none skipped, in 12.9 min.
+- After that gate, two edits changed only text no test reads: the AC-0002 seed comment, and the 55-row paging test's title, which dropped AC-0024 since that test opens with no search (the 25-row test checks AC-0024 with a search and a date). The typecheck passed after both.
+

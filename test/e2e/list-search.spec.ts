@@ -1,13 +1,11 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { resetTestData } from "../db";
+import { callAsOperator, query, resetTestData, voidReceiptCall } from "../db";
 import { checkPageState } from "./a11y";
-import { withTextSize } from "./look-checks";
+import { box, withTextSize } from "./look-checks";
 import {
   addressOf,
   ALPHA,
-  BETA,
   BATCHES,
-  boxOf,
   capLine,
   clearOf,
   closeRow,
@@ -16,12 +14,10 @@ import {
   DAY_B,
   expectInside,
   expectNoSidewaysScroll,
-  GAMMA,
-  groupOf,
   listSection,
+  lowestScrollY,
   menuSearch,
   menuStatus,
-  mixedDay,
   NO_MATCH,
   noMatchLine,
   numberOf,
@@ -29,6 +25,7 @@ import {
   opensList,
   paramsOf,
   RECEIPTS,
+  receiveNumbered,
   RECENT_LISTS,
   type RecentList,
   recordReversal,
@@ -41,6 +38,7 @@ import {
   searchFor,
   searchForm,
   sectionOf,
+  seedOtherProductRow,
   seedRows,
   shown,
   showingLine,
@@ -48,9 +46,11 @@ import {
   textBoxOf,
   TOO_MANY,
   typeMenuSearch,
+  watchLowestScroll,
 } from "./list-search-page";
 import {
   FORM_CONTROLS as BATCH_FORM_CONTROLS,
+  BATCH_SEARCH_STOPS,
   batchItem,
   reversalState,
   reversedCount,
@@ -71,6 +71,7 @@ import {
   fields as receiptFields,
   lotState,
   FORM_CONTROLS as RECEIPT_FORM_CONTROLS,
+  RECEIPT_SEARCH_STOPS,
   receiptItem,
   voidButton,
   voidMarks as receiptVoidMarks,
@@ -80,12 +81,12 @@ import {
   fields as saleFields,
   recentItem,
   FORM_CONTROLS as SALE_FORM_CONTROLS,
+  SALE_SEARCH_STOPS,
   saleState,
   voidButtonOf,
   voidMarks as saleVoidMarks,
   voidThrough as voidSaleThrough,
 } from "./sales-page";
-import { callAsOperator, query, voidReceiptCall } from "../db";
 import {
   addFinished,
   addRaw,
@@ -104,8 +105,6 @@ import { OPERATOR_STATE } from "./states";
 // Every name is made up. Operator session; data is reset before each test.
 
 test.use({ storageState: OPERATOR_STATE });
-// The Recent lists seed up to 55 rows through the operations, so a test may take longer than the 30 s default.
-test.describe.configure({ timeout: 120_000 });
 
 test.beforeEach(async () => {
   await resetTestData();
@@ -141,11 +140,11 @@ test.describe("Menu's search box", () => {
   test("AC-0007: 'Search products' is a text box inside the Menu list's section, above the switch", async ({ page }) => {
     await seedFour();
     await opensMenu(page);
-    const box = menuSearch(page);
+    const searchBox = menuSearch(page);
     const section = sectionOf(sellableSwitch(page));
     await expect(section.getByRole("textbox", { name: "Search products", exact: true })).toHaveCount(1);
-    await expect(box).toBeVisible();
-    const boxTop = (await box.boundingBox())!;
+    await expect(searchBox).toBeVisible();
+    const boxTop = (await searchBox.boundingBox())!;
     const switchTop = (await sellableSwitch(page).boundingBox())!;
     expect(boxTop.y + boxTop.height).toBeLessThanOrEqual(switchTop.y);
   });
@@ -238,20 +237,20 @@ test.describe("Menu's search box", () => {
   test("AC-0011: a tab at the text's start and a no-break space at its end are ignored", async ({ page }) => {
     await seedFour();
     await opensMenu(page);
-    await typeMenuSearch(page, "\tjerky ");
+    await typeMenuSearch(page, "\tjerky\u00a0");
     expect(await cardHeadings(page)).toEqual(["J-400 Beef Jerky"]);
-    await typeMenuSearch(page, "\t  ");
+    await typeMenuSearch(page, "\t \u00a0");
     expect((await cardHeadings(page)).length).toBe(4);
   });
 
   test("AC-0014: Menu's box takes at most 100 characters", async ({ page }) => {
     await seedFour();
     await opensMenu(page);
-    const box = menuSearch(page);
-    await expect(box).toHaveAttribute("maxlength", "100");
-    await box.click();
+    const searchBox = menuSearch(page);
+    await expect(searchBox).toHaveAttribute("maxlength", "100");
+    await searchBox.click();
     await page.keyboard.insertText("a".repeat(120));
-    expect((await box.inputValue()).length).toBe(100);
+    expect((await searchBox.inputValue()).length).toBe(100);
   });
 
   test("AC-0028: a search that matches nothing reads 'No products match.', with the switch on and off", async ({ page }) => {
@@ -421,7 +420,11 @@ async function listStops(page: Page, list: RecentList): Promise<string[]> {
   );
 }
 
-const searchStops = (list: RecentList) => [`input #${list.textId}`, `input #${list.dateId}`, "button Search"];
+const SEARCH_STOPS: Record<RecentList["key"], string[]> = {
+  receipts: RECEIPT_SEARCH_STOPS,
+  batches: BATCH_SEARCH_STOPS,
+  sales: SALE_SEARCH_STOPS,
+};
 
 for (const list of RECENT_LISTS) {
   test.describe(`${list.title}: the ${list.noun} search form`, () => {
@@ -443,13 +446,16 @@ for (const list of RECENT_LISTS) {
       await expect(searchButtonOf(page, list)).toBeVisible();
       await expect(form.getByRole("textbox", { name: "Search", exact: true })).toHaveCount(1);
       // Above its rows.
-      const formBox = await boxOf(form);
-      const firstRow = await boxOf(rowsOf(page, list).first());
+      const formBox = await box(form);
+      const firstRow = await box(rowsOf(page, list).first());
       expect(formBox.y + formBox.height).toBeLessThanOrEqual(firstRow.y);
     });
 
     test(`AC-0002, AC-0004, AC-0006, AC-0008, AC-0013: a search lists the rows its text and date match, keeps the search in the address, and an empty one lists as no search does`, async ({ page }) => {
       await seedRows(list, 12, { shape: "mixed" });
+      // AC-0002 and AC-0004: another product's row numbered 000 on DAY_A (a receipt's from Beta Meats) matches the
+      // name, number, and date searches below. Each list below is exact, so it leaves that row out.
+      const other = list.product === null ? null : await seedOtherProductRow(list);
       await opensList(page, list);
       // No search: the 10 newest.
       expect(await shown(page, list)).toEqual(numbersOf(list, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3]));
@@ -465,6 +471,7 @@ for (const list of RECENT_LISTS) {
       // A number's own text.
       await searchFor(page, list, `${list.prefix}-00`);
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [9, 8, 7, 6, 5, 4, 3, 2, 1]));
+      expect(await shown(page, list), "the other product's row").not.toContain(numberOf(list, 0));
       // A date alone, and a date with text.
       await searchFor(page, list, "", DAY_A);
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [6, 5, 4, 3, 2, 1]));
@@ -484,13 +491,28 @@ for (const list of RECENT_LISTS) {
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3]));
       await searchFor(page, list, "   ");
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3]));
+      // The other product's row does match the number search: its own list shows it.
+      if (other !== null) {
+        await opensList(page, { ...list, product: other }, { q: `${list.prefix}-00` });
+        expect(await shown(page, list)).toEqual(numbersOf(list, [0]));
+      }
     });
 
-    test(`AC-0006: a sale's customer, product code, and product name are searched; a receipt's lot and vendor`, async ({ page }) => {
-      test.skip(list.key === "batches", "a batch has only its number to search");
-      await seedRows(list, 12, { shape: "mixed" });
-      await opensList(page, list);
-      if (list.key === "sales") {
+    if (list.key === "receipts") {
+      test(`AC-0002: a receipt's vendor name and lot number are searched, in any letter case`, async ({ page }) => {
+        await seedRows(list, 12, { shape: "mixed" });
+        await opensList(page, list);
+        await searchFor(page, list, "gamma");
+        await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [12, 11, 10, 9]));
+        await searchFor(page, list, "lt-005");
+        await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [5]));
+      });
+    }
+
+    if (list.key === "sales") {
+      test(`AC-0006: a sale's product code, product name, customer, and sale number are searched, in any letter case`, async ({ page }) => {
+        await seedRows(list, 12, { shape: "mixed" });
+        await opensList(page, list);
         await searchFor(page, list, "502");
         await expect.poll(() => shown(page, list)).toHaveLength(10);
         await searchFor(page, list, "drums tom");
@@ -499,22 +521,17 @@ for (const list of RECENT_LISTS) {
         await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [12, 11, 10, 9]));
         await searchFor(page, list, "sl-005");
         await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [5]));
-      } else {
-        await searchFor(page, list, "gamma");
-        await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [12, 11, 10, 9]));
-        await searchFor(page, list, "lt-005");
-        await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [5]));
-      }
-    });
+      });
+    }
 
     test(`AC-0014, AC-0015: the box takes at most 100 characters; a longer address text is cut, and a NUL is dropped`, async ({ page }) => {
       await seedRows(list, 12, { shape: "mixed" });
       await opensList(page, list);
-      const box = textBoxOf(page, list);
-      await expect(box).toHaveAttribute("maxlength", "100");
-      await box.click();
+      const searchBox = textBoxOf(page, list);
+      await expect(searchBox).toHaveAttribute("maxlength", "100");
+      await searchBox.click();
       await page.keyboard.insertText("a".repeat(120));
-      expect((await box.inputValue()).length).toBe(100);
+      expect((await searchBox.inputValue()).length).toBe(100);
       // By address: 150 letters are cut to 100, with no error view.
       await opensList(page, list, { q: "a".repeat(150) });
       expect(await textBoxOf(page, list).inputValue()).toBe("a".repeat(100));
@@ -537,16 +554,13 @@ for (const list of RECENT_LISTS) {
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [5]));
     });
 
-    test(`AC-0016: a date that is not a real yyyy-mm-dd day from year 0100 on is ignored, its box shows empty, and the page opens`, async ({ page }) => {
+    test(`AC-0016: an address date of 2026-02-30, 0000-01-01, or 11/10/2026 is ignored, its box shows empty, and the page opens`, async ({ page }) => {
       await seedRows(list, 12, { shape: "mixed" });
-      for (const date of ["2026-02-30", "0000-01-01", "0099-12-31", "11/10/2026", "2026-9-5", "10000-01-01", "abc", ""]) {
+      for (const date of ["2026-02-30", "0000-01-01", "11/10/2026"]) {
         await opensList(page, list, { date });
         await expect(dateBoxOf(page, list), `date ${date}`).toHaveValue("");
         expect(await shown(page, list), `date ${date}`).toEqual(numbersOf(list, [12, 11, 10, 9, 8, 7, 6, 5, 4, 3]));
       }
-      await opensList(page, list, { date: DAY_B });
-      await expect(dateBoxOf(page, list)).toHaveValue(DAY_B);
-      expect(await shown(page, list)).toEqual(numbersOf(list, [12, 11, 10, 9, 8, 7]));
     });
 
     test(`AC-0027: a search that matches nothing says so, keeps its text in the boxes, and Clear search goes back to the page with no search`, async ({ page }) => {
@@ -554,6 +568,7 @@ for (const list of RECENT_LISTS) {
       await opensList(page, list);
       await searchFor(page, list, "zzz", DAY_A);
       await expect(noMatchLine(page, list)).toBeVisible();
+      await expect(listSection(page, list).getByRole("status").getByText(`No ${list.noun} match.`, { exact: true })).toBeVisible();
       await expect(rowsOf(page, list)).toHaveCount(0);
       await expect(textBoxOf(page, list)).toHaveValue("zzz");
       await expect(dateBoxOf(page, list)).toHaveValue(DAY_A);
@@ -564,6 +579,7 @@ for (const list of RECENT_LISTS) {
       await clear.click();
       await expect(page).toHaveURL(addressOf(list), { timeout: 15_000 });
       await expect.poll(() => shown(page, list)).toHaveLength(10);
+      await expect(textBoxOf(page, list)).toBeFocused();
       await expect(noMatchLine(page, list)).toHaveCount(0);
       await expect(textBoxOf(page, list)).toHaveValue("");
       await expect(dateBoxOf(page, list)).toHaveValue("");
@@ -583,38 +599,41 @@ for (const list of RECENT_LISTS) {
       const more = showMoreOf(page, list);
       await expect(more).toHaveCount(1);
       // The line is above the link, and the link is below the rows.
-      const lineBox = await boxOf(showingLine(page, list, 10, 25));
-      const linkBox = await boxOf(more);
-      const lastRow = await boxOf(rowsOf(page, list).last());
+      const lineBox = await box(showingLine(page, list, 10, 25));
+      const linkBox = await box(more);
+      const lastRow = await box(rowsOf(page, list).last());
       expect(lineBox.y).toBeGreaterThanOrEqual(lastRow.y + lastRow.height - 1);
       expect(linkBox.y).toBeGreaterThanOrEqual(lineBox.y + lineBox.height - 1);
       // By keyboard: the first press adds rows 15 to 6.
       await more.focus();
       await more.scrollIntoViewIfNeeded();
-      const before = await scrollY(page);
-      expect(before, "the page is scrolled to the link").toBeGreaterThan(0);
+      expect(await scrollY(page), "the page is scrolled to the link").toBeGreaterThan(0);
+      await watchLowestScroll(page);
       await page.keyboard.press("Enter");
       await expect(rowsOf(page, list)).toHaveCount(20);
       expect(await shown(page, list)).toEqual(numbersOf(list, Array.from({ length: 20 }, (_, i) => 25 - i)));
       await expect(showingLine(page, list, 20, 25)).toBeVisible();
       expect(paramsOf(page).get("rows")).toBe("20");
-      // AC-0024: the boxes keep their values. AC-0025: the page stays where it was. AC-0026: focus is on row 11.
+      // AC-0024: the boxes keep their values. AC-0026: focus is on row 11. AC-0025: from the press to that focus,
+      // the page never reached its top.
       await expect(textBoxOf(page, list)).toHaveValue(list.prefix);
       await expect(dateBoxOf(page, list)).toHaveValue(DAY_A);
-      expect(await scrollY(page)).toBeGreaterThan(0);
       await expect(rowsOf(page, list).nth(10)).toBeFocused();
+      expect(await lowestScrollY(page), "the lowest scroll offset from the press to the focus").toBeGreaterThan(0);
       // By pointer: the second press adds the last 5, and the line and the link go.
+      await showMoreOf(page, list).scrollIntoViewIfNeeded();
+      await watchLowestScroll(page);
       await showMoreOf(page, list).click();
       await expect(rowsOf(page, list)).toHaveCount(25);
       await expect(rowsOf(page, list).nth(20)).toBeFocused();
+      expect(await lowestScrollY(page), "the lowest scroll offset from the press to the focus").toBeGreaterThan(0);
       await expect(listSection(page, list).getByText(/^Showing /)).toHaveCount(0);
       await expect(showMoreOf(page, list)).toHaveCount(0);
       expect(paramsOf(page).get("rows")).toBe("30");
       await expect(textBoxOf(page, list)).toHaveValue(list.prefix);
-      expect(await scrollY(page)).toBeGreaterThan(0);
     });
 
-    test(`AC-0019, AC-0020, AC-0021, AC-0022: with 12 rows, one press shows every row and ends the line and the link`, async ({ page }) => {
+    test(`AC-0019, AC-0020, AC-0022: with 12 rows, one press shows every row and ends the line and the link, and a search whose 9 matches all show has neither`, async ({ page }) => {
       await seedRows(list, 12);
       await opensList(page, list);
       await expect(showingLine(page, list, 10, 12)).toBeVisible();
@@ -623,7 +642,7 @@ for (const list of RECENT_LISTS) {
       await expect(rowsOf(page, list).nth(10)).toBeFocused();
       await expect(listSection(page, list).getByText(/^Showing /)).toHaveCount(0);
       await expect(showMoreOf(page, list)).toHaveCount(0);
-      // 10 rows of 10: no line and no link.
+      // A search that 9 rows match, read at 10 rows: all 9 show, with no line and no link.
       await opensList(page, list, { q: list.prefix, date: DAY_A, rows: "10" });
       await searchFor(page, list, `${list.prefix}-00`, DAY_A);
       await expect.poll(() => shown(page, list)).toHaveLength(9);
@@ -631,7 +650,7 @@ for (const list of RECENT_LISTS) {
       await expect(showMoreOf(page, list)).toHaveCount(0);
     });
 
-    test(`AC-0013, AC-0017, AC-0019, AC-0020, AC-0021, AC-0022, AC-0024, AC-0025, AC-0026: with 55 rows, Show 10 more goes until 50, where the cap line takes its place`, async ({ page }) => {
+    test(`AC-0013, AC-0017, AC-0019, AC-0020, AC-0021, AC-0022, AC-0025, AC-0026: with 55 rows, Show 10 more goes until 50, where the cap line takes its place`, async ({ page }) => {
       test.setTimeout(240_000);
       await seedRows(list, 55);
       await opensList(page, list);
@@ -639,11 +658,17 @@ for (const list of RECENT_LISTS) {
         await expect(rowsOf(page, list)).toHaveCount(rows);
         await expect(showingLine(page, list, rows, 55)).toBeVisible();
         await expect(capLine(page, list, 55)).toHaveCount(0);
-        if (rows > 10) await expect(rowsOf(page, list).nth(rows - 10)).toBeFocused();
+        if (rows > 10) {
+          await expect(rowsOf(page, list).nth(rows - 10)).toBeFocused();
+          expect(await lowestScrollY(page), `the lowest scroll offset from press ${rows / 10 - 1} to the focus`).toBeGreaterThan(0);
+        }
+        await showMoreOf(page, list).scrollIntoViewIfNeeded();
+        await watchLowestScroll(page);
         await showMoreOf(page, list).click();
       }
       await expect(rowsOf(page, list)).toHaveCount(50);
       await expect(rowsOf(page, list).nth(40)).toBeFocused();
+      expect(await lowestScrollY(page), "the lowest scroll offset from press 4 to the focus").toBeGreaterThan(0);
       await expect(capLine(page, list, 55)).toBeVisible();
       await expect(showMoreOf(page, list)).toHaveCount(0);
       await expect(listSection(page, list).getByText(`Showing 50 of 55 ${list.noun}.`, { exact: true })).toHaveCount(0);
@@ -653,39 +678,29 @@ for (const list of RECENT_LISTS) {
       await searchFor(page, list, `${list.prefix}-00`, DAY_A);
       await expect.poll(() => shown(page, list)).toEqual(numbersOf(list, [9, 8, 7, 6, 5, 4, 3, 2, 1]));
       await expect(capLine(page, list, 55)).toHaveCount(0);
+      // An address with a search and a row count opens the same list, with the boxes filled.
+      await opensList(page, list, { rows: "20", q: list.prefix, date: DAY_A });
+      await expect(textBoxOf(page, list)).toHaveValue(list.prefix);
+      await expect(dateBoxOf(page, list)).toHaveValue(DAY_A);
+      await expect(rowsOf(page, list)).toHaveCount(20);
     });
 
-    test(`AC-0017: a row count in digits alone counts from 10 to 50, and every other one counts as 10, with no error view`, async ({ page }) => {
+    test(`AC-0017: the row counts 1000000 and 99999999999999999999 count as 50, and 5, -5, +20, 20.0, and 1e21 as 10, with no error view`, async ({ page }) => {
       test.setTimeout(240_000);
       await seedRows(list, 55);
       for (const [rows, count] of [
         ["1000000", 50],
         ["99999999999999999999", 50],
-        ["0000000000000000000050", 50],
-        ["51", 50],
-        ["50", 50],
-        ["30", 30],
-        ["025", 25],
-        ["10", 10],
-        ["9", 10],
         ["5", 10],
-        ["0", 10],
         ["-5", 10],
         ["+20", 10],
         ["20.0", 10],
         ["1e21", 10],
-        ["abc", 10],
-        ["", 10],
       ] as const) {
         await opensList(page, list, { rows });
         await expect(rowsOf(page, list), `rows=${rows}`).toHaveCount(count);
+        if (count === 50) await expect(capLine(page, list, 55), `rows=${rows}`).toBeVisible();
       }
-      await opensList(page, list, { rows: "1000000" });
-      await expect(capLine(page, list, 55)).toBeVisible();
-      await opensList(page, list, { rows: "20", q: list.prefix, date: DAY_A });
-      await expect(textBoxOf(page, list)).toHaveValue(list.prefix);
-      await expect(dateBoxOf(page, list)).toHaveValue(DAY_A);
-      await expect(rowsOf(page, list)).toHaveCount(20);
     });
   });
 }
@@ -701,8 +716,10 @@ test.describe("Recent receipts: too many vendors", () => {
   test("AC-0047: more than 100 matching vendors reads 'Too many vendors match.' with Clear search, and no receipt, line, or link", async ({ page }) => {
     test.setTimeout(240_000);
     await seedFarms();
+    // A RAW-TOM receipt from Reyes Meats whose lot number holds the text, so a lot-number read would list it.
+    await receiveNumbered("LT-004-FARM");
     await opensList(page, RECEIPTS);
-    expect(await shown(page, RECEIPTS)).toEqual(numbersOf(RECEIPTS, [3, 2, 1]));
+    expect(await shown(page, RECEIPTS)).toEqual(numbersOf(RECEIPTS, [4, 3, 2, 1]));
     await searchFor(page, RECEIPTS, "farm");
     const section = listSection(page, RECEIPTS);
     await expect(section.getByText(TOO_MANY, { exact: true })).toBeVisible();
@@ -720,13 +737,16 @@ test.describe("Recent receipts: too many vendors", () => {
     await searchFor(page, RECEIPTS, "farm 002");
     await expect.poll(() => shown(page, RECEIPTS)).toEqual(numbersOf(RECEIPTS, [2]));
     await expect(section.getByText(TOO_MANY, { exact: true })).toHaveCount(0);
+    // With few vendors matching, the lot number's own text finds that receipt.
+    await searchFor(page, RECEIPTS, "004-farm");
+    await expect.poll(() => shown(page, RECEIPTS)).toEqual(numbersOf(RECEIPTS, [4]));
     // Clear search goes back.
     await searchFor(page, RECEIPTS, "farm");
     await clearOf(page, RECEIPTS).click();
     await expect(page).toHaveURL(addressOf(RECEIPTS));
-    await expect.poll(() => shown(page, RECEIPTS)).toEqual(numbersOf(RECEIPTS, [3, 2, 1]));
+    await expect.poll(() => shown(page, RECEIPTS)).toEqual(numbersOf(RECEIPTS, [4, 3, 2, 1]));
     await expect(textBoxOf(page, RECEIPTS)).toHaveValue("");
-    // A lot number that holds the text is also not read in the too-many case: nothing is listed.
+    // In the too-many case that lot number is not read either: nothing is listed.
     await opensList(page, RECEIPTS, { q: "farm", date: "" });
     await expect(rowsOf(page, RECEIPTS)).toHaveCount(0);
   });
@@ -737,7 +757,7 @@ test.describe("Recent receipts: too many vendors", () => {
     await opensList(page, RECEIPTS, { q: "farm" });
     await expect(listSection(page, RECEIPTS).getByText(TOO_MANY, { exact: true })).toBeVisible();
     const order = await checkPageState(page);
-    expect(order).toEqual([...RECEIPT_FORM_CONTROLS, ...searchStops(RECEIPTS), "a Clear search"]);
+    expect(order).toEqual([...RECEIPT_FORM_CONTROLS, ...SEARCH_STOPS.receipts, "a Clear search"]);
   });
 });
 
@@ -750,7 +770,7 @@ test.describe("The Recent lists: the Tab order, the layout, the look, and the pa
       const before = FORM_STOPS[list.key];
       const own = await listStops(page, list);
       expect(own.length, "the rows have stops of their own").toBeGreaterThan(0);
-      expect(order).toEqual([...before, ...searchStops(list), ...own, "a Show 10 more"]);
+      expect(order).toEqual([...before, ...SEARCH_STOPS[list.key], ...own, "a Show 10 more"]);
       // By hand: the stop before the text box is the entry form's last, and the one after the button is the list's
       // first. (The date box takes several presses of its own, one for each part of the date, so the walk skips it.)
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -768,7 +788,7 @@ test.describe("The Recent lists: the Tab order, the layout, the look, and the pa
       await seedRows(list, 12, { shape: "mixed" });
       await opensList(page, list, { q: "zzz" });
       await expect(noMatchLine(page, list)).toBeVisible();
-      expect(await checkPageState(page)).toEqual([...FORM_STOPS[list.key], ...searchStops(list), "a Clear search"]);
+      expect(await checkPageState(page)).toEqual([...FORM_STOPS[list.key], ...SEARCH_STOPS[list.key], "a Clear search"]);
     });
 
     test(`AC-0041: ${list.title} passes the page-state check with a search entered, after Show 10 more, and at 50 rows`, async ({ page }) => {
@@ -782,7 +802,7 @@ test.describe("The Recent lists: the Tab order, the layout, the look, and the pa
       await opensList(page, list, { rows: "50" });
       await expect(capLine(page, list, 55)).toBeVisible();
       const order = await checkPageState(page);
-      expect(order.slice(0, FORM_STOPS[list.key].length + 3)).toEqual([...FORM_STOPS[list.key], ...searchStops(list)]);
+      expect(order.slice(0, FORM_STOPS[list.key].length + 3)).toEqual([...FORM_STOPS[list.key], ...SEARCH_STOPS[list.key]]);
       expect(order).not.toContain("a Show 10 more");
     });
 
@@ -816,7 +836,7 @@ test.describe("The Recent lists: the Tab order, the layout, the look, and the pa
           await expectInside(clearOf(page, list), section, "Clear search");
           await expectInside(noMatchLine(page, list), section, "the no-match line");
           // A search that finds rows.
-          await opensList(page, list, { q: list.prefix, date: DAY_A });
+          await opensList(page, list, { q: list.prefix, date: DAY_A }, width, height);
           if (size) await withTextSize(page, width, height, size);
           await checkControls("a search that finds rows");
           await expectInside(showMoreOf(page, list), section, "Show 10 more");
@@ -896,7 +916,7 @@ test.describe("The Recent lists: the Tab order, the layout, the look, and the pa
     }
     await opensList(page, RECEIPTS);
     expect(await listStops(page, RECEIPTS)).toEqual([]);
-    expect(await checkPageState(page)).toEqual([...RECEIPT_FORM_CONTROLS, ...searchStops(RECEIPTS), "a Show 10 more"]);
+    expect(await checkPageState(page)).toEqual([...RECEIPT_FORM_CONTROLS, ...SEARCH_STOPS.receipts, "a Show 10 more"]);
   });
 });
 

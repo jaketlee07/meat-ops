@@ -62,7 +62,7 @@ describe("the address parser and the match values", () => {
 
   it("AC-0011: white space at the start and end of the text is ignored, as trim removes it", () => {
     expect(parseListSearch({ q: "  abc  " }).text).toBe("abc");
-    expect(parseListSearch({ q: "\tabc " }).text).toBe("abc");
+    expect(parseListSearch({ q: "\tabc\u00a0" }).text).toBe("abc");
     expect(parseListSearch({ q: "   " }).text).toBe("");
     expect(parseListSearch({ q: "a  b" }).text).toBe("a  b");
     expect(parseListSearch({}).text).toBe("");
@@ -490,7 +490,7 @@ it("AC-0046: Recent sales order by sale date, then by entry time, newest first",
 
 // ---- AC-0029: the vendor limit ----
 
-it("AC-0029: 100 matching vendors list their receipts, a 101st gives the too-many result, and an empty text lists all", LONG, async () => {
+it("AC-0029: 100 matching vendors list their receipts, a 101st gives the too-many result, and an empty or white-space text lists the latest receipts, with and without a date", LONG, async () => {
   const slashes = "\\".repeat(100);
   const day = (i: number) => `2026-10-0${(i % 5) + 1}`;
   const addVendorReceipt = async (i: number) => {
@@ -520,7 +520,7 @@ it("AC-0029: 100 matching vendors list their receipts, a 101st gives the too-man
         date ? [RAW_TOM_ID, rows, date] : [RAW_TOM_ID, rows],
       )
     ).map((r) => String(r.lot_number));
-  for (const q of ["", "   ", "\t  "]) {
+  for (const q of ["", "   ", "\t\u00a0 "]) {
     const noDate = await listRecentReceipts(operator, RAW_TOM_ID, searchOf(q));
     expect(noDate.tooManyVendors, JSON.stringify(q)).toBeUndefined();
     expect(lotNumbersOf(noDate), JSON.stringify(q)).toEqual(await latest(null, 10));

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDate, formatPricePerLb, formatWeight } from "../../lib/format";
-import type { ListSearch } from "../../lib/list-search";
+import { isSearchSet, type ListSearch } from "../../lib/list-search";
 import type { RecentSales as Sales, SaleSummary } from "../../lib/sales";
 import { Facts } from "../facts";
 import { ListEnd, SearchForm } from "../list-search";
@@ -12,6 +12,8 @@ const HEADING_ID = "recent-sales-heading";
 const LIST_ID = "recent-sales-list";
 // The search form and the lines under the list line up with the list's own text where the section is a table.
 const INSET = "sale-table:px-4 sale-table:pb-3";
+// While the lines under the list show nothing, this cancels the section's gap above them.
+const COLLAPSED = "-mt-2 sale-table:mt-0";
 
 // Where the section is a table (the `sale-table` variant: the section is the container named
 // `sales` and at least 40rem wide at the current text size) it reads as one template for the header
@@ -82,7 +84,7 @@ function Status({ sale }: { sale: SaleSummary }) {
 // scroll; where the section is a table it is a row of it. The page renders this
 // again after a save or a void.
 export function RecentSales({ sales, total, search }: Sales & { search: ListSearch }) {
-  const searching = search.text !== "" || search.date !== null;
+  const searching = isSearchSet(search);
   return (
     <section aria-labelledby={HEADING_ID} className="@container/sales mt-8 desk:mt-0 desk:[grid-area:recent]">
       {/* The container cannot style itself, so this div carries the table's card edge. */}
@@ -120,7 +122,7 @@ export function RecentSales({ sales, total, search }: Sales & { search: ListSear
                 <li
                   key={sale.id}
                   tabIndex={-1}
-                  className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 sale-table:grid sale-table:items-center sale-table:gap-y-0 sale-table:rounded-none sale-table:border-0 sale-table:border-t sale-table:py-1.5 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
+                  className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 sale-table:grid sale-table:items-center sale-table:gap-y-0 sale-table:rounded-none sale-table:border-0 sale-table:border-t sale-table:py-1.5 sale-table:-outline-offset-2 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
                 >
                   <h3 className="text-base font-bold sale-table:relative sale-table:col-start-1 sale-table:row-start-2 sale-table:whitespace-nowrap sale-table:text-sm sale-table:font-medium">
                     <Link
@@ -147,15 +149,15 @@ export function RecentSales({ sales, total, search }: Sales & { search: ListSear
         )}
         <ListEnd
           noun="sales"
+          slug="sales"
           listId={LIST_ID}
           path="/sales"
           product={null}
-          text={search.text}
-          date={search.date}
-          rows={search.rows}
+          search={search}
           shown={sales.length}
           total={total}
           inset={INSET}
+          collapsed={COLLAPSED}
         />
       </div>
     </section>

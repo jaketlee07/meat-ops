@@ -14,6 +14,8 @@ import {
   voidSaleCall,
 } from "../db";
 import { signInOperator } from "../users";
+import { box } from "./look-checks";
+import { addFinished, addRaw } from "./menu-page";
 import { openReversal } from "./production-page";
 
 // What the list-search specs share, named for all four lists: each list's search box, the section it sits in,
@@ -37,22 +39,16 @@ export function menuStatus(page: Page): Locator {
 
 // Types a search into Menu's box as the owner would, one input event per change.
 export async function typeMenuSearch(page: Page, text: string): Promise<void> {
-  const box = menuSearch(page);
-  await box.click();
-  await box.fill(text);
-  await expect(box).toHaveValue(text);
-}
-
-export async function boxOf(target: Locator): Promise<{ x: number; y: number; width: number; height: number }> {
-  const found = await target.boundingBox();
-  expect(found, "box").not.toBeNull();
-  return found!;
+  const searchBox = menuSearch(page);
+  await searchBox.click();
+  await searchBox.fill(text);
+  await expect(searchBox).toHaveValue(text);
 }
 
 // A control sits inside its section's box, and neither it nor an ancestor clips or overflows sideways.
 export async function expectInside(control: Locator, section: Locator, named: string): Promise<void> {
-  const inner = await boxOf(control);
-  const outer = await boxOf(section);
+  const inner = await box(control);
+  const outer = await box(section);
   expect(inner.x, `${named}: left edge`).toBeGreaterThanOrEqual(outer.x - 0.5);
   expect(inner.y, `${named}: top edge`).toBeGreaterThanOrEqual(outer.y - 0.5);
   expect(inner.x + inner.width, `${named}: right edge`).toBeLessThanOrEqual(outer.x + outer.width + 0.5);
@@ -198,6 +194,31 @@ export interface Seed {
 const dayOf = (shape: Seed["shape"], i: number): string => (shape === "mixed" ? mixedDay(i) : DAY_A);
 const nameOf = (seed: Seed, i: number): string => seed.vendor?.(i) ?? (seed.shape === "mixed" ? groupOf(i) : ALPHA);
 
+// One receipt of 100 lbs at $1.50, and one batch of 10 raw lbs, with the number given.
+const receiptCall = (product: string, vendor: string, day: string, lotNumber: string): OpCall => ({
+  fn: "receive_lot",
+  args: {
+    p_product_id: product,
+    p_vendor_id: vendor,
+    p_weight_lbs: 100,
+    p_unit_cost: 1.5,
+    p_received: day,
+    p_lot_number: lotNumber,
+    p_notes: null,
+  },
+});
+const batchCall = (product: string, day: string, batchNumber: string): OpCall => ({
+  fn: "produce_batch",
+  args: {
+    p_finished_product_id: product,
+    p_raw_lbs_in: 10,
+    p_finished_lbs_out: null,
+    p_production_date: day,
+    p_batch_number: batchNumber,
+    p_notes: null,
+  },
+});
+
 // Raw stock for the batch and sale seeds, through the operation.
 async function stockRaw(): Promise<void> {
   await runOperation(receiveCall(RAW_TOM_ID, VENDOR_ID, 100000, 1.5, "2026-01-01"));
@@ -212,39 +233,14 @@ export async function seedRows(list: RecentList, n: number, seed: Seed = { shape
   if (list.key === "receipts") {
     for (let i = from; i <= last; i++) {
       const vendor = await namedId("vendors", nameOf(seed, i));
-      ids.push(
-        await runOperation({
-          fn: "receive_lot",
-          args: {
-            p_product_id: RAW_TOM_ID,
-            p_vendor_id: vendor,
-            p_weight_lbs: 100,
-            p_unit_cost: 1.5,
-            p_received: dayOf(seed.shape, i),
-            p_lot_number: numberOf(list, i),
-            p_notes: null,
-          },
-        }),
-      );
+      ids.push(await runOperation(receiptCall(RAW_TOM_ID, vendor, dayOf(seed.shape, i), numberOf(list, i))));
     }
     return ids;
   }
   if (from === 1) await stockRaw();
   if (list.key === "batches") {
     for (let i = from; i <= last; i++) {
-      ids.push(
-        await runOperation({
-          fn: "produce_batch",
-          args: {
-            p_finished_product_id: PROD_502_ID,
-            p_raw_lbs_in: 10,
-            p_finished_lbs_out: null,
-            p_production_date: dayOf(seed.shape, i),
-            p_batch_number: numberOf(list, i),
-            p_notes: null,
-          },
-        }),
-      );
+      ids.push(await runOperation(batchCall(PROD_502_ID, dayOf(seed.shape, i), numberOf(list, i))));
     }
     return ids;
   }
@@ -266,6 +262,29 @@ export async function seedRows(list: RecentList, n: number, seed: Seed = { shape
     );
   }
   return ids;
+}
+
+// One RAW-TOM receipt from Reyes Meats on DAY_A with the lot number given, through the operation.
+export async function receiveNumbered(lotNumber: string): Promise<void> {
+  await runOperation(receiptCall(RAW_TOM_ID, VENDOR_ID, DAY_A, lotNumber));
+}
+
+// A row of another product that the chosen product's searches would also find if they left the product out: a
+// receipt of a second raw product from Beta Meats numbered LT-000, or a batch of a second finished product (made
+// from RAW-TOM, which a seed from 1 stocks) numbered BT-000, each on DAY_A. Returns the other product's code.
+// Recent sales have no chosen product.
+export async function seedOtherProductRow(list: RecentList): Promise<string> {
+  if (list.key === "receipts") {
+    const raw = await addRaw("RAW-OTHER", "Made-up other (raw)");
+    await runOperation(receiptCall(raw, await namedId("vendors", BETA), DAY_A, numberOf(list, 0)));
+    return "RAW-OTHER";
+  }
+  if (list.key === "batches") {
+    const finished = await addFinished("F-OTHER", "Made-up other", RAW_TOM_ID);
+    await runOperation(batchCall(finished, DAY_A, numberOf(list, 0)));
+    return "F-OTHER";
+  }
+  throw new Error("Recent sales have no chosen product.");
 }
 
 // Voids a receipt or a sale, or reverses a batch, through its operation, so its row carries its tag and reason.
@@ -370,5 +389,28 @@ export function paramsOf(page: Page): URLSearchParams {
   return new URL(page.url()).searchParams;
 }
 
-// The scroll offset of the page, or of the main area when that scrolls instead.
+// The page's vertical scroll offset, `window.scrollY`.
 export const scrollY = (page: Page): Promise<number> => page.evaluate(() => window.scrollY);
+
+// From this call on, records the smallest `window.scrollY` the page reaches: at each scroll event, and at each move
+// of focus, as the focus event fires and before the browser scrolls the newly focused element into view. So a jump
+// to the top that a later focus move scrolls back from still counts. The page must stay loaded until lowestScrollY.
+export async function watchLowestScroll(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const kept = window as unknown as { __lowestScrollY?: number };
+    if (kept.__lowestScrollY === undefined) {
+      const record = () => {
+        kept.__lowestScrollY = Math.min(kept.__lowestScrollY ?? window.scrollY, window.scrollY);
+      };
+      window.addEventListener("scroll", record, { passive: true });
+      document.addEventListener("focusin", record, true);
+    }
+    kept.__lowestScrollY = window.scrollY;
+  });
+}
+
+export async function lowestScrollY(page: Page): Promise<number> {
+  const lowest = await page.evaluate(() => (window as unknown as { __lowestScrollY?: number }).__lowestScrollY);
+  expect(lowest, "the scroll watch is still installed: the page did not reload").toBeDefined();
+  return lowest!;
+}

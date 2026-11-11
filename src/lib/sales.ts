@@ -39,7 +39,7 @@ export interface SaleSummary {
 
 export interface RecentSales {
   sales: SaleSummary[];
-  // Every sale, void or not, for "Showing the 10 most recent of N".
+  // How many sales match the search, void or not: the M in "Showing N of M sales.".
   total: number;
 }
 
