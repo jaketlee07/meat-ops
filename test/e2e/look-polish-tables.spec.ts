@@ -595,7 +595,7 @@ test("AC-0020: with 11 sales Recent sales shows the 10 newest by sale date", asy
   expect(shown).toHaveLength(10);
   expect(shown).not.toContain(numbers[1]);
   expect([...shown].sort()).toEqual([numbers[0], ...numbers.slice(2)].sort());
-  await expect(sales(page).getByText("Showing the 10 most recent of 11 sales.", { exact: true })).toBeVisible();
+  await expect(sales(page).getByText("Showing 10 of 11 sales.", { exact: true })).toBeVisible();
 });
 
 // ---- Pricing's advice, Menu's switch, and the weight pass ----

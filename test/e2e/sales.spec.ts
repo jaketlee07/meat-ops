@@ -30,6 +30,8 @@ import {
   fillSale,
   fixtureWithPrice,
   FORM_CONTROLS,
+  FORM_AND_SEARCH,
+  SALE_SEARCH_STOPS,
   holdActionRequests,
   listControls,
   NO_PRODUCTS,
@@ -724,7 +726,7 @@ test.describe("save refusals and failures", () => {
     await expectNothingWritten(lots);
     await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toHaveCount(0);
     // The form after an AC-0050 refusal.
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("AC-0051, AC-0058, AC-0059, and AC-0157: a product made inactive after the page loaded is refused", async ({
@@ -796,7 +798,7 @@ test.describe("save refusals and failures", () => {
     await expectNothingWritten(lots);
     await expect(f.save).toBeEnabled();
     // The form after an AC-0055 failure.
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("AC-0056, AC-0058, AC-0059, and AC-0157: lbs of 400 nines pass the rules and show the engine's reason", async ({
@@ -835,7 +837,7 @@ test.describe("keyboard, focus, and names", () => {
       await expect(page.locator(`#${id}-error`)).toBeVisible();
     }
     expect(await saleCount()).toBe(0);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
 
     // With only a later field wrong, focus goes there.
     await f.code.fill(CODE);
@@ -970,7 +972,7 @@ test.describe("recent sales", () => {
     await expect(items).toHaveCount(10);
     // The 10 newest by sale date, then last entered first within a date.
     await expect(items.getByRole("heading")).toHaveText([7, 3, 10, 5, 9, 1, 6, 0, 4, 8].map((i) => numbers[i] ?? ""));
-    await expect(f.recent.getByText("Showing the 10 most recent of 12 sales.", { exact: true })).toBeVisible();
+    await expect(f.recent.getByText("Showing 10 of 12 sales.", { exact: true })).toBeVisible();
     await expect(factValue(items.last(), "Sale date")).toHaveText("Oct 7, 2026");
 
     // AC-0076: a saved sale joins the list in sale-date order, and the count follows.
@@ -978,7 +980,7 @@ test.describe("recent sales", () => {
     await f.save.click();
     await expect(f.result.getByRole("heading", { name: SAVED_HEADING })).toBeVisible();
     const saved = await factValue(f.result, "Sale number").textContent();
-    await expect(f.recent.getByText("Showing the 10 most recent of 13 sales.", { exact: true })).toBeVisible();
+    await expect(f.recent.getByText("Showing 10 of 13 sales.", { exact: true })).toBeVisible();
     // Dated Oct 8 and the last entered, it sits first among the Oct 8 sales, after the eight later-dated ones.
     await expect(items.nth(8).getByRole("heading")).toHaveText(saved ?? "");
   });
@@ -988,7 +990,7 @@ test.describe("recent sales", () => {
     for (let n = 0; n < 10; n++) await seedSale(10);
     const f = await openForm(page);
     await expect(f.recent.getByRole("listitem")).toHaveCount(10);
-    await expect(f.recent.getByText(/^Showing the/)).toHaveCount(0);
+    await expect(f.recent.getByText(/^Showing /)).toHaveCount(0);
   });
 
   test("AC-0071: the sales run by sale date, newest first, whatever their entry order", async ({ page }) => {
@@ -1036,7 +1038,7 @@ test.describe("recent sales", () => {
     const f = await openForm(page);
     await expect(f.recent.getByText("No sales yet.", { exact: true })).toBeVisible();
     await expect(f.recent.getByRole("listitem")).toHaveCount(0);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("AC-0077: a sale that is not void has a Void button, and a void one shows its reason", async ({ page }) => {
@@ -1161,6 +1163,7 @@ test.describe("voiding", () => {
     expect(await checkPageState(page)).toEqual([
       ...FORM_CONTROLS,
       "a Trace this sale",
+      ...SALE_SEARCH_STOPS,
       ...listControls([{ number, voidable: false }]),
     ]);
   });
@@ -1190,7 +1193,7 @@ test.describe("voiding", () => {
     expect(await finishedSnapshot()).toEqual(lots);
     await expect(item.getByText("Voided", { exact: true })).toHaveCount(0);
     // The list after an AC-0084 refusal: still showing the sale with its Void button.
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...listControls([{ number, voidable: true }])]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...listControls([{ number, voidable: true }])]);
   });
 
   test("AC-0034 (the plan's loading row): while a void is pending the pressed button keeps focus, both buttons are disabled, and neither a second confirm, Cancel, nor Escape acts", async ({
@@ -1297,7 +1300,7 @@ test.describe("page states", () => {
   test("the empty form meets the page-state checks", async ({ page }) => {
     await fixtureWithPrice();
     await openForm(page);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("the form with a product that has a list price meets the page-state checks", async ({ page }) => {
@@ -1305,7 +1308,7 @@ test.describe("page states", () => {
     const f = await openForm(page);
     await f.code.fill(CODE);
     await expect(factValue(f.facts, "List price")).toHaveText("$3.29/lb");
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("the form with a product that has no list price meets the page-state checks", async ({ page }) => {
@@ -1313,7 +1316,7 @@ test.describe("page states", () => {
     const f = await openForm(page);
     await f.code.fill(CODE);
     await expect(factValue(f.facts, "List price")).toHaveText("No list price yet");
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("the form with no active finished product meets the page-state checks", async ({ page }) => {
@@ -1321,7 +1324,7 @@ test.describe("page states", () => {
     const f = await openForm(page);
     await expect(page.getByText(NO_PRODUCTS, { exact: true })).toBeVisible();
     await expect(f.save).toHaveAttribute("aria-disabled", "true");
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("the form after a save meets the page-state checks", async ({ page }) => {
@@ -1331,6 +1334,7 @@ test.describe("page states", () => {
     expect(await checkPageState(page)).toEqual([
       ...FORM_CONTROLS,
       "a Trace this sale",
+      ...SALE_SEARCH_STOPS,
       ...listControls([{ number, voidable: true }]),
     ]);
   });
@@ -1346,6 +1350,6 @@ test.describe("page states", () => {
     } finally {
       await restoreSaleItemsRead();
     }
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "a Trace this sale"]);
+    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "a Trace this sale", ...SALE_SEARCH_STOPS]);
   });
 });

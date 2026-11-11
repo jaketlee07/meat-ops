@@ -20,6 +20,7 @@ import {
   correctPanel,
   correctThrough,
   FORM_CONTROLS,
+  FORM_AND_SEARCH,
   fillReceipt,
   lotNumberOf,
   NOT_VOIDED,
@@ -693,7 +694,7 @@ test.describe("the Receiving layout", () => {
 
       if (width === 1280) {
         expect(await checkPageState(page)).toEqual([
-          ...FORM_CONTROLS,
+          ...FORM_AND_SEARCH,
           "button Void",
           "button Correct",
           "button Void",

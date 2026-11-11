@@ -36,6 +36,10 @@ export const FORM_CONTROLS = [
   "button Save",
 ];
 
+// The form's stops and, with a product chosen, Recent receipts' search controls, which come next (AC-0037).
+export const RECEIPT_SEARCH_STOPS = ["input #receipts-search-text", "input #receipts-search-date", "button Search"];
+export const FORM_AND_SEARCH = [...FORM_CONTROLS, ...RECEIPT_SEARCH_STOPS];
+
 export function fields(page: Page) {
   return {
     code: page.getByLabel("Product code"),

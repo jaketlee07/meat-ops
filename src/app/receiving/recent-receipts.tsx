@@ -1,12 +1,17 @@
 import { formatCostPerLb, formatDate, formatWeight } from "../../lib/format";
+import type { ListSearch } from "../../lib/list-search";
 import type { RecentReceipt, RecentReceipts as Receipts } from "../../lib/receiving";
 import { Facts } from "../facts";
+import { ListEnd, SearchForm } from "../list-search";
 import { REASON_LINE, StatusTag } from "../status-tag";
 import { correctReceipt, voidReceipt } from "./actions";
 import { CorrectDialog } from "./correct-dialog";
 import { VoidDialog } from "./void-dialog";
 
 const HEADING_ID = "recent-receipts-heading";
+const LIST_ID = "recent-receipts-list";
+// The search form and the lines under the list line up with the list's own text where the section is a card.
+const INSET = "wide:px-4 wide:pb-3";
 
 // Where the section is a table (the `receipt-table` variant: 1280 px wide and the section wide
 // enough for these tracks at the current text size) it reads as one template for the header line
@@ -92,10 +97,17 @@ function Status({ receipt }: { receipt: RecentReceipt }) {
   );
 }
 
-// The product's most recently entered receipts, last entered first. The page
-// renders this again after a save, a void, or a correction, so it always shows the database's
-// current status.
-export function RecentReceipts({ receipts, total }: Receipts) {
+// The product's receipts that match the search, latest entered first: the first `search.rows`, 10 with no
+// search. The page renders this again after a save, a void, or a correction, so it always shows the
+// database's current status. A found receipt renders as a recent one does.
+export function RecentReceipts({
+  receipts,
+  total,
+  tooManyVendors,
+  search,
+  productCode,
+}: Receipts & { search: ListSearch; productCode: string }) {
+  const searching = search.text !== "" || search.date !== null;
   return (
     <section
       aria-labelledby={HEADING_ID}
@@ -104,11 +116,19 @@ export function RecentReceipts({ receipts, total }: Receipts) {
       <h2 id={HEADING_ID} tabIndex={-1} className="text-lg font-bold wide:-outline-offset-2 wide:px-4 wide:py-3">
         Recent receipts
       </h2>
-      {total === 0 ? (
-        <p className="wide:px-4 wide:pb-3">No receipts for this product yet.</p>
-      ) : (
+      <SearchForm
+        name="Search receipts"
+        slug="receipts"
+        dateLabel="Received on"
+        path="/receiving"
+        product={productCode}
+        text={search.text}
+        date={search.date}
+        inset={INSET}
+      />
+      {total === 0 && !searching && <p className="wide:px-4 wide:pb-3">No receipts for this product yet.</p>}
+      {total > 0 && (
         <>
-          {total > receipts.length && <p className="wide:px-4 wide:pb-3">{`Showing the ${receipts.length} most recent of ${total} receipts.`}</p>}
           {/* Where the section is a table the header line names the columns; each receipt's own labels are hidden visually and stay in the page. */}
           <div
             aria-hidden="true"
@@ -121,10 +141,11 @@ export function RecentReceipts({ receipts, total }: Receipts) {
             ))}
             <span />
           </div>
-          <ul className="space-y-3 wide:px-4 wide:pb-4 receipt-table:space-y-0 receipt-table:p-0">
+          <ul id={LIST_ID} className="space-y-3 wide:px-4 wide:pb-4 receipt-table:space-y-0 receipt-table:p-0">
             {receipts.map((receipt) => (
               <li
                 key={receipt.id}
+                tabIndex={-1}
                 className={`flex flex-col gap-2.5 rounded-card border border-card-border bg-surface px-3.5 py-3 receipt-table:grid receipt-table:items-center receipt-table:gap-y-0 receipt-table:rounded-none receipt-table:border-0 receipt-table:border-t receipt-table:py-1.5 ${TABLE_COLUMNS} ${FIGURE_CELLS}`}
               >
                 <Facts
@@ -150,6 +171,19 @@ export function RecentReceipts({ receipts, total }: Receipts) {
           </ul>
         </>
       )}
+      <ListEnd
+        noun="receipts"
+        listId={LIST_ID}
+        path="/receiving"
+        product={productCode}
+        text={search.text}
+        date={search.date}
+        rows={search.rows}
+        shown={receipts.length}
+        total={total}
+        tooMany={tooManyVendors === true}
+        inset={INSET}
+      />
     </section>
   );
 }

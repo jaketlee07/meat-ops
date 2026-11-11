@@ -17,6 +17,7 @@ import {
   finishedRows,
   type Fields,
   FORM_CONTROLS,
+  FORM_AND_SEARCH,
   lotSnapshot,
   NO_PRODUCTS,
   NOT_SAVED,
@@ -132,7 +133,7 @@ test.describe("the form", () => {
     await expect(factValue(f.region, "Shrink")).toHaveText("23%");
     await expect(factValue(f.region, "Raw on hand")).toHaveText("8,000 lbs");
     await expect(factValue(f.region, "Raw average cost")).toHaveText("$1.7250/lb");
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("AC-0047: a raw input with no stock shows 0 lbs and None yet", async ({ page }) => {
@@ -302,7 +303,7 @@ test.describe("refused forms", () => {
     await f.save.click();
     await expect(page.locator("#raw-lbs-error")).toHaveText(RAW_FORMAT);
     await expect(f.raw).toBeFocused();
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 });
 
@@ -539,7 +540,7 @@ test.describe("the batch result", () => {
     await expect(f.notes).toHaveValue("");
 
     // The saved batch is listed with its Reverse button.
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Reverse"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Reverse"]);
   });
 
   test("AC-0021, AC-0027: a batch of 6,000 raw lbs draws lot A, then lot B", async ({ page }) => {
@@ -628,7 +629,7 @@ test.describe("recent batches", () => {
         .reverse()
         .map((date) => `Oct ${Number(date.slice(-2))}, 2026`),
     );
-    await expect(f.region.getByText("Showing the 10 most recent of 12 batches.", { exact: true })).toBeVisible();
+    await expect(f.region.getByText("Showing 10 of 12 batches.", { exact: true })).toBeVisible();
   });
 
   test("AC-0040: with 10 batches or fewer there is no count line", async ({ page }) => {
@@ -636,11 +637,11 @@ test.describe("recent batches", () => {
     for (const date of ENTRY_DATES.slice(0, 10)) await seedBatch(100, date);
     const f = await openForm(page, BATCH_URL);
     await expect(f.region.getByRole("listitem")).toHaveCount(10);
-    await expect(f.region.getByText(/^Showing the/)).toHaveCount(0);
+    await expect(f.region.getByText(/^Showing /)).toHaveCount(0);
 
     await seedBatch(100, "2026-10-05");
     await page.reload();
-    await expect(f.region.getByText("Showing the 10 most recent of 11 batches.", { exact: true })).toBeVisible();
+    await expect(f.region.getByText("Showing 10 of 11 batches.", { exact: true })).toBeVisible();
   });
 
   test("AC-0039: each batch shows its number, date, raw lbs, finished lbs, and cost per finished lb", async ({
@@ -721,7 +722,7 @@ test.describe("refused and failed saves", () => {
       lots,
     );
     await expect(f.result.getByRole("heading", { name: "Batch saved" })).toHaveCount(0);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 
   test("AC-0031, AC-0036, AC-0037, AC-0055: a product made inactive after the page loaded is refused", async ({
@@ -791,7 +792,7 @@ test.describe("refused and failed saves", () => {
     expect(await readValues(f)).toEqual(typed);
     expect(await batchCount()).toBe(0);
     await expect(f.save).toBeEnabled();
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 });
 
@@ -844,7 +845,7 @@ test.describe("a save whose reads afterward fail", () => {
     await expect(f.result.getByRole("heading", { name: "Finished stock added" })).toHaveCount(0);
     await expect(f.result.getByRole("table")).toHaveCount(0);
     await expect(f.result.getByRole("listitem")).toHaveCount(0);
-    expect(await checkPageState(page)).toEqual(FORM_CONTROLS);
+    expect(await checkPageState(page)).toEqual(FORM_AND_SEARCH);
   });
 });
 

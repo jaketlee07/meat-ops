@@ -109,3 +109,19 @@ Red run, 2026-11-10, against `src/app/menu/menu-list.tsx` unchanged from commit 
 - Before the gate, `test/invoice-data.test.ts` timed out in T4's run, a file this work does not touch. The stack A slot fix ran at 2026-11-10T22:01Z under the owner's build approval: dead `pg_class` rows went from 522,934 to 0 and the Realtime slot's age from 70,206 to 2.
 - `npm test` passed on T1's commit `e55439a` plus T4's uncommitted work: Vitest 58 files and 1,101 tests in 68 s, then Playwright 1,197 tests in 15.0 min.
 
+
+## T2
+
+Red run of the Recent lists' new tests in `test/e2e/list-search.spec.ts`, 2026-11-10, on `3f3b1e4` with the new spec and `test/e2e/list-search-page.ts` in place and the app code (`src/app/list-search.tsx`, the three pages, the three lists, and the two `product-region.tsx` files) as `3f3b1e4` has it. The first run, `npm run test:e2e -- list-search`, was stopped by hand after its 51st test; it took about 40 minutes, since a failing test waits out its 30 s and 120 s limits. The rest ran as `npm run test:e2e -- list-search -g "Sales: the sales search form|paging|too many|The Recent lists"`. Together they ran every new Recent-list test, and all of them failed (the two sign-in setup tests passed; Menu's 24 tests are T4's and stayed green):
+
+- AC-0001, AC-0003, AC-0005 on each page: the form named "Search receipts", "Search batches", or "Search sales" did not exist (`getByRole('form', ...)` found `element(s) not found`).
+- AC-0002, AC-0004, AC-0006, AC-0008, AC-0013, AC-0014, AC-0015, AC-0016, AC-0027 on each page: the same missing form (`locator.fill`/`locator.click` waiting on the "Search" text box until the test timeout).
+- AC-0019 to AC-0026 with 25 rows, with 12 rows, and with 55 rows, and AC-0017's row counts, on each page: `expect(locator).toHaveCount(expected)` on `#recent-receipts-list > li` (and the batches and sales ids) found 0, since the lists had no id and no "Show 10 more".
+- AC-0047 and its AC-0041 page-state check: `expect(received).toEqual(expected)` read `[]` for the seeded `LT-003`, `LT-002`, `LT-001` (no list id), and no "Too many vendors match." line.
+- AC-0037 on each page and with no stops: no search controls in the Tab order.
+- AC-0038, AC-0039 on each page at 390, 1024, and 1280 px at both text sizes (18 runs), AC-0040 on each page, and AC-0041 on each page: `locator.boundingBox` and `page.evaluate` found no search control to read (`getComputedStyle` on `null`).
+- Totals: the stopped first run showed 24 failures (Receiving, Production, and the start of Sales); the second run showed 51 failures and 2 passes (the setup tests) in 1.0 h.
+
+- The T2 implementer stopped twice before finishing: once on a network error (ENOTFOUND) during its full browser run, then on its model's usage limit. The controller finished T2 on 2026-11-11 from the implementer's working tree: it pointed the five `/production` page-state checks still listing the form's controls alone (`production.spec.ts` AC-0008, AC-0030, AC-0074, AC-0029, and `reverse.spec.ts` AC-0130) at `FORM_AND_SEARCH`, the AC-0044 move the other Production checks had already taken; gave the "Search" button the secondary look so Save stays each floor page's one blue button; and imported `MAX_ROWS` in place of a repeated 50.
+- A browser run on the implementer's tree took 2.8 h with 26 failures, most in files T2 does not touch; the cause of the slowdown was not established. A rerun on 2026-11-11 had 6 failures: the five checks above and one `alerts.spec.ts` seed that hit `alerts_one_live`, a file T2 does not touch, which passed in the next run.
+- T2 gate, `npm test` on `3f3b1e4` plus T2's working tree: Vitest 58 files and 1,101 tests in 42 s, then Playwright 1,259 passed and 1 skipped in 12.9 min. The skip is `list-search.spec.ts`' receipt and sale column check, which skips itself for batches.

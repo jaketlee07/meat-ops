@@ -9,7 +9,7 @@ import {
   CHECK_HEADING,
   dropActionRequests,
   fillBatch,
-  FORM_CONTROLS,
+  FORM_AND_SEARCH,
   NOT_LOADED,
   NOT_REVERSED,
   openForm,
@@ -80,7 +80,7 @@ test.describe("the list", () => {
     // The list with a Reverse button on each batch.
     await expect(page.getByRole("button", { name: /^Reverse batch / })).toHaveCount(2);
     await expect(reverseButton(batchItem(page, batch1))).toHaveText("Reverse");
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(2)]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...REVERSE_BUTTONS(2)]);
 
     // The list with a reversed batch.
     await op(reverseCall(fixture.batch2Id, "entered twice"));
@@ -91,7 +91,7 @@ test.describe("the list", () => {
     await expect(reverseButton(reversed)).toHaveCount(0);
     await expect(reverseButton(batchItem(page, batch1))).toBeVisible();
     await expect(page.getByRole("button", { name: /^Reverse batch / })).toHaveCount(1);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(1)]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...REVERSE_BUTTONS(1)]);
   });
 });
 
@@ -201,7 +201,7 @@ test.describe("reversing", () => {
     expect(await reversedCount()).toBe(1);
     expect(await reversalState(fixture.batch2Id)).toMatchObject({ reversed: true, reason: "entered twice", voided: 1 });
 
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(1)]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...REVERSE_BUTTONS(1)]);
   });
 
   test("AC-0137, AC-0170 to AC-0172, AC-0180, AC-0181: a reversal that voids no sale says so", async ({ page }) => {
@@ -213,7 +213,7 @@ test.describe("reversing", () => {
     await expect(panel.getByRole("heading", { name: "Sales voided" })).toHaveCount(0);
     await expect(panel.getByText("Record these sales again on Sales.")).toHaveCount(0);
     await expect(beforeAfter(panel, /^On hand/)).toHaveText(["1,000 lbs", "2,000 lbs"]);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(1)]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...REVERSE_BUTTONS(1)]);
   });
 
   test("AC-0142, AC-0170 to AC-0172, AC-0180, AC-0181: reversing the saved batch turns the Batch saved panel into a reversed line", async ({
@@ -349,7 +349,7 @@ test.describe("a reversal that ends in the list", () => {
     await expect(reverseDialog(page, batch2)).toBeHidden();
     expect(await reversedCount()).toBe(1);
     expect(await reversalState(fixture.batch2Id)).toEqual(before);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(2)]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...REVERSE_BUTTONS(2)]);
   });
 
   test("AC-0150, AC-0177, AC-0170 to AC-0172, AC-0180, AC-0181: a refusal the page does not name, here the statement timeout of a held lock, closes the confirmation and says so", async ({
@@ -372,7 +372,7 @@ test.describe("a reversal that ends in the list", () => {
     }
     expect(await reversedCount()).toBe(0);
     expect(await reversalState(fixture.batch2Id)).toEqual(before);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(2)]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...REVERSE_BUTTONS(2)]);
   });
 
   test("AC-0131: pressing Reverse again after the third Escape, while the reversal waits, keeps the sent reason, and the list marks the batch with it", async ({
@@ -438,7 +438,7 @@ test.describe("a reversal that ends in the list", () => {
     await expect(reverseDialog(page, batch2)).toBeHidden();
     await expect(reverseButton(item2)).toBeVisible();
     expect(await reversedCount()).toBe(0);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, ...REVERSE_BUTTONS(2)]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, ...REVERSE_BUTTONS(2)]);
   });
 
   test("AC-0145, AC-0170 to AC-0172, AC-0180, AC-0181: a read that fails after the write still shows the heading and the batch number", async ({

@@ -29,6 +29,7 @@ import {
   factValue,
   fillReceipt,
   FORM_CONTROLS,
+  FORM_AND_SEARCH,
   holdStockLock,
   lotNumberOf,
   NOT_ALLOWED,
@@ -109,7 +110,7 @@ test.describe("the list", () => {
     await expect(page.getByRole("button", { name: "Correct", exact: false })).toHaveCount(3);
 
     expect(await checkPageState(page)).toEqual([
-      ...FORM_CONTROLS,
+      ...FORM_AND_SEARCH,
       "button Void",
       "button Correct",
       "button Correct",
@@ -152,7 +153,7 @@ test.describe("the list", () => {
     await expect(other.getByText(/^Received as /)).toHaveCount(0);
     await expect(other.getByText(/^Corrected: /)).toHaveCount(0);
 
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Correct", "button Correct"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Correct", "button Correct"]);
   });
 });
 
@@ -554,7 +555,7 @@ test.describe("a correction the database refuses", () => {
     await expect(message).toBeFocused();
     await expect(correctDialog(page, lotNumber)).toBeHidden();
     expect(await correctionCount()).toBe(0);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Void", "button Correct"]);
   });
 
   test("AC-0117, AC-0177: a refusal the page does not name, here the statement timeout of a held lock, closes the confirmation and says so", async ({
@@ -652,7 +653,7 @@ test.describe("a correction that ends in the list", () => {
     await expect(correctDialog(page, lotNumber)).toBeHidden();
     await expect(correctButton(item)).toBeVisible();
     expect(await correctionCount()).toBe(0);
-    expect(await checkPageState(page)).toEqual([...FORM_CONTROLS, "button Void", "button Correct"]);
+    expect(await checkPageState(page)).toEqual([...FORM_AND_SEARCH, "button Void", "button Correct"]);
   });
 
   test("AC-0111, AC-0170 to AC-0172, AC-0180, AC-0181: a read that fails after the write still shows the heading and the lot number", async ({

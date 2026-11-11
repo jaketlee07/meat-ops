@@ -6,6 +6,7 @@ import {
   listRecentReceipts,
   listVendors,
 } from "../../lib/receiving";
+import { parseListSearch } from "../../lib/list-search";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
 import { NotAllowed } from "../not-allowed";
@@ -45,6 +46,7 @@ export default async function ReceivingPage({
   ]);
   const requested = typeof query.product === "string" ? query.product : "";
   const selected = products.find((product) => product.code === requested);
+  const search = parseListSearch(query);
 
   let region = null;
   let voidedLots: string[] = [];
@@ -53,9 +55,9 @@ export default async function ReceivingPage({
     const [stock, prices, recent] = await Promise.all([
       getStock(supabase, selected.id),
       listFinishedPrices(supabase, selected.id),
-      listRecentReceipts(supabase, selected.id),
+      listRecentReceipts(supabase, selected.id, search),
     ]);
-    region = <ProductRegion stock={stock} prices={prices} recent={recent} />;
+    region = <ProductRegion stock={stock} prices={prices} recent={recent} search={search} productCode={selected.code} />;
     voidedLots = recent.receipts
       .filter((receipt) => receipt.status === "void")
       .map((receipt) => receipt.lotNumber);

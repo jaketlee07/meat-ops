@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getReversalPreview, listActiveFinishedProducts, listRecentBatches } from "../../lib/production";
+import { parseListSearch } from "../../lib/list-search";
 import { getStock } from "../../lib/receiving";
 import { isOperator } from "../../lib/rpc";
 import { createSessionClient } from "../_server/session";
@@ -35,13 +36,14 @@ export default async function ProductionPage({
   const [products, query] = await Promise.all([listActiveFinishedProducts(supabase), searchParams]);
   const requested = typeof query.product === "string" ? query.product : "";
   const selected = products.find((product) => product.code === requested);
+  const search = parseListSearch(query);
 
   let region = null;
   let reversedBatches: string[] = [];
   if (selected) {
     const [stock, recent] = await Promise.all([
       selected.raw ? getStock(supabase, selected.raw.id) : null,
-      listRecentBatches(supabase, selected.id),
+      listRecentBatches(supabase, selected.id, search),
     ]);
     // What each batch that is not reversed would do, for its Reverse confirmation.
     const open = recent.batches.filter((batch) => batch.reversedAt === null);
@@ -53,7 +55,7 @@ export default async function ProductionPage({
         }),
       ),
     );
-    region = <ProductRegion product={selected} stock={stock} recent={recent} previews={previews} />;
+    region = <ProductRegion product={selected} stock={stock} recent={recent} previews={previews} search={search} />;
     reversedBatches = recent.batches.filter((batch) => batch.reversedAt !== null).map((batch) => batch.batchNumber);
   }
 

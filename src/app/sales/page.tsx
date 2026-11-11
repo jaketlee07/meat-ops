@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { parseListSearch } from "../../lib/list-search";
 import { isOperator } from "../../lib/rpc";
 import { listCustomers, listRecentSales, listSaleProducts } from "../../lib/sales";
 import { createSessionClient } from "../_server/session";
@@ -17,7 +18,11 @@ const MAIN_GRID = `${FORM_COLUMN_GRID} desk:grid-rows-[auto_auto_1fr] desk:[grid
 // Every page settles who is asking. The proxy only refreshes the session.
 // /sales?product=<code> renders the same page: the form asks for it to get a
 // fresh product list when a typed code is missing from the one it has.
-export default async function SalesPage() {
+export default async function SalesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const supabase = await createSessionClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims) redirect("/sign-in");
@@ -26,17 +31,19 @@ export default async function SalesPage() {
   // user who is not on the allowlist gets the not-allowed page.
   if (!(await isOperator(supabase))) return <NotAllowed />;
 
+  const query = await searchParams;
+  const search = parseListSearch(query);
   const [products, customers, recent] = await Promise.all([
     listSaleProducts(supabase),
     listCustomers(supabase),
-    listRecentSales(supabase),
+    listRecentSales(supabase, search),
   ]);
 
   return (
     <PageShell title="Sales" current="sales" fullWidth mainClassName={MAIN_GRID}>
       <VoidedSalesProvider>
         <SaleForm products={products} customers={customers} />
-        <RecentSales sales={recent.sales} total={recent.total} />
+        <RecentSales sales={recent.sales} total={recent.total} search={search} />
       </VoidedSalesProvider>
     </PageShell>
   );
