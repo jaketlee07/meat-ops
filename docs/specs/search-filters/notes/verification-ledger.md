@@ -330,3 +330,13 @@ Gates, 2026-11-11, on `200c2b1` plus these fixes, uncommitted:
 
 Delta review over `200c2b1..fbb1d77`, 2026-11-11: the adversarial reviewer, the quality engineer, and the frontend reviewer each returned the clean line and no finding (`.context/reviews/a5f08fda-ae0d-4d6e-a49d-fb51e365b01a/5-post-gates-*-raw.md`). The security reviewer was clean in round 1, and no later round changed a security control. Review rounds 1 to 4 used 4 of the 5 fix rounds. One finding stays deferred by the owner's call above: round 4's frontend finding 1.
 
+## Close-out (2026-11-11)
+
+- PR #67 merged on 2026-11-11 at 17:18 CST as `6e80617`; the work-loop run is DONE.
+- The overview gained two facts that only this spec's Assumptions held: the local gateway's 8 KB address limit with the hosted gateway unmeasured (the `src/lib/` row), and the 50-row cap's cost of about 250 Reverse-preview reads per `/production` render (the `src/app` row). The owner confirmed on 2026-11-11 that the overview's `src/app`, `src/lib/`, `test/`, and `test/e2e/` rows read right. The folder cools for 30 days (`docs/lifecycle/search-filters.json`, review on 2026-12-11).
+- Set aside at close-out:
+  - Queued in the UI polish leftovers intent (owner, 2026-11-11): round 4's deferred frontend finding 1, an overtaken press whose other navigation lands on its address still runs its focus move.
+  - Added as a dated sighting to the Draft intent `alerts-watch-test-race.md` (owner, 2026-11-11): the `alerts_one_live` duplicate key in T2's rerun.
+  - Recorded nowhere else (owner, 2026-11-11): Kong's one 502 on `check_operator` in round 2's first `npm test`, a known local-stack hiccup; T2's 2.8 h browser run, whose cause was not established; and the security reviewer's unchecked point that a hosted request log could hold a search text, which no rule covers.
+- The UI polish brief is Shipped and its intent Fulfilled (owner, 2026-11-11): all four specs are Shipped.
+
