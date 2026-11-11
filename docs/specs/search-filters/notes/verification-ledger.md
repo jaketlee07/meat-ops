@@ -146,3 +146,16 @@ Since each passed on its first run, a scratch copy of the spec, `test/e2e/scratc
 - Batch, by Show 10 more, after Reverse: `Error: the address`, `Expected: "http://127.0.0.1:3100/production?product=502"`, `Received: "http://127.0.0.1:3100/production?product=502&rows=20"`
 - Sale, by Show 10 more, after Void: `Error: the address`, `Expected: "http://127.0.0.1:3100/sales"`, `Received: "http://127.0.0.1:3100/sales?rows=20"`
 - T3 gate, `npm test` on `9b0e1c1` plus T3's working tree, 2026-11-11: Vitest 58 files and 1,101 tests in 40 s, then Playwright 1,265 passed and 1 skipped in 12.7 min. The skip is the same self-skip T2's gate names.
+
+## T5
+
+Both records below read `03caf67`, the branch's last commit that changes a file other than those under `docs/specs/search-filters/`, `docs/product/briefs/ui-polish.md`, and `workspace.toml`. A later commit that changes any other file re-opens both.
+
+- **AC-0042, 2026-11-11: "match".** The owner compared `/receiving`, `/production`, `/sales`, and `/menu`, built from `03caf67` at 1280 px with made-up data and a search entered on each, with the comparison page at revision 1794121141-4df1, its "Finding things" block. The check page is https://claude.ai/artifact/JYp8gNdHFobLtZvdDLDjFS (version 1794418136-bb4a): the Receiving page searching "north" and with no match, Recent batches searching "B-202610", Recent sales with 20 matches before "Show 10 more", and Menu typing "smoked" at 1280 and 390 px.
+- **AC-0044, 2026-11-11: pass.** `git diff 7c6ddcc..03caf67 -- test/`, with no untracked test files. Every changed expectation in an existing file is one of the three moves AC-0044 lists:
+  - The "Showing the N most recent of M" lines read "Showing N of M" (`receiving.spec.ts`, `production.spec.ts`, `sales.spec.ts`, `look-polish-tables.spec.ts`), moved by AC-0020.
+  - The checks that Recent sales picks the 10 last-entered sales pick by sale date, then entry, moved by AC-0046 and AC-0019: `sales-data.test.ts` (T-12 dated Oct 6 in place of Oct 2, so it stays first, and the asserted first date with it), `sales.spec.ts`' AC-0070 test (voids at indexes 2 and 4 in place of 0 and 4, so one stays outside the 10 and one inside; the expected order, the last row's date, and the saved sale's place), and `look-polish-tables.spec.ts`' AC-0020 test (the dropped sale is the Oct 1 one).
+  - The Tab-order and page-state lists of the four pages include the search controls where AC-0037 puts them: after the form, or after the saved result's Trace link on `/sales`, and before the list's own stops (`correct.spec.ts`, `look-floor-pages.spec.ts`, `look-pages.spec.ts`, `production.spec.ts`, `receiving.spec.ts`, `reverse.spec.ts`, `sales.spec.ts`, `menu.spec.ts`, `look-menu-invoices-ask-alerts.spec.ts`, and the page objects' new lists), moved by AC-0037.
+- **Red runs:** recorded under T1, T2, T3, and T4 above.
+- **AC-0043:** the T3 gate ran `npm test` on the tree `03caf67` holds: Vitest 58 files and 1,101 tests in 40 s, Playwright 1,265 passed and 1 self-skip in 12.7 min.
+
