@@ -1,6 +1,6 @@
 # Meat Ops looks finished to anyone who sees it, and the business owner sees the day at a glance
 
-- **Status:** Accepted
+- **Status:** Fulfilled
 - **Slug:** `ui-polish`
 - **Level:** `feature`
 - **Scale:** `app`

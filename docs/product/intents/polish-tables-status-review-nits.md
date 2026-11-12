@@ -1,4 +1,4 @@
-# UI polish leftovers: Recent receipts' vendor column, Menu's card price, the switch test, the phone saved result, Choose photo while reading, Ask's status space, and Today's long lists, Try again, and a repeated check
+# UI polish leftovers: Recent receipts' vendor column, Menu's card price, the switch test, the phone saved result, Choose photo while reading, Ask's status space, Today's long lists, Try again, and a repeated check, and an overtaken focus move
 
 - **Status:** Draft
 
@@ -20,7 +20,8 @@ Recent receipts keeps every vendor word whole and each lot number right under it
 - Today's long lists (spec 2a): `src/lib/home.ts` reads today's receipts, batches, and sales with an exact count but no paging, so on a day with more than 1,000 of one kind the list stops at the database's 1,000-row cap (`max_rows`) while its heading still shows the full count.
 - Try again on Today (spec 2a): `test/e2e/home.spec.ts` checks that a refused read shows "Today"'s error view (AC-0035) but never presses "Try again" to see the page come back once the read works.
 - Repeated check (spec 2a): `test/e2e/home.spec.ts:191`, in the test of an open alert that is not urgent, counts the Open alerts list a second time instead of naming the alert it shows.
-- The owner queued spec 1a's four at its close-out on 2026-11-09, spec 1b's three and the test sightings at its close-out the same day, and spec 2a's three at its close-out on 2026-11-10. Spec 1a is shipped, so under the UI polish brief's Boundary-change rule these gaps stay out of that intent's Boundary, and the same holds for spec 1b's.
+- Overtaken focus move (spec 2b): in `ListEnd` (`src/app/list-search.tsx`), a press of "Show 10 more" or "Clear search" arms a focus move keyed on the address it opens. If a Back, or a Search with both boxes emptied, lands first on that same address, the move still runs, focusing the first added row or the Search box. It needs a second navigation started before the press's page lands (spec 2b's post-gates round 4, frontend finding 1, deferred by the owner).
+- The owner queued spec 1a's four at its close-out on 2026-11-09, spec 1b's three and the test sightings at its close-out the same day, spec 2a's three at its close-out on 2026-11-10, and spec 2b's one at its close-out on 2026-11-11. Spec 1a is shipped, so under the UI polish brief's Boundary-change rule these gaps stay out of that intent's Boundary, and the same holds for spec 1b's.
 - What each screen does, and every figure, word, and control name, stays the same. Each layout keeps picking its look from its own section's width and the text size.
 
 ## Owner

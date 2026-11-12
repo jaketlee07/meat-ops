@@ -48,7 +48,7 @@ open = [
   { path = "docs/product/intents/hosted-rollout-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/hosted-rollout/notes/verification-ledger.md", revision = "027d4a3" }, summary = "A spare app server outlived a slow run and ignored SIGTERM, and the AC-0090 digest test once read a row still writing", needs = [] },
   { path = "docs/product/intents/vite-advisory-upgrade.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/next-security-upgrade/notes/verification-ledger.md", revision = "ed4d5c1" }, summary = "The full npm audit names a high advisory in vite 8.3.2, which only Vitest uses; upgrade it in its own change", needs = [] },
   { path = "docs/product/intents/app-hosting-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/app-hosting/notes/verification-ledger.md", revision = "813a8e6" }, summary = "The AC-0014 foreign-Origin test counts sessions only, so a broken Origin check could pass if the sign-in limit refused the replays too", needs = [] },
-  { path = "docs/product/intents/polish-tables-status-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/polish-tables-status/notes/verification-ledger.md", revision = "87e8f26" }, summary = "UI polish leftovers: Recent receipts' Vendor column and a three-line vendor, Menu's phone card price, the switch test's transform blind spot, the 390 px saved result's wrap, Choose photo while a read runs, Ask's empty status space, and two one-off look-floor-pages test failures, and spec 2a's long lists, untested Try again, and repeated list check", needs = [] },
+  { path = "docs/product/intents/polish-tables-status-review-nits.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/polish-tables-status/notes/verification-ledger.md", revision = "87e8f26" }, summary = "UI polish leftovers: Recent receipts' Vendor column and a three-line vendor, Menu's phone card price, the switch test's transform blind spot, the 390 px saved result's wrap, Choose photo while a read runs, Ask's empty status space, and two one-off look-floor-pages test failures, spec 2a's long lists, untested Try again, and repeated list check, and spec 2b's overtaken focus move", needs = [] },
   { path = "docs/product/intents/rls-estimated-counts.md", kind = "intent", source = { mode = "repo-origin", ref = "docs/specs/home-screen/notes/verification-ledger.md", revision = "c72a00e" }, summary = "PostgREST's planned and estimated counts may hint to a signed-in non-operator how many rows each RLS table holds; check it on the local stack and close it", needs = [] },
 ]
 closed = []
@@ -86,6 +86,7 @@ shipped = [
 ]
 
 [ini-002.brief_queue]
-executing = [
-  { path = "docs/product/briefs/ui-polish.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-polish.md", revision = "c98460e" }, summary = "Executing brief for UI polish: four specs in order (1a tables and status, then 1b forms, alerts, and page space, then 2a home screen and 2b search and filters)", needs = [] },
+executing = []
+shipped = [
+  { path = "docs/product/briefs/ui-polish.md", kind = "brief", source = { mode = "repo-origin", ref = "docs/product/intents/ui-polish.md", revision = "c98460e" }, summary = "UI polish brief: all four specs shipped (1a tables and status, 1b forms, alerts, and page space, 2a home screen, 2b search and filters); closed 2026-11-11", needs = [] },
 ]
